@@ -2,6 +2,7 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_app_desc.h"
 #include "nvs_flash.h"
 #include "playlist.h"
 #include "audio_player.h"
@@ -30,6 +31,10 @@ void system_monitor_task(void *pv);
 
 void app_main(void)
 {
+    const esp_app_desc_t *app_desc = esp_app_get_description();
+    ESP_LOGI(TAG, "AtlasCube firmware %s (built %s %s, IDF %s)",
+             app_desc->version, app_desc->date, app_desc->time, app_desc->idf_ver);
+
     nvs_flash_init();
     init_fs();
 
