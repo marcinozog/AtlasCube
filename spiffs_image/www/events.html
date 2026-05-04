@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AtlasCube – Events</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="events.css">
+</head>
+<body>
+
+<header class="app-header">
+    <div class="logo">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text">ATLAS <span class="logo-accent">CUBE</span></span>
+    </div>
+</header>
+
+<main class="card card--wide">
+    <a href="/" class="back-link">← Back to Radio</a>
+
+    <div class="section-title">🗓️ Events &amp; Reminders</div>
+
+    <!-- ══════════════════════════════════════════
+         Form (add / edit)
+    ══════════════════════════════════════════ -->
+    <div class="panel ev-form" id="ev_form">
+        <div class="ev-form-header">
+            <span id="ev_form_title">➕ New event</span>
+            <button class="btn-secondary" onclick="evFormReset()">Clear</button>
+        </div>
+
+        <div class="ev-grid">
+            <div class="field-group">
+                <label class="field-label">Type</label>
+                <select id="ev_type" class="field-input">
+                    <option value="birthday">🎂 Birthday</option>
+                    <option value="nameday">🌹 Name day</option>
+                    <option value="anniversary">💍 Anniversary</option>
+                    <option value="reminder" selected>⏰ Reminder</option>
+                </select>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label">Title</label>
+                <input type="text" id="ev_title" class="field-input" maxlength="63" placeholder="e.g. Ania's birthday" />
+            </div>
+
+            <div class="field-group">
+                <label class="field-label">Date</label>
+                <input type="date" id="ev_date" class="field-input" />
+            </div>
+
+            <div class="field-group">
+                <label class="field-label">Time</label>
+                <input type="time" id="ev_time" class="field-input" value="08:00" />
+            </div>
+
+            <div class="field-group">
+                <label class="field-label">Recurrence</label>
+                <select id="ev_recurrence" class="field-input">
+                    <option value="none">One-time</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly" selected>Yearly</option>
+                </select>
+            </div>
+
+            <div class="field-group">
+                <label class="field-label">
+                    <input type="checkbox" id="ev_enabled" checked />
+                    Enabled
+                </label>
+            </div>
+        </div>
+
+        <div class="ev-form-actions">
+            <button id="ev_save_btn" onclick="evSave()">💾 Save</button>
+            <button class="btn-secondary" id="ev_cancel_btn" onclick="evFormReset()" style="display:none">Cancel edit</button>
+        </div>
+        <div id="ev_status" class="save-status"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         List
+    ══════════════════════════════════════════ -->
+    <div class="section-gap"></div>
+    <div class="panel">
+        <div class="pl-hint">
+            <span id="ev_count">0</span> event(s). Click ✎ to edit, ✕ to delete.
+        </div>
+        <div id="ev_list" class="ev-list"></div>
+    </div>
+</main>
+
+<script src="events.js"></script>
+</body>
+</html>

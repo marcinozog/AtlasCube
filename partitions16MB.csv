@@ -1,0 +1,15 @@
+# Name,     Type, SubType, Offset,   Size,     Flags
+
+# Boot / system
+nvs,        data, nvs,      0x9000,   0x6000
+otadata,    data, ota,      0xf000,   0x2000
+phy_init,   data, phy,      0x11000,  0x1000
+
+# App
+factory,    app,  factory,  0x20000,  4M
+
+# Application data (e.g. config, station list, cache)
+storage,    data, spiffs,           ,  4M
+
+# Reszta flasha (np. nagrywanie, DLNA cache, itd.)
+media,      data, spiffs,           ,  6M

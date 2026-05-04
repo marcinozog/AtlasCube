@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AtlasCube – Playlist</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="playlist.css">
+</head>
+<body>
+
+<header class="app-header">
+    <div class="logo">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text">ATLAS <span class="logo-accent">CUBE</span></span>
+    </div>
+</header>
+
+<main class="card card--wide">
+    <a href="/" class="back-link">← Back to Radio</a>
+
+    <div class="section-title">📻 Playlist editor</div>
+
+    <div class="panel">
+        <div class="pl-hint">Drag ⠿ to reorder. Max <span id="pl_max">64</span> stations.</div>
+        <div id="pl_list" class="pl-list"></div>
+
+        <div class="pl-actions">
+            <button class="btn-secondary" onclick="plAddRow()">➕ Add station</button>
+            <button id="pl_save_btn" onclick="plSave()">💾 Save &amp; Apply</button>
+        </div>
+        <div class="pl-meta">
+            <span id="pl_count">0</span> / <span id="pl_max2">64</span> stations
+        </div>
+        <div id="pl_status" class="save-status"></div>
+    </div>
+</main>
+
+<script src="playlist.js"></script>
+</body>
+</html>

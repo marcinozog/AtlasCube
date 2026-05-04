@@ -1,0 +1,18 @@
+menu "Display configuration"
+
+choice DISPLAY_TYPE
+    prompt "Select display driver"
+    default DISPLAY_ILI9341
+
+config DISPLAY_ILI9341
+    bool "ILI9341"
+
+config DISPLAY_ST7796
+    bool "ST7796"
+
+config DISPLAY_SSD1322
+    bool "SSD1322"
+
+endchoice
+
+endmenu

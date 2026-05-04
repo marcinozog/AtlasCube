@@ -1,0 +1,11 @@
+idf_component_register(
+    SRCS
+        "events_service.c"
+    INCLUDE_DIRS
+        "."
+    REQUIRES
+        json
+        esp_timer
+        buzzer
+        services
+)

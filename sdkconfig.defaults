@@ -1,0 +1,66 @@
+CONFIG_FREERTOS_ENABLE_BACKWARD_COMPATIBILITY=y
+
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions8MB.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions8MB.csv"
+CONFIG_PARTITION_TABLE_OFFSET=0x8000
+CONFIG_PARTITION_TABLE_MD5=y
+
+CONFIG_ESP32_S3_ATLASCUBE_BOARD=y
+
+CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+
+# Allows placing the .bss segment in PSRAM (via EXT_RAM_BSS_ATTR).
+# Without this, the attribute is a no-op and large static arrays stay in internal RAM.
+CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y
+
+
+# WARNING: MBEDTLS_DYNAMIC_BUFFER + RENEGOTIATION = broken HTTPS
+# Eurozet CDN requires TLS renegotiation after connection is established.
+# Dynamic buffer cannot expand in time → PEER_CLOSE_NOTIFY (-0x7100).
+# Solution: use EXTERNAL_MEM_ALLOC instead of DYNAMIC_BUFFER.
+CONFIG_MBEDTLS_SSL_IN_CONTENT_LEN=16384
+CONFIG_MBEDTLS_SSL_OUT_CONTENT_LEN=4096
+CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
+# Threshold: allocations below this value stay in internal RAM, larger ones → PSRAM.
+# Lowered from 8192 → 4096 — internal RAM baseline is ~7-8KB largest block,
+# so with 8192 too many small mbedTLS/lwIP allocations stayed in internal RAM,
+# fragmenting it and breaking TLS handshake.
+CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=4096
+
+CONFIG_MBEDTLS_HARDWARE_AES=n
+CONFIG_MBEDTLS_HARDWARE_SHA=n
+CONFIG_MBEDTLS_HARDWARE_MPI=n
+
+# WARNING: DYNAMIC_BUFFER + renegotiation = broken HTTPS (Eurozet CDN)
+# HARDWARE_AES = failed allocation during renegotiation when internal RAM < ~20KB
+
+
+CONFIG_HTTPD_WS_SUPPORT=y
+CONFIG_FREERTOS_USE_STATS_FORMATTING_FUNCTIONS=y
+CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
+
+# CONFIG_LV_FONT_MONTSERRAT_12=y
+# CONFIG_LV_FONT_MONTSERRAT_14=y
+# CONFIG_LV_FONT_MONTSERRAT_18=y
+CONFIG_LV_FONT_MONTSERRAT_28=y
+CONFIG_LV_FONT_MONTSERRAT_48=y
+
+CONFIG_LWIP_MAX_SOCKETS=16
+
+# TCP receive buffer and window — default 5760 B is too small for 256 kbps
+# audio streams. A small window forces frequent ACKs and limits throughput
+# due to the bandwidth-delay product, which results in stuttering at playback start
+# (TCP slow-start cannot fill the esp-adf ring buffer fast enough).
+# 32 KB ≈ 1 second at 256 kbps; leaves margin for network jitter.
+CONFIG_LWIP_TCP_WND_DEFAULT=32768
+CONFIG_LWIP_TCP_RCV_BUF_DEFAULT=32768
+CONFIG_LWIP_TCP_RECVMBOX_SIZE=32
+
+CONFIG_LV_USE_FONT_PLACEHOLDER=n
+
+# CONFIG_LOG_DEFAULT_LEVEL_DEBUG=y

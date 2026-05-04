@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AtlasCube – WiFi Setup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: #16213e;
+    border-radius: 12px;
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #4fc3f7;
+    letter-spacing: 1px;
+  }
+  .header p {
+    font-size: 13px;
+    color: #888;
+    margin-top: 6px;
+  }
+  .form-group {
+    margin-bottom: 18px;
+  }
+  label {
+    display: block;
+    font-size: 11px;
+    color: #aaa;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    padding: 12px 14px;
+    background: #0f3460;
+    border: 1px solid #2a4a7f;
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus {
+    border-color: #4fc3f7;
+  }
+  .show-pass {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #888;
+    cursor: pointer;
+    user-select: none;
+  }
+  .show-pass input[type="checkbox"] { cursor: pointer; }
+  button[type="submit"] {
+    width: 100%;
+    padding: 14px;
+    background: #4fc3f7;
+    color: #1a1a2e;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background 0.2s, opacity 0.2s;
+  }
+  button[type="submit"]:hover:not(:disabled) { background: #81d4fa; }
+  button[type="submit"]:disabled { opacity: 0.5; cursor: default; }
+  .status {
+    display: none;
+    text-align: center;
+    margin-top: 20px;
+    font-size: 14px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    background: rgba(79, 195, 247, 0.12);
+    color: #4fc3f7;
+    line-height: 1.5;
+  }
+  .status.error {
+    background: rgba(244, 143, 177, 0.12);
+    color: #f48fb1;
+  }
+  .status.visible { display: block; }
+  .hint {
+    text-align: center;
+    font-size: 12px;
+    color: #555;
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <h1>AtlasCube</h1>
+    <p>Enter your home WiFi credentials</p>
+  </div>
+
+  <form id="form" novalidate>
+    <div class="form-group">
+      <label for="ssid">Network SSID</label>
+      <input type="text" id="ssid" name="ssid"
+             placeholder="Your WiFi network name"
+             autocomplete="off" autocapitalize="none"
+             autocorrect="off" spellcheck="false" required>
+    </div>
+    <div class="form-group">
+      <label for="pass">Password</label>
+      <input type="password" id="pass" name="pass"
+             placeholder="WiFi password"
+             autocomplete="new-password">
+      <label class="show-pass">
+        <input type="checkbox" id="show-toggle"> Show password
+      </label>
+    </div>
+    <button type="submit" id="btn">Save &amp; Connect</button>
+  </form>
+
+  <div class="status" id="status"></div>
+  <div class="hint">Device will restart automatically after saving</div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  document.getElementById('show-toggle').addEventListener('change', function () {
+    document.getElementById('pass').type = this.checked ? 'text' : 'password';
+  });
+
+  document.getElementById('form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    var ssid   = document.getElementById('ssid').value.trim();
+    var pass   = document.getElementById('pass').value;
+    var btn    = document.getElementById('btn');
+    var status = document.getElementById('status');
+
+    if (!ssid) {
+      showStatus('Please enter the network name (SSID).', true);
+      return;
+    }
+
+    // btn.disabled = true;
+    showStatus('Saving settings\u2026', false);
+
+    try {
+      var r = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wifi: { ssid: ssid, password: pass } })
+      });
+      if (!r.ok) throw new Error('Server returned ' + r.status);
+
+      showStatus('Settings saved. Restarting device\u2026', false);
+
+      try {
+        await fetch('/api/restart', { method: 'POST' });
+      } catch (_) {
+        /* ignore — device restarts mid-response */
+      }
+
+      var countdown = 12;
+      var iv = setInterval(function () {
+        countdown--;
+        if (countdown <= 0) {
+          clearInterval(iv);
+          showStatus('Device restarted. Disconnect from "AtlasCube" and connect to your home WiFi.', false);
+        } else {
+          showStatus('Restarting\u2026 (' + countdown + 's)  Then connect to your home WiFi.', false);
+        }
+      }, 1000);
+
+    } catch (err) {
+      showStatus('Error: ' + err.message, true);
+      // btn.disabled = false;
+    }
+  });
+
+  function showStatus(msg, isError) {
+    var el = document.getElementById('status');
+    el.textContent = msg;
+    el.className = 'status visible' + (isError ? ' error' : '');
+  }
+}());
+</script>
+</body>
+</html>

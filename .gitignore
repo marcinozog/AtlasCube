@@ -1,0 +1,78 @@
+spiffs_image/web
+TMP
+.claude
+.clangd
+
+# ===== Build artifacts =====
+build/
+managed_components
+sdkconfig
+sdkconfig.old
+*.bin
+*.elf
+*.map
+*.hex
+
+# ===== CMake =====
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# ===== Ninja =====
+.ninja_deps
+.ninja_log
+
+# ===== ESP-IDF =====
+idf_component.yml.lock
+
+# ===== Partition table / flashing =====
+flash_project_args
+flasher_args.json
+
+# ===== Python virtual env (Espressif tools) =====
+.espressif/
+.python_env/
+
+# ===== Logs =====
+*.log
+
+# ===== VS Code =====
+.vscode/*
+# !.vscode/settings.json
+# !.vscode/launch.json
+# !.vscode/extensions.json
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== Temporary =====
+*.tmp
+*.bak
+*.swp
+
+# ===== Archives =====
+*.zip
+*.tar
+*.gz
+
+# ===== Toolchain / downloads =====
+# tools/
+dist/
+downloads/
+
+# ===== Coverage / debug =====
+*.gcda
+*.gcno
+*.gcov
+
+# ===== C/C++ =====
+*.o
+*.a
+*.so
+
+# ===== Optional: local secrets =====
+# (jeśli będziesz trzymał WiFi itp.)
+secrets.h
+wifi_config.h

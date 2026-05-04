@@ -1,0 +1,161 @@
+/* ════════════════════════════════════════════════
+   ATLASCUBE — events.css
+   ════════════════════════════════════════════════ */
+
+.card--wide {
+    width: 440px;
+    max-width: calc(100vw - 24px);
+}
+
+.ev-form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+}
+
+.ev-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px 14px;
+}
+
+.ev-grid .field-group {
+    margin: 0;
+}
+
+.ev-form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+}
+
+#ev_save_btn {
+    padding: 10px 18px;
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    color: #fff;
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+#ev_save_btn:hover:not(:disabled) {
+    background: var(--accent-dim);
+    border-color: var(--accent-dim);
+}
+#ev_save_btn:disabled {
+    background: var(--border);
+    border-color: var(--border);
+    cursor: not-allowed;
+}
+
+/* ─── Lista ─── */
+
+.ev-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-top: 6px;
+}
+
+.ev-list::-webkit-scrollbar       { width: 4px; }
+.ev-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.ev-row {
+    display: grid;
+    grid-template-columns: 36px 1fr auto auto auto auto;
+    gap: 8px;
+    align-items: center;
+    background: var(--bg-station);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    transition: background .15s, border-color .15s, opacity .15s;
+}
+
+.ev-row.disabled {
+    opacity: .5;
+}
+
+.ev-icon {
+    text-align: center;
+    font-size: 20px;
+}
+
+.ev-info {
+    min-width: 0;
+}
+
+.ev-title {
+    color: var(--text);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ev-meta {
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+.ev-tag {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+}
+
+.ev-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: var(--radius-sm);
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+}
+.ev-btn:hover {
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
+}
+.ev-btn.danger:hover {
+    background: var(--red);
+    border-color: var(--red);
+}
+
+@media (max-width: 520px) {
+    .ev-grid { grid-template-columns: 1fr; }
+    .ev-row {
+        grid-template-columns: 36px 1fr auto auto;
+        grid-template-areas:
+            "icon title edit del"
+            "icon meta  tag  tag";
+        row-gap: 4px;
+    }
+    .ev-icon  { grid-area: icon; }
+    .ev-info  { grid-area: title; }
+    .ev-meta  { grid-area: meta; }
+    .ev-tag   { grid-area: tag; justify-self: end; }
+}

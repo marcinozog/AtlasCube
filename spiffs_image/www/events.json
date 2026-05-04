@@ -1,0 +1,18 @@
+{
+    "events":
+    [
+        {
+            "id":"e45203ba",
+            "type":"reminder",
+            "title":"Test",
+            "year":2026,
+            "month":4,
+            "day":21,
+            "hour":20,
+            "minute":58,
+            "all_day":false,
+            "recurrence":"none",
+            "enabled":true
+        }
+    ]
+}

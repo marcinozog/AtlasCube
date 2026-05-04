@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AtlasCube</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ═══════════════════════ HEADER ═══════════════════════ -->
+<header class="app-header">
+    <div class="logo">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text">ATLAS <span class="logo-accent">CUBE</span></span>
+    </div>
+</header>
+
+<!-- ═══════════════════════ CARD ═══════════════════════ -->
+<main class="card">
+
+    <!-- ── Device Screen ── -->
+    <section class="panel">
+        <div class="panel-label">DEVICE SCREEN</div>
+        <div class="screen-switcher">
+            <button onclick="setScreen('clock')">🕐 Clock</button>
+            <button onclick="setScreen('radio')">📻 Radio</button>
+            <button onclick="setScreen('bt')">🔵 BT</button>
+        </div>
+    </section>
+
+    <!-- ── Now Playing ── -->
+    <section class="now-playing">
+        <div class="np-inner">
+            <div id="station_name" class="station-name">---</div>
+            <div id="title"        class="track-title">---</div>
+            <div id="audio_info"   class="audio-info">---</div>
+        </div>
+        <div id="status" class="status-badge">⏹ Stopped</div>
+    </section>
+
+    <!-- ── Volume ── -->
+    <section class="panel">
+        <div class="slider-row">
+            <span class="slider-label">🔊 Volume</span>
+            <span id="vol_value" class="slider-value">50</span>
+        </div>
+        <input type="range" min="0" max="100" value="50"
+               id="volume_slider" oninput="onVolumeChange(this.value)" />
+    </section>
+
+    <!-- ── Play Button ── -->
+    <button id="play_btn" class="btn-play" onclick="playCurrent()">▶ Play</button>
+
+    <!-- ── Stations ── -->
+    <section class="panel">
+        <div class="panel-label">📻 STATIONS</div>
+        <div id="stations" class="stations-list"></div>
+    </section>
+
+    <!-- ── Bluetooth ── -->
+    <section class="panel">
+        <div class="panel-label panel-label--row">
+            BLUETOOTH
+            <span id="bt_status" class="bt-status">⬤ disconnected</span>
+        </div>
+        <div class="screen-switcher">
+            <button class="bt-toggle-btn" id="bt_toggle_btn" onclick="toggleBtMode()">⚪ BT OFF</button>
+        </div>
+        <!-- BT Volume -->
+        <div class="panel" style="margin-top: 10px;">
+            <div class="slider-row">
+                <span class="slider-label">📶 BT Volume</span>
+                <span id="bt_vol_value" class="slider-value">8</span>
+            </div>
+            <input type="range" min="0" max="100" value="30"
+                   id="bt_volume_slider" oninput="onBtVolumeChange(this.value)" />
+        </div>
+    </section>
+
+    <!-- ── Toolbar ── -->
+    <div class="toolbar">
+        <button class="tool-btn" onclick="openEq()">🎛 EQ</button>
+        <button class="tool-btn" id="bt_console" onclick="openBtConsole()">⚪ BT Console</button>
+        <a href="/playlist.html" class="tool-btn tool-link">📻 Playlist</a>
+        <a href="/events.html" class="tool-btn tool-link">🗓 Events</a>
+        <a href="/settings.html" class="tool-btn tool-link">⚙ Settings</a>
+    </div>
+
+</main>
+
+<!-- ═══════════════════════ MODAL: EQUALIZER ═══════════════════════ -->
+<div id="eq_modal" class="modal hidden" onclick="onModalBgClick(event,'eq_modal')">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="modal-title">🎛 Equalizer</span>
+            <button class="modal-close" onclick="closeEq()">✕</button>
+        </div>
+        <canvas id="eq_canvas" width="320" height="120"></canvas>
+        <div class="eq-wrapper">
+            <div id="eq_bands"></div>
+            <div class="eq-scale">
+                <span>+13</span>
+                <span>0</span>
+                <span>−13</span>
+            </div>
+        </div>
+        <div class="eq-footer">
+            <button class="btn-secondary" onclick="resetEQ()">↺ Reset</button>
+            <button class="btn-secondary" onclick="closeEq()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════ MODAL: BT CONSOLE ═══════════════════════ -->
+<div id="bt_modal" class="modal hidden" onclick="onModalBgClick(event,'bt_modal')">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="modal-title">🔵 Bluetooth</span>
+            <div style="display:flex;gap:8px;align-items:center">
+                <!-- <button class="bt-toggle-btn" id="bt_toggle_btn" onclick="toggleBtMode()">⚪ BT OFF</button> -->
+                <button class="modal-close" onclick="closeBtConsole()">✕</button>
+            </div>
+        </div>
+
+        <!-- BT Volume -->
+        <div class="panel">
+            <div class="slider-row">
+                <span class="slider-label">📶 BT Volume</span>
+                <span id="bt_vol_value" class="slider-value">8</span>
+            </div>
+            <input type="range" min="0" max="15" value="8"
+                   id="bt_volume_slider" oninput="onBtVolumeChange(this.value)" />
+        </div>
+
+        <!-- BT Log -->
+        <div class="panel-label" style="margin-top:12px">CONSOLE</div>
+        <pre id="bt_log" class="bt-log"></pre>
+
+        <!-- BT Send -->
+        <div class="bt-send-row">
+            <input id="bt_input" class="bt-input" placeholder="AT+STATE" />
+            <button class="btn-secondary btn-send" onclick="sendBt()">Send</button>
+        </div>
+    </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

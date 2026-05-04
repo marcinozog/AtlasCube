@@ -1,0 +1,22 @@
+{
+  "dark":
+  {
+    "bg_primary":"#0D0D1A",
+    "bg_secondary":"#1A1A2E",
+    "text_primary":"#FFFFFF",
+    "text_secondary":"#A8A8B3",
+    "text_muted":"#505060",
+    "accent":"#E94560",
+    "bt_brand":"#0082FC",
+    "status_ok":"#00C853"},
+  "light":
+  {
+    "bg_primary":"#F4F4F8",
+    "bg_secondary":"#E4E4EC",
+    "text_primary":"#0D0D1A",
+    "text_secondary":"#484860",
+    "text_muted":"#8888A0",
+    "accent":"#C4243E",
+    "bt_brand":"#0066CC",
+    "status_ok":"#1B8E3A"}
+}

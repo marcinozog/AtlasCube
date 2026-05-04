@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AtlasCube – Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="app-header">
+    <div class="logo">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text">ATLAS <span class="logo-accent">CUBE</span></span>
+    </div>
+</header>
+
+<main class="card">
+    <a href="/" class="back-link">← Back to Radio</a>
+
+    <!-- ══════════════════════════════════════════
+         Display
+    ══════════════════════════════════════════ -->
+    <div class="section-title">🖥️ Display</div>
+
+    <div class="panel">
+        <label class="field-label">Theme</label>
+        <div class="theme-toggle" id="themeToggle" style="width:fit-content">
+            <button class="theme-btn" id="settingsBtnDark"  onclick="setDeviceTheme('dark')">🌙 Dark</button>
+            <button class="theme-btn" id="settingsBtnLight" onclick="setDeviceTheme('light')">☀️ Light</button>
+        </div>
+    </div>
+
+    <!-- Brightness -->
+    <div class="panel">
+        <div class="slider-row">
+            <span class="slider-label">☀️ Brightness</span>
+            <span id="disp_bright_value" class="slider-value">80</span>
+        </div>
+        <input type="range" min="0" max="100" value="80"
+                id="disp_bright_slider" oninput="setDisplayBrightness(this.value)" />
+    </div>
+
+    <div class="panel">
+        <label class="field-label">Show/hide Bluetooth screen</label>
+        <div class="theme-toggle" id="btScreenToggle" style="width:fit-content">
+            <button class="theme-btn" id="settingsBtnBTshow" onclick="setDeviceBTScreen(true)">✅ Show</button>
+            <button class="theme-btn" id="settingsBtnBThide" onclick="setDeviceBTScreen(false)">❌ Hide</button>
+        </div>
+    </div>
+
+    <div class="panel">
+        <label class="field-label">Screen layout editor</label>
+        <a href="/layout.html" class="tool-btn tool-link" style="width:fit-content;padding:8px 14px">🖼️ Open Layout Editor</a>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         Audio
+    ══════════════════════════════════════════ -->
+    <div class="section-gap"></div>
+    <div class="section-title">🎚️ Audio</div>
+
+    <div class="panel">
+        <label class="field-label">Equalizer (DSP)</label>
+        <div class="theme-toggle" id="dspToggle" style="width:fit-content">
+            <button class="theme-btn" id="settingsBtnDspOn"  onclick="setDeviceEqEnabled(true)">✅ On</button>
+            <button class="theme-btn" id="settingsBtnDspOff" onclick="setDeviceEqEnabled(false)">❌ Off</button>
+        </div>
+        <div class="field-hint">When off, the 10-band EQ is bypassed entirely. Volume is unaffected.</div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         Colors (custom palettes)
+    ══════════════════════════════════════════ -->
+    <div class="section-gap"></div>
+    <div class="section-title">🎨 Colors</div>
+
+    <div class="field-group">
+        <label class="field-label">Editing palette</label>
+        <div class="theme-toggle" style="width:fit-content">
+            <button class="theme-btn active" id="palTabDark"  onclick="selectPaletteTab('dark')">🌙 Dark</button>
+            <button class="theme-btn"        id="palTabLight" onclick="selectPaletteTab('light')">☀️ Light</button>
+        </div>
+        <div class="field-hint">Changes apply instantly on the device display.</div>
+    </div>
+
+    <div class="panel">
+        <div id="colorGrid"></div>
+        <div class="color-actions">
+            <button id="colors_save_btn" onclick="saveColors()">💾 Save palette</button>
+            <button id="colors_reset_btn" class="btn-secondary" onclick="resetColors()">↺ Reset to defaults</button>
+        </div>
+        <div id="colors_status" class="save-status"></div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
+         WiFi
+    ══════════════════════════════════════════ -->
+    <div class="section-gap"></div>
+    <div class="section-title">📡 WiFi</div>
+
+    <div id="wifi_mode_banner" class="wifi-banner hidden"></div>
+
+    <div class="field-group">
+        <label class="field-label">Network SSID</label>
+        <input type="text" id="wifi_ssid" class="field-input"
+               placeholder="Nazwa sieci WiFi" autocomplete="off" />
+    </div>
+    <div class="field-group">
+        <label class="field-label">Password</label>
+        <div class="pw-row">
+            <input type="password" id="wifi_password" class="field-input"
+                   placeholder="••••••••" autocomplete="new-password" />
+            <button class="pw-eye" id="pw_eye" onclick="togglePwVisibility()" title="Show/hide">👁</button>
+        </div>
+        <div class="field-hint">Leave blank to keep the existing password.</div>
+    </div>
+
+    <button id="wifi_save_btn" class="wifi-save-btn" onclick="saveWifi()">
+        📡 Save WiFi and restart
+    </button>
+    <div id="wifi_status" class="save-status"></div>
+
+    <!-- ══════════════════════════════════════════
+         NTP
+    ══════════════════════════════════════════ -->
+    <div class="section-gap"></div>
+    <div class="section-title">🕐 NTP / Time Sync</div>
+
+    <div class="field-group">
+        <label class="field-label">NTP Server 1</label>
+        <input type="text" id="ntp_server1" class="field-input" placeholder="pool.ntp.org" />
+    </div>
+    <div class="field-group">
+        <label class="field-label">NTP Server 2 (fallback)</label>
+        <input type="text" id="ntp_server2" class="field-input" placeholder="time.cloudflare.com" />
+    </div>
+    <div class="field-group">
+        <label class="field-label">Timezone preset</label>
+        <select id="tz_preset" class="field-input" onchange="onTzPreset(this.value)">
+            <option value="">— select preset —</option>
+            <optgroup label="Europe">
+                <option value="UTC0">UTC</option>
+                <option value="WET0WEST,M3.5.0/1,M10.5.0">WET/WEST – Western Europe (UK, PT)</option>
+                <option value="CET-1CEST,M3.5.0,M10.5.0/3">CET/CEST – Central Europe (PL, DE, FR…)</option>
+                <option value="EET-2EEST,M3.5.0/3,M10.5.0/4">EET/EEST – Eastern Europe (UA, GR, FI…)</option>
+                <option value="MSK-3">MSK – Moscow</option>
+            </optgroup>
+            <optgroup label="Americas">
+                <option value="EST5EDT,M3.2.0,M11.1.0">EST/EDT – US Eastern</option>
+                <option value="CST6CDT,M3.2.0,M11.1.0">CST/CDT – US Central</option>
+                <option value="MST7MDT,M3.2.0,M11.1.0">MST/MDT – US Mountain</option>
+                <option value="PST8PDT,M3.2.0,M11.1.0">PST/PDT – US Pacific</option>
+                <option value="BRT3">BRT – Brazil (São Paulo)</option>
+            </optgroup>
+            <optgroup label="Asia / Pacific">
+                <option value="IST-5:30">IST – India</option>
+                <option value="CST-8">CST – China / Singapore</option>
+                <option value="JST-9">JST – Japan / Korea</option>
+                <option value="AEST-10AEDT,M10.1.0,M4.1.0/3">AEST/AEDT – Eastern Australia</option>
+            </optgroup>
+        </select>
+    </div>
+    <div class="field-group">
+        <label class="field-label">Timezone (POSIX string)</label>
+        <input type="text" id="ntp_tz" class="field-input"
+               placeholder="CET-1CEST,M3.5.0,M10.5.0/3"
+               oninput="onTzManualEdit()" />
+        <div class="field-hint">Max 63 chars. Select a preset or type manually.</div>
+        <div class="field-hint" style="margin-top:6px;color:var(--accent)">
+            ⚠ Changing the timezone while events are scheduled may cause an already-fired
+            event to trigger again (or a due event to be skipped) if the local date shifts.
+            Set your timezone once during initial setup and avoid changing it later.
+        </div>
+    </div>
+
+    <button id="save_btn" onclick="saveSettings()">💾 Save &amp; Apply</button>
+    <div id="save_status" class="save-status"></div>
+
+</main>
+
+<script src="settings.js"></script>
+</body>
+</html>

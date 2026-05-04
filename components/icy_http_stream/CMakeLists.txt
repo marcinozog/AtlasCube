@@ -1,0 +1,10 @@
+idf_component_register(
+    SRCS
+        "icy_http_stream.c"
+    INCLUDE_DIRS
+        "include"
+    REQUIRES
+        audio_pipeline
+        esp_http_client
+        esp-tls
+)

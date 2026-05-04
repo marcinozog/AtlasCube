@@ -1,0 +1,29 @@
+{
+  "audio": {
+    "volume": 20,
+    "eq": [-13, -5, -2, 0, 0, 4, 8, 9, 9, 9],
+    "eq_enabled": true
+  },
+  "playlist": {
+    "curr_index": 0
+  },
+  "display": {
+    "screen": 3,
+    "brightness": 100,
+    "theme": "dark"
+  },
+  "bluetooth": {
+    "enable": false,
+    "show_screen": true,
+    "volume": 20
+  },
+  "ntp": {
+    "server1": "pool.ntp.org",
+    "server2": "time.cloudflare.com",
+    "tz": "CET-1CEST,M3.5.0,M10.5.0/3"
+  },
+  "wifi": {
+    "ssid": "",
+    "password": ""
+  }
+}
