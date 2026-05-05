@@ -17,9 +17,32 @@ static const char *TAG = "SCR_PLAYLIST";
 static lv_obj_t *s_root     = NULL;
 static lv_obj_t *s_list     = NULL;    // scrollable container
 static lv_obj_t *s_header_label = NULL;
-static int       s_selected = 0;       // kursor enkodera
-static int       s_playing  = -1;      // aktualnie odtwarzana stacja
+static int       s_selected = 0;       // kursor enkodera (display index)
+static int       s_playing  = -1;      // aktualnie odtwarzana stacja (display index)
 static int       s_count    = 0;
+// Maps display position → real playlist index. Favorites first, original order
+// preserved within each group. Real indices stay stable so app_state.curr_index
+// and radio_play_index() can keep operating on the underlying playlist.
+static int       s_order[PLAYLIST_MAX_ENTRIES];
+
+static int real_to_display(int real_idx)
+{
+    for (int i = 0; i < s_count; i++) if (s_order[i] == real_idx) return i;
+    return -1;
+}
+
+static void build_order(void)
+{
+    int n = 0;
+    for (int i = 0; i < s_count; i++) {
+        const playlist_entry_t *e = playlist_get(i);
+        if (e && e->favorite) s_order[n++] = i;
+    }
+    for (int i = 0; i < s_count; i++) {
+        const playlist_entry_t *e = playlist_get(i);
+        if (e && !e->favorite) s_order[n++] = i;
+    }
+}
 
 // --------------------------------------------------------------------------
 // Helpers
@@ -82,6 +105,7 @@ static void playlist_create(lv_obj_t *parent)
 {
     s_root  = parent;
     s_count = playlist_get_count();
+    build_order();
 
     const ui_theme_colors_t *th = theme_get();
     const ui_profile_t      *p  = ui_profile_get();
@@ -129,7 +153,7 @@ static void playlist_create(lv_obj_t *parent)
 
     // ----- Items -----
     for (int i = 0; i < s_count; i++) {
-        const playlist_entry_t *e = playlist_get(i);
+        const playlist_entry_t *e = playlist_get(s_order[i]);
         if (!e) continue;
 
         lv_obj_t *row = lv_obj_create(s_list);
@@ -144,7 +168,9 @@ static void playlist_create(lv_obj_t *parent)
         lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
 
         lv_obj_t *lbl = lv_label_create(row);
-        lv_label_set_text_fmt(lbl, "%2d. %s", i + 1, e->name);
+        // '*' prefix marks favorites; constant width keeps numbers aligned.
+        lv_label_set_text_fmt(lbl, "%c%2d. %s",
+                              e->favorite ? '*' : ' ', i + 1, e->name);
         lv_label_set_long_mode(lbl, LV_LABEL_LONG_CLIP);
         lv_obj_set_width(lbl, p->playlist_row_label_w);
         lv_obj_set_style_text_font(lbl, p->playlist_row_font, LV_PART_MAIN);
@@ -152,13 +178,13 @@ static void playlist_create(lv_obj_t *parent)
         lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 0, 0);
     }
 
-    // Return to the last selected station (curr_index from app_state)
-    int curr = app_state_get()->curr_index;
-    if (curr < 0 || curr >= s_count) curr = 0;
-    s_playing  = (app_state_get()->curr_index >= 0 && app_state_get()->curr_index < s_count)
-                 ? app_state_get()->curr_index : -1;
-    s_selected = curr;   // no animation — set first, then highlight
-    highlight_item(curr);
+    // Return to the last selected station (curr_index from app_state lives in
+    // real-index space — translate to display position).
+    int curr_real = app_state_get()->curr_index;
+    int curr_disp = (curr_real >= 0 && curr_real < s_count) ? real_to_display(curr_real) : -1;
+    s_playing  = curr_disp;
+    s_selected = (curr_disp >= 0) ? curr_disp : 0;
+    highlight_item(s_selected);
 
     ESP_LOGI(TAG, "Created, %d stations, selected=%d", s_count, s_selected);
 }
@@ -201,11 +227,12 @@ static void playlist_on_input(ui_input_t input)
         case UI_INPUT_ENCODER_PRESS:
             app_state_t *s = app_state_get();
             // Play the selected station and return to radio
-            if (s_selected >= 0 && s_selected < s_count && 
-                (s_selected != s->curr_index || s->radio_state != RADIO_STATE_PLAYING))
-            {
-                ESP_LOGI(TAG, "Play index %d", s_selected);
-                radio_play_index(s_selected);
+            if (s_selected >= 0 && s_selected < s_count) {
+                int real_idx = s_order[s_selected];
+                if (real_idx != s->curr_index || s->radio_state != RADIO_STATE_PLAYING) {
+                    ESP_LOGI(TAG, "Play display=%d real=%d", s_selected, real_idx);
+                    radio_play_index(real_idx);
+                }
             }
 
             if(s->bt_enable)

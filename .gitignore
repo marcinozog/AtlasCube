@@ -1,7 +1,5 @@
 spiffs_image/web
 TMP
-.claude
-.clangd
 
 # ===== Build artifacts =====
 build/
@@ -12,6 +10,7 @@ sdkconfig.old
 *.elf
 *.map
 *.hex
+.clangd
 
 # ===== CMake =====
 CMakeFiles/
@@ -39,6 +38,7 @@ flasher_args.json
 
 # ===== VS Code =====
 .vscode/*
+.claude
 # !.vscode/settings.json
 # !.vscode/launch.json
 # !.vscode/extensions.json

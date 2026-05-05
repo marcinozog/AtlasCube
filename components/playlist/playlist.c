@@ -29,22 +29,26 @@ esp_err_t playlist_load(void)
         line[strcspn(line, "\r\n")] = 0;
         if (line[0] == 0) continue;
 
-        // format: name\turl[\tselected]
+        // format: name\turl[\tfavorite]   (favorite: '0' or '1')
         char *tab1 = strchr(line, '\t');
         if (!tab1) continue;
 
         *tab1 = 0;
         char *url_start = tab1 + 1;
 
-        // optional third column — truncate at second tab
         char *tab2 = strchr(url_start, '\t');
-        if (tab2) *tab2 = 0;
+        char *flag_start = NULL;
+        if (tab2) {
+            *tab2 = 0;
+            flag_start = tab2 + 1;
+        }
 
         strncpy(s_entries[s_count].name, line,      PLAYLIST_NAME_LEN - 1);
         strncpy(s_entries[s_count].url,  url_start, PLAYLIST_URL_LEN  - 1);
 
         s_entries[s_count].name[PLAYLIST_NAME_LEN - 1] = 0;
         s_entries[s_count].url [PLAYLIST_URL_LEN  - 1] = 0;
+        s_entries[s_count].favorite = (flag_start && flag_start[0] == '1');
 
         // ESP_LOGI(TAG, "[%d] %s → %s", s_count, s_entries[s_count].name, s_entries[s_count].url);
         s_count++;

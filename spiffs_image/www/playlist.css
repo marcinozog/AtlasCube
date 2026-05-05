@@ -49,7 +49,7 @@
 
 .pl-row {
     display: grid;
-    grid-template-columns: 22px 28px 1fr 2fr 28px;
+    grid-template-columns: 22px 28px 24px 1fr 2fr 28px;
     gap: 6px;
     align-items: center;
     background: var(--bg-station);
@@ -118,11 +118,43 @@
     border-color: var(--red);
 }
 
+.pl-fav {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+    user-select: none;
+}
+.pl-fav:hover    { color: var(--accent); }
+.pl-fav.on       { color: var(--accent); }
+
 .pl-actions {
     display: flex;
     gap: 8px;
     margin-top: 14px;
     flex-wrap: wrap;
+    align-items: center;
+}
+
+.pl-download {
+    margin-left: auto;
+    padding: 8px 14px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-dim);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 13px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+}
+.pl-download:hover {
+    color: var(--accent);
+    border-color: var(--accent);
 }
 
 .pl-meta {
@@ -134,13 +166,14 @@
 
 @media (max-width: 520px) {
     .pl-row {
-        grid-template-columns: 22px 1fr 28px;
+        grid-template-columns: 22px 24px 1fr 28px;
         grid-template-areas:
-            "grip name del"
-            "idx  url  url";
+            "grip fav  name del"
+            "idx  idx  url  url";
         row-gap: 4px;
     }
     .pl-grip  { grid-area: grip; }
+    .pl-fav   { grid-area: fav; }
     .pl-index { grid-area: idx; text-align: left; }
     .pl-del   { grid-area: del; }
     .pl-row input.name { grid-area: name; }

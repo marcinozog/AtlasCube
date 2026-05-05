@@ -8,7 +8,7 @@ const PL_MAX      = 64;
 const PL_NAME_MAX = 63;
 const PL_URL_MAX  = 255;
 
-let stations = [];   // [{name, url}, ...]
+let stations = [];   // [{name, url, favorite}, ...]
 let dragIdx  = -1;   // index of the row being dragged
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -23,7 +23,14 @@ async function plLoad() {
         setStatus('Failed to load playlist', 'error');
         stations = [];
     }
+    sortFavoritesFirst();
     render();
+}
+
+// Stable sort: favorites first, original order preserved within each group.
+// Called after any operation that may have placed a favorite below a non-favorite.
+function sortFavoritesFirst() {
+    stations.sort((a, b) => (b.favorite ? 1 : 0) - (a.favorite ? 1 : 0));
 }
 
 async function plSave() {
@@ -32,7 +39,11 @@ async function plSave() {
 
     // Client-side validation
     const clean = stations
-        .map(s => ({ name: (s.name || '').trim(), url: (s.url || '').trim() }))
+        .map(s => ({
+            name:     (s.name || '').trim(),
+            url:      (s.url  || '').trim(),
+            favorite: !!s.favorite,
+        }))
         .filter(s => s.name && s.url);
 
     if (clean.length === 0) {
@@ -88,8 +99,9 @@ function setStatus(text, cls) {
 function syncFromDom() {
     const rows = document.querySelectorAll('#pl_list .pl-row');
     stations = Array.from(rows).map(row => ({
-        name: row.querySelector('input.name').value,
-        url:  row.querySelector('input.url').value,
+        name:     row.querySelector('input.name').value,
+        url:      row.querySelector('input.url').value,
+        favorite: row.dataset.fav === '1',
     }));
 }
 
@@ -115,10 +127,14 @@ function makeRow(st, idx) {
     row.className = 'pl-row';
     row.draggable = true;
     row.dataset.idx = idx;
+    const fav = !!st.favorite;
+    row.dataset.fav = fav ? '1' : '0';
 
     row.innerHTML = `
         <span class="pl-grip" title="Drag to reorder">⠿</span>
         <span class="pl-index">${idx + 1}.</span>
+        <button class="pl-fav${fav ? ' on' : ''}" title="Mark as favorite"
+                onclick="plToggleFav(this)">${fav ? '★' : '☆'}</button>
         <input type="text" class="name" placeholder="Station name"
                maxlength="${PL_NAME_MAX}" value="${escapeAttr(st.name || '')}" />
         <input type="text" class="url"  placeholder="https://…"
@@ -149,7 +165,7 @@ function plAddRow() {
         setStatus(`Max ${PL_MAX} stations reached`, 'error');
         return;
     }
-    stations.push({ name: '', url: '' });
+    stations.push({ name: '', url: '', favorite: false });
     render();
     // Focus the new name field
     const rows = document.querySelectorAll('#pl_list .pl-row');
@@ -165,6 +181,71 @@ function plDelRow(btn) {
     const idx = parseInt(row.dataset.idx, 10);
     syncFromDom();
     stations.splice(idx, 1);
+    render();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Import — replaces the current list (in the editor only; user must Save)
+// ─────────────────────────────────────────────────────────────────────────────
+async function plImport(input) {
+    const file = input.files && input.files[0];
+    input.value = '';   // allow re-importing the same file later
+    if (!file) return;
+
+    let text;
+    try {
+        text = await file.text();
+    } catch (e) {
+        setStatus('Failed to read file: ' + e.message, 'error');
+        return;
+    }
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);   // strip BOM
+
+    const parsed = [];
+    let skipped  = 0;
+    for (const raw of text.split(/\r?\n/)) {
+        const line = raw.trim();
+        if (!line) continue;
+        const cols = line.split('\t');
+        if (cols.length < 2 || !cols[0].trim() || !cols[1].trim()) { skipped++; continue; }
+        parsed.push({
+            name:     cols[0].trim().slice(0, PL_NAME_MAX),
+            url:      cols[1].trim().slice(0, PL_URL_MAX),
+            favorite: cols.length > 2 && cols[2].trim() === '1',
+        });
+    }
+
+    if (parsed.length === 0) {
+        setStatus('No valid stations found (expected name\\turl per line)', 'error');
+        return;
+    }
+
+    let truncated = 0;
+    if (parsed.length > PL_MAX) {
+        truncated = parsed.length - PL_MAX;
+        parsed.length = PL_MAX;
+    }
+
+    if (!confirm(`Replace current list with ${parsed.length} stations from "${file.name}"?`)) {
+        return;
+    }
+
+    stations = parsed;
+    sortFavoritesFirst();
+    render();
+
+    let msg = `✓ Imported ${parsed.length} stations — review and Save to apply`;
+    if (skipped)   msg += ` (${skipped} invalid lines skipped)`;
+    if (truncated) msg += ` (${truncated} extra lines dropped, max ${PL_MAX})`;
+    setStatus(msg, 'ok');
+}
+
+function plToggleFav(btn) {
+    const row = btn.closest('.pl-row');
+    const idx = parseInt(row.dataset.idx, 10);
+    syncFromDom();
+    stations[idx].favorite = !stations[idx].favorite;
+    sortFavoritesFirst();
     render();
 }
 
@@ -221,6 +302,10 @@ function onDrop(e) {
     // Adjust if removal was before the target
     if (dragIdx < targetIdx) insertAt--;
     stations.splice(insertAt, 0, item);
+
+    // Keep favorites pinned to the top — drop within own group sticks,
+    // drop across groups gets clamped back into the correct group.
+    sortFavoritesFirst();
 
     clearDragHints();
     render();

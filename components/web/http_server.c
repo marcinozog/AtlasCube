@@ -389,6 +389,7 @@ static esp_err_t api_playlist_get_handler(httpd_req_t *req)
         cJSON *o = cJSON_CreateObject();
         cJSON_AddStringToObject(o, "name", e->name);
         cJSON_AddStringToObject(o, "url",  e->url);
+        cJSON_AddBoolToObject  (o, "favorite", e->favorite);
         cJSON_AddItemToArray(arr, o);
     }
 
@@ -399,6 +400,30 @@ static esp_err_t api_playlist_get_handler(httpd_req_t *req)
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
     httpd_resp_sendstr(req, str);
     free(str);
+    return ESP_OK;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/playlist.csv  — downloads the playlist in the on-disk format
+// (name\turl\t<0|1>\n). Reflects the last *saved* state, not unsaved edits.
+// ─────────────────────────────────────────────────────────────────────────────
+static esp_err_t api_playlist_csv_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "text/csv; charset=utf-8");
+    httpd_resp_set_hdr(req, "Content-Disposition",
+                      "attachment; filename=\"playlist.csv\"");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+
+    char line[PLAYLIST_NAME_LEN + PLAYLIST_URL_LEN + 8];
+    int n = playlist_get_count();
+    for (int i = 0; i < n; i++) {
+        const playlist_entry_t *e = playlist_get(i);
+        if (!e) continue;
+        int len = snprintf(line, sizeof(line), "%s\t%s\t%d\n",
+                           e->name, e->url, e->favorite ? 1 : 0);
+        if (len > 0) httpd_resp_send_chunk(req, line, len);
+    }
+    httpd_resp_send_chunk(req, NULL, 0);
     return ESP_OK;
 }
 
@@ -460,12 +485,14 @@ static esp_err_t api_playlist_post_handler(httpd_req_t *req)
         cJSON *item = cJSON_GetArrayItem(arr, i);
         cJSON *jn = cJSON_GetObjectItem(item, "name");
         cJSON *ju = cJSON_GetObjectItem(item, "url");
+        cJSON *jf = cJSON_GetObjectItem(item, "favorite");
         if (!cJSON_IsString(jn) || !cJSON_IsString(ju))       continue;
         if (jn->valuestring[0] == 0 || ju->valuestring[0] == 0) continue;
         // sanitize: no tabs or newlines in fields
         for (char *p = jn->valuestring; *p; p++) if (*p == '\t' || *p == '\r' || *p == '\n') *p = ' ';
         for (char *p = ju->valuestring; *p; p++) if (*p == '\t' || *p == '\r' || *p == '\n') *p = ' ';
-        fprintf(f, "%s\t%s\t0\n", jn->valuestring, ju->valuestring);
+        int fav = cJSON_IsTrue(jf) ? 1 : 0;
+        fprintf(f, "%s\t%s\t%d\n", jn->valuestring, ju->valuestring, fav);
     }
     fflush(f);
     fclose(f);
@@ -1122,6 +1149,13 @@ void http_server_start(void)
         .handler = api_playlist_post_handler,
     };
     httpd_register_uri_handler(server, &api_playlist_post);
+
+    httpd_uri_t api_playlist_csv = {
+        .uri     = "/api/playlist.csv",
+        .method  = HTTP_GET,
+        .handler = api_playlist_csv_handler,
+    };
+    httpd_register_uri_handler(server, &api_playlist_csv);
 
     // ── EVENTS ────────────────────────────────────────────────────────────────
     httpd_uri_t api_events_get = {

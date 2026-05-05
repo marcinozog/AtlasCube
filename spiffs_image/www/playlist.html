@@ -24,12 +24,18 @@
     <div class="section-title">📻 Playlist editor</div>
 
     <div class="panel">
-        <div class="pl-hint">Drag ⠿ to reorder. Max <span id="pl_max">64</span> stations.</div>
+        <div class="pl-hint">Drag ⠿ to reorder. Click ☆ to mark favorite (pinned to top). Max <span id="pl_max">64</span> stations.</div>
         <div id="pl_list" class="pl-list"></div>
 
         <div class="pl-actions">
             <button class="btn-secondary" onclick="plAddRow()">➕ Add station</button>
             <button id="pl_save_btn" onclick="plSave()">💾 Save &amp; Apply</button>
+            <button class="pl-download" onclick="document.getElementById('pl_import').click()"
+                    title="Replace current list with a CSV file">⬆ Import CSV</button>
+            <a class="pl-download" href="/api/playlist.csv" download="playlist.csv"
+               title="Download last saved playlist">⬇ Download CSV</a>
+            <input id="pl_import" type="file" accept=".csv,text/csv,text/plain"
+                   onchange="plImport(this)" hidden>
         </div>
         <div class="pl-meta">
             <span id="pl_count">0</span> / <span id="pl_max2">64</span> stations
