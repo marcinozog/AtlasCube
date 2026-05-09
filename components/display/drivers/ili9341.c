@@ -17,7 +17,7 @@ static const char *TAG = "ILI9341";
 #define LCD_BL_LEDC_RES      LEDC_TIMER_8_BIT   // 0–255
 
 static void backlight_init(void);
-void ili9341_set_backlight(uint8_t brightness);
+void display_set_backlight(uint8_t brightness);
 
 static spi_device_handle_t spi;
 
@@ -31,19 +31,19 @@ static void spi_init(void)
         .mosi_io_num = LCD_PIN_MOSI,
         .miso_io_num = -1,
         .sclk_io_num = LCD_PIN_CLK,
-        .max_transfer_sz = LCD_WIDTH * LCD_HEIGHT * 2 + 8
+        .max_transfer_sz = DISPLAY_WIDTH * DISPLAY_HEIGHT * 2 + 8
     };
 
-    ESP_ERROR_CHECK(spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
+    ESP_ERROR_CHECK(spi_bus_initialize(DISPLAY_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
     spi_device_interface_config_t devcfg = {
-        .clock_speed_hz = 40 * 1000 * 1000,
+        .clock_speed_hz = DISPLAY_CLK_SPEED,
         .mode = 0,
         .spics_io_num = LCD_PIN_CS,
         .queue_size = 7,
     };
 
-    ESP_ERROR_CHECK(spi_bus_add_device(LCD_HOST, &devcfg, &spi));
+    ESP_ERROR_CHECK(spi_bus_add_device(DISPLAY_HOST, &devcfg, &spi));
 
     gpio_set_direction(LCD_PIN_DC, GPIO_MODE_OUTPUT);
     gpio_set_direction(LCD_PIN_RST, GPIO_MODE_OUTPUT);
@@ -239,7 +239,7 @@ void ili9341_init(void)
     /* LVGL buffer */
     static lv_color_t *buf = NULL;
 
-    buf = heap_caps_malloc(LCD_WIDTH * LVGL_BUF_LINES * sizeof(lv_color_t),
+    buf = heap_caps_malloc(DISPLAY_WIDTH * LVGL_BUF_LINES * sizeof(lv_color_t),
                            MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
 
     if (!buf) {
@@ -248,7 +248,7 @@ void ili9341_init(void)
     }
 
     /* LVGL display */
-    lv_display_t *disp = lv_display_create(LCD_WIDTH, LCD_HEIGHT);
+    lv_display_t *disp = lv_display_create(DISPLAY_WIDTH, DISPLAY_HEIGHT);
     // lv_display_set_color_format(disp, LV_COLOR_FORMAT_RGB565_SWAP);
     lv_display_set_flush_cb(disp, my_flush_cb);
 
@@ -256,7 +256,7 @@ void ili9341_init(void)
         disp,
         buf,
         NULL,
-        LCD_WIDTH * LVGL_BUF_LINES,
+        DISPLAY_WIDTH * LVGL_BUF_LINES,
         LV_DISPLAY_RENDER_MODE_PARTIAL
     );
 
@@ -293,7 +293,7 @@ static void backlight_init(void)
  * @brief Set the LCD backlight brightness.
  * @param brightness  0 = off, 100 = full brightness
  */
-void ili9341_set_backlight(uint8_t brightness)
+void display_set_backlight(uint8_t brightness)
 {
     if (brightness > 100) brightness = 100;
     uint32_t duty = (brightness * 255) / 100;

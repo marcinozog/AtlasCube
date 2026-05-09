@@ -28,6 +28,9 @@ void display_init(void)
 #if CONFIG_DISPLAY_ILI9341
     extern void ili9341_init(void);
     ili9341_init();
+#elif CONFIG_DISPLAY_CO5300
+    extern void co5300_init(void);
+    co5300_init();
 #elif CONFIG_DISPLAY_ST7796
     extern void st7796_init(void);
     st7796_init();

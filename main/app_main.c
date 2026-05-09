@@ -1,24 +1,23 @@
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include "defines.h"
+// #include "freertos/FreeRTOS.h"
+// #include "freertos/task.h"
 #include "esp_log.h"
-#include "esp_timer.h"
+// #include "esp_timer.h"
 #include "esp_app_desc.h"
 #include "nvs_flash.h"
 #include "playlist.h"
 #include "audio_player.h"
 #include "http_server.h"
 #include "wifi_manager.h"
-#include "radio_service.h"
+// #include "radio_service.h"
 #include "ws_server.h"
 #include "esp_spiffs.h"
 #include "display.h"
 #include "settings.h"
-#include "app_state.h"
+// #include "app_state.h"
 #include "bt.h"
 #include "ntp_service.h"
-// #include "ui_events.h"
 #include "ui_manager.h"
-#include "defines.h"
 #include "encoder.h"
 #include "buzzer.h"
 #include "events_service.h"
@@ -42,7 +41,7 @@ void app_main(void)
     app_state_init();      // 1. initializes s_cbs[]
     bt_init();             // 2. no subscribe
     settings_init();       // 3. no subscribe
-    buzzer_init(BUZZER_GPIO);
+    buzzer_init(BUZZER_PIN);
     events_service_init();
     ui_profile_load_from_file();   // layout overrides — must run before display_init()
     display_init();        // 4. ui_manager_init() → subscribe #1

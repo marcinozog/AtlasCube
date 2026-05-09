@@ -7,6 +7,9 @@ choice DISPLAY_TYPE
 config DISPLAY_ILI9341
     bool "ILI9341"
 
+config DISPLAY_CO5300
+    bool "CO5300"
+
 config DISPLAY_ST7796
     bool "ST7796"
 

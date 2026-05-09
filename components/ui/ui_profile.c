@@ -1,3 +1,4 @@
+#include "defines.h"
 #include "ui_profile.h"
 #include "fonts/ui_fonts.h"
 #include "cJSON.h"
@@ -142,7 +143,140 @@ static const ui_profile_t k_defaults = {
     .wifi_hint_font            = &lv_font_montserrat_12_pl,
 };
 
-#else  // default: ILI9341 320x240
+#elif defined(UI_PROFILE_240X296)
+
+static const ui_profile_t k_defaults = {
+    .screen_w = 240,
+    .screen_h = 296,
+
+    // Clock Panel: Large clock on top, information bar underneath
+    .clock_panel_x             = 0,
+    .clock_panel_y             = 0,
+    .clock_panel_w             = 240,
+    .clock_panel_h             = 188,
+    .clock_strip_x             = 0,
+    .clock_strip_y             = 193,
+    .clock_strip_w             = 240,
+    .clock_strip_h             = 103,
+    .clock_strip_label_w       = 220,
+    .clock_strip_station_y     = 10,
+    .clock_strip_title_y       = 40,
+    .clock_strip_station_font  = &lv_font_montserrat_14_pl,
+    .clock_strip_title_font    = &lv_font_montserrat_12_pl,
+    .clock_time_x              = 60,  // Centering depends on the font, here a slight offset
+    .clock_time_y              = 45,
+    .clock_time_font           = &lv_font_montserrat_48, // Choose the largest available, e.g. 48 or 64
+    .clock_show_time           = true,
+    .clock_date_x              = 49,
+    .clock_date_y              = 128,
+    .clock_date_font           = &lv_font_montserrat_18_pl,
+    .clock_show_date           = true,
+    .clock_show_strip          = true,
+    .clock_show_mode_indicator = true,
+    .clock_show_event_indicator = true,
+
+    // Radio: Station info and large volume slider
+    .radio_state_y             = 80,
+    .radio_audio_info_y        = 20,
+    .radio_slider_w            = 180,
+    .radio_slider_h            = 12,
+    .radio_slider_y            = -60,
+    .radio_vol_label_y         = -35,
+    .radio_state_font          = &lv_font_montserrat_14_pl,
+    .radio_audio_info_font     = &lv_font_montserrat_12_pl,
+    .radio_vol_label_font      = &lv_font_montserrat_14_pl,
+    .radio_show_mode_indicator = true,
+    .radio_show_clock          = true,
+
+    // Playlist: We use the screen height for more list items
+    .playlist_header_h         = 30,
+    .playlist_item_h           = 34,
+    .playlist_item_pad         = 2,
+    .playlist_row_w            = 234,
+    .playlist_row_label_w      = 210,
+    .playlist_row_pad_left     = 10,
+    .playlist_header_font      = &lv_font_montserrat_14_pl,
+    .playlist_row_font         = &lv_font_montserrat_14_pl,
+
+    // Bluetooth: Icon in a circle and data below
+    .bt_circle_x               = 70,  // (240-100)/2
+    .bt_circle_y               = 40,
+    .bt_circle_w               = 100,
+    .bt_circle_h               = 100,
+    .bt_icon_font              = &lv_font_montserrat_48,
+    .bt_show_circle            = true,
+    .bt_brand_x                = 46,
+    .bt_brand_y                = 153,
+    .bt_brand_font             = &lv_font_montserrat_18_pl,
+    .bt_status_x               = 76,
+    .bt_status_y               = 190,
+    .bt_status_font            = &lv_font_montserrat_14_pl,
+    .bt_slider_x               = 30,
+    .bt_slider_y               = 230,
+    .bt_slider_w               = 180,
+    .bt_slider_h               = 10,
+    .bt_vol_label_x            = 95,
+    .bt_vol_label_y            = 255,
+    .bt_vol_label_font         = &lv_font_montserrat_14_pl,
+    .bt_show_mode_indicator    = true,
+    .bt_show_clock             = true,
+
+    // Settings
+    .settings_title_y          = 10,
+    .settings_row_w            = 220,
+    .settings_row_h            = 60,
+    .settings_row1_y           = 45,
+    .settings_row2_y           = 115,
+    .settings_row3_y           = 185,
+    .settings_slider_w         = 140,
+    .settings_slider_h         = 8,
+    .settings_hint_y           = -10,
+    .settings_title_font       = &lv_font_montserrat_14_pl,
+    .settings_row_font         = &lv_font_montserrat_14_pl,
+    .settings_value_font       = &lv_font_montserrat_14_pl,
+    .settings_hint_font        = &lv_font_montserrat_12_pl,
+
+    // Equalizer: Narrower bars to fit 10 bands in a 240 width
+    .eq_title_y                = 10,
+    .eq_info_y                 = 35,
+    .eq_band_area_y            = 70,
+    .eq_slider_h               = 160,
+    .eq_slider_w               = 6,
+    .eq_band_w                 = 22, // 240 / 10 bands = 24 max
+    .eq_hint_y                 = -8,
+    .eq_title_font             = &lv_font_montserrat_18_pl,
+    .eq_info_font              = &lv_font_montserrat_14_pl,
+    .eq_freq_font              = &lv_font_montserrat_12_pl, // Smaller font for frequency
+    .eq_hint_font              = &lv_font_montserrat_12_pl,
+
+    // Events
+    .events_header_h           = 30,
+    .events_item_h             = 50,
+    .events_item_pad           = 4,
+    .events_row_w              = 232,
+    .events_row_label_w        = 215,
+    .events_row_pad_hor        = 8,
+    .events_header_font        = &lv_font_montserrat_14_pl,
+    .events_title_font         = &lv_font_montserrat_14_pl,
+    .events_meta_font          = &lv_font_montserrat_12_pl,
+
+    // WiFi Card
+    .wifi_title_y              = 20,
+    .wifi_card_w               = 220,
+    .wifi_card_h               = 160,
+    .wifi_card_y               = 10,
+    .wifi_card_pad_hor         = 12,
+    .wifi_card_pad_ver         = 15,
+    .wifi_row2_y               = 45,
+    .wifi_row3_y               = 90,
+    .wifi_hint_y               = -15,
+    .wifi_title_font           = &lv_font_montserrat_18_pl,
+    .wifi_key_font             = &lv_font_montserrat_12_pl,
+    .wifi_value_font           = &lv_font_montserrat_14_pl,
+    .wifi_hint_font            = &lv_font_montserrat_12_pl,
+};
+
+#elif defined(UI_PROFILE_320x240)
 
 static const ui_profile_t k_defaults = {
     .screen_w = 320,
@@ -268,6 +402,8 @@ static const ui_profile_t k_defaults = {
     .wifi_hint_font            = &lv_font_montserrat_12_pl,
 };
 
+#else
+    #error "Unknown UI_PROFILE"
 #endif
 
 // Mutable runtime — copy of defaults at startup, overwritten from JSON / API.

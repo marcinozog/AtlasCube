@@ -1,3 +1,5 @@
+#include "sdkconfig.h"
+
 #define WEB_ROOT "/spiffs"
 #define SETTINGS_FILE "/spiffs/settings.json"
 #define PLAYLIST_FILE "/spiffs/data/playlist.csv"
@@ -5,7 +7,26 @@
 #define EVENTS_FILE "/spiffs/events.json"
 
 
+// ===== UI =====
+
+#define UI_PROFILE_240X296
+// #define UI_PROFILE_320x240
+// #define UI_PROFILE_MONO_128X64
+
+
 // ===== DISPLAY =====
+
+#define DISPLAY_WIDTH     240 //432 //320
+#define DISPLAY_HEIGHT    296 //502 //240
+
+#define DISPLAY_HOST      SPI2_HOST
+#define DISPLAY_CLK_SPEED   40000000
+
+/*
+Define display in the SDK Configuration Editor or manually in sdkconfig.defaults
+*/
+
+#if CONFIG_DISPLAY_ILI9341
 
 #define LCD_PIN_MOSI  11
 #define LCD_PIN_CLK   12
@@ -14,15 +35,25 @@
 #define LCD_PIN_RST   38
 #define LCD_LED       40
 
-#define LCD_HOST      SPI2_HOST
-#define LCD_WIDTH     320
-#define LCD_HEIGHT    240
+#elif CONFIG_DISPLAY_CO5300
+
+#define DISPLAY_PIN_CS      2
+#define DISPLAY_PIN_CLK     38
+#define DISPLAY_PIN_D0      39
+#define DISPLAY_PIN_D1      40
+#define DISPLAY_PIN_D2      41
+#define DISPLAY_PIN_D3      42
+#define DISPLAY_PIN_RST     1
+
+#else
+    #error "Unknown DISPLAY_TYPE"
+#endif
 
 
 
 // ===== I2S PCM5102A =====
 
-// defined in components\audio_board\esp32_s3_atlascube\board_def.h (ESP-ADF requirement)
+// Defined in components\audio_board\esp32_s3_atlascube\board_def.h (ESP-ADF requirement)
 
 // #define I2S_DATA        16 // GPIO_NUM_8
 // #define I2S_BCK         15 // GPIO_NUM_7
@@ -49,14 +80,14 @@
 
 // ===== ENCODER =====
 
-#define ENC_CLK         3
-#define ENC_DT          9
-#define ENC_BTN         10
+#define ENC_CLK_PIN         3
+#define ENC_DT_PIN          9
+#define ENC_BTN_PIN         10
 
 
 // ===== BUZZER =====
 
-#define BUZZER_GPIO     2
+#define BUZZER_PIN     6 //2
 
 
 // ===== WIFI =====

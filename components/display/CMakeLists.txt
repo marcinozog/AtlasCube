@@ -4,6 +4,10 @@ if(CONFIG_DISPLAY_ILI9341)
     list(APPEND DRIVERS "drivers/ili9341.c")
 endif()
 
+if(CONFIG_DISPLAY_CO5300)
+    list(APPEND DRIVERS "drivers/co5300.c")
+endif()
+
 if(CONFIG_DISPLAY_ST7796)
     list(APPEND DRIVERS "drivers/st7796.c")
 endif()

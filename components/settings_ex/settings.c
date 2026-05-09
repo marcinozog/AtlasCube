@@ -287,7 +287,7 @@ void settings_apply(void)
     bt_check_connection();
 
     ui_navigate(s_settings.display.screen);
-    ili9341_set_backlight(s_settings.display.brightness);
+    display_set_backlight(s_settings.display.brightness);
 
     app_state_patch_t patch = {
         .has_volume             = true, .volume    = s_settings.audio.volume,
@@ -356,7 +356,7 @@ void settings_set_brightness(int brightness)
 {
     s_settings.display.brightness = brightness;
     app_state_update(&(app_state_patch_t) {.has_display_brightness = true, .display_brightness = brightness});
-    ili9341_set_backlight(s_settings.display.brightness);
+    display_set_backlight(s_settings.display.brightness);
     save_to_file();
 }
 

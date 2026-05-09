@@ -221,6 +221,7 @@ Architecture and design notes in [`docs/`](docs/):
 - [`audio_pipeline.md`](docs/audio_pipeline.md) — streaming pipeline, DSP, TCP tuning, task affinity
 - [`events.md`](docs/events.md) — reminder/event system design
 - [`layout_editor.md`](docs/layout_editor.md) — UI layout customization
+- [`display_drivers.md`](docs/display_drivers.md) — display driver gotchas (QSPI AMOLED even-boundary, shared SPI mutex)
 
 ---
 
