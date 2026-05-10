@@ -46,6 +46,10 @@ typedef struct {
     bool             clock_show_strip;
     bool             clock_show_mode_indicator;
     bool             clock_show_event_indicator;
+    int16_t          clock_mode_indic_x;       // mode_indicator widget position
+    int16_t          clock_mode_indic_y;
+    int16_t          clock_event_indic_x;      // event_indicator widget position
+    int16_t          clock_event_indic_y;
 
     // screen_radio — absolute LCD coordinates (top-left origin)
     int16_t          radio_np_x;               // now-playing widget (station + title labels)
@@ -71,6 +75,10 @@ typedef struct {
 
     bool             radio_show_mode_indicator;
     bool             radio_show_clock;
+    int16_t          radio_mode_indic_x;
+    int16_t          radio_mode_indic_y;
+    int16_t          radio_clock_widget_x;
+    int16_t          radio_clock_widget_y;
 
     // screen_playlist
     int16_t          playlist_header_h;
@@ -113,6 +121,10 @@ typedef struct {
 
     bool             bt_show_mode_indicator;
     bool             bt_show_clock;
+    int16_t          bt_mode_indic_x;
+    int16_t          bt_mode_indic_y;
+    int16_t          bt_clock_widget_x;
+    int16_t          bt_clock_widget_y;
 
     // screen_settings
     int16_t          settings_title_y;

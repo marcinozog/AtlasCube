@@ -43,7 +43,11 @@ const CLOCK_FIELDS = [
     { key: 'clock_strip_title_font',      label: 'Title font',     type: 'font'   },
 
     { key: 'clock_show_mode_indicator',  label: 'Show mode indic.',  type: 'bool' },
+    { key: 'clock_mode_indic_x',         label: 'Mode indic. X',     type: 'number' },
+    { key: 'clock_mode_indic_y',         label: 'Mode indic. Y',     type: 'number' },
     { key: 'clock_show_event_indicator', label: 'Show event indic.', type: 'bool' },
+    { key: 'clock_event_indic_x',        label: 'Event indic. X',    type: 'number' },
+    { key: 'clock_event_indic_y',        label: 'Event indic. Y',    type: 'number' },
 ];
 
 const BT_FIELDS = [
@@ -72,7 +76,11 @@ const BT_FIELDS = [
     { key: 'bt_vol_label_font',  label: 'Vol label font', type: 'font'   },
 
     { key: 'bt_show_mode_indicator', label: 'Show mode indic.', type: 'bool' },
+    { key: 'bt_mode_indic_x',        label: 'Mode indic. X',    type: 'number' },
+    { key: 'bt_mode_indic_y',        label: 'Mode indic. Y',    type: 'number' },
     { key: 'bt_show_clock',          label: 'Show clock',       type: 'bool' },
+    { key: 'bt_clock_widget_x',      label: 'Clock X',          type: 'number' },
+    { key: 'bt_clock_widget_y',      label: 'Clock Y',          type: 'number' },
 ];
 
 const RADIO_FIELDS = [
@@ -98,7 +106,11 @@ const RADIO_FIELDS = [
     { key: 'radio_vol_label_font',    label: 'Vol label font',   type: 'font'   },
 
     { key: 'radio_show_mode_indicator', label: 'Show mode indic.', type: 'bool' },
+    { key: 'radio_mode_indic_x',        label: 'Mode indic. X',    type: 'number' },
+    { key: 'radio_mode_indic_y',        label: 'Mode indic. Y',    type: 'number' },
     { key: 'radio_show_clock',          label: 'Show clock',       type: 'bool' },
+    { key: 'radio_clock_widget_x',      label: 'Clock X',          type: 'number' },
+    { key: 'radio_clock_widget_y',      label: 'Clock Y',          type: 'number' },
 ];
 
 // ── Sections registry ──────────────────────────────────────────────────────
@@ -265,12 +277,18 @@ function renderClock(svg) {
     }
 
     if (c.clock_show_mode_indicator) {
-        rect(svg, { x: W - 6 - 12, y: 8, width: 12, height: 12, class: 'indicator-rect' });
-        tag(svg, W - 18, 6, 'mode');
+        drawFreeElement(svg, {
+            x: c.clock_mode_indic_x, y: c.clock_mode_indic_y, w: 16, h: 16,
+            label: 'mode', cls: 'label-rect',
+            fields: { x: 'clock_mode_indic_x', y: 'clock_mode_indic_y' },
+        });
     }
     if (c.clock_show_event_indicator) {
-        rect(svg, { x: W - 24 - 12, y: 8, width: 12, height: 12, class: 'indicator-rect' });
-        tag(svg, W - 36, 6, 'evt');
+        drawFreeElement(svg, {
+            x: c.clock_event_indic_x, y: c.clock_event_indic_y, w: 16, h: 16,
+            label: 'evt', cls: 'label-rect',
+            fields: { x: 'clock_event_indic_x', y: 'clock_event_indic_y' },
+        });
     }
 
     if (c.clock_show_strip) {
@@ -350,13 +368,20 @@ function renderBt(svg) {
               'vol', { x: 'bt_vol_label_x', y: 'bt_vol_label_y' });
 
     if (b.bt_show_mode_indicator) {
-        rect(svg, { x: W - 6 - 12, y: 8, width: 12, height: 12, class: 'indicator-rect' });
-        tag(svg, W - 18, 6, 'mode');
+        drawFreeElement(svg, {
+            x: b.bt_mode_indic_x, y: b.bt_mode_indic_y, w: 16, h: 16,
+            label: 'mode', cls: 'label-rect',
+            fields: { x: 'bt_mode_indic_x', y: 'bt_mode_indic_y' },
+        });
     }
     if (b.bt_show_clock) {
-        // Small clock_widget at top-right (hardcoded position in clock_widget.c)
-        rect(svg, { x: W - 60, y: 4, width: 56, height: 14, class: 'indicator-rect' });
-        tag(svg, W - 60, 24, 'clock');
+        // clock_widget — "00:00" label, font 18 (~50 px wide)
+        drawFreeElement(svg, {
+            x: b.bt_clock_widget_x, y: b.bt_clock_widget_y, w: 50, h: 18,
+            label: 'clock', cls: 'label-rect',
+            fields: { x: 'bt_clock_widget_x', y: 'bt_clock_widget_y' },
+            text: '00:00', textSize: 18,
+        });
     }
 }
 
@@ -404,12 +429,19 @@ function renderRadio(svg) {
               '50%', 'vol', { x: 'radio_vol_label_x', y: 'radio_vol_label_y' });
 
     if (r.radio_show_mode_indicator) {
-        rect(svg, { x: W - 6 - 12, y: 8, width: 12, height: 12, class: 'indicator-rect' });
-        tag(svg, W - 18, 6, 'mode');
+        drawFreeElement(svg, {
+            x: r.radio_mode_indic_x, y: r.radio_mode_indic_y, w: 16, h: 16,
+            label: 'mode', cls: 'label-rect',
+            fields: { x: 'radio_mode_indic_x', y: 'radio_mode_indic_y' },
+        });
     }
     if (r.radio_show_clock) {
-        rect(svg, { x: W - 60, y: 4, width: 56, height: 14, class: 'indicator-rect' });
-        tag(svg, W - 60, 24, 'clock');
+        drawFreeElement(svg, {
+            x: r.radio_clock_widget_x, y: r.radio_clock_widget_y, w: 50, h: 18,
+            label: 'clock', cls: 'label-rect',
+            fields: { x: 'radio_clock_widget_x', y: 'radio_clock_widget_y' },
+            text: '00:00', textSize: 18,
+        });
     }
 }
 

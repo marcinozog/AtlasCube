@@ -205,11 +205,11 @@ static void clock_create(lv_obj_t *parent)
     update_clock_display();
 
     if (p->clock_show_mode_indicator) {
-        mode_indicator_create(parent, LV_ALIGN_TOP_RIGHT, -6, 8);
+        mode_indicator_create(parent, p->clock_mode_indic_x, p->clock_mode_indic_y);
     }
 
     if (p->clock_show_event_indicator) {
-        event_indicator_create(parent, LV_ALIGN_TOP_RIGHT, -24, 8);
+        event_indicator_create(parent, p->clock_event_indic_x, p->clock_event_indic_y);
     }
 
     if (p->clock_show_strip) {

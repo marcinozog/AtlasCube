@@ -15,7 +15,7 @@ extern "C" {
  * event_indicator_update() is available to force a refresh (e.g. in
  * apply_theme).
  */
-void event_indicator_create(lv_obj_t *parent, lv_align_t align, int x, int y);
+void event_indicator_create(lv_obj_t *parent, int x, int y);
 void event_indicator_destroy(void);
 void event_indicator_update(void);
 void event_indicator_apply_theme(void);

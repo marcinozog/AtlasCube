@@ -73,10 +73,10 @@ static void bt_create(lv_obj_t *parent)
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
 
     if (p->bt_show_mode_indicator) {
-        mode_indicator_create(parent, LV_ALIGN_TOP_RIGHT, -6, 8);
+        mode_indicator_create(parent, p->bt_mode_indic_x, p->bt_mode_indic_y);
     }
     if (p->bt_show_clock) {
-        clock_widget_create(parent, 0, 0, false);
+        clock_widget_create(parent, p->bt_clock_widget_x, p->bt_clock_widget_y, false);
     }
 
     if (p->bt_show_circle) {

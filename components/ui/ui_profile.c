@@ -46,6 +46,10 @@ static const ui_profile_t k_defaults = {
     .clock_show_strip          = true,
     .clock_show_mode_indicator = false,
     .clock_show_event_indicator = false,
+    .clock_mode_indic_x        = 108,
+    .clock_mode_indic_y        = 8,
+    .clock_event_indic_x       = 90,
+    .clock_event_indic_y       = 8,
 
     .radio_np_x                = 10,
     .radio_np_y                = 35,
@@ -65,6 +69,10 @@ static const ui_profile_t k_defaults = {
     .radio_vol_label_font      = &lv_font_montserrat_12_pl,
     .radio_show_mode_indicator = false,
     .radio_show_clock          = false,
+    .radio_mode_indic_x        = 108,
+    .radio_mode_indic_y        = 8,
+    .radio_clock_widget_x      = 39,
+    .radio_clock_widget_y      = 0,
 
     .playlist_header_h         = 14,
     .playlist_item_h           = 12,
@@ -97,6 +105,10 @@ static const ui_profile_t k_defaults = {
     .bt_vol_label_font         = &lv_font_montserrat_12_pl,
     .bt_show_mode_indicator    = false,
     .bt_show_clock             = false,
+    .bt_mode_indic_x           = 108,
+    .bt_mode_indic_y           = 8,
+    .bt_clock_widget_x         = 39,
+    .bt_clock_widget_y         = 0,
 
     .settings_title_y          = 2,
     .settings_row_w            = 124,
@@ -172,7 +184,7 @@ static const ui_profile_t k_defaults = {
     .clock_strip_title_font    = &lv_font_montserrat_12_pl,
     .clock_time_x              = 60,  // Centering depends on the font, here a slight offset
     .clock_time_y              = 45,
-    .clock_time_font           = &lv_font_montserrat_48, // Choose the largest available, e.g. 48 or 64
+    .clock_time_font           = &lv_font_montserrat_72, // Choose the largest available, e.g. 48 or 64
     .clock_show_time           = true,
     .clock_date_x              = 49,
     .clock_date_y              = 128,
@@ -181,6 +193,10 @@ static const ui_profile_t k_defaults = {
     .clock_show_strip          = true,
     .clock_show_mode_indicator = true,
     .clock_show_event_indicator = true,
+    .clock_mode_indic_x        = 170,
+    .clock_mode_indic_y        = 1,
+    .clock_event_indic_x       = 150,
+    .clock_event_indic_y       = 1,
 
     // Radio: Station info and large volume slider
     .radio_np_x                = 10,
@@ -201,6 +217,10 @@ static const ui_profile_t k_defaults = {
     .radio_vol_label_font      = &lv_font_montserrat_14_pl,
     .radio_show_mode_indicator = true,
     .radio_show_clock          = true,
+    .radio_mode_indic_x        = 158,
+    .radio_mode_indic_y        = 1,
+    .radio_clock_widget_x      = 95,
+    .radio_clock_widget_y      = 0,
 
     // Playlist: We use the screen height for more list items
     .playlist_header_h         = 45,
@@ -238,6 +258,10 @@ static const ui_profile_t k_defaults = {
     .bt_vol_label_font         = &lv_font_montserrat_14_pl,
     .bt_show_mode_indicator    = true,
     .bt_show_clock             = true,
+    .bt_mode_indic_x           = 158,
+    .bt_mode_indic_y           = 1,
+    .bt_clock_widget_x         = 95,
+    .bt_clock_widget_y         = 0,
 
     // Settings
     .settings_title_y          = 10,
@@ -324,6 +348,10 @@ static const ui_profile_t k_defaults = {
     .clock_show_strip          = true,
     .clock_show_mode_indicator = true,
     .clock_show_event_indicator = true,
+    .clock_mode_indic_x        = 300,
+    .clock_mode_indic_y        = 8,
+    .clock_event_indic_x       = 282,
+    .clock_event_indic_y       = 8,
 
     .radio_np_x                = 10,
     .radio_np_y                = 35,
@@ -343,6 +371,10 @@ static const ui_profile_t k_defaults = {
     .radio_vol_label_font      = &lv_font_montserrat_12_pl,
     .radio_show_mode_indicator = true,
     .radio_show_clock          = true,
+    .radio_mode_indic_x        = 300,
+    .radio_mode_indic_y        = 8,
+    .radio_clock_widget_x      = 135,
+    .radio_clock_widget_y      = 0,
 
     .playlist_header_h         = 26,
     .playlist_item_h           = 28,
@@ -375,6 +407,10 @@ static const ui_profile_t k_defaults = {
     .bt_vol_label_font         = &lv_font_montserrat_12_pl,
     .bt_show_mode_indicator    = true,
     .bt_show_clock             = true,
+    .bt_mode_indic_x           = 300,
+    .bt_mode_indic_y           = 8,
+    .bt_clock_widget_x         = 135,
+    .bt_clock_widget_y         = 0,
 
     .settings_title_y          = 6,
     .settings_row_w            = 288,
@@ -534,6 +570,10 @@ static void load_clock(const cJSON *obj, ui_profile_t *p)
     load_bool(obj, "clock_show_strip",           &p->clock_show_strip);
     load_bool(obj, "clock_show_mode_indicator",  &p->clock_show_mode_indicator);
     load_bool(obj, "clock_show_event_indicator", &p->clock_show_event_indicator);
+    load_i16 (obj, "clock_mode_indic_x",         &p->clock_mode_indic_x);
+    load_i16 (obj, "clock_mode_indic_y",         &p->clock_mode_indic_y);
+    load_i16 (obj, "clock_event_indic_x",        &p->clock_event_indic_x);
+    load_i16 (obj, "clock_event_indic_y",        &p->clock_event_indic_y);
 }
 
 static void load_bt(const cJSON *obj, ui_profile_t *p)
@@ -560,6 +600,10 @@ static void load_bt(const cJSON *obj, ui_profile_t *p)
     load_font(obj, "bt_vol_label_font",      &p->bt_vol_label_font);
     load_bool(obj, "bt_show_mode_indicator", &p->bt_show_mode_indicator);
     load_bool(obj, "bt_show_clock",          &p->bt_show_clock);
+    load_i16 (obj, "bt_mode_indic_x",        &p->bt_mode_indic_x);
+    load_i16 (obj, "bt_mode_indic_y",        &p->bt_mode_indic_y);
+    load_i16 (obj, "bt_clock_widget_x",      &p->bt_clock_widget_x);
+    load_i16 (obj, "bt_clock_widget_y",      &p->bt_clock_widget_y);
 }
 
 static void load_radio(const cJSON *obj, ui_profile_t *p)
@@ -583,6 +627,10 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_font(obj, "radio_vol_label_font",      &p->radio_vol_label_font);
     load_bool(obj, "radio_show_mode_indicator", &p->radio_show_mode_indicator);
     load_bool(obj, "radio_show_clock",          &p->radio_show_clock);
+    load_i16 (obj, "radio_mode_indic_x",        &p->radio_mode_indic_x);
+    load_i16 (obj, "radio_mode_indic_y",        &p->radio_mode_indic_y);
+    load_i16 (obj, "radio_clock_widget_x",      &p->radio_clock_widget_x);
+    load_i16 (obj, "radio_clock_widget_y",      &p->radio_clock_widget_y);
 }
 
 static cJSON *dump_radio(const ui_profile_t *p)
@@ -606,6 +654,10 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_font(o, "radio_vol_label_font",      p->radio_vol_label_font);
     add_bool(o, "radio_show_mode_indicator", p->radio_show_mode_indicator);
     add_bool(o, "radio_show_clock",          p->radio_show_clock);
+    add_i16 (o, "radio_mode_indic_x",        p->radio_mode_indic_x);
+    add_i16 (o, "radio_mode_indic_y",        p->radio_mode_indic_y);
+    add_i16 (o, "radio_clock_widget_x",      p->radio_clock_widget_x);
+    add_i16 (o, "radio_clock_widget_y",      p->radio_clock_widget_y);
     return o;
 }
 
@@ -633,6 +685,10 @@ static cJSON *dump_bt(const ui_profile_t *p)
     add_font(o, "bt_vol_label_font",      p->bt_vol_label_font);
     add_bool(o, "bt_show_mode_indicator", p->bt_show_mode_indicator);
     add_bool(o, "bt_show_clock",          p->bt_show_clock);
+    add_i16 (o, "bt_mode_indic_x",        p->bt_mode_indic_x);
+    add_i16 (o, "bt_mode_indic_y",        p->bt_mode_indic_y);
+    add_i16 (o, "bt_clock_widget_x",      p->bt_clock_widget_x);
+    add_i16 (o, "bt_clock_widget_y",      p->bt_clock_widget_y);
     return o;
 }
 
@@ -663,6 +719,10 @@ static cJSON *dump_clock(const ui_profile_t *p)
     add_bool(o, "clock_show_strip",           p->clock_show_strip);
     add_bool(o, "clock_show_mode_indicator",  p->clock_show_mode_indicator);
     add_bool(o, "clock_show_event_indicator", p->clock_show_event_indicator);
+    add_i16 (o, "clock_mode_indic_x",         p->clock_mode_indic_x);
+    add_i16 (o, "clock_mode_indic_y",         p->clock_mode_indic_y);
+    add_i16 (o, "clock_event_indic_x",        p->clock_event_indic_x);
+    add_i16 (o, "clock_event_indic_y",        p->clock_event_indic_y);
     return o;
 }
 

@@ -60,7 +60,7 @@ void clock_widget_create(lv_obj_t *parent, int x, int y, bool large)
         large ? &lv_font_montserrat_96 : &lv_font_montserrat_18_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_time,
         lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_align(s_label_time, LV_ALIGN_TOP_MID, x, y);
+    lv_obj_set_pos(s_label_time, x, y);
 
     if (large) {
         s_label_date = lv_label_create(parent);

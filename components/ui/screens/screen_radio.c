@@ -72,10 +72,10 @@ static void radio_create(lv_obj_t *parent)
         now_playing_widget_create(parent, p->radio_np_x, p->radio_np_y);
     }
     if (p->radio_show_mode_indicator) {
-        mode_indicator_create(parent, LV_ALIGN_TOP_RIGHT, -6, 8);
+        mode_indicator_create(parent, p->radio_mode_indic_x, p->radio_mode_indic_y);
     }
     if (p->radio_show_clock) {
-        clock_widget_create(parent, 0, 0, false);
+        clock_widget_create(parent, p->radio_clock_widget_x, p->radio_clock_widget_y, false);
     }
 
     s_label_state = lv_label_create(parent);
