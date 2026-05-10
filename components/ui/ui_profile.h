@@ -47,16 +47,28 @@ typedef struct {
     bool             clock_show_mode_indicator;
     bool             clock_show_event_indicator;
 
-    // screen_radio
-    int16_t          radio_state_y;            // from top
-    int16_t          radio_audio_info_y;       // offset from CENTER
+    // screen_radio — absolute LCD coordinates (top-left origin)
+    int16_t          radio_np_x;               // now-playing widget (station + title labels)
+    int16_t          radio_np_y;
+    bool             radio_show_np;
+
+    int16_t          radio_state_x;            // "PLAYING / STOPPED / ..." label
+    int16_t          radio_state_y;
+    const lv_font_t *radio_state_font;
+
+    int16_t          radio_audio_info_x;       // "44100 Hz  2ch  128kbps"
+    int16_t          radio_audio_info_y;
+    const lv_font_t *radio_audio_info_font;
+
+    int16_t          radio_slider_x;
+    int16_t          radio_slider_y;
     int16_t          radio_slider_w;
     int16_t          radio_slider_h;
-    int16_t          radio_slider_y;           // from bottom (negative)
-    int16_t          radio_vol_label_y;        // from bottom (negative)
-    const lv_font_t *radio_state_font;
-    const lv_font_t *radio_audio_info_font;
+
+    int16_t          radio_vol_label_x;
+    int16_t          radio_vol_label_y;
     const lv_font_t *radio_vol_label_font;
+
     bool             radio_show_mode_indicator;
     bool             radio_show_clock;
 
@@ -185,6 +197,9 @@ void  ui_profile_patch_clock(const void *obj); // accepts cJSON object — patch
 
 void *ui_profile_dump_bt(void);
 void  ui_profile_patch_bt(const void *obj);
+
+void *ui_profile_dump_radio(void);
+void  ui_profile_patch_radio(const void *obj);
 
 #ifdef __cplusplus
 }

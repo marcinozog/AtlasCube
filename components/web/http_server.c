@@ -936,6 +936,45 @@ static esp_err_t api_ui_profile_bt_post_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static esp_err_t api_ui_profile_radio_get_handler(httpd_req_t *req)
+{
+    cJSON *radio = (cJSON *)ui_profile_dump_radio();
+
+    char *str = cJSON_PrintUnformatted(radio);
+    cJSON_Delete(radio);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    httpd_resp_sendstr(req, str);
+    free(str);
+    return ESP_OK;
+}
+
+static esp_err_t api_ui_profile_radio_post_handler(httpd_req_t *req)
+{
+    char *buf = NULL;
+    if (read_body(req, &buf, 4096) != ESP_OK) return ESP_FAIL;
+
+    cJSON *json = cJSON_Parse(buf);
+    free(buf);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    ui_profile_patch_radio(json);
+    cJSON_Delete(json);
+
+    ui_profile_save_to_file();
+
+    ui_event_t ev = { .type = UI_EVT_PROFILE_CHANGED };
+    ui_event_send(&ev);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true}");
+    return ESP_OK;
+}
+
 static esp_err_t api_ui_profile_reset_handler(httpd_req_t *req)
 {
     ui_profile_reset();
@@ -1072,7 +1111,7 @@ void http_server_start(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn      = httpd_uri_match_wildcard;
-    config.max_uri_handlers  = 24;
+    config.max_uri_handlers  = 26;
     // max_open_sockets: each lwIP socket uses ~2KB internal RAM for buffers
     // TCP + control. On ESP32 with tight internal heap (radio TLS, WiFi, LVGL)
     // 13 sockets caused the TLS audio stream to drop on page open.
@@ -1221,6 +1260,20 @@ void http_server_start(void)
         .handler = api_ui_profile_bt_post_handler,
     };
     httpd_register_uri_handler(server, &api_ui_bt_post);
+
+    httpd_uri_t api_ui_radio_get = {
+        .uri = "/api/ui/profile/radio",
+        .method = HTTP_GET,
+        .handler = api_ui_profile_radio_get_handler,
+    };
+    httpd_register_uri_handler(server, &api_ui_radio_get);
+
+    httpd_uri_t api_ui_radio_post = {
+        .uri = "/api/ui/profile/radio",
+        .method = HTTP_POST,
+        .handler = api_ui_profile_radio_post_handler,
+    };
+    httpd_register_uri_handler(server, &api_ui_radio_post);
 
     httpd_uri_t api_ui_reset = {
         .uri = "/api/ui/profile/reset",

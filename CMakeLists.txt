@@ -15,4 +15,4 @@ set(PROJECT_VER_FROM_GIT 1)
 
 project(atlascube)
 
-# spiffs_create_partition_image(storage spiffs_image/web FLASH_IN_PROJECT)
+spiffs_create_partition_image(storage spiffs_image/web FLASH_IN_PROJECT)

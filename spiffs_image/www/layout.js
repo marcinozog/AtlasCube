@@ -75,12 +75,39 @@ const BT_FIELDS = [
     { key: 'bt_show_clock',          label: 'Show clock',       type: 'bool' },
 ];
 
+const RADIO_FIELDS = [
+    { key: 'radio_show_np',           label: 'Show now-playing', type: 'bool' },
+    { key: 'radio_np_x',              label: 'NP X',             type: 'number' },
+    { key: 'radio_np_y',              label: 'NP Y',             type: 'number' },
+
+    { key: 'radio_state_x',           label: 'State X',          type: 'number' },
+    { key: 'radio_state_y',           label: 'State Y',          type: 'number' },
+    { key: 'radio_state_font',        label: 'State font',       type: 'font'   },
+
+    { key: 'radio_audio_info_x',      label: 'Audio info X',     type: 'number' },
+    { key: 'radio_audio_info_y',      label: 'Audio info Y',     type: 'number' },
+    { key: 'radio_audio_info_font',   label: 'Audio info font',  type: 'font'   },
+
+    { key: 'radio_slider_x',          label: 'Slider X',         type: 'number' },
+    { key: 'radio_slider_y',          label: 'Slider Y',         type: 'number' },
+    { key: 'radio_slider_w',          label: 'Slider W',         type: 'number' },
+    { key: 'radio_slider_h',          label: 'Slider H',         type: 'number' },
+
+    { key: 'radio_vol_label_x',       label: 'Vol label X',      type: 'number' },
+    { key: 'radio_vol_label_y',       label: 'Vol label Y',      type: 'number' },
+    { key: 'radio_vol_label_font',    label: 'Vol label font',   type: 'font'   },
+
+    { key: 'radio_show_mode_indicator', label: 'Show mode indic.', type: 'bool' },
+    { key: 'radio_show_clock',          label: 'Show clock',       type: 'bool' },
+];
+
 // ── Sections registry ──────────────────────────────────────────────────────
 // Each entry: { title, fields, renderer (active section's renderSvg) }
 
 const SECTIONS = {
-    clock: { title: 'Clock', fields: CLOCK_FIELDS, renderer: renderClock },
-    bt:    { title: 'Bluetooth', fields: BT_FIELDS, renderer: renderBt },
+    clock: { title: 'Clock',     fields: CLOCK_FIELDS, renderer: renderClock },
+    bt:    { title: 'Bluetooth', fields: BT_FIELDS,    renderer: renderBt    },
+    radio: { title: 'Radio',     fields: RADIO_FIELDS, renderer: renderRadio },
 };
 
 const state = {
@@ -88,6 +115,7 @@ const state = {
     active: 'clock',
     clock:  {},
     bt:     {},
+    radio:  {},
 };
 
 // ── Bootstrap ───────────────────────────────────────────────────────────────
@@ -327,6 +355,59 @@ function renderBt(svg) {
     }
     if (b.bt_show_clock) {
         // Small clock_widget at top-right (hardcoded position in clock_widget.c)
+        rect(svg, { x: W - 60, y: 4, width: 56, height: 14, class: 'indicator-rect' });
+        tag(svg, W - 60, 24, 'clock');
+    }
+}
+
+// ── RADIO renderer ─────────────────────────────────────────────────────────
+
+function renderRadio(svg) {
+    const r = state.radio;
+    const W = state.meta.screen_w;
+
+    if (r.radio_show_np) {
+        // Now-playing widget = two stacked labels (station + title, +26px gap).
+        // Width is fixed in firmware to screen_w - 20 (full-screen scrolling line).
+        const stationFh = 18;  // hardcoded font_18 in now_playing_widget.c
+        const titleFh   = 14;  // hardcoded font_14
+        const npW       = Math.max(W - 20, 8);
+        drawFreeElement(svg, {
+            x: r.radio_np_x, y: r.radio_np_y, w: npW, h: stationFh,
+            label: 'np_station', cls: 'label-rect',
+            fields: { x: 'radio_np_x', y: 'radio_np_y' },
+            text: 'Atlas Radio', textSize: stationFh,
+        });
+        drawFreeElement(svg, {
+            x: r.radio_np_x, y: r.radio_np_y + 26, w: npW, h: titleFh,
+            label: 'np_title', cls: 'label-rect',
+            fields: { x: 'radio_np_x', y: 'radio_np_y' },
+            text: 'Title — Artist', textSize: titleFh,
+        });
+    }
+
+    drawLabel(svg, r.radio_state_x, r.radio_state_y, r.radio_state_font, 'PLAYING',
+              'state', { x: 'radio_state_x', y: 'radio_state_y' });
+    drawLabel(svg, r.radio_audio_info_x, r.radio_audio_info_y, r.radio_audio_info_font,
+              '44100 Hz  2ch  128kbps',
+              'info', { x: 'radio_audio_info_x', y: 'radio_audio_info_y' });
+
+    drawFreeElement(svg, {
+        x: r.radio_slider_x, y: r.radio_slider_y,
+        w: r.radio_slider_w, h: r.radio_slider_h,
+        label: 'slider', cls: 'slider-rect',
+        fields: { x: 'radio_slider_x', y: 'radio_slider_y',
+                  w: 'radio_slider_w', h: 'radio_slider_h' },
+    });
+
+    drawLabel(svg, r.radio_vol_label_x, r.radio_vol_label_y, r.radio_vol_label_font,
+              '50%', 'vol', { x: 'radio_vol_label_x', y: 'radio_vol_label_y' });
+
+    if (r.radio_show_mode_indicator) {
+        rect(svg, { x: W - 6 - 12, y: 8, width: 12, height: 12, class: 'indicator-rect' });
+        tag(svg, W - 18, 6, 'mode');
+    }
+    if (r.radio_show_clock) {
         rect(svg, { x: W - 60, y: 4, width: 56, height: 14, class: 'indicator-rect' });
         tag(svg, W - 60, 24, 'clock');
     }

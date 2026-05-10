@@ -22,7 +22,7 @@ void now_playing_widget_create(lv_obj_t *parent, int x, int y)
     lv_obj_set_style_text_font(s_label_station, &lv_font_montserrat_18_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_station,
         lv_color_hex(th->accent), LV_PART_MAIN);
-    lv_obj_align(s_label_station, LV_ALIGN_TOP_MID, x, y);
+    lv_obj_set_pos(s_label_station, x, y);
 
     s_label_title = lv_label_create(parent);
     lv_label_set_long_mode(s_label_title, LV_LABEL_LONG_SCROLL_CIRCULAR);
@@ -30,7 +30,7 @@ void now_playing_widget_create(lv_obj_t *parent, int x, int y)
     lv_obj_set_style_text_font(s_label_title, &lv_font_montserrat_14_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_title,
         lv_color_hex(th->text_secondary), LV_PART_MAIN);
-    lv_obj_align(s_label_title, LV_ALIGN_TOP_MID, x, y + 26);
+    lv_obj_set_pos(s_label_title, x, y + 26);
 
     now_playing_widget_update();
     ESP_LOGI(TAG, "Created");

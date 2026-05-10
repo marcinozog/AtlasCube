@@ -68,7 +68,9 @@ static void radio_create(lv_obj_t *parent)
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
 
-    now_playing_widget_create(parent, 0, 35);
+    if (p->radio_show_np) {
+        now_playing_widget_create(parent, p->radio_np_x, p->radio_np_y);
+    }
     if (p->radio_show_mode_indicator) {
         mode_indicator_create(parent, LV_ALIGN_TOP_RIGHT, -6, 8);
     }
@@ -80,17 +82,17 @@ static void radio_create(lv_obj_t *parent)
     lv_label_set_text(s_label_state, "");
     lv_obj_set_style_text_font(s_label_state, p->radio_state_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_state, lv_color_hex(th->status_ok), LV_PART_MAIN);
-    lv_obj_align(s_label_state, LV_ALIGN_TOP_MID, 0, p->radio_state_y);
+    lv_obj_set_pos(s_label_state, p->radio_state_x, p->radio_state_y);
 
     s_label_audio_info = lv_label_create(parent);
     lv_label_set_text(s_label_audio_info, "");
     lv_obj_set_style_text_font(s_label_audio_info, p->radio_audio_info_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_audio_info, lv_color_hex(th->text_muted), LV_PART_MAIN);
-    lv_obj_align(s_label_audio_info, LV_ALIGN_CENTER, 0, p->radio_audio_info_y);
+    lv_obj_set_pos(s_label_audio_info, p->radio_audio_info_x, p->radio_audio_info_y);
 
     s_slider_vol = lv_slider_create(parent);
     lv_obj_set_size(s_slider_vol, p->radio_slider_w, p->radio_slider_h);
-    lv_obj_align(s_slider_vol, LV_ALIGN_BOTTOM_MID, 0, p->radio_slider_y);
+    lv_obj_set_pos(s_slider_vol, p->radio_slider_x, p->radio_slider_y);
     lv_slider_set_range(s_slider_vol, 0, 100);
     lv_slider_set_value(s_slider_vol, 0, LV_ANIM_OFF);
     lv_obj_set_style_bg_color(s_slider_vol, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
@@ -101,7 +103,7 @@ static void radio_create(lv_obj_t *parent)
     lv_label_set_text(s_label_vol, "0%");
     lv_obj_set_style_text_font(s_label_vol, p->radio_vol_label_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_vol, lv_color_hex(th->text_secondary), LV_PART_MAIN);
-    lv_obj_align(s_label_vol, LV_ALIGN_BOTTOM_MID, 0, p->radio_vol_label_y);
+    lv_obj_set_pos(s_label_vol, p->radio_vol_label_x, p->radio_vol_label_y);
 
     
     refresh_from_state();
