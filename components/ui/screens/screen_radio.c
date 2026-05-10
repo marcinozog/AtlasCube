@@ -68,6 +68,14 @@ static void radio_create(lv_obj_t *parent)
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
 
+    now_playing_widget_create(parent, 0, 35);
+    if (p->radio_show_mode_indicator) {
+        mode_indicator_create(parent, LV_ALIGN_TOP_RIGHT, -6, 8);
+    }
+    if (p->radio_show_clock) {
+        clock_widget_create(parent, 0, 0, false);
+    }
+
     s_label_state = lv_label_create(parent);
     lv_label_set_text(s_label_state, "");
     lv_obj_set_style_text_font(s_label_state, p->radio_state_font, LV_PART_MAIN);
@@ -95,13 +103,7 @@ static void radio_create(lv_obj_t *parent)
     lv_obj_set_style_text_color(s_label_vol, lv_color_hex(th->text_secondary), LV_PART_MAIN);
     lv_obj_align(s_label_vol, LV_ALIGN_BOTTOM_MID, 0, p->radio_vol_label_y);
 
-    now_playing_widget_create(parent);
-    if (p->radio_show_mode_indicator) {
-        mode_indicator_create(parent, LV_ALIGN_TOP_RIGHT, -6, 8);
-    }
-    if (p->radio_show_clock) {
-        clock_widget_create(parent, false);
-    }
+    
     refresh_from_state();
 
     ESP_LOGI(TAG, "Created (theme=%d)", theme_current());
@@ -132,14 +134,14 @@ static void radio_on_event(const ui_event_t *ev)
         case UI_EVT_TITLE_CHANGED:
             now_playing_widget_update();
             break;
-        case UI_EVT_VOLUME_CHANGED:
-            if (s_slider_vol) {
-                lv_slider_set_value(s_slider_vol, ev->volume, LV_ANIM_ON);
-                char buf[16];
-                snprintf(buf, sizeof(buf), "%d%%", ev->volume);
-                lv_label_set_text(s_label_vol, buf);
-            }
-            break;
+        // case UI_EVT_VOLUME_CHANGED:
+        //     if (s_slider_vol) {
+        //         lv_slider_set_value(s_slider_vol, ev->volume, LV_ANIM_ON);
+        //         char buf[16];
+        //         snprintf(buf, sizeof(buf), "%d%%", ev->volume);
+        //         lv_label_set_text(s_label_vol, buf);
+        //     }
+        //     break;
         case UI_EVT_RADIO_STATE:
             if (s_label_state)
                 lv_label_set_text(s_label_state, radio_state_str(ev->radio_state));

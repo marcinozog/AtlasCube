@@ -294,15 +294,18 @@ static void clear_panel(uint16_t color)
     }
 }
 
-// CO5300 requires even CASET/RASET boundaries. Areas are rounded up via the
-// LV_EVENT_INVALIDATE_AREA hook before LVGL renders, so by the time we get
-// here x1/y1 are even and width/height are even — no rounding needed.
+// CO5300 requires even CASET/RASET boundaries; Y is rounded to even via this
+// hook. X is forced to the full display width on every refresh: with partial
+// X ranges and an odd original x1 the rounder's leftmost added column shows
+// up as a black artifact (LVGL's SW rasterizer leaves it unpainted, the DMA
+// buffer starts zeroed). Full-width refresh sidesteps the issue and on a
+// 240-wide panel the bandwidth cost is negligible.
 static void co5300_rounder_cb(lv_event_t *e)
 {
     lv_area_t *a = lv_event_get_param(e);
-    a->x1 &= ~1;
+    a->x1 = 0;
+    a->x2 = DISPLAY_WIDTH - 1;
     a->y1 &= ~1;
-    a->x2 |= 1;
     a->y2 |= 1;
 }
 

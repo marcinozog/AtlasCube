@@ -50,7 +50,7 @@ static void timer_cb(lv_timer_t *timer)
     update_display(); 
 }
 
-void clock_widget_create(lv_obj_t *parent, bool large)
+void clock_widget_create(lv_obj_t *parent, int x, int y, bool large)
 {
     const ui_theme_colors_t *th = theme_get();
 
@@ -60,10 +60,7 @@ void clock_widget_create(lv_obj_t *parent, bool large)
         large ? &lv_font_montserrat_96 : &lv_font_montserrat_18_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_time,
         lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_align(s_label_time,
-        large ? LV_ALIGN_CENTER : LV_ALIGN_TOP_RIGHT,
-        large ? 0 : -24,
-        large ? -20 : 6);
+    lv_obj_align(s_label_time, LV_ALIGN_TOP_MID, x, y);
 
     if (large) {
         s_label_date = lv_label_create(parent);

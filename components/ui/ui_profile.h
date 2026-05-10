@@ -67,6 +67,10 @@ typedef struct {
     int16_t          playlist_row_w;
     int16_t          playlist_row_label_w;
     int16_t          playlist_row_pad_left;
+    int16_t          playlist_label_x;
+    int16_t          playlist_label_y;
+    int16_t          playlist_hint_x;
+    int16_t          playlist_hint_y;
     const lv_font_t *playlist_header_font;
     const lv_font_t *playlist_row_font;
 

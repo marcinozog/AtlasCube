@@ -32,7 +32,36 @@ static void slider_event_cb(lv_event_t *e)
     settings_set_bt_volume(value);   // → bt_set_volume + app_state + save
 }
 
-// ---------------------------------------------------------------------------
+static void refresh_from_state(void)
+{
+    if (!s_status_label && !s_slider && !s_vol_label) return;
+    
+    app_state_t *s = app_state_get();
+
+    // BT volume slider
+    if (!lv_obj_has_state(s_slider, LV_STATE_PRESSED)) {
+        lv_slider_set_value(s_slider, s->bt_volume, LV_ANIM_OFF);
+    }
+
+    // Volume
+    lv_slider_set_value(s_slider, s->bt_volume, LV_ANIM_OFF);
+    char vol_buf[16];
+    snprintf(vol_buf, sizeof(vol_buf), "%d%%", s->bt_volume);
+    lv_label_set_text(s_vol_label, vol_buf);
+
+    // Connection status
+    const ui_theme_colors_t *th = theme_get();
+    lv_obj_set_style_text_color(s_status_label, lv_color_hex(th->status_ok), LV_PART_MAIN);
+    if(s->bt_state == BT_CONNECTED) {
+        lv_label_set_text(s_status_label, "Connected");
+    }
+    else if(s->bt_state == BT_DISCONNECTED) {
+        lv_label_set_text(s_status_label, "Not connected");
+    }
+    else if(s->bt_state == BT_DISCOVERABLE) {
+        lv_label_set_text(s_status_label, "Discoverable");
+    }
+}
 
 static void bt_create(lv_obj_t *parent)
 {
@@ -42,6 +71,13 @@ static void bt_create(lv_obj_t *parent)
 
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
+
+    if (p->bt_show_mode_indicator) {
+        mode_indicator_create(parent, LV_ALIGN_TOP_RIGHT, -6, 8);
+    }
+    if (p->bt_show_clock) {
+        clock_widget_create(parent, 0, 0, false);
+    }
 
     if (p->bt_show_circle) {
         s_circle = lv_obj_create(parent);
@@ -95,17 +131,12 @@ static void bt_create(lv_obj_t *parent)
     lv_obj_add_event_cb(s_slider, slider_event_cb, LV_EVENT_RELEASED, NULL);
 
     s_vol_label = lv_label_create(parent);
-    lv_label_set_text(s_vol_label, "Volume");
+    lv_label_set_text(s_vol_label, "0%");
     lv_obj_set_style_text_font(s_vol_label, p->bt_vol_label_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_vol_label, lv_color_hex(th->text_muted), LV_PART_MAIN);
     lv_obj_set_pos(s_vol_label, p->bt_vol_label_x, p->bt_vol_label_y);
 
-    if (p->bt_show_mode_indicator) {
-        mode_indicator_create(parent, LV_ALIGN_TOP_RIGHT, -6, 8);
-    }
-    if (p->bt_show_clock) {
-        clock_widget_create(parent, false);
-    }
+    refresh_from_state();
 
     ESP_LOGI(TAG, "Created (bt_volume=%d, theme=%d)",
              app_state_get()->bt_volume, theme_current());
@@ -122,30 +153,47 @@ static void bt_destroy(void)
 
 static void bt_on_event(const ui_event_t *ev)
 {
-    if (ev->type == UI_EVT_STATE_CHANGED && s_slider) {
-        app_state_t *s = app_state_get();
-
-        // BT volume slider
-        if (!lv_obj_has_state(s_slider, LV_STATE_PRESSED)) {
-            lv_slider_set_value(s_slider, s->bt_volume, LV_ANIM_OFF);
-        }
-
-        // Connection status
-        const ui_theme_colors_t *th = theme_get();
-        lv_obj_set_style_text_color(s_status_label, lv_color_hex(th->status_ok), LV_PART_MAIN);
-        if(s->bt_state == BT_CONNECTED) {
-            lv_label_set_text(s_status_label, "Connected");
-        }
-        else if(s->bt_state == BT_DISCONNECTED) {
-            lv_label_set_text(s_status_label, "Not connected");
-        }
-        else if(s->bt_state == BT_DISCOVERABLE) {
-            lv_label_set_text(s_status_label, "Discoverable");
-        }
-
-        mode_indicator_update();
-        clock_widget_tick();
+    switch (ev->type) {
+        case UI_EVT_STATE_CHANGED:
+            refresh_from_state();
+            mode_indicator_update();
+            clock_widget_tick();
+            break;
+        // case UI_EVT_TITLE_CHANGED:
+        //     break;
+        // case UI_EVT_VOLUME_CHANGED:
+        //     if (s_slider) {
+        //         lv_slider_set_value(s_slider, ev->volume, LV_ANIM_ON);
+        //         char buf[16];
+        //         snprintf(buf, sizeof(buf), "%d%%", ev->volume);
+        //         lv_label_set_text(s_vol_label, buf);
+        //     }
+        //     break;
+        default:
+            break;
     }
+
+    // if (ev->type == UI_EVT_STATE_CHANGED && s_slider) {
+    //     app_state_t *s = app_state_get();
+
+    //     // BT volume slider
+    //     if (!lv_obj_has_state(s_slider, LV_STATE_PRESSED)) {
+    //         lv_slider_set_value(s_slider, s->bt_volume, LV_ANIM_OFF);
+    //     }
+
+    //     // Connection status
+    //     const ui_theme_colors_t *th = theme_get();
+    //     lv_obj_set_style_text_color(s_status_label, lv_color_hex(th->status_ok), LV_PART_MAIN);
+    //     if(s->bt_state == BT_CONNECTED) {
+    //         lv_label_set_text(s_status_label, "Connected");
+    //     }
+    //     else if(s->bt_state == BT_DISCONNECTED) {
+    //         lv_label_set_text(s_status_label, "Not connected");
+    //     }
+    //     else if(s->bt_state == BT_DISCOVERABLE) {
+    //         lv_label_set_text(s_status_label, "Discoverable");
+    //     }
+    // }
 }
 
 static void bt_on_input(ui_input_t input)
@@ -164,6 +212,9 @@ static void bt_on_input(ui_input_t input)
             // optymistyczna aktualizacja slidera
             if (s_slider && !lv_obj_has_state(s_slider, LV_STATE_PRESSED)) {
                 lv_slider_set_value(s_slider, vol, LV_ANIM_OFF);
+                char buf[16];
+                snprintf(buf, sizeof(buf), "%d%%", vol);
+                lv_label_set_text(s_vol_label, buf);
             }
             break;
         }

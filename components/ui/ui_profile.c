@@ -176,7 +176,7 @@ static const ui_profile_t k_defaults = {
     .clock_show_event_indicator = true,
 
     // Radio: Station info and large volume slider
-    .radio_state_y             = 80,
+    .radio_state_y             = 100,
     .radio_audio_info_y        = 20,
     .radio_slider_w            = 180,
     .radio_slider_h            = 12,
@@ -189,12 +189,16 @@ static const ui_profile_t k_defaults = {
     .radio_show_clock          = true,
 
     // Playlist: We use the screen height for more list items
-    .playlist_header_h         = 30,
+    .playlist_header_h         = 45,
     .playlist_item_h           = 34,
     .playlist_item_pad         = 2,
     .playlist_row_w            = 234,
     .playlist_row_label_w      = 210,
     .playlist_row_pad_left     = 10,
+    .playlist_label_x          = 90,
+    .playlist_label_y          = -10,
+    .playlist_hint_x           = -20,
+    .playlist_hint_y           = 10,
     .playlist_header_font      = &lv_font_montserrat_14_pl,
     .playlist_row_font         = &lv_font_montserrat_14_pl,
 

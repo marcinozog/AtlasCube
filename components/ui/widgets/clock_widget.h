@@ -13,10 +13,12 @@ extern "C" {
  * creates its own instance and destroys it on destroy().
  *
  * @param parent    LVGL container (e.g. lv_scr_act() or any lv_obj)
+ * @param x         coordinates
+ * @param y         coordinates
  * @param large     true = large font 48 (screen_clock),
  *                  false = small 14/18 (status bar on another screen)
  */
-void clock_widget_create(lv_obj_t *parent, bool large);
+void clock_widget_create(lv_obj_t *parent, int x, int y, bool large);
 
 /**
  * Destroys the widget and stops the LVGL timer.
