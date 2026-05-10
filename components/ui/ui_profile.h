@@ -1,9 +1,24 @@
 #pragma once
 
+#include "defines.h"
 #include "lvgl.h"
 #include "esp_err.h"
 #include <stdbool.h>
 #include <stdint.h>
+
+// Display dimensions derived from UI_PROFILE_* (defines.h)
+#if defined(UI_PROFILE_240X296)
+    #define DISPLAY_WIDTH   240
+    #define DISPLAY_HEIGHT  296
+#elif defined(UI_PROFILE_320x240)
+    #define DISPLAY_WIDTH   320
+    #define DISPLAY_HEIGHT  240
+#elif defined(UI_PROFILE_MONO_128X64)
+    #define DISPLAY_WIDTH   128
+    #define DISPLAY_HEIGHT  64
+#else
+    #error "Unknown UI_PROFILE"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -14,9 +29,6 @@ extern "C" {
 // UI code for different displays (color/mono, various resolutions)
 // without a runtime JSON parser.
 typedef struct {
-    int16_t screen_w;
-    int16_t screen_h;
-
     // screen_clock — absolute LCD coordinates (top-left origin)
     int16_t          clock_panel_x;
     int16_t          clock_panel_y;

@@ -5,6 +5,7 @@
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "defines.h"
+#include "ui_profile.h"
 #include "freertos/task.h"
 
 static const char *TAG = "ILI9341";

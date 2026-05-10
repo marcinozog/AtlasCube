@@ -19,9 +19,6 @@ static const char *TAG = "UI_PROFILE";
 #if defined(UI_PROFILE_MONO_128X64)
 
 static const ui_profile_t k_defaults = {
-    .screen_w = 128,
-    .screen_h = 64,
-
     .clock_panel_x             = 0,
     .clock_panel_y             = 0,
     .clock_panel_w             = 128,
@@ -165,9 +162,6 @@ static const ui_profile_t k_defaults = {
 #elif defined(UI_PROFILE_240X296)
 
 static const ui_profile_t k_defaults = {
-    .screen_w = 240,
-    .screen_h = 296,
-
     // Clock Panel: Large clock on top, information bar underneath
     .clock_panel_x             = 0,
     .clock_panel_y             = 0,
@@ -321,9 +315,6 @@ static const ui_profile_t k_defaults = {
 #elif defined(UI_PROFILE_320x240)
 
 static const ui_profile_t k_defaults = {
-    .screen_w = 320,
-    .screen_h = 240,
-
     .clock_panel_x             = 0,
     .clock_panel_y             = 0,
     .clock_panel_w             = 320,

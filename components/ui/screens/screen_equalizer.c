@@ -84,7 +84,7 @@ static void eq_create(lv_obj_t *parent)
 
     /* title */
     int title_h = lv_font_get_line_height(p->eq_title_font);
-    if (title_h > 0 && p->screen_h > 80) {
+    if (title_h > 0 && DISPLAY_HEIGHT > 80) {
         s_title = lv_label_create(parent);
         lv_label_set_text(s_title, "Equalizer");
         lv_obj_set_style_text_font(s_title, p->eq_title_font, LV_PART_MAIN);

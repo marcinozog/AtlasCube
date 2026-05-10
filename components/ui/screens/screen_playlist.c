@@ -109,7 +109,7 @@ static void playlist_create(lv_obj_t *parent)
 
     const ui_theme_colors_t *th = theme_get();
     const ui_profile_t      *p  = ui_profile_get();
-    const int16_t list_h = p->screen_h - p->playlist_header_h;
+    const int16_t list_h = DISPLAY_HEIGHT - p->playlist_header_h;
 
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
@@ -117,7 +117,7 @@ static void playlist_create(lv_obj_t *parent)
 
     // ----- Header -----
     lv_obj_t *header = lv_obj_create(parent);
-    lv_obj_set_size(header, p->screen_w, p->playlist_header_h);
+    lv_obj_set_size(header, DISPLAY_WIDTH, p->playlist_header_h);
     lv_obj_align(header, LV_ALIGN_TOP_MID, 0, 0);
     lv_obj_set_style_bg_color(header, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(header, LV_OPA_COVER, LV_PART_MAIN);
@@ -139,7 +139,7 @@ static void playlist_create(lv_obj_t *parent)
 
     // ----- Scrollable list -----
     s_list = lv_obj_create(parent);
-    lv_obj_set_size(s_list, p->screen_w, list_h);
+    lv_obj_set_size(s_list, DISPLAY_WIDTH, list_h);
     lv_obj_align(s_list, LV_ALIGN_BOTTOM_MID, 0, 0);
     lv_obj_set_flex_flow(s_list, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(s_list, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);

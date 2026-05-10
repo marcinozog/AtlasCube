@@ -833,11 +833,9 @@ static esp_err_t api_events_delete_handler(httpd_req_t *req)
 
 static esp_err_t api_ui_profile_meta_get_handler(httpd_req_t *req)
 {
-    const ui_profile_t *p = ui_profile_get();
-
     cJSON *json = cJSON_CreateObject();
-    cJSON_AddNumberToObject(json, "screen_w", p->screen_w);
-    cJSON_AddNumberToObject(json, "screen_h", p->screen_h);
+    cJSON_AddNumberToObject(json, "screen_w", DISPLAY_WIDTH);
+    cJSON_AddNumberToObject(json, "screen_h", DISPLAY_HEIGHT);
 
     cJSON *fonts = cJSON_CreateArray();
     int n = ui_font_list_count();

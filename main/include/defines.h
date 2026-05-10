@@ -1,3 +1,5 @@
+#pragma once
+
 #include "sdkconfig.h"
 
 #define WEB_ROOT "/spiffs"
@@ -15,9 +17,7 @@
 
 
 // ===== DISPLAY =====
-
-#define DISPLAY_WIDTH     240 //432 //320
-#define DISPLAY_HEIGHT    296 //502 //240
+// DISPLAY_WIDTH / DISPLAY_HEIGHT live in ui_profile.h, derived from UI_PROFILE_*
 
 #define DISPLAY_HOST      SPI2_HOST
 #define DISPLAY_CLK_SPEED   40000000

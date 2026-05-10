@@ -265,7 +265,7 @@ static void settings_create(lv_obj_t *parent)
     /* ── scrollable rows container (between memory bar and hint) ── */
     int hint_h = lv_font_get_line_height(p->settings_hint_font);
     int rows_start_y = p->settings_row1_y + mem_bar_h + 2;
-    int rows_cont_h = p->screen_h + p->settings_hint_y - hint_h - rows_start_y - 4;
+    int rows_cont_h = DISPLAY_HEIGHT + p->settings_hint_y - hint_h - rows_start_y - 4;
     s_rows_cont = lv_obj_create(parent);
     lv_obj_set_size(s_rows_cont, p->settings_row_w + 12, rows_cont_h);
     lv_obj_align(s_rows_cont, LV_ALIGN_TOP_MID, 0, rows_start_y);

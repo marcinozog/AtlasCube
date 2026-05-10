@@ -1,5 +1,5 @@
-#include "defines.h"
 #include "now_playing_widget.h"
+#include "ui_profile.h"
 #include "app_state.h"
 #include "theme.h"
 #include "fonts/ui_fonts.h"

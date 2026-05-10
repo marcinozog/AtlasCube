@@ -1,4 +1,5 @@
 #include "defines.h"
+#include "ui_profile.h"
 #include <string.h>
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
