@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AtlasCube – File Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .editor-wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 14px;
+        }
+        .editor-toolbar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding: 10px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .editor-toolbar select {
+            flex: 1 1 240px;
+            min-width: 200px;
+            padding: 8px 10px;
+            background: var(--bg-input);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+        .editor-toolbar .meta {
+            color: var(--text-dim);
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            margin-left: auto;
+        }
+        .editor-toolbar button {
+            padding: 8px 14px;
+            background: var(--bg-panel);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .editor-toolbar button.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #000;
+            font-weight: 600;
+        }
+        .editor-toolbar button:hover { filter: brightness(1.15); }
+        textarea#code {
+            width: 100%;
+            min-height: 65vh;
+            padding: 12px;
+            background: var(--bg-input);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            resize: vertical;
+            tab-size: 4;
+            white-space: pre;
+            outline: none;
+        }
+        textarea#code:focus { border-color: var(--accent); }
+        .editor-footer {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-top: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            flex-wrap: wrap;
+        }
+        .editor-footer .hint   { color: var(--text-label); }
+        .editor-footer .status { color: var(--text-dim); }
+        .editor-footer .status.ok   { color: var(--green); }
+        .editor-footer .status.err  { color: var(--red);   }
+        .editor-footer .status.warn { color: var(--orange); }
+    </style>
+</head>
+<body>
+
+<header class="app-header">
+    <div class="logo">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text">ATLAS <span class="logo-accent">CUBE</span> · EDITOR</span>
+    </div>
+</header>
+
+<main class="editor-wrap">
+    <a href="/settings.html" class="back-link">← Back to Settings</a>
+
+    <div class="section-title" style="margin: 16px 0 12px">📝 File Editor</div>
+
+    <div class="editor-toolbar">
+        <select id="file_select"></select>
+        <button onclick="reloadFile()" title="Reload from flash">↺ Reload</button>
+        <button onclick="downloadFile()" title="Save copy to your PC (sync back to www/)">⬇ Download</button>
+        <button class="primary" onclick="saveFile()" title="Ctrl+S">💾 Save</button>
+        <span class="meta" id="file_meta">—</span>
+    </div>
+
+    <textarea id="code" spellcheck="false"></textarea>
+
+    <div class="editor-footer">
+        <span class="hint">Tab = 4 spaces · Ctrl+S = save · HTML/CSS/JS gzipped on save · JSON/CSV stored raw</span>
+        <span class="status" id="status">Ready</span>
+    </div>
+
+</main>
+
+<script src="editor.js"></script>
+</body>
+</html>

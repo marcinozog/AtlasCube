@@ -18,6 +18,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include "zlib.h"
 #include "defines.h"
 
 extern void ws_set_server(httpd_handle_t server);
@@ -987,6 +990,235 @@ static esp_err_t api_ui_profile_reset_handler(httpd_req_t *req)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// FILE EDITOR — list + save raw text into /spiffs (html/css/js → .gz, else raw)
+// GET /api/files            — JSON [{name, size, gz}] of editable files
+// PUT /api/files/<name>     — body = plain text; server gzips when applicable
+// ─────────────────────────────────────────────────────────────────────────────
+static esp_err_t gzip_buffer(const char *src, size_t src_len,
+                             uint8_t **out_buf, size_t *out_len)
+{
+    z_stream s = {0};
+    // windowBits = 15 + 16 → gzip wrapper (matches tools/compress_web.py output)
+    if (deflateInit2(&s, Z_BEST_COMPRESSION, Z_DEFLATED,
+                     15 + 16, 8, Z_DEFAULT_STRATEGY) != Z_OK) {
+        return ESP_FAIL;
+    }
+    unsigned long bound = deflateBound(&s, src_len);
+    uint8_t *buf = malloc(bound);
+    if (!buf) {
+        deflateEnd(&s);
+        return ESP_ERR_NO_MEM;
+    }
+    s.next_in   = (Bytef *)src;
+    s.avail_in  = src_len;
+    s.next_out  = buf;
+    s.avail_out = bound;
+    int r = deflate(&s, Z_FINISH);
+    if (r != Z_STREAM_END) {
+        free(buf);
+        deflateEnd(&s);
+        return ESP_FAIL;
+    }
+    *out_len = s.total_out;
+    *out_buf = buf;
+    deflateEnd(&s);
+    return ESP_OK;
+}
+
+static esp_err_t api_files_get_handler(httpd_req_t *req)
+{
+    DIR *d = opendir(WEB_ROOT);
+    if (!d) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "opendir failed");
+        return ESP_FAIL;
+    }
+
+    cJSON *arr = cJSON_CreateArray();
+    struct dirent *e;
+    while ((e = readdir(d)) != NULL) {
+        if (e->d_name[0] == '.') continue;
+
+        const char *fname = e->d_name;
+        size_t nlen = strlen(fname);
+        // skip tmp leftovers from atomic writes
+        if (nlen > 4 && strcmp(fname + nlen - 4, ".tmp") == 0) continue;
+
+        char display[160];
+        bool is_gz = false;
+        if (nlen > 3 && strcmp(fname + nlen - 3, ".gz") == 0) {
+            is_gz = true;
+            if (nlen - 3 >= sizeof(display)) continue;
+            memcpy(display, fname, nlen - 3);
+            display[nlen - 3] = '\0';
+        } else {
+            if (nlen >= sizeof(display)) continue;
+            strcpy(display, fname);
+        }
+
+        // binary formats not editable as text
+        const char *ext = strrchr(display, '.');
+        if (ext && strcmp(ext, ".ico") == 0) continue;
+
+        char fullpath[320];
+        snprintf(fullpath, sizeof(fullpath), "%s/%s", WEB_ROOT, fname);
+        struct stat st = {0};
+        long sz = (stat(fullpath, &st) == 0) ? (long)st.st_size : 0;
+
+        cJSON *o = cJSON_CreateObject();
+        cJSON_AddStringToObject(o, "name", display);
+        cJSON_AddNumberToObject(o, "size", sz);
+        cJSON_AddBoolToObject  (o, "gz",   is_gz);
+        cJSON_AddItemToArray(arr, o);
+    }
+    closedir(d);
+
+    char *str = cJSON_PrintUnformatted(arr);
+    cJSON_Delete(arr);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    httpd_resp_sendstr(req, str);
+    free(str);
+    return ESP_OK;
+}
+
+static esp_err_t api_files_put_handler(httpd_req_t *req)
+{
+    const char *prefix = "/api/files/";
+    const char *p = strstr(req->uri, prefix);
+    if (!p) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad URI");
+        return ESP_FAIL;
+    }
+    p += strlen(prefix);
+    if (*p == '\0' || *p == '/') {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad name");
+        return ESP_FAIL;
+    }
+
+    // URL-decode percent escapes (slashes for subpaths come through literally)
+    char name[160];
+    size_t ni = 0;
+    while (*p && *p != '?' && ni < sizeof(name) - 1) {
+        if (*p == '%' && p[1] && p[2]) {
+            char hex[3] = { p[1], p[2], 0 };
+            name[ni++] = (char)strtol(hex, NULL, 16);
+            p += 3;
+        } else {
+            name[ni++] = *p++;
+        }
+    }
+    name[ni] = '\0';
+
+    if (strstr(name, "..") || name[0] == '/') {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad name");
+        return ESP_FAIL;
+    }
+
+    const char *ext = strrchr(name, '.');
+    if (!ext) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "No extension");
+        return ESP_FAIL;
+    }
+    if (strcmp(ext, ".ico") == 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Binary not supported");
+        return ESP_FAIL;
+    }
+
+    bool do_gzip = (strcmp(ext, ".html") == 0 ||
+                    strcmp(ext, ".css")  == 0 ||
+                    strcmp(ext, ".js")   == 0);
+
+    int total = req->content_len;
+    if (total < 0 || total > 65536) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad content length");
+        return ESP_FAIL;
+    }
+    char *body = malloc((size_t)total + 1);
+    if (!body) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OOM");
+        return ESP_FAIL;
+    }
+    int recv = 0;
+    while (recv < total) {
+        int r = httpd_req_recv(req, body + recv, total - recv);
+        if (r <= 0) {
+            free(body);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Recv error");
+            return ESP_FAIL;
+        }
+        recv += r;
+    }
+    body[total] = '\0';
+
+    char dest_path[256];
+    if (do_gzip)
+        snprintf(dest_path, sizeof(dest_path), "%s/%s.gz", WEB_ROOT, name);
+    else
+        snprintf(dest_path, sizeof(dest_path), "%s/%s",    WEB_ROOT, name);
+
+    char tmp_path[260];
+    snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", dest_path);
+
+    FILE *f = fopen(tmp_path, "wb");
+    if (!f) {
+        free(body);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Cannot open tmp");
+        return ESP_FAIL;
+    }
+
+    size_t bytes_written = 0;
+    esp_err_t rc = ESP_OK;
+    if (do_gzip) {
+        uint8_t *gz = NULL;
+        size_t gz_len = 0;
+        rc = gzip_buffer(body, (size_t)total, &gz, &gz_len);
+        free(body);
+        if (rc == ESP_OK) {
+            bytes_written = fwrite(gz, 1, gz_len, f);
+            free(gz);
+            if (bytes_written != gz_len) rc = ESP_FAIL;
+        }
+    } else {
+        bytes_written = fwrite(body, 1, (size_t)total, f);
+        free(body);
+        if (bytes_written != (size_t)total) rc = ESP_FAIL;
+    }
+    fclose(f);
+
+    if (rc != ESP_OK) {
+        remove(tmp_path);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Write failed");
+        return ESP_FAIL;
+    }
+
+    // SPIFFS rename onto existing target fails — remove first
+    remove(dest_path);
+    if (rename(tmp_path, dest_path) != 0) {
+        ESP_LOGE("HTTP", "rename %s → %s failed", tmp_path, dest_path);
+        remove(tmp_path);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Rename failed");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI("HTTP", "Saved %s (%zu bytes%s)", dest_path, bytes_written,
+             do_gzip ? ", gzipped" : "");
+
+    cJSON *o = cJSON_CreateObject();
+    cJSON_AddBoolToObject  (o, "ok",   true);
+    cJSON_AddStringToObject(o, "name", name);
+    cJSON_AddNumberToObject(o, "size", (double)bytes_written);
+    cJSON_AddBoolToObject  (o, "gz",   do_gzip);
+    char *str = cJSON_PrintUnformatted(o);
+    cJSON_Delete(o);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, str);
+    free(str);
+    return ESP_OK;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Wildcard — serve files from SPIFFS
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t file_handler(httpd_req_t *req)
@@ -1109,7 +1341,7 @@ void http_server_start(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn      = httpd_uri_match_wildcard;
-    config.max_uri_handlers  = 26;
+    config.max_uri_handlers  = 28;
     // max_open_sockets: each lwIP socket uses ~2KB internal RAM for buffers
     // TCP + control. On ESP32 with tight internal heap (radio TLS, WiFi, LVGL)
     // 13 sockets caused the TLS audio stream to drop on page open.
@@ -1279,6 +1511,21 @@ void http_server_start(void)
         .handler = api_ui_profile_reset_handler,
     };
     httpd_register_uri_handler(server, &api_ui_reset);
+
+    // ── FILE EDITOR ───────────────────────────────────────────────────────────
+    httpd_uri_t api_files_get = {
+        .uri     = "/api/files",
+        .method  = HTTP_GET,
+        .handler = api_files_get_handler,
+    };
+    httpd_register_uri_handler(server, &api_files_get);
+
+    httpd_uri_t api_files_put = {
+        .uri     = "/api/files/*",
+        .method  = HTTP_PUT,
+        .handler = api_files_put_handler,
+    };
+    httpd_register_uri_handler(server, &api_files_put);
 
     // OPTIONS dla /api/restart — preflight CORS
     httpd_uri_t api_restart_options = {

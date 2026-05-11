@@ -12,4 +12,5 @@ idf_component_register(
         ui
         playlist
         events
+        espressif__zlib
 )
