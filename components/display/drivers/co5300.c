@@ -37,7 +37,7 @@ static const char *TAG = "CO5300";
 #define CS_LOW()    gpio_set_level(DISPLAY_PIN_CS, 0)
 #define CS_HIGH()   gpio_set_level(DISPLAY_PIN_CS, 1)
 
-#define LVGL_BUF_LINES 40
+#define LVGL_BUF_LINES 36
 
 spi_device_handle_t display_spi;
 spi_transaction_ext_t spi_tran_ext;

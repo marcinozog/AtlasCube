@@ -1,6 +1,6 @@
 # AtlasCube
 
-A hobby project — internet radio and smart clock built on a custom ESP32-S3 board (Atlas Hub). Streams internet radio, shows a clock, manages reminders, and exposes a web UI for configuration. Everything runs on the device with no cloud dependency.
+A hobby project — internet radio and smart clock built on a custom ESP32-S3 board (AtlasCube). Streams internet radio, shows a clock, manages reminders, and exposes a web UI for configuration. Everything runs on the device with no cloud dependency.
 
 🌐 **[atlascube.net](https://atlascube.net)**
 
@@ -128,7 +128,7 @@ After cloning ESP-ADF, initialize the required submodules — they contain pre-c
 git -C $ADF_PATH submodule update --init components/esp-adf-libs components/esp-sr
 ```
 
-**Atlas Hub board support**
+**AtlasCube board support**
 
 ESP-ADF requires a board definition to compile — it uses it to initialize the audio codec, I2S pins, PA enable, and other hardware specifics. Every supported board in `esp-adf/components/audio_board/` is a separate subdirectory with `board.c`, `board.h`, and `board_pins_config.c`. The `esp32_s3_atlascube` component in this repo follows that same structure and was modelled after the existing ESP32-S3 board definitions shipped with ESP-ADF.
 

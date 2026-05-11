@@ -8,6 +8,12 @@
 #define THEME_FILE "/spiffs/theme.json"
 #define EVENTS_FILE "/spiffs/events.json"
 
+// WTD -> 37 -> PSRAM 33, 34, 35, 36, 37
+
+// ===== USER CONFIG =====
+// UI layout: pick UI_PROFILE_* below
+// Display driver: pick CONFIG_DISPLAY_* in sdkconfig.defaults (or via menuconfig)
+
 
 // ===== UI =====
 
@@ -22,15 +28,11 @@
 #define DISPLAY_HOST      SPI2_HOST
 #define DISPLAY_CLK_SPEED   40000000
 
-/*
-Define display in the SDK Configuration Editor or manually in sdkconfig.defaults
-*/
-
 #if CONFIG_DISPLAY_ILI9341
 
 #define LCD_PIN_MOSI  11
 #define LCD_PIN_CLK   12
-#define LCD_PIN_CS    41 // WTD -> 37 -> PSRAM 33, 34, 35, 36, 37
+#define LCD_PIN_CS    41
 #define LCD_PIN_DC    39
 #define LCD_PIN_RST   38
 #define LCD_LED       40
