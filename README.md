@@ -71,7 +71,7 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 - Automatic retry on stream loss
 
 **UI**
-- LVGL-based GUI on a 320×240 ILI9341 display
+- LVGL-based GUI — supports ILI9341 320×240 (SPI) and CO5300 240×296 round AMOLED (QSPI), switched via a single compile-time define
 - Screens: clock, playlist, equalizer, settings, Bluetooth, events, WiFi AP
 - Rotary encoder navigation (turn + press)
 - Configurable layout (widget positions editable via JSON)
@@ -102,7 +102,7 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 | Board | Atlas Hub (custom) |
 | Flash | 8 MB |
 | PSRAM | OctoSPI, 80 MHz |
-| Display | ILI9341, 320×240, SPI |
+| Display | ILI9341 320×240 (SPI) or CO5300 240×296 AMOLED (QSPI) — selected at compile time |
 | Input | Rotary encoder with push button |
 | I2S mux | 74HC157D — hardware switch between ESP32-S3 and QCC5125 I2S outputs; controlled via GPIO |
 | Audio out | I2S DAC / amplifier (fed from 74HC157D output) |
@@ -230,7 +230,7 @@ Architecture and design notes in [`docs/`](docs/):
 - **Enclosure** — 3D-printed case currently in design; firmware is developed and tested on the bare development board
 - **Touch input** — capacitive touch panel support
 - **SD card** — local storage for station logos, music files, and voice notification clips
-- **Additional displays** — SSD1322 (256×64 OLED) and ST7796 TFT support in progress
+- **Additional displays** — SSD1322 (256×64 OLED) and ST7796 TFT support in progress (ILI9341 and CO5300 240×296 already supported)
 - **Web melody editor** — in-browser tool for composing custom buzzer notification tunes
 
 ---
