@@ -18,6 +18,12 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
     <td align="center"><img src="https://atlascube.net/images/scr_radio_l.jpg" width="200"><br><sub>Radio — light</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="https://atlascube.net/images/scr_clock_d_2.jpg" width="200"><br><sub>Clock — dark</sub></td>
+    <td align="center"><img src="https://atlascube.net/images/scr_clock_l_2.jpg" width="200"><br><sub>Clock — light</sub></td>
+    <td align="center"><img src="https://atlascube.net/images/scr_radio_d_2.jpg" width="200"><br><sub>Radio — dark</sub></td>
+    <td align="center"><img src="https://atlascube.net/images/scr_radio_l_2.jpg" width="200"><br><sub>Radio — light</sub></td>
+  </tr>
+  <tr>
     <td align="center"><img src="https://atlascube.net/images/scr_playlist_d.jpg" width="200"><br><sub>Playlist — dark</sub></td>
     <td align="center"><img src="https://atlascube.net/images/scr_playlist_l.jpg" width="200"><br><sub>Playlist — light</sub></td>
     <td align="center"><img src="https://atlascube.net/images/scr_settings_d.jpg" width="200"><br><sub>Settings — dark</sub></td>
