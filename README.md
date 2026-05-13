@@ -4,7 +4,7 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 
 🌐 **[atlascube.net](https://atlascube.net)**
 
-➡️ **[Web interface demo](https://atlascube.net/demo)**
+➡️ **[Web interface demo](https://atlascube.net/demo)** — a live, in-browser preview of the device web UI. The demo mirrors what runs on the ESP32-S3: playlist, settings, events, equalizer, layout editor, and file editor are all interactive, backed by a mock state so you can click around without owning the hardware.
 
 ---
 
@@ -220,11 +220,19 @@ Available at the device IP (STA mode) or `192.168.4.1` (AP mode).
 
 | Page | Path |
 |---|---|
+| Radio / now playing | `/` |
 | Settings | `/settings.html` |
 | Playlist | `/playlist.html` |
 | Events | `/events.html` |
+| Equalizer | `/eq.html` |
+| Layout editor | `/layout.html` |
+| File editor | `/editor.html` |
 
 WebSocket endpoint: `ws://<device-ip>/ws` — pushes state changes (volume, track, radio state) in real time.
+
+**File editor**
+
+`/editor.html` is an in-browser editor for files stored in SPIFFS — JSON configs (layouts, playlist, events), HTML/CSS/JS of the web UI itself, and any other text assets on the device. Lists files from the storage partition, lets you edit them with syntax highlighting, and saves back over HTTP without reflashing. Useful for tweaking layouts or web UI on a deployed device.
 
 ---
 
