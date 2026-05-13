@@ -9,6 +9,11 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-05-13
+
+### Added
+- **ui:** Added screensavers
+
 ## [0.3.0] - 2026-05-11
 
 ### Added
@@ -42,7 +47,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/marcinozog/AtlasCube/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/marcinozog/AtlasCube/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/marcinozog/AtlasCube/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/marcinozog/AtlasCube/releases/tag/v0.1.0
