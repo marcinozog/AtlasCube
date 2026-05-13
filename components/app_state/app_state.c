@@ -109,6 +109,10 @@ void app_state_update(const app_state_patch_t *patch)
         theme_set(patch->theme);
     }
 
+    if (patch->has_scrsaver_enable) s_state.scrsaver_enable = patch->scrsaver_enable;
+    if (patch->has_scrsaver_delay)  s_state.scrsaver_delay  = patch->scrsaver_delay;
+    if (patch->has_scrsaver_id)     s_state.scrsaver_id     = patch->scrsaver_id;
+
     notify();
 
     char buf[256];
@@ -131,6 +135,9 @@ void app_state_update(const app_state_patch_t *patch)
                                                     (unsigned long)s_state.bitrate, s_state.codec_fmt);
     if (patch->has_time_synced)       n += snprintf(buf + n, sizeof(buf) - n, " time_synced=%d", s_state.time_synced);
     if (patch->has_theme)             n += snprintf(buf + n, sizeof(buf) - n, " theme=%d", s_state.theme);
+    if (patch->has_scrsaver_enable)   n += snprintf(buf + n, sizeof(buf) - n, " scrsaver_enable=%d", s_state.scrsaver_enable);
+    if (patch->has_scrsaver_delay)    n += snprintf(buf + n, sizeof(buf) - n, " scrsaver_delay=%d", s_state.scrsaver_delay);
+    if (patch->has_scrsaver_id)       n += snprintf(buf + n, sizeof(buf) - n, " scrsaver_id=%d", s_state.scrsaver_id);
 
     if (n > 0) {
         ESP_LOGI("STATE", "Updated:%s", buf);

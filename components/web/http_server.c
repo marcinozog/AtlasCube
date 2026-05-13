@@ -14,6 +14,7 @@
 #include "fonts/ui_fonts.h"
 #include "playlist.h"
 #include "events_service.h"
+#include "screensavers.h"
 #include "cJSON.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,6 +73,14 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(wifi_obj, "ssid",     s->wifi.ssid);
     cJSON_AddStringToObject(wifi_obj, "password", "");   // never send the password back
     cJSON_AddItemToObject(json, "wifi", wifi_obj);
+
+    // screensaver
+    cJSON *scrs = cJSON_CreateObject();
+    cJSON_AddBoolToObject(scrs,   "enable", s->scrsaver.enable);
+    cJSON_AddNumberToObject(scrs, "delay",  s->scrsaver.delay);
+    cJSON_AddStringToObject(scrs, "id",
+        screensaver_name(s->scrsaver.screensaver_id));
+    cJSON_AddItemToObject(json, "scrsaver", scrs);
 
 
     char *str = cJSON_PrintUnformatted(json);
@@ -187,6 +196,21 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         if (cJSON_IsBool(en))     settings_set_bt_enable(cJSON_IsTrue(en));
         if (cJSON_IsBool(sh_scr)) settings_set_bt_show_screen(cJSON_IsTrue(sh_scr));
         if (cJSON_IsNumber(bvol)) settings_set_bt_volume(bvol->valueint);
+    }
+
+    // ── SCREENSAVER ───────────────────────────────────────────────────────────
+    cJSON *scrs = cJSON_GetObjectItem(json, "scrsaver");
+    if (cJSON_IsObject(scrs)) {
+        cJSON *en = cJSON_GetObjectItem(scrs, "enable");
+        cJSON *dl = cJSON_GetObjectItem(scrs, "delay");
+        cJSON *id = cJSON_GetObjectItem(scrs, "id");
+        if (cJSON_IsBool(en))   settings_set_scrsaver_enable(cJSON_IsTrue(en));
+        if (cJSON_IsNumber(dl)) settings_set_scrsaver_delay(dl->valueint);
+        if (cJSON_IsString(id)) {
+            settings_set_scrsaver_id(screensaver_from_name(id->valuestring));
+        } else if (cJSON_IsNumber(id)) {
+            settings_set_scrsaver_id(id->valueint);
+        }
     }
 
     // ── WIFI ──────────────────────────────────────────────────────────────────

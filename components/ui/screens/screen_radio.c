@@ -176,13 +176,12 @@ static void radio_on_input(ui_input_t input)
             break;
         }
 
-        case UI_INPUT_ENCODER_PRESS:
+        case UI_INPUT_ENCODER_PRESS: {
             app_state_t *s = app_state_get();
-            if(s->bt_show_screen == true)
+            if (s->bt_show_screen)
                 settings_set_screen(SCREEN_BT); // set & save
-            else
-                settings_set_screen(SCREEN_CLOCK); // set & save
             break;
+        }
         case UI_INPUT_ENCODER_LONG_PRESS:
             ui_navigate(SCREEN_PLAYLIST);
             break;

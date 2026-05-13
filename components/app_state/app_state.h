@@ -42,6 +42,9 @@ typedef struct {
     ui_screen_id_t screen;      // Current screen
     int brightness;             // Display brightness
     ui_theme_t theme;
+    bool scrsaver_enable;       // Screensaver on/off
+    int  scrsaver_delay;        // Idle seconds before activation
+    int  scrsaver_id;           // screensaver_id_t (see screensavers.h)
 } app_state_t;
 
 typedef struct {
@@ -96,6 +99,13 @@ typedef struct {
 
     bool has_theme;
     ui_theme_t theme;
+
+    bool has_scrsaver_enable;
+    bool scrsaver_enable;
+    bool has_scrsaver_delay;
+    int  scrsaver_delay;
+    bool has_scrsaver_id;
+    int  scrsaver_id;
 } app_state_patch_t;
 
 typedef void (*app_state_cb_t)(void);

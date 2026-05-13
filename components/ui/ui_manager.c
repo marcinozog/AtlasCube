@@ -6,10 +6,12 @@
 #include "wifi_manager.h"
 #include "screen_event_notification.h"
 #include "events_service.h"
+#include "screensavers.h"
 #include "lvgl.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include <string.h>
 
 // --------------------------------------------------------------------------
@@ -61,6 +63,20 @@ static const ui_screen_t   *s_active      = NULL;
 static bool s_prev_bt_enable = false;
 static ui_theme_t     s_prev_theme    = THEME_DARK;
 
+// Screensaver overlay — runs on top of an existing screen.
+// While active, the underlying s_active widgets are torn down but s_active /
+// s_active_id still point at the underlying screen so we can rebuild it.
+static const ui_screen_t *s_ss_overlay     = NULL;
+static int64_t            s_last_input_us  = 0;
+
+static bool can_auto_screensaver_from(ui_screen_id_t id)
+{
+    if (id >= SCREEN_COUNT)              return false;
+    if (id == SCREEN_SPLASH)             return false;
+    if (id == SCREEN_EVENT_NOTIFICATION) return false;
+    return true;
+}
+
 // --------------------------------------------------------------------------
 // app_state callback — invoked from a foreign task, only pushes an event
 // --------------------------------------------------------------------------
@@ -93,6 +109,11 @@ static void on_state_change(void)
 // values from ui_profile_get() are copied during create().
 static void do_rebuild_active(void)
 {
+    if (s_ss_overlay) {
+        // Underlying widgets aren't built right now; they will be rebuilt with
+        // the latest profile when the screensaver is dismissed.
+        return;
+    }
     if (!s_active) {
         ESP_LOGW(TAG, "rebuild: no active screen");
         return;
@@ -103,6 +124,19 @@ static void do_rebuild_active(void)
         ESP_LOGI(TAG, "rebuild: %s", s_active->name ? s_active->name : "?");
         s_active->create(lv_scr_act());
     }
+}
+
+// Tear down whichever widget tree is currently on screen (overlay or screen).
+static void teardown_displayed(void)
+{
+    if (s_ss_overlay) {
+        if (s_ss_overlay->destroy) s_ss_overlay->destroy();
+        s_ss_overlay = NULL;
+    } else if (s_active && s_active->destroy) {
+        ESP_LOGI(TAG, "destroy: %s", s_active->name ? s_active->name : "?");
+        s_active->destroy();
+    }
+    lv_obj_clean(lv_scr_act());
 }
 
 static void do_navigate(ui_screen_id_t id)
@@ -117,15 +151,8 @@ static void do_navigate(ui_screen_id_t id)
         return;
     }
 
-    // destroy the active one
-    if (s_active && s_active->destroy) {
-        ESP_LOGI(TAG, "destroy: %s", s_active->name ? s_active->name : "?");
-        s_active->destroy();
-    }
+    teardown_displayed();
 
-    lv_obj_clean(lv_scr_act());
-
-    // create the new one
     s_active_id = id;
     s_active    = s_screens[id];
 
@@ -133,6 +160,36 @@ static void do_navigate(ui_screen_id_t id)
         ESP_LOGI(TAG, "create: %s", s_active->name ? s_active->name : "?");
         s_active->create(lv_scr_act());
     }
+}
+
+static void activate_screensaver(int ss_id)
+{
+    if (s_ss_overlay) return;
+
+    const ui_screen_t *ss = screensaver_get(ss_id);
+    if (!ss) return;
+
+    // Tear down the underlying screen's widgets but keep s_active pointer
+    // so we can rebuild it on dismiss.
+    if (s_active && s_active->destroy) s_active->destroy();
+    lv_obj_clean(lv_scr_act());
+
+    s_ss_overlay = ss;
+    ESP_LOGI(TAG, "screensaver activate: %s", ss->name ? ss->name : "?");
+    if (ss->create) ss->create(lv_scr_act());
+}
+
+static void dismiss_screensaver(void)
+{
+    if (!s_ss_overlay) return;
+
+    if (s_ss_overlay->destroy) s_ss_overlay->destroy();
+    ESP_LOGI(TAG, "screensaver dismiss → %s",
+             s_active && s_active->name ? s_active->name : "?");
+    s_ss_overlay = NULL;
+    lv_obj_clean(lv_scr_act());
+
+    if (s_active && s_active->create) s_active->create(lv_scr_act());
 }
 
 // --------------------------------------------------------------------------
@@ -205,6 +262,7 @@ void ui_input_send(ui_input_t input)
 
 void ui_manager_run(void)
 {
+    s_last_input_us = esp_timer_get_time();
     do_navigate(SCREEN_SPLASH);
 
     ui_event_t ev;
@@ -229,8 +287,8 @@ void ui_manager_run(void)
                 continue;
             }
             if (ev.type == UI_EVT_EVENT_FIRED) {
-                // Set return_to only when coming from a real screen.
-                // If another event arrives during the previous one — keep the previous return_to.
+                // s_active_id always refers to the underlying screen (the
+                // overlay model keeps it stable while the screensaver is up).
                 if (s_active_id != SCREEN_EVENT_NOTIFICATION) {
                     screen_event_notification_set_return(s_active_id);
                 }
@@ -239,12 +297,34 @@ void ui_manager_run(void)
                 continue;
             }
             if (ev.type == UI_EVT_INPUT) {
+                s_last_input_us = esp_timer_get_time();
+                if (s_ss_overlay) {
+                    // Any encoder/button action just dismisses the screensaver;
+                    // the underlying screen does NOT receive the input.
+                    dismiss_screensaver();
+                    continue;
+                }
                 if (s_active && s_active->on_input)
                     s_active->on_input(ev.input);
                 continue;
             }
             if (s_active && s_active->on_event)
                 s_active->on_event(&ev);
+        }
+
+        // ── Idle-driven screensaver activation ─────────────────────────────
+        if (!s_ss_overlay) {
+            const app_state_t *st = app_state_get();
+            if (st->scrsaver_enable && st->scrsaver_delay > 0
+                && can_auto_screensaver_from(s_active_id))
+            {
+                int64_t idle_s = (esp_timer_get_time() - s_last_input_us) / 1000000;
+                if (idle_s >= st->scrsaver_delay) {
+                    ESP_LOGI(TAG, "screensaver auto-activate (idle=%llds, id=%d)",
+                             idle_s, st->scrsaver_id);
+                    activate_screensaver(st->scrsaver_id);
+                }
+            }
         }
 
         uint32_t delay_ms = lv_timer_handler();

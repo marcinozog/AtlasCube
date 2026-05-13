@@ -219,13 +219,11 @@ static void bt_on_input(ui_input_t input)
             break;
         }
 
-        case UI_INPUT_ENCODER_PRESS:
-            settings_set_screen(SCREEN_CLOCK); // set & save
-            break;
-        case UI_INPUT_ENCODER_LONG_PRESS:
+        case UI_INPUT_ENCODER_LONG_PRESS: {
             app_state_t *s = app_state_get();
             s->bt_enable ? settings_set_bt_enable(false) : settings_set_bt_enable(true);
             break;
+        }
 
         default:
             break;

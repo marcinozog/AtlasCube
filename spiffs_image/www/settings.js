@@ -6,6 +6,7 @@
 let currentSettings = null;
 let isApMode        = false;
 let brightnessTimeout;
+let scrsDelayTimeout;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Device theme (display)
@@ -58,6 +59,40 @@ function setDeviceEqEnabled(t) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ audio: { eq_enabled: t } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Screensaver
+// ─────────────────────────────────────────────────────────────────────────────
+function setScrsaverEnable(t) {
+    document.getElementById('settingsBtnScrsOn') ?.classList.toggle('active', t);
+    document.getElementById('settingsBtnScrsOff')?.classList.toggle('active', !t);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scrsaver: { enable: t } })
+    }).catch(console.error);
+}
+
+function setScrsaverDelay(t) {
+    clearTimeout(scrsDelayTimeout);
+    scrsDelayTimeout = setTimeout(() => {
+        let v = parseInt(t, 10);
+        if (isNaN(v) || v < 0) v = 0;
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scrsaver: { delay: v } })
+        }).catch(console.error);
+    }, 400);
+}
+
+function setScrsaverId(id) {
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scrsaver: { id } })
     }).catch(console.error);
 }
 
@@ -214,6 +249,14 @@ function populateForm(s) {
         const eq_en = (s.audio.eq_enabled !== false);
         document.getElementById('settingsBtnDspOn') ?.classList.toggle('active', eq_en);
         document.getElementById('settingsBtnDspOff')?.classList.toggle('active', !eq_en);
+    }
+    if (s.scrsaver) {
+        const en = s.scrsaver.enable !== false;
+        document.getElementById('settingsBtnScrsOn') ?.classList.toggle('active', en);
+        document.getElementById('settingsBtnScrsOff')?.classList.toggle('active', !en);
+        setVal('scrs_delay', s.scrsaver.delay ?? 60);
+        const sel = document.getElementById('scrs_id');
+        if (sel) sel.value = s.scrsaver.id || 'clockhands';
     }
 }
 

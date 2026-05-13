@@ -14,6 +14,12 @@ idf_component_register(
         "screens/screen_equalizer.c"
         "screens/screen_events.c"
         "screens/screen_event_notification.c"
+        "screensavers/screensaver_starfield.c"
+        "screensavers/screensaver_fireworks.c"
+        "screensavers/screensaver_plasma.c"
+        "screensavers/screensaver_clockhands.c"
+        "screensavers/screensaver_life.c"
+        "screensavers/screensavers.c"
         "widgets/clock_widget.c"
         "widgets/now_playing_widget.c"
         "widgets/mode_indicator_widget.c"
@@ -28,6 +34,7 @@ idf_component_register(
     INCLUDE_DIRS
         "."
         "screens"
+        "screensavers"
         "widgets"
     REQUIRES
         lvgl
