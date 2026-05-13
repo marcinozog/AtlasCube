@@ -36,7 +36,10 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
     <td align="center"><img src="https://atlascube.net/images/scr_bt_d.jpg" width="200"><br><sub>Bluetooth</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="https://atlascube.net/images/diagram.png" width="200"><br><sub>Diagram with ILI9341</sub></td>
+    <td align="center"><img src="https://atlascube.net/images/diagram_ili9341.jpg" width="200"><br><sub>Diagram with ILI9341</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="https://atlascube.net/images/diagram_co5300.jpg" width="200"><br><sub>Diagram with CO5300</sub></td>
   </tr>
 </table>
 
