@@ -4,6 +4,8 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 
 🌐 **[atlascube.net](https://atlascube.net)**
 
+➡️ **[Web interface demo](https://atlascube.net/demo)**
+
 ---
 
 ## Screenshots
