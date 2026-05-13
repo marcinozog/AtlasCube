@@ -54,6 +54,9 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
     <td align="center"><img src="https://atlascube.net/images/www_settings_2.png" width="400"><br><sub>Settings (cont.)</sub></td>
   </tr>
   <tr>
+    <td align="center"><img src="https://atlascube.net/images/www_editor.png" width="400"><br><sub>Editor</sub></td>
+  </tr>
+  <tr>
     <td align="center"><img src="https://atlascube.net/images/www_playlist.png" width="400"><br><sub>Playlist</sub></td>
     <td align="center"><img src="https://atlascube.net/images/www_events.png" width="400"><br><sub>Events</sub></td>
   </tr>
