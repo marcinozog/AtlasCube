@@ -89,6 +89,7 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 - Screens: clock, playlist, equalizer, settings, Bluetooth, events, WiFi AP
 - Rotary encoder navigation (turn + press)
 - Configurable layout (widget positions editable via JSON)
+- Screensavers — kick in after a configurable idle timeout; choose from clock hands, starfield, fireworks, plasma, or Conway's Game of Life
 
 **Events & reminders**
 - Birthdays, namedays, anniversaries, plain reminders
