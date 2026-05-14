@@ -15,4 +15,5 @@ set(PROJECT_VER_FROM_GIT 1)
 
 project(atlascube)
 
+# Uncomment the following to load the contents of spiffs_image/web into the ESP flash memory
 # spiffs_create_partition_image(storage spiffs_image/web FLASH_IN_PROJECT)

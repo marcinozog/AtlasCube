@@ -15,6 +15,7 @@
 #include "playlist.h"
 #include "events_service.h"
 #include "screensavers.h"
+#include "screensaver_dashboard.h"
 #include "cJSON.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -239,6 +240,9 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         cJSON *jp = cJSON_GetObjectItem(dash, "json_path");
         cJSON *sf = cJSON_GetObjectItem(dash, "suffix");
         cJSON *pi = cJSON_GetObjectItem(dash, "poll_interval_ms");
+        bool dashboard_touched = (cJSON_IsString(t)  || cJSON_IsString(u) ||
+                                  cJSON_IsString(jp) || cJSON_IsString(sf) ||
+                                  cJSON_IsNumber(pi));
         settings_set_dashboard(
             cJSON_IsString(t)  ? t->valuestring  : NULL,
             cJSON_IsString(u)  ? u->valuestring  : NULL,
@@ -272,6 +276,12 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             if (cJSON_IsBool(sne))  ds->dashboard.notify_str_ne_en   = cJSON_IsTrue(sne);
             if (cJSON_IsString(sn)) { ds->dashboard.notify_str_ne[0] = '\0'; strncpy(ds->dashboard.notify_str_ne, sn->valuestring, sizeof(ds->dashboard.notify_str_ne) - 1); }
             settings_save();
+            dashboard_touched = true;
+        }
+
+        if (dashboard_touched) {
+            // Live-reload an active dashboard screensaver; no-op if inactive.
+            screensaver_dashboard_settings_changed();
         }
     }
 
@@ -1327,6 +1337,12 @@ static esp_err_t file_handler(httpd_req_t *req)
         }
         strcat(filepath, req->uri);
     }
+
+    // Strip query string — static-file paths must not include "?..." parts,
+    // otherwise fopen() fails on e.g. /spiffs/settings.html?tab=screensaver
+    // when a deep link is refreshed.
+    char *q = strchr(filepath, '?');
+    if (q) *q = '\0';
 
     // Content-Type based on the original extension (before adding .gz)
     const char *content_type = "text/plain";

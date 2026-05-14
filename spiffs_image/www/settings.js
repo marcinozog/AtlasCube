@@ -10,6 +10,60 @@ let scrsDelayTimeout;
 let dashboardTimeout;
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Tabs
+// ─────────────────────────────────────────────────────────────────────────────
+const TAB_STORAGE_KEY = 'atlascube.settings.tab';
+const DEFAULT_TAB     = 'display';
+
+function getKnownTabs() {
+    return Array.from(document.querySelectorAll('#settingsTabNav .tab-btn'))
+                .map(b => b.dataset.tab);
+}
+
+function selectTab(name) {
+    const known = getKnownTabs();
+    if (!known.includes(name)) name = DEFAULT_TAB;
+
+    for (const btn  of document.querySelectorAll('#settingsTabNav .tab-btn')) {
+        btn.classList.toggle('active', btn.dataset.tab === name);
+    }
+    for (const pane of document.querySelectorAll('.tab-pane')) {
+        pane.classList.toggle('active', pane.dataset.tab === name);
+    }
+    try { localStorage.setItem(TAB_STORAGE_KEY, name); } catch (e) { /* private mode */ }
+
+    // Persist in URL fragment so deep links work without hitting the server
+    // with a query string the file handler can't resolve.
+    const newHash = '#tab=' + name;
+    if (window.location.hash !== newHash) {
+        window.history.replaceState(null, '', window.location.pathname + newHash);
+    }
+}
+
+function tabFromHash() {
+    const m = /(?:^|[#&])tab=([^&]+)/.exec(window.location.hash || '');
+    return m ? decodeURIComponent(m[1]) : null;
+}
+
+function initTabs() {
+    const known    = getKnownTabs();
+    const hashTab  = tabFromHash();
+    let   savedTab = null;
+    try { savedTab = localStorage.getItem(TAB_STORAGE_KEY); } catch (e) { /* ignore */ }
+
+    const initial = (hashTab  && known.includes(hashTab))  ? hashTab
+                  : (savedTab && known.includes(savedTab)) ? savedTab
+                  : DEFAULT_TAB;
+    selectTab(initial);
+
+    // React to manual hash edits / back-forward navigation.
+    window.addEventListener('hashchange', () => {
+        const t = tabFromHash();
+        if (t) selectTab(t);
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Device theme (display)
 // ─────────────────────────────────────────────────────────────────────────────
 function setDeviceTheme(t) {
@@ -554,5 +608,6 @@ function showColorsStatus(msg, type) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────────────────────────────────────
+initTabs();
 loadSettings();
 loadColors();

@@ -141,8 +141,14 @@ static lv_timer_t *s_refresh_timer   = NULL;
 // Fetcher task
 // ---------------------------------------------------------------------------
 
-static TaskHandle_t       s_fetch_task   = NULL;
-static volatile bool      s_fetch_stop   = false;
+static TaskHandle_t       s_fetch_task     = NULL;
+static volatile bool      s_fetch_stop     = false;
+static volatile bool      s_settings_dirty = false;
+
+void screensaver_dashboard_settings_changed(void)
+{
+    s_settings_dirty = true;
+}
 
 #define HTTP_BUF_LEN 4096
 
@@ -366,6 +372,17 @@ static void fetcher_task(void *arg)
     uint32_t next_due_ms[WIDGET_COUNT] = {0};   // 0 = fetch immediately
 
     while (!s_fetch_stop) {
+        // Pick up settings changes saved via web UI while we were running.
+        // Re-snapshot config, reset notify state (so new thresholds aren't
+        // pre-disarmed against the cached value), and force an immediate
+        // refetch with the new URL / poll interval.
+        if (s_settings_dirty) {
+            s_settings_dirty = false;
+            populate_widgets_from_settings();
+            memset(next_due_ms, 0, sizeof(next_due_ms));
+            ESP_LOGI(TAG, "settings reloaded mid-flight");
+        }
+
         uint32_t now_ms = (uint32_t)(esp_timer_get_time() / 1000ULL);
         uint32_t sleep_ms = 1000;
 
@@ -453,6 +470,7 @@ static void dashboard_create(lv_obj_t *parent)
     const int H = DISPLAY_HEIGHT;
 
     populate_widgets_from_settings();
+    s_settings_dirty = false;   // create() already pulled fresh snapshot
 
     for (size_t i = 0; i < WIDGET_COUNT; i++) {
         s_state[i].mutex = xSemaphoreCreateMutex();

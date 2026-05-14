@@ -737,6 +737,46 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
 
 .section-gap { margin-top: 24px; }
 
+/* ════════════════════════════════════════════════
+   Settings tabs (settings.html)
+   ════════════════════════════════════════════════ */
+.tab-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 6px;
+    margin: 10px 0 18px;
+    border-bottom: 1px solid var(--border);
+}
+
+.tab-btn {
+    flex: 0 0 auto;
+    background: transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    color: var(--text-dim);
+    padding: 7px 12px;
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    cursor: pointer;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    white-space: nowrap;
+    transition: color .15s, background .15s, border-color .15s;
+    position: relative;
+    top: 1px;   /* overlap nav bottom border when active */
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active {
+    color: var(--accent);
+    background: var(--bg-input);
+    border-color: var(--border);
+    border-bottom-color: var(--bg-input);
+}
+
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
 /* settings theme toggle reuse .theme-toggle / .theme-btn */
 
 /* ════════════════════════════════════════════════
