@@ -139,7 +139,10 @@ static void update_ss_label(void)
     if (!s_label_ss_val) return;
     int ss = app_state_get()->scrsaver_delay;
     char buf[16];
-    snprintf(buf, sizeof(buf), "%ds", ss);
+    if (ss == 0)
+        snprintf(buf, sizeof(buf), "%s", "OFF");
+    else
+        snprintf(buf, sizeof(buf), "%ds", ss);
     lv_label_set_text(s_label_ss_val, buf);
 }
 
@@ -459,7 +462,7 @@ static void settings_on_input(ui_input_t input)
                 }
                 else if (s_focus == FOCUS_SS) {
                     int ss = app_state_get()->scrsaver_delay + delta * 5;
-                    if (ss < 5) ss = 5;
+                    if (ss < 0) ss = 0;
                     if (ss > 600) ss = 600;
                     settings_set_scrsaver_delay(ss);
                     update_ss_label();

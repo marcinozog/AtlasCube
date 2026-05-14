@@ -43,7 +43,6 @@ esp_err_t settings_init(void)
         s_settings.wifi.ssid[0]             = '\0';
         s_settings.wifi.password[0]         = '\0';
         // Screensaver
-        s_settings.scrsaver.enable          = true;
         s_settings.scrsaver.delay           = 60;
         s_settings.scrsaver.screensaver_id  = SCREENSAVER_CLOCKHANDS;
 
@@ -182,11 +181,9 @@ static esp_err_t load_from_file(void)
     // ── SCREENSAVER ───────────────────────────────────────────────────────────
     cJSON *scrs = cJSON_GetObjectItem(json, "scrsaver");
     if (cJSON_IsObject(scrs)) {
-        cJSON *en = cJSON_GetObjectItem(scrs, "enable");
         cJSON *dl = cJSON_GetObjectItem(scrs, "delay");
         cJSON *id = cJSON_GetObjectItem(scrs, "id");
-        s_settings.scrsaver.enable = cJSON_IsBool(en) ? cJSON_IsTrue(en) : true;
-        s_settings.scrsaver.delay  = cJSON_IsNumber(dl) ? dl->valueint : 60;
+        s_settings.scrsaver.delay = cJSON_IsNumber(dl) ? dl->valueint : 60;
         if (cJSON_IsString(id)) {
             s_settings.scrsaver.screensaver_id = screensaver_from_name(id->valuestring);
         } else if (cJSON_IsNumber(id) && screensaver_is_valid(id->valueint)) {
@@ -195,7 +192,6 @@ static esp_err_t load_from_file(void)
             s_settings.scrsaver.screensaver_id = SCREENSAVER_CLOCKHANDS;
         }
     } else {
-        s_settings.scrsaver.enable         = true;
         s_settings.scrsaver.delay          = 60;
         s_settings.scrsaver.screensaver_id = SCREENSAVER_CLOCKHANDS;
     }
@@ -281,7 +277,6 @@ static esp_err_t save_to_file(void)
 
     // screensaver
     cJSON *scrs = cJSON_CreateObject();
-    cJSON_AddBoolToObject(scrs,   "enable", s_settings.scrsaver.enable);
     cJSON_AddNumberToObject(scrs, "delay",  s_settings.scrsaver.delay);
     cJSON_AddStringToObject(scrs, "id",
         screensaver_name(s_settings.scrsaver.screensaver_id));
@@ -333,7 +328,6 @@ void settings_apply(void)
         .has_bt_volume          = true, .bt_volume = s_settings.bluetooth.volume,
         .has_display_brightness = true, .display_brightness = s_settings.display.brightness,
         .has_theme              = true, .theme     = s_settings.display.theme,
-        .has_scrsaver_enable    = true, .scrsaver_enable = s_settings.scrsaver.enable,
         .has_scrsaver_delay     = true, .scrsaver_delay  = s_settings.scrsaver.delay,
         .has_scrsaver_id        = true, .scrsaver_id     = s_settings.scrsaver.screensaver_id,
     };
@@ -454,16 +448,6 @@ void settings_set_wifi(const char *ssid, const char *password)
     if (ssid)     strncpy(s_settings.wifi.ssid,     ssid,     sizeof(s_settings.wifi.ssid)     - 1);
     if (password) strncpy(s_settings.wifi.password, password, sizeof(s_settings.wifi.password) - 1);
     ESP_LOGI("SETTINGS", "WiFi saved: ssid=\"%s\"", s_settings.wifi.ssid);
-    save_to_file();
-}
-
-void settings_set_scrsaver_enable(bool enable)
-{
-    if (s_settings.scrsaver.enable == enable) return;
-    s_settings.scrsaver.enable = enable;
-    app_state_update(&(app_state_patch_t){
-        .has_scrsaver_enable = true, .scrsaver_enable = enable
-    });
     save_to_file();
 }
 

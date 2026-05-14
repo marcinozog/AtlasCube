@@ -315,7 +315,7 @@ void ui_manager_run(void)
         // ── Idle-driven screensaver activation ─────────────────────────────
         if (!s_ss_overlay) {
             const app_state_t *st = app_state_get();
-            if (st->scrsaver_enable && st->scrsaver_delay > 0
+            if (st->scrsaver_delay > 0
                 && can_auto_screensaver_from(s_active_id))
             {
                 int64_t idle_s = (esp_timer_get_time() - s_last_input_us) / 1000000;

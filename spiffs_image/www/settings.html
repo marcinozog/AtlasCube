@@ -68,18 +68,10 @@
     <div class="section-title">🌀 Screensaver</div>
 
     <div class="panel">
-        <label class="field-label">Enabled</label>
-        <div class="theme-toggle" id="scrsEnableToggle" style="width:fit-content">
-            <button class="theme-btn" id="settingsBtnScrsOn"  onclick="setScrsaverEnable(true)">✅ On</button>
-            <button class="theme-btn" id="settingsBtnScrsOff" onclick="setScrsaverEnable(false)">❌ Off</button>
-        </div>
-    </div>
-
-    <div class="panel">
         <label class="field-label">Activation delay (seconds)</label>
         <input type="number" id="scrs_delay" class="field-input" min="0" max="3600" step="5"
                style="width:140px" oninput="setScrsaverDelay(this.value)" />
-        <div class="field-hint">Idle time before the screensaver starts. 0 = disabled.</div>
+        <div class="field-hint">Idle time before the screensaver starts. 0 = OFF.</div>
     </div>
 
     <div class="panel">

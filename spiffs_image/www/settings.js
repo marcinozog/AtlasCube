@@ -65,16 +65,6 @@ function setDeviceEqEnabled(t) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Screensaver
 // ─────────────────────────────────────────────────────────────────────────────
-function setScrsaverEnable(t) {
-    document.getElementById('settingsBtnScrsOn') ?.classList.toggle('active', t);
-    document.getElementById('settingsBtnScrsOff')?.classList.toggle('active', !t);
-    fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scrsaver: { enable: t } })
-    }).catch(console.error);
-}
-
 function setScrsaverDelay(t) {
     clearTimeout(scrsDelayTimeout);
     scrsDelayTimeout = setTimeout(() => {
@@ -251,9 +241,6 @@ function populateForm(s) {
         document.getElementById('settingsBtnDspOff')?.classList.toggle('active', !eq_en);
     }
     if (s.scrsaver) {
-        const en = s.scrsaver.enable !== false;
-        document.getElementById('settingsBtnScrsOn') ?.classList.toggle('active', en);
-        document.getElementById('settingsBtnScrsOff')?.classList.toggle('active', !en);
         setVal('scrs_delay', s.scrsaver.delay ?? 60);
         const sel = document.getElementById('scrs_id');
         if (sel) sel.value = s.scrsaver.id || 'clockhands';

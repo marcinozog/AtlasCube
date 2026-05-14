@@ -40,8 +40,7 @@ typedef struct {
 
 typedef struct
 {
-    bool enable;
-    int  delay;            // seconds of idle before activating
+    int  delay;            // seconds of idle before activating (0 = off)
     int  screensaver_id;   // screensaver_id_t (see screensavers.h)
 } scrsaver_settings_t;
 
@@ -73,6 +72,5 @@ void settings_set_bt_volume(int volume);
 void settings_set_ntp(const char *server1, const char *server2, const char *tz);
 void settings_set_theme(ui_theme_t theme);
 void settings_set_wifi(const char *ssid, const char *password);
-void settings_set_scrsaver_enable(bool enable);
 void settings_set_scrsaver_delay(int delay);
 void settings_set_scrsaver_id(int id);
