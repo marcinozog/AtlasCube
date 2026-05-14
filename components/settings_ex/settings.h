@@ -44,6 +44,14 @@ typedef struct
     int  screensaver_id;   // screensaver_id_t (see screensavers.h)
 } scrsaver_settings_t;
 
+typedef struct {
+    char title[32];
+    char url[256];
+    char json_path[64];     // e.g. "rates[0].mid"; empty = use root
+    char suffix[16];        // appended to value (may be empty)
+    int  poll_interval_ms;  // minimum 5000
+} dashboard_settings_t;
+
 
 typedef struct {
     audio_settings_t     audio;
@@ -53,6 +61,7 @@ typedef struct {
     ntp_settings_t       ntp;
     wifi_settings_t      wifi;
     scrsaver_settings_t  scrsaver;
+    dashboard_settings_t dashboard;
 } app_settings_t;
 
 esp_err_t settings_init(void);
@@ -74,3 +83,8 @@ void settings_set_theme(ui_theme_t theme);
 void settings_set_wifi(const char *ssid, const char *password);
 void settings_set_scrsaver_delay(int delay);
 void settings_set_scrsaver_id(int id);
+void settings_set_dashboard(const char *title,
+                            const char *url,
+                            const char *json_path,
+                            const char *suffix,
+                            int poll_interval_ms);

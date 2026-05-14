@@ -81,6 +81,15 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
         screensaver_name(s->scrsaver.screensaver_id));
     cJSON_AddItemToObject(json, "scrsaver", scrs);
 
+    // dashboard
+    cJSON *dash = cJSON_CreateObject();
+    cJSON_AddStringToObject(dash, "title",            s->dashboard.title);
+    cJSON_AddStringToObject(dash, "url",              s->dashboard.url);
+    cJSON_AddStringToObject(dash, "json_path",        s->dashboard.json_path);
+    cJSON_AddStringToObject(dash, "suffix",           s->dashboard.suffix);
+    cJSON_AddNumberToObject(dash, "poll_interval_ms", s->dashboard.poll_interval_ms);
+    cJSON_AddItemToObject(json, "dashboard", dash);
+
 
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
@@ -208,6 +217,22 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         } else if (cJSON_IsNumber(id)) {
             settings_set_scrsaver_id(id->valueint);
         }
+    }
+
+    // ── DASHBOARD ─────────────────────────────────────────────────────────────
+    cJSON *dash = cJSON_GetObjectItem(json, "dashboard");
+    if (cJSON_IsObject(dash)) {
+        cJSON *t  = cJSON_GetObjectItem(dash, "title");
+        cJSON *u  = cJSON_GetObjectItem(dash, "url");
+        cJSON *jp = cJSON_GetObjectItem(dash, "json_path");
+        cJSON *sf = cJSON_GetObjectItem(dash, "suffix");
+        cJSON *pi = cJSON_GetObjectItem(dash, "poll_interval_ms");
+        settings_set_dashboard(
+            cJSON_IsString(t)  ? t->valuestring  : NULL,
+            cJSON_IsString(u)  ? u->valuestring  : NULL,
+            cJSON_IsString(jp) ? jp->valuestring : NULL,
+            cJSON_IsString(sf) ? sf->valuestring : NULL,
+            cJSON_IsNumber(pi) ? pi->valueint    : 0);
     }
 
     // ── WIFI ──────────────────────────────────────────────────────────────────

@@ -6,6 +6,8 @@ extern const ui_screen_t screensaver_starfield;
 extern const ui_screen_t screensaver_fireworks;
 extern const ui_screen_t screensaver_plasma;
 extern const ui_screen_t screensaver_life;
+extern const ui_screen_t screensaver_dashboard;
+extern const ui_screen_t screensaver_blank;
 
 static const struct {
     screensaver_id_t        id;
@@ -17,6 +19,8 @@ static const struct {
     { SCREENSAVER_FIREWORKS,  &screensaver_fireworks,  "fireworks"  },
     { SCREENSAVER_PLASMA,     &screensaver_plasma,     "plasma"     },
     { SCREENSAVER_LIFE,       &screensaver_life,       "life"       },
+    { SCREENSAVER_DASHBOARD,  &screensaver_dashboard,  "dashboard"  },
+    { SCREENSAVER_BLANK,      &screensaver_blank,      "blank"      },
 };
 
 #define K_MAP_LEN (sizeof(k_map) / sizeof(k_map[0]))

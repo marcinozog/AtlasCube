@@ -83,7 +83,50 @@
             <option value="fireworks">🎆 Fireworks</option>
             <option value="plasma">🌈 Plasma</option>
             <option value="life">🧬 Game of Life</option>
+            <option value="dashboard">📊 Dashboard</option>
+            <option value="blank">⬛ Blank (off)</option>
         </select>
+    </div>
+
+    <!-- Dashboard screensaver — webhook-driven widget config -->
+    <div id="dashboard_panel" class="panel">
+        <label class="field-label">📊 Dashboard widget</label>
+        <div class="field-hint" style="margin-bottom:8px">
+            Polls a JSON endpoint and renders one value. Active when screensaver style is "Dashboard".
+        </div>
+
+        <div class="field-group">
+            <label class="field-label">Title</label>
+            <input type="text" id="dash_title" class="field-input" maxlength="31"
+                   placeholder="USD/PLN" oninput="setDashboard()" />
+        </div>
+        <div class="field-group">
+            <label class="field-label">URL</label>
+            <input type="text" id="dash_url" class="field-input" maxlength="255"
+                   placeholder="https://api.example.com/..." oninput="setDashboard()" />
+            <div class="field-hint">Must return JSON. HTTPS supported via cert bundle.</div>
+        </div>
+        <div class="field-group">
+            <label class="field-label">JSON path</label>
+            <input type="text" id="dash_json_path" class="field-input" maxlength="63"
+                   placeholder="rates[0].mid" oninput="setDashboard()" />
+            <div class="field-hint">
+                Dot/bracket path into the response, e.g. <code>rates[0].mid</code>,
+                <code>main.temp</code>, <code>data[2].value</code>. Empty = use root.
+            </div>
+        </div>
+        <div class="field-group">
+            <label class="field-label">Suffix</label>
+            <input type="text" id="dash_suffix" class="field-input" maxlength="15"
+                   placeholder=" PLN" oninput="setDashboard()" />
+            <div class="field-hint">Appended to the value. Leave empty for none.</div>
+        </div>
+        <div class="field-group">
+            <label class="field-label">Poll interval (seconds)</label>
+            <input type="number" id="dash_poll_s" class="field-input" min="5" max="3600" step="1"
+                   style="width:140px" oninput="setDashboard()" />
+            <div class="field-hint">Minimum 5 s. Default 60 s.</div>
+        </div>
     </div>
 
     <!-- ══════════════════════════════════════════

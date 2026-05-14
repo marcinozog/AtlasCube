@@ -7,6 +7,7 @@ let currentSettings = null;
 let isApMode        = false;
 let brightnessTimeout;
 let scrsDelayTimeout;
+let dashboardTimeout;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Device theme (display)
@@ -84,6 +85,29 @@ function setScrsaverId(id) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scrsaver: { id } })
     }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dashboard screensaver widget — debounced full-form push
+// ─────────────────────────────────────────────────────────────────────────────
+function setDashboard() {
+    clearTimeout(dashboardTimeout);
+    dashboardTimeout = setTimeout(() => {
+        const title     = (document.getElementById('dash_title')?.value     ?? '').trim();
+        const url       = (document.getElementById('dash_url')?.value       ?? '').trim();
+        const json_path = (document.getElementById('dash_json_path')?.value ?? '').trim();
+        const suffix    =  document.getElementById('dash_suffix')?.value    ?? '';
+        let   pollS     = parseInt(document.getElementById('dash_poll_s')?.value, 10);
+        if (isNaN(pollS) || pollS < 5) pollS = 5;
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dashboard: {
+                title, url, json_path, suffix,
+                poll_interval_ms: pollS * 1000
+            }})
+        }).catch(console.error);
+    }, 500);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -244,6 +268,13 @@ function populateForm(s) {
         setVal('scrs_delay', s.scrsaver.delay ?? 60);
         const sel = document.getElementById('scrs_id');
         if (sel) sel.value = s.scrsaver.id || 'clockhands';
+    }
+    if (s.dashboard) {
+        setVal('dash_title',     s.dashboard.title     ?? '');
+        setVal('dash_url',       s.dashboard.url       ?? '');
+        setVal('dash_json_path', s.dashboard.json_path ?? '');
+        setVal('dash_suffix',    s.dashboard.suffix    ?? '');
+        setVal('dash_poll_s', Math.max(5, Math.round((s.dashboard.poll_interval_ms ?? 60000) / 1000)));
     }
 }
 

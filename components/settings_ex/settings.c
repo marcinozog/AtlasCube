@@ -45,6 +45,12 @@ esp_err_t settings_init(void)
         // Screensaver
         s_settings.scrsaver.delay           = 60;
         s_settings.scrsaver.screensaver_id  = SCREENSAVER_CLOCKHANDS;
+        // Dashboard screensaver — defaults to NBP USD/PLN exchange rate
+        strncpy(s_settings.dashboard.title,     "USD/PLN",                                                       sizeof(s_settings.dashboard.title)     - 1);
+        strncpy(s_settings.dashboard.url,       "https://api.nbp.pl/api/exchangerates/rates/A/USD?format=json", sizeof(s_settings.dashboard.url)       - 1);
+        strncpy(s_settings.dashboard.json_path, "rates[0].mid",                                                  sizeof(s_settings.dashboard.json_path) - 1);
+        strncpy(s_settings.dashboard.suffix,    " PLN",                                                          sizeof(s_settings.dashboard.suffix)    - 1);
+        s_settings.dashboard.poll_interval_ms = 60000;
 
         save_to_file();
     }
@@ -196,6 +202,31 @@ static esp_err_t load_from_file(void)
         s_settings.scrsaver.screensaver_id = SCREENSAVER_CLOCKHANDS;
     }
 
+    // ── DASHBOARD ─────────────────────────────────────────────────────────────
+    cJSON *dash = cJSON_GetObjectItem(json, "dashboard");
+    // start from defaults — missing fields keep their default value
+    strncpy(s_settings.dashboard.title,     "USD/PLN",                                                       sizeof(s_settings.dashboard.title)     - 1);
+    strncpy(s_settings.dashboard.url,       "https://api.nbp.pl/api/exchangerates/rates/A/USD?format=json", sizeof(s_settings.dashboard.url)       - 1);
+    strncpy(s_settings.dashboard.json_path, "rates[0].mid",                                                  sizeof(s_settings.dashboard.json_path) - 1);
+    strncpy(s_settings.dashboard.suffix,    " PLN",                                                          sizeof(s_settings.dashboard.suffix)    - 1);
+    s_settings.dashboard.poll_interval_ms = 60000;
+    if (cJSON_IsObject(dash)) {
+        cJSON *t  = cJSON_GetObjectItem(dash, "title");
+        cJSON *u  = cJSON_GetObjectItem(dash, "url");
+        cJSON *jp = cJSON_GetObjectItem(dash, "json_path");
+        cJSON *sf = cJSON_GetObjectItem(dash, "suffix");
+        cJSON *pi = cJSON_GetObjectItem(dash, "poll_interval_ms");
+        if (cJSON_IsString(t))  { s_settings.dashboard.title[0]     = '\0'; strncpy(s_settings.dashboard.title,     t->valuestring,  sizeof(s_settings.dashboard.title)     - 1); }
+        if (cJSON_IsString(u))  { s_settings.dashboard.url[0]       = '\0'; strncpy(s_settings.dashboard.url,       u->valuestring,  sizeof(s_settings.dashboard.url)       - 1); }
+        if (cJSON_IsString(jp)) { s_settings.dashboard.json_path[0] = '\0'; strncpy(s_settings.dashboard.json_path, jp->valuestring, sizeof(s_settings.dashboard.json_path) - 1); }
+        if (cJSON_IsString(sf)) { s_settings.dashboard.suffix[0]    = '\0'; strncpy(s_settings.dashboard.suffix,    sf->valuestring, sizeof(s_settings.dashboard.suffix)    - 1); }
+        if (cJSON_IsNumber(pi)) {
+            int ms = pi->valueint;
+            if (ms < 5000) ms = 5000;
+            s_settings.dashboard.poll_interval_ms = ms;
+        }
+    }
+
     // ── WIFI ──────────────────────────────────────────────────────────────────
     cJSON *wifi_obj = cJSON_GetObjectItem(json, "wifi");
     if (cJSON_IsObject(wifi_obj)) {
@@ -281,6 +312,15 @@ static esp_err_t save_to_file(void)
     cJSON_AddStringToObject(scrs, "id",
         screensaver_name(s_settings.scrsaver.screensaver_id));
     cJSON_AddItemToObject(json, "scrsaver", scrs);
+
+    // dashboard
+    cJSON *dash = cJSON_CreateObject();
+    cJSON_AddStringToObject(dash, "title",            s_settings.dashboard.title);
+    cJSON_AddStringToObject(dash, "url",              s_settings.dashboard.url);
+    cJSON_AddStringToObject(dash, "json_path",        s_settings.dashboard.json_path);
+    cJSON_AddStringToObject(dash, "suffix",           s_settings.dashboard.suffix);
+    cJSON_AddNumberToObject(dash, "poll_interval_ms", s_settings.dashboard.poll_interval_ms);
+    cJSON_AddItemToObject(json, "dashboard", dash);
 
     char *str = cJSON_PrintUnformatted(json);
 
@@ -470,5 +510,34 @@ void settings_set_scrsaver_id(int id)
     app_state_update(&(app_state_patch_t){
         .has_scrsaver_id = true, .scrsaver_id = id
     });
+    save_to_file();
+}
+
+void settings_set_dashboard(const char *title,
+                            const char *url,
+                            const char *json_path,
+                            const char *suffix,
+                            int poll_interval_ms)
+{
+    if (title) {
+        s_settings.dashboard.title[0] = '\0';
+        strncpy(s_settings.dashboard.title, title, sizeof(s_settings.dashboard.title) - 1);
+    }
+    if (url) {
+        s_settings.dashboard.url[0] = '\0';
+        strncpy(s_settings.dashboard.url, url, sizeof(s_settings.dashboard.url) - 1);
+    }
+    if (json_path) {
+        s_settings.dashboard.json_path[0] = '\0';
+        strncpy(s_settings.dashboard.json_path, json_path, sizeof(s_settings.dashboard.json_path) - 1);
+    }
+    if (suffix) {
+        s_settings.dashboard.suffix[0] = '\0';
+        strncpy(s_settings.dashboard.suffix, suffix, sizeof(s_settings.dashboard.suffix) - 1);
+    }
+    if (poll_interval_ms > 0) {
+        if (poll_interval_ms < 5000) poll_interval_ms = 5000;
+        s_settings.dashboard.poll_interval_ms = poll_interval_ms;
+    }
     save_to_file();
 }

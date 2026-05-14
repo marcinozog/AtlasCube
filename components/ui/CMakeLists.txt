@@ -19,6 +19,8 @@ idf_component_register(
         "screensavers/screensaver_plasma.c"
         "screensavers/screensaver_clockhands.c"
         "screensavers/screensaver_life.c"
+        "screensavers/screensaver_dashboard.c"
+        "screensavers/screensaver_blank.c"
         "screensavers/screensavers.c"
         "widgets/clock_widget.c"
         "widgets/now_playing_widget.c"
@@ -47,4 +49,6 @@ idf_component_register(
         events                  # event_indicator_widget, screen_event_notification
         esp_wifi                # RSSI w settings mem bar
         json                    # ui_profile JSON I/O
+        esp_http_client         # screensaver_dashboard
+        esp-tls                 # esp_crt_bundle for HTTPS
 )
