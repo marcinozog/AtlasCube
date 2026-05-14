@@ -26,6 +26,7 @@ typedef enum {
     FOCUS_BT_SCREEN,
     FOCUS_DSP,
     FOCUS_EQ,
+    FOCUS_SS,
     FOCUS_EVENTS,
     FOCUS_COUNT
 } settings_focus_t;
@@ -39,6 +40,7 @@ static lv_obj_t *s_row_mode          = NULL;
 static lv_obj_t *s_row_bt_screen     = NULL;
 static lv_obj_t *s_row_dsp           = NULL;
 static lv_obj_t *s_row_eq            = NULL;
+static lv_obj_t *s_row_ss            = NULL;
 static lv_obj_t *s_row_events        = NULL;
 static lv_obj_t *s_slider_bright     = NULL;
 static lv_obj_t *s_label_bright_val  = NULL;
@@ -47,6 +49,7 @@ static lv_obj_t *s_label_mode_val    = NULL;
 static lv_obj_t *s_label_bt_screen_val = NULL;
 static lv_obj_t *s_label_dsp_val     = NULL;
 static lv_obj_t *s_label_eq_val      = NULL;
+static lv_obj_t *s_label_ss_val      = NULL;
 static lv_obj_t *s_label_events_val  = NULL;
 static lv_obj_t *s_mem_bar           = NULL;
 static lv_timer_t *s_mem_timer       = NULL;
@@ -65,7 +68,9 @@ static bool focus_opens_screen(settings_focus_t f)
 static void update_focus_visuals(void)
 {
     const ui_theme_colors_t *th = theme_get();
-    lv_obj_t *rows[FOCUS_COUNT] = { s_row_bright, s_row_theme, s_row_mode, s_row_bt_screen, s_row_dsp, s_row_eq, s_row_events };
+    lv_obj_t *rows[FOCUS_COUNT] = { 
+        s_row_bright, s_row_theme, s_row_mode, s_row_bt_screen, s_row_dsp, s_row_eq, s_row_ss, s_row_events 
+    };
     for (int i = 0; i < FOCUS_COUNT; i++) {
         if (!rows[i]) continue;
         bool focused = (i == (int)s_focus);
@@ -127,6 +132,15 @@ static void update_dsp_label(void)
     if (!s_label_dsp_val) return;
     lv_label_set_text(s_label_dsp_val,
         app_state_get()->eq_enabled == true ? "<    On    >" : "<    Off    >");
+}
+
+static void update_ss_label(void)
+{
+    if (!s_label_ss_val) return;
+    int ss = app_state_get()->scrsaver_delay;
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%ds", ss);
+    lv_label_set_text(s_label_ss_val, buf);
 }
 
 /* ── CPU usage (per core, %) ────────────────────────────────────────────────
@@ -340,10 +354,20 @@ static void settings_create(lv_obj_t *parent)
     lv_label_set_text(s_label_eq_val, "Open >");
     lv_obj_align(s_label_eq_val, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    /* ── row: Events ── */
+    /* ── row: Screensaver ── */
     int row7_y_ofs = (p->settings_row3_y - p->settings_row1_y)
                    + 4 * (p->settings_row2_y - p->settings_row1_y);
-    s_row_events = make_row(s_rows_cont, row7_y_ofs, "Events");
+    s_row_ss = make_row(s_rows_cont, row7_y_ofs, "Screensaver");
+
+    s_label_ss_val = lv_label_create(s_row_ss);
+    lv_obj_set_style_text_font(s_label_ss_val, p->settings_value_font, LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_label_ss_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
+    lv_obj_align(s_label_ss_val, LV_ALIGN_BOTTOM_MID, 0, 0);
+
+    /* ── row: Events ── */
+    int row8_y_ofs = (p->settings_row3_y - p->settings_row1_y)
+                   + 5 * (p->settings_row2_y - p->settings_row1_y);
+    s_row_events = make_row(s_rows_cont, row8_y_ofs, "Events");
 
     s_label_events_val = lv_label_create(s_row_events);
     lv_obj_set_style_text_font(s_label_events_val, p->settings_value_font, LV_PART_MAIN);
@@ -367,6 +391,7 @@ static void settings_create(lv_obj_t *parent)
     update_mode_label();
     update_bt_screen_label();
     update_dsp_label();
+    update_ss_label();
     update_focus_visuals();
     update_hint();
 
@@ -379,7 +404,7 @@ static void settings_destroy(void)
 {
     if (s_mem_timer) { lv_timer_delete(s_mem_timer); s_mem_timer = NULL; }
     s_root = s_title = s_rows_cont = NULL;
-    s_row_bright = s_row_theme = s_row_mode = s_row_bt_screen = s_row_dsp = s_row_eq = s_row_events = NULL;
+    s_row_bright = s_row_theme = s_row_mode = s_row_bt_screen = s_row_dsp = s_row_eq = s_row_ss = s_row_events = NULL;
     s_slider_bright = s_label_bright_val = NULL;
     s_label_theme_val = s_label_mode_val = s_label_bt_screen_val = s_label_dsp_val = s_label_eq_val = s_label_events_val = NULL;
     s_mem_bar = s_hint = NULL;
@@ -432,6 +457,13 @@ static void settings_on_input(ui_input_t input)
                     settings_set_eq_enabled(eq_en);
                     update_dsp_label();
                 }
+                else if (s_focus == FOCUS_SS) {
+                    int ss = app_state_get()->scrsaver_delay + delta * 5;
+                    if (ss < 5) ss = 5;
+                    if (ss > 600) ss = 600;
+                    settings_set_scrsaver_delay(ss);
+                    update_ss_label();
+                }
             } else {
                 int next = (int)s_focus + delta;
                 if (next < 0) next = 0;
@@ -477,7 +509,7 @@ static void settings_apply_theme(void)
     lv_obj_set_style_bg_color(s_root, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_text_color(s_title, lv_color_hex(th->accent), LV_PART_MAIN);
 
-    lv_obj_t *rows[FOCUS_COUNT] = { s_row_bright, s_row_theme, s_row_mode, s_row_bt_screen, s_row_dsp, s_row_eq, s_row_events };
+    lv_obj_t *rows[FOCUS_COUNT] = { s_row_bright, s_row_theme, s_row_mode, s_row_bt_screen, s_row_dsp, s_row_eq, s_row_ss, s_row_events };
     for (int i = 0; i < FOCUS_COUNT; i++) {
         if (!rows[i]) continue;
         lv_obj_set_style_bg_color(rows[i], lv_color_hex(th->bg_secondary), LV_PART_MAIN);
@@ -494,6 +526,7 @@ static void settings_apply_theme(void)
     if (s_label_bt_screen_val) lv_obj_set_style_text_color(s_label_bt_screen_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
     if (s_label_dsp_val)    lv_obj_set_style_text_color(s_label_dsp_val,    lv_color_hex(th->text_primary), LV_PART_MAIN);
     if (s_label_eq_val)     lv_obj_set_style_text_color(s_label_eq_val,     lv_color_hex(th->text_primary), LV_PART_MAIN);
+    if (s_label_ss_val)     lv_obj_set_style_text_color(s_label_ss_val,     lv_color_hex(th->text_primary), LV_PART_MAIN);
     if (s_label_events_val) lv_obj_set_style_text_color(s_label_events_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
     if (s_mem_bar)          lv_obj_set_style_text_color(s_mem_bar,          lv_color_hex(th->text_muted),   LV_PART_MAIN);
     lv_obj_set_style_text_color(s_hint,             lv_color_hex(th->text_muted),   LV_PART_MAIN);
@@ -504,6 +537,7 @@ static void settings_apply_theme(void)
     update_mode_label();
     update_bt_screen_label();
     update_dsp_label();
+    update_ss_label();
     lv_obj_invalidate(s_root);
 }
 
