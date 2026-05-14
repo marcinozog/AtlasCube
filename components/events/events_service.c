@@ -1,6 +1,7 @@
 #include "events_service.h"
 
 #include "buzzer.h"
+#include "melodies.h"
 #include "cJSON.h"
 #include "defines.h"
 #include "esp_attr.h"
@@ -41,25 +42,6 @@ static esp_timer_handle_t s_timer;
 static SemaphoreHandle_t  s_mtx;
 static bool               s_initialized;
 static events_fire_cb_t   s_fire_cb = NULL;
-
-// --------------------------------------------------------------------------
-// Buzzer patterns
-// --------------------------------------------------------------------------
-
-static const uint16_t BEEP_REMINDER[] = {
-    880, 150,   0, 80,
-    880, 150,   0, 80,
-    880, 200,
-};
-
-// Short "Happy Birthday" melody (first phrase).
-static const uint16_t MELODY_BDAY[] = {
-    262, 300,   0, 40,   262, 150,   0, 40,
-    294, 400,
-    262, 400,
-    349, 400,
-    330, 700,
-};
 
 // --------------------------------------------------------------------------
 // Helpers
@@ -280,9 +262,9 @@ static void fire_event(const event_t *e)
              e->id, e->title, type_to_str(e->type));
 
     if (e->type == EV_BIRTHDAY || e->type == EV_ANNIVERSARY) {
-        buzzer_beep_pattern(MELODY_BDAY, sizeof(MELODY_BDAY) / sizeof(uint16_t) / 2);
+        melody_play(MELODY_BIRTHDAY);
     } else {
-        buzzer_beep_pattern(BEEP_REMINDER, sizeof(BEEP_REMINDER) / sizeof(uint16_t) / 2);
+        melody_play(MELODY_REMINDER);
     }
 
     if (s_fire_cb) s_fire_cb(e);

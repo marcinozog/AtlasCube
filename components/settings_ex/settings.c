@@ -51,6 +51,17 @@ esp_err_t settings_init(void)
         strncpy(s_settings.dashboard.json_path, "rates[0].mid",                                                  sizeof(s_settings.dashboard.json_path) - 1);
         strncpy(s_settings.dashboard.suffix,    " PLN",                                                          sizeof(s_settings.dashboard.suffix)    - 1);
         s_settings.dashboard.poll_interval_ms = 60000;
+        // Dashboard notifications — off by default
+        s_settings.dashboard.notify_enabled     = false;
+        s_settings.dashboard.value_type         = DASHBOARD_VALUE_NUMBER;
+        s_settings.dashboard.notify_num_low_en  = false;
+        s_settings.dashboard.notify_num_low     = 0.0;
+        s_settings.dashboard.notify_num_high_en = false;
+        s_settings.dashboard.notify_num_high    = 0.0;
+        s_settings.dashboard.notify_str_eq_en   = false;
+        s_settings.dashboard.notify_str_eq[0]   = '\0';
+        s_settings.dashboard.notify_str_ne_en   = false;
+        s_settings.dashboard.notify_str_ne[0]   = '\0';
 
         save_to_file();
     }
@@ -209,7 +220,17 @@ static esp_err_t load_from_file(void)
     strncpy(s_settings.dashboard.url,       "https://api.nbp.pl/api/exchangerates/rates/A/USD?format=json", sizeof(s_settings.dashboard.url)       - 1);
     strncpy(s_settings.dashboard.json_path, "rates[0].mid",                                                  sizeof(s_settings.dashboard.json_path) - 1);
     strncpy(s_settings.dashboard.suffix,    " PLN",                                                          sizeof(s_settings.dashboard.suffix)    - 1);
-    s_settings.dashboard.poll_interval_ms = 60000;
+    s_settings.dashboard.poll_interval_ms   = 60000;
+    s_settings.dashboard.notify_enabled     = false;
+    s_settings.dashboard.value_type         = DASHBOARD_VALUE_NUMBER;
+    s_settings.dashboard.notify_num_low_en  = false;
+    s_settings.dashboard.notify_num_low     = 0.0;
+    s_settings.dashboard.notify_num_high_en = false;
+    s_settings.dashboard.notify_num_high    = 0.0;
+    s_settings.dashboard.notify_str_eq_en   = false;
+    s_settings.dashboard.notify_str_eq[0]   = '\0';
+    s_settings.dashboard.notify_str_ne_en   = false;
+    s_settings.dashboard.notify_str_ne[0]   = '\0';
     if (cJSON_IsObject(dash)) {
         cJSON *t  = cJSON_GetObjectItem(dash, "title");
         cJSON *u  = cJSON_GetObjectItem(dash, "url");
@@ -224,6 +245,30 @@ static esp_err_t load_from_file(void)
             int ms = pi->valueint;
             if (ms < 5000) ms = 5000;
             s_settings.dashboard.poll_interval_ms = ms;
+        }
+
+        cJSON *nx = cJSON_GetObjectItem(dash, "notify");
+        if (cJSON_IsObject(nx)) {
+            cJSON *en  = cJSON_GetObjectItem(nx, "enabled");
+            cJSON *vt  = cJSON_GetObjectItem(nx, "value_type");
+            cJSON *nle = cJSON_GetObjectItem(nx, "num_low_en");
+            cJSON *nl  = cJSON_GetObjectItem(nx, "num_low");
+            cJSON *nhe = cJSON_GetObjectItem(nx, "num_high_en");
+            cJSON *nh  = cJSON_GetObjectItem(nx, "num_high");
+            cJSON *see = cJSON_GetObjectItem(nx, "str_eq_en");
+            cJSON *se  = cJSON_GetObjectItem(nx, "str_eq");
+            cJSON *sne = cJSON_GetObjectItem(nx, "str_ne_en");
+            cJSON *sn  = cJSON_GetObjectItem(nx, "str_ne");
+            if (cJSON_IsBool(en))   s_settings.dashboard.notify_enabled     = cJSON_IsTrue(en);
+            if (cJSON_IsString(vt)) s_settings.dashboard.value_type         = strcmp(vt->valuestring, "string") == 0 ? DASHBOARD_VALUE_STRING : DASHBOARD_VALUE_NUMBER;
+            if (cJSON_IsBool(nle))  s_settings.dashboard.notify_num_low_en  = cJSON_IsTrue(nle);
+            if (cJSON_IsNumber(nl)) s_settings.dashboard.notify_num_low     = nl->valuedouble;
+            if (cJSON_IsBool(nhe))  s_settings.dashboard.notify_num_high_en = cJSON_IsTrue(nhe);
+            if (cJSON_IsNumber(nh)) s_settings.dashboard.notify_num_high    = nh->valuedouble;
+            if (cJSON_IsBool(see))  s_settings.dashboard.notify_str_eq_en   = cJSON_IsTrue(see);
+            if (cJSON_IsString(se)) { s_settings.dashboard.notify_str_eq[0] = '\0'; strncpy(s_settings.dashboard.notify_str_eq, se->valuestring, sizeof(s_settings.dashboard.notify_str_eq) - 1); }
+            if (cJSON_IsBool(sne))  s_settings.dashboard.notify_str_ne_en   = cJSON_IsTrue(sne);
+            if (cJSON_IsString(sn)) { s_settings.dashboard.notify_str_ne[0] = '\0'; strncpy(s_settings.dashboard.notify_str_ne, sn->valuestring, sizeof(s_settings.dashboard.notify_str_ne) - 1); }
         }
     }
 
@@ -320,6 +365,18 @@ static esp_err_t save_to_file(void)
     cJSON_AddStringToObject(dash, "json_path",        s_settings.dashboard.json_path);
     cJSON_AddStringToObject(dash, "suffix",           s_settings.dashboard.suffix);
     cJSON_AddNumberToObject(dash, "poll_interval_ms", s_settings.dashboard.poll_interval_ms);
+    cJSON *notify = cJSON_CreateObject();
+    cJSON_AddBoolToObject  (notify, "enabled",     s_settings.dashboard.notify_enabled);
+    cJSON_AddStringToObject(notify, "value_type",  s_settings.dashboard.value_type == DASHBOARD_VALUE_STRING ? "string" : "number");
+    cJSON_AddBoolToObject  (notify, "num_low_en",  s_settings.dashboard.notify_num_low_en);
+    cJSON_AddNumberToObject(notify, "num_low",     s_settings.dashboard.notify_num_low);
+    cJSON_AddBoolToObject  (notify, "num_high_en", s_settings.dashboard.notify_num_high_en);
+    cJSON_AddNumberToObject(notify, "num_high",    s_settings.dashboard.notify_num_high);
+    cJSON_AddBoolToObject  (notify, "str_eq_en",   s_settings.dashboard.notify_str_eq_en);
+    cJSON_AddStringToObject(notify, "str_eq",      s_settings.dashboard.notify_str_eq);
+    cJSON_AddBoolToObject  (notify, "str_ne_en",   s_settings.dashboard.notify_str_ne_en);
+    cJSON_AddStringToObject(notify, "str_ne",      s_settings.dashboard.notify_str_ne);
+    cJSON_AddItemToObject  (dash, "notify", notify);
     cJSON_AddItemToObject(json, "dashboard", dash);
 
     char *str = cJSON_PrintUnformatted(json);

@@ -111,6 +111,56 @@ function setDashboard() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Dashboard notification
+// ─────────────────────────────────────────────────────────────────────────────
+let dashNotifyTimeout;
+
+function setDashboardNotifyEnabled(t) {
+    document.getElementById('dashNotifyOn') ?.classList.toggle('active', t);
+    document.getElementById('dashNotifyOff')?.classList.toggle('active', !t);
+    document.getElementById('dash_notify_panel').style.display = t ? '' : 'none';
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dashboard: { notify: { enabled: t } } })
+    }).catch(console.error);
+}
+
+function onDashboardValueTypeChange() {
+    const t = document.getElementById('dash_value_type').value;
+    document.getElementById('dash_notify_num').style.display = (t === 'number') ? '' : 'none';
+    document.getElementById('dash_notify_str').style.display = (t === 'string') ? '' : 'none';
+    setDashboardNotify();
+}
+
+function setDashboardNotify() {
+    clearTimeout(dashNotifyTimeout);
+    dashNotifyTimeout = setTimeout(() => {
+        const get = id => document.getElementById(id);
+        const num = id => {
+            const v = parseFloat(get(id)?.value);
+            return isNaN(v) ? 0 : v;
+        };
+        const notify = {
+            value_type:  get('dash_value_type').value,
+            num_low_en:  get('dash_num_low_en').checked,
+            num_low:     num('dash_num_low'),
+            num_high_en: get('dash_num_high_en').checked,
+            num_high:    num('dash_num_high'),
+            str_eq_en:   get('dash_str_eq_en').checked,
+            str_eq:      get('dash_str_eq').value,
+            str_ne_en:   get('dash_str_ne_en').checked,
+            str_ne:      get('dash_str_ne').value,
+        };
+        fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dashboard: { notify } })
+        }).catch(console.error);
+    }, 500);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // WiFi — show/hide password
 // ─────────────────────────────────────────────────────────────────────────────
 function togglePwVisibility() {
@@ -275,6 +325,27 @@ function populateForm(s) {
         setVal('dash_json_path', s.dashboard.json_path ?? '');
         setVal('dash_suffix',    s.dashboard.suffix    ?? '');
         setVal('dash_poll_s', Math.max(5, Math.round((s.dashboard.poll_interval_ms ?? 60000) / 1000)));
+
+        const n = s.dashboard.notify || {};
+        const enabled = !!n.enabled;
+        document.getElementById('dashNotifyOn') ?.classList.toggle('active', enabled);
+        document.getElementById('dashNotifyOff')?.classList.toggle('active', !enabled);
+        document.getElementById('dash_notify_panel').style.display = enabled ? '' : 'none';
+
+        const vt = n.value_type === 'string' ? 'string' : 'number';
+        setVal('dash_value_type', vt);
+        document.getElementById('dash_notify_num').style.display = (vt === 'number') ? '' : 'none';
+        document.getElementById('dash_notify_str').style.display = (vt === 'string') ? '' : 'none';
+
+        const cb = (id, v) => { const el = document.getElementById(id); if (el) el.checked = !!v; };
+        cb('dash_num_low_en',  n.num_low_en);
+        cb('dash_num_high_en', n.num_high_en);
+        cb('dash_str_eq_en',   n.str_eq_en);
+        cb('dash_str_ne_en',   n.str_ne_en);
+        setVal('dash_num_low',  n.num_low  ?? '');
+        setVal('dash_num_high', n.num_high ?? '');
+        setVal('dash_str_eq',   n.str_eq   ?? '');
+        setVal('dash_str_ne',   n.str_ne   ?? '');
     }
 }
 

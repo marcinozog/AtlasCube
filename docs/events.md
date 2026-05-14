@@ -129,12 +129,15 @@ Next day flags reset, the event will fire again per recurrence rules.
 Two actions:
 
 **1. Buzzer.** Pattern depends on type:
-- `birthday` / `anniversary` → `MELODY_BDAY` ("Happy Birthday" snippet)
-- `reminder` / `nameday` → `BEEP_REMINDER` (3× short 880 Hz tone)
+- `birthday` / `anniversary` → `MELODY_BIRTHDAY` ("Happy Birthday" snippet)
+- `reminder` / `nameday` → `MELODY_REMINDER` (3× short 880 Hz tone)
 
-Patterns in [events_service.c](../components/events/events_service.c),
-played by `buzzer_beep_pattern()` (FreeRTOS queue, task playing
-`freq_hz, duration_ms` pairs).
+Patterns live in the shared melody registry
+[components/buzzer/melodies.c](../components/buzzer/melodies.c) (also used by
+the dashboard screensaver for threshold alerts); triggered from
+[events_service.c](../components/events/events_service.c) via
+`melody_play(MELODY_*)`. The buzzer module plays the pattern on its own
+FreeRTOS task as `freq_hz, duration_ms` pairs.
 
 **2. UI callback.** Invokes pointer `s_fire_cb` (if registered).
 Dependency inversion: `events_service` doesn't know about UI, the UI

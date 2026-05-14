@@ -8,6 +8,7 @@
 #include "esp_crt_bundle.h"
 #include "cJSON.h"
 #include "settings.h"
+#include "buzzer.h"
 #include "fonts/ui_fonts.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -18,6 +19,15 @@
 #include <stdlib.h>
 
 static const char *TAG = "SS_DASHBOARD";
+
+// Buzzer pattern played when a notification fires. (freq_hz, duration_ms)
+// pairs, freq=0 means silence. Edit to taste.
+static const uint16_t DASHBOARD_ALERT_PATTERN[] = {
+    988, 120,   0, 60,
+    988, 120,   0, 60,
+   1319, 220,
+};
+#define DASHBOARD_ALERT_PAIRS (sizeof(DASHBOARD_ALERT_PATTERN) / sizeof(uint16_t) / 2)
 
 // ---------------------------------------------------------------------------
 // Widget config
@@ -40,6 +50,34 @@ typedef struct {
 #define WIDGET_COUNT 1
 static dashboard_widget_t s_widgets[WIDGET_COUNT];
 
+// ---------------------------------------------------------------------------
+// Notification — snapshot of settings + runtime armed/primed flags
+// ---------------------------------------------------------------------------
+
+typedef struct {
+    bool   enabled;
+    int    value_type;       // dashboard_value_type_t (0=number, 1=string)
+    bool   num_low_en;
+    double num_low;
+    bool   num_high_en;
+    double num_high;
+    bool   str_eq_en;
+    char   str_eq[32];
+    bool   str_ne_en;
+    char   str_ne[32];
+} notify_config_t;
+
+typedef struct {
+    bool primed;             // false → first fetch only sets state, no fire
+    bool num_low_armed;
+    bool num_high_armed;
+    bool str_eq_armed;
+    bool str_ne_armed;
+} notify_state_t;
+
+static notify_config_t s_notify_cfg;
+static notify_state_t  s_notify_state;
+
 static void populate_widgets_from_settings(void)
 {
     const app_settings_t *s = settings_get();
@@ -53,6 +91,27 @@ static void populate_widgets_from_settings(void)
     w->poll_interval_ms = (s->dashboard.poll_interval_ms >= 5000)
                           ? (uint32_t)s->dashboard.poll_interval_ms
                           : 60000U;
+
+    // Snapshot notification config (settings are read-only after this point —
+    // changes via web UI take effect after the screensaver is re-activated).
+    s_notify_cfg.enabled     = s->dashboard.notify_enabled;
+    s_notify_cfg.value_type  = s->dashboard.value_type;
+    s_notify_cfg.num_low_en  = s->dashboard.notify_num_low_en;
+    s_notify_cfg.num_low     = s->dashboard.notify_num_low;
+    s_notify_cfg.num_high_en = s->dashboard.notify_num_high_en;
+    s_notify_cfg.num_high    = s->dashboard.notify_num_high;
+    s_notify_cfg.str_eq_en   = s->dashboard.notify_str_eq_en;
+    s_notify_cfg.str_eq[0]   = '\0'; strncpy(s_notify_cfg.str_eq, s->dashboard.notify_str_eq, sizeof(s_notify_cfg.str_eq) - 1);
+    s_notify_cfg.str_ne_en   = s->dashboard.notify_str_ne_en;
+    s_notify_cfg.str_ne[0]   = '\0'; strncpy(s_notify_cfg.str_ne, s->dashboard.notify_str_ne, sizeof(s_notify_cfg.str_ne) - 1);
+
+    // Reset runtime state — all armed=true means "ready to fire", primed=false
+    // means "first fetch will just initialize, no melody on cold start".
+    s_notify_state.primed         = false;
+    s_notify_state.num_low_armed  = true;
+    s_notify_state.num_high_armed = true;
+    s_notify_state.str_eq_armed   = true;
+    s_notify_state.str_ne_armed   = true;
 }
 
 // ---------------------------------------------------------------------------
@@ -186,6 +245,80 @@ static esp_err_t http_get(const char *url, char *body, int cap, int *out_len)
     return ESP_OK;
 }
 
+// Threshold check + buzzer trigger. Called only after a successful parse,
+// with the *raw* extracted node (before suffix formatting). Updates the
+// armed/primed flags in s_notify_state.
+static void check_notification(cJSON *node)
+{
+    if (!s_notify_cfg.enabled || !node) return;
+
+    // First call after activation: just initialize armed flags so we don't
+    // fire on the cold-start value, then mark primed and bail out.
+    if (!s_notify_state.primed) {
+        if (s_notify_cfg.value_type == DASHBOARD_VALUE_NUMBER && cJSON_IsNumber(node)) {
+            double v = node->valuedouble;
+            s_notify_state.num_low_armed  = (v >= s_notify_cfg.num_low);   // disarmed if already below
+            s_notify_state.num_high_armed = (v <= s_notify_cfg.num_high);  // disarmed if already above
+        } else if (s_notify_cfg.value_type == DASHBOARD_VALUE_STRING && cJSON_IsString(node) && node->valuestring) {
+            const char *s = node->valuestring;
+            s_notify_state.str_eq_armed = (strcmp(s, s_notify_cfg.str_eq) != 0);
+            s_notify_state.str_ne_armed = (strcmp(s, s_notify_cfg.str_ne) == 0);
+        }
+        s_notify_state.primed = true;
+        return;
+    }
+
+    bool fire = false;
+
+    if (s_notify_cfg.value_type == DASHBOARD_VALUE_NUMBER && cJSON_IsNumber(node)) {
+        double v = node->valuedouble;
+
+        if (s_notify_cfg.num_low_en) {
+            if (s_notify_state.num_low_armed && v < s_notify_cfg.num_low) {
+                ESP_LOGI(TAG, "notify: value %.4g < low %.4g", v, s_notify_cfg.num_low);
+                fire = true;
+                s_notify_state.num_low_armed = false;
+            } else if (!s_notify_state.num_low_armed && v >= s_notify_cfg.num_low) {
+                s_notify_state.num_low_armed = true;
+            }
+        }
+        if (s_notify_cfg.num_high_en) {
+            if (s_notify_state.num_high_armed && v > s_notify_cfg.num_high) {
+                ESP_LOGI(TAG, "notify: value %.4g > high %.4g", v, s_notify_cfg.num_high);
+                fire = true;
+                s_notify_state.num_high_armed = false;
+            } else if (!s_notify_state.num_high_armed && v <= s_notify_cfg.num_high) {
+                s_notify_state.num_high_armed = true;
+            }
+        }
+    } else if (s_notify_cfg.value_type == DASHBOARD_VALUE_STRING && cJSON_IsString(node) && node->valuestring) {
+        const char *s = node->valuestring;
+
+        if (s_notify_cfg.str_eq_en) {
+            bool match = (strcmp(s, s_notify_cfg.str_eq) == 0);
+            if (s_notify_state.str_eq_armed && match) {
+                ESP_LOGI(TAG, "notify: value == \"%s\"", s_notify_cfg.str_eq);
+                fire = true;
+                s_notify_state.str_eq_armed = false;
+            } else if (!s_notify_state.str_eq_armed && !match) {
+                s_notify_state.str_eq_armed = true;   // rearm when value moves away
+            }
+        }
+        if (s_notify_cfg.str_ne_en) {
+            bool differ = (strcmp(s, s_notify_cfg.str_ne) != 0);
+            if (s_notify_state.str_ne_armed && differ) {
+                ESP_LOGI(TAG, "notify: value != \"%s\" (got \"%s\")", s_notify_cfg.str_ne, s);
+                fire = true;
+                s_notify_state.str_ne_armed = false;
+            } else if (!s_notify_state.str_ne_armed && !differ) {
+                s_notify_state.str_ne_armed = true;
+            }
+        }
+    }
+
+    if (fire) buzzer_beep_pattern(DASHBOARD_ALERT_PATTERN, DASHBOARD_ALERT_PAIRS);
+}
+
 static void fetch_widget(int i)
 {
     const dashboard_widget_t *w = &s_widgets[i];
@@ -217,10 +350,14 @@ static void fetch_widget(int i)
     cJSON *node = json_resolve_path(root, w->json_path);
     char value[VALUE_BUF_LEN];
     format_value(w, node, value, sizeof(value));
-    cJSON_Delete(root);
 
     ESP_LOGI(TAG, "%s = %s", w->title, value);
     set_widget_text(i, value);
+
+    // Single-widget MVP: notification logic operates on widget 0.
+    if (i == 0) check_notification(node);
+
+    cJSON_Delete(root);
 }
 
 static void fetcher_task(void *arg)

@@ -88,6 +88,18 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(dash, "json_path",        s->dashboard.json_path);
     cJSON_AddStringToObject(dash, "suffix",           s->dashboard.suffix);
     cJSON_AddNumberToObject(dash, "poll_interval_ms", s->dashboard.poll_interval_ms);
+    cJSON *notify = cJSON_CreateObject();
+    cJSON_AddBoolToObject  (notify, "enabled",     s->dashboard.notify_enabled);
+    cJSON_AddStringToObject(notify, "value_type",  s->dashboard.value_type == DASHBOARD_VALUE_STRING ? "string" : "number");
+    cJSON_AddBoolToObject  (notify, "num_low_en",  s->dashboard.notify_num_low_en);
+    cJSON_AddNumberToObject(notify, "num_low",     s->dashboard.notify_num_low);
+    cJSON_AddBoolToObject  (notify, "num_high_en", s->dashboard.notify_num_high_en);
+    cJSON_AddNumberToObject(notify, "num_high",    s->dashboard.notify_num_high);
+    cJSON_AddBoolToObject  (notify, "str_eq_en",   s->dashboard.notify_str_eq_en);
+    cJSON_AddStringToObject(notify, "str_eq",      s->dashboard.notify_str_eq);
+    cJSON_AddBoolToObject  (notify, "str_ne_en",   s->dashboard.notify_str_ne_en);
+    cJSON_AddStringToObject(notify, "str_ne",      s->dashboard.notify_str_ne);
+    cJSON_AddItemToObject  (dash, "notify", notify);
     cJSON_AddItemToObject(json, "dashboard", dash);
 
 
@@ -233,6 +245,34 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             cJSON_IsString(jp) ? jp->valuestring : NULL,
             cJSON_IsString(sf) ? sf->valuestring : NULL,
             cJSON_IsNumber(pi) ? pi->valueint    : 0);
+
+        // Notification subsection — apply directly via the mutable settings
+        // pointer (avoids a huge setter signature for ~10 fields).
+        cJSON *nx = cJSON_GetObjectItem(dash, "notify");
+        if (cJSON_IsObject(nx)) {
+            app_settings_t *ds = settings_get();
+            cJSON *en  = cJSON_GetObjectItem(nx, "enabled");
+            cJSON *vt  = cJSON_GetObjectItem(nx, "value_type");
+            cJSON *nle = cJSON_GetObjectItem(nx, "num_low_en");
+            cJSON *nl  = cJSON_GetObjectItem(nx, "num_low");
+            cJSON *nhe = cJSON_GetObjectItem(nx, "num_high_en");
+            cJSON *nh  = cJSON_GetObjectItem(nx, "num_high");
+            cJSON *see = cJSON_GetObjectItem(nx, "str_eq_en");
+            cJSON *se  = cJSON_GetObjectItem(nx, "str_eq");
+            cJSON *sne = cJSON_GetObjectItem(nx, "str_ne_en");
+            cJSON *sn  = cJSON_GetObjectItem(nx, "str_ne");
+            if (cJSON_IsBool(en))   ds->dashboard.notify_enabled     = cJSON_IsTrue(en);
+            if (cJSON_IsString(vt)) ds->dashboard.value_type         = strcmp(vt->valuestring, "string") == 0 ? DASHBOARD_VALUE_STRING : DASHBOARD_VALUE_NUMBER;
+            if (cJSON_IsBool(nle))  ds->dashboard.notify_num_low_en  = cJSON_IsTrue(nle);
+            if (cJSON_IsNumber(nl)) ds->dashboard.notify_num_low     = nl->valuedouble;
+            if (cJSON_IsBool(nhe))  ds->dashboard.notify_num_high_en = cJSON_IsTrue(nhe);
+            if (cJSON_IsNumber(nh)) ds->dashboard.notify_num_high    = nh->valuedouble;
+            if (cJSON_IsBool(see))  ds->dashboard.notify_str_eq_en   = cJSON_IsTrue(see);
+            if (cJSON_IsString(se)) { ds->dashboard.notify_str_eq[0] = '\0'; strncpy(ds->dashboard.notify_str_eq, se->valuestring, sizeof(ds->dashboard.notify_str_eq) - 1); }
+            if (cJSON_IsBool(sne))  ds->dashboard.notify_str_ne_en   = cJSON_IsTrue(sne);
+            if (cJSON_IsString(sn)) { ds->dashboard.notify_str_ne[0] = '\0'; strncpy(ds->dashboard.notify_str_ne, sn->valuestring, sizeof(ds->dashboard.notify_str_ne) - 1); }
+            settings_save();
+        }
     }
 
     // ── WIFI ──────────────────────────────────────────────────────────────────

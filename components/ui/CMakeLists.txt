@@ -51,4 +51,5 @@ idf_component_register(
         json                    # ui_profile JSON I/O
         esp_http_client         # screensaver_dashboard
         esp-tls                 # esp_crt_bundle for HTTPS
+        buzzer                  # screensaver_dashboard notifications via melodies.h
 )

@@ -127,6 +127,71 @@
                    style="width:140px" oninput="setDashboard()" />
             <div class="field-hint">Minimum 5 s. Default 60 s.</div>
         </div>
+
+        <!-- Notification — buzzer when value crosses a threshold -->
+        <div class="field-group" style="margin-top:14px;border-top:1px solid var(--border, #333);padding-top:14px">
+            <label class="field-label">🔔 Notification</label>
+            <div class="theme-toggle" style="width:fit-content;margin-top:4px">
+                <button class="theme-btn" id="dashNotifyOn"  onclick="setDashboardNotifyEnabled(true)">✅ On</button>
+                <button class="theme-btn" id="dashNotifyOff" onclick="setDashboardNotifyEnabled(false)">❌ Off</button>
+            </div>
+            <div class="field-hint">
+                Plays a melody when the value crosses a threshold. Fires once per crossing;
+                rearms when the value comes back across.
+            </div>
+        </div>
+
+        <div id="dash_notify_panel">
+            <div class="field-group">
+                <label class="field-label">Value type</label>
+                <select id="dash_value_type" class="field-input" style="width:240px"
+                        onchange="onDashboardValueTypeChange()">
+                    <option value="number">🔢 Number (uses &lt; / &gt; thresholds)</option>
+                    <option value="string">🔤 String (uses == / != comparisons)</option>
+                </select>
+            </div>
+
+            <!-- Number mode -->
+            <div id="dash_notify_num">
+                <div class="field-group">
+                    <label class="field-label">
+                        <input type="checkbox" id="dash_num_low_en" onchange="setDashboardNotify()" />
+                        Alert when value &lt;
+                    </label>
+                    <input type="number" id="dash_num_low" class="field-input" step="any"
+                           style="width:160px" oninput="setDashboardNotify()" />
+                </div>
+                <div class="field-group">
+                    <label class="field-label">
+                        <input type="checkbox" id="dash_num_high_en" onchange="setDashboardNotify()" />
+                        Alert when value &gt;
+                    </label>
+                    <input type="number" id="dash_num_high" class="field-input" step="any"
+                           style="width:160px" oninput="setDashboardNotify()" />
+                </div>
+            </div>
+
+            <!-- String mode -->
+            <div id="dash_notify_str">
+                <div class="field-group">
+                    <label class="field-label">
+                        <input type="checkbox" id="dash_str_eq_en" onchange="setDashboardNotify()" />
+                        Alert when value ==
+                    </label>
+                    <input type="text" id="dash_str_eq" class="field-input" maxlength="31"
+                           placeholder="rain" oninput="setDashboardNotify()" />
+                </div>
+                <div class="field-group">
+                    <label class="field-label">
+                        <input type="checkbox" id="dash_str_ne_en" onchange="setDashboardNotify()" />
+                        Alert when value !=
+                    </label>
+                    <input type="text" id="dash_str_ne" class="field-input" maxlength="31"
+                           placeholder="ok" oninput="setDashboardNotify()" />
+                </div>
+            </div>
+
+        </div>
     </div>
 
     <!-- ══════════════════════════════════════════

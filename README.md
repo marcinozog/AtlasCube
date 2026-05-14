@@ -89,7 +89,14 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 - Screens: clock, playlist, equalizer, settings, Bluetooth, events, WiFi AP
 - Rotary encoder navigation (turn + press)
 - Configurable layout (widget positions editable via JSON)
-- Screensavers — kick in after a configurable idle timeout; choose from clock hands, starfield, fireworks, plasma, or Conway's Game of Life
+- Screensavers — kick in after a configurable idle timeout; choose from clock hands, starfield, fireworks, plasma, Conway's Game of Life, blank (AMOLED-friendly "off"), or **Dashboard** (see below)
+
+**Dashboard screensaver**
+- A user-configurable ambient display that polls any JSON HTTP/HTTPS endpoint and renders a single value
+- Configurable from the Settings web UI: **title**, **URL**, **JSON path** (dot/bracket notation, e.g. `rates[0].mid` or `main.temp`), **suffix** (e.g. ` PLN`, `°C`), and **poll interval** (≥ 5 s)
+- HTTPS supported out of the box via the ESP-IDF certificate bundle — works with public APIs that need no auth
+- Defaults ship with the NBP USD/PLN exchange rate; swap the fields to read pretty much anything serving JSON (weather, crypto, home automation, GitHub stats, …)
+- Polling runs in a dedicated FreeRTOS task only while the screensaver is active — no background traffic when another screen is shown
 
 **Events & reminders**
 - Birthdays, namedays, anniversaries, plain reminders

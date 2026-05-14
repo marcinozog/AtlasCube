@@ -44,12 +44,33 @@ typedef struct
     int  screensaver_id;   // screensaver_id_t (see screensavers.h)
 } scrsaver_settings_t;
 
+typedef enum {
+    DASHBOARD_VALUE_NUMBER = 0,
+    DASHBOARD_VALUE_STRING = 1,
+} dashboard_value_type_t;
+
 typedef struct {
     char title[32];
     char url[256];
     char json_path[64];     // e.g. "rates[0].mid"; empty = use root
     char suffix[16];        // appended to value (may be empty)
     int  poll_interval_ms;  // minimum 5000
+
+    // ── notification ──────────────────────────────────────────────────────
+    bool   notify_enabled;
+    int    value_type;           // dashboard_value_type_t
+
+    // number mode
+    bool   notify_num_low_en;
+    double notify_num_low;
+    bool   notify_num_high_en;
+    double notify_num_high;
+
+    // string mode
+    bool   notify_str_eq_en;
+    char   notify_str_eq[32];
+    bool   notify_str_ne_en;
+    char   notify_str_ne[32];
 } dashboard_settings_t;
 
 
@@ -88,3 +109,6 @@ void settings_set_dashboard(const char *title,
                             const char *json_path,
                             const char *suffix,
                             int poll_interval_ms);
+
+// Notification fields are applied by http_server directly via the mutable
+// pointer returned by settings_get(), followed by settings_save().
