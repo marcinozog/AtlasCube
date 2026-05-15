@@ -12,6 +12,7 @@
 #include "fonts/ui_fonts.h"
 #include "lvgl.h"
 #include "esp_log.h"
+#include <string.h>
 
 static const char *TAG = "SCR_BT";
 
@@ -73,9 +74,14 @@ static void refresh_from_state(void)
         lv_label_set_text(s_status_label, "Discoverable");
     }
 
-    // Track metadata
-    if (s_title_label)  lv_label_set_text(s_title_label,  s->bt_title);
-    if (s_artist_label) lv_label_set_text(s_artist_label, s->bt_artist);
+    // Track metadata — set_text only on real change so SCROLL_CIRCULAR
+    // doesn't restart every second when +PYPS triggers a state refresh.
+    if (s_title_label && strcmp(lv_label_get_text(s_title_label), s->bt_title) != 0) {
+        lv_label_set_text(s_title_label, s->bt_title);
+    }
+    if (s_artist_label && strcmp(lv_label_get_text(s_artist_label), s->bt_artist) != 0) {
+        lv_label_set_text(s_artist_label, s->bt_artist);
+    }
     if (s_time_label) {
         char cur[8], total[8], buf[24];
         format_time(s->bt_position_s, cur, sizeof(cur));

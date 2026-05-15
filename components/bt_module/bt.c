@@ -166,6 +166,7 @@ void bt_parse_cmd(const char *cmd) {
 
     if (strstr(cmd, "BT_PA")) {
         bt_send_raw("AT+GMETA");
+        vTaskDelay(pdMS_TO_TICKS(100));
         bt_send_raw("AT+SMTIMEON");
     }
 
@@ -218,7 +219,7 @@ static void bt_uart_rx_task(void *arg)
         if (len > 0) {
             data[len] = 0; // null terminate (for logs)
 
-            ESP_LOGI(TAG, "UART RX (%d bytes): %s", len, (char *)data);
+            // ESP_LOGI(TAG, "UART RX (%d bytes): %s", len, (char *)data);
             ws_send_bt_log((char*)data);
             bt_parse_cmd((char*)data);
         }
