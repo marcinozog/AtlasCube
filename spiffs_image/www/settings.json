@@ -25,5 +25,28 @@
   "wifi": {
     "ssid": "",
     "password": ""
+  },
+  "scrsaver": {
+    "delay": 60,
+    "id": "dashboard"
+  },
+  "dashboard": {
+    "title": "USD/PLN",
+    "url": "https://api.nbp.pl/api/exchangerates/rates/A/USD?format=json",
+    "json_path": "rates[0].mid",
+    "suffix": " PLN",
+    "poll_interval_ms": 60000,
+    "notify": {
+      "enabled": true,
+      "value_type": "number",
+      "num_low_en": false,
+      "num_low": 0,
+      "num_high_en": true,
+      "num_high": 3.64,
+      "str_eq_en": false,
+      "str_eq": "",
+      "str_ne_en": false,
+      "str_ne": ""
+    }
   }
 }

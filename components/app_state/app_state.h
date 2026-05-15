@@ -38,6 +38,10 @@ typedef struct {
     bool bt_show_screen;        // Bluetooth show/hide screen
     bt_state_t bt_state;        // Bluetooth connected
     int bt_volume;              // Bluetooth volume
+    char bt_title[128];         // BT track title
+    char bt_artist[64];         // BT track artist
+    int  bt_duration_ms;        // BT track length (ms)
+    int  bt_position_s;         // BT current position (s)
     bool time_synced;           // Time synced
     ui_screen_id_t screen;      // Current screen
     int brightness;             // Display brightness
@@ -83,9 +87,18 @@ typedef struct {
     bool has_bt_show_screen;
     bool bt_show_screen;
     bool has_bt_state;
-    ui_theme_t bt_state;
+    bt_state_t bt_state;
     bool has_bt_volume;
     int bt_volume;
+
+    bool has_bt_title;
+    const char *bt_title;
+    bool has_bt_artist;
+    const char *bt_artist;
+    bool has_bt_duration_ms;
+    int  bt_duration_ms;
+    bool has_bt_position_s;
+    int  bt_position_s;
 
     bool has_time_synced;
     bool time_synced;

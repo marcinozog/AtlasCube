@@ -106,6 +106,17 @@ static const ui_profile_t k_defaults = {
     .bt_mode_indic_y           = 8,
     .bt_clock_widget_x         = 39,
     .bt_clock_widget_y         = 0,
+    .bt_title_x                = 4,
+    .bt_title_y                = 30,
+    .bt_title_w                = 124,
+    .bt_title_font             = &lv_font_montserrat_12_pl,
+    .bt_artist_x               = 4,
+    .bt_artist_y               = 42,
+    .bt_artist_w               = 124,
+    .bt_artist_font            = &lv_font_montserrat_12_pl,
+    .bt_time_x                 = 80,
+    .bt_time_y                 = 54,
+    .bt_time_font              = &lv_font_montserrat_12_pl,
 
     .settings_title_y          = 2,
     .settings_row_w            = 124,
@@ -230,19 +241,19 @@ static const ui_profile_t k_defaults = {
     .playlist_header_font      = &lv_font_montserrat_14_pl,
     .playlist_row_font         = &lv_font_montserrat_14_pl,
 
-    // Bluetooth: Icon in a circle and data below
-    .bt_circle_x               = 70,  // (240-100)/2
-    .bt_circle_y               = 40,
-    .bt_circle_w               = 100,
-    .bt_circle_h               = 100,
-    .bt_icon_font              = &lv_font_montserrat_48,
+    // Bluetooth: small BT icon at top, brand + status, then track metadata
+    .bt_circle_x               = 90,
+    .bt_circle_y               = 35,
+    .bt_circle_w               = 60,
+    .bt_circle_h               = 60,
+    .bt_icon_font              = &lv_font_montserrat_18_pl,
     .bt_show_circle            = true,
-    .bt_brand_x                = 46,
-    .bt_brand_y                = 153,
-    .bt_brand_font             = &lv_font_montserrat_18_pl,
-    .bt_status_x               = 76,
-    .bt_status_y               = 190,
-    .bt_status_font            = &lv_font_montserrat_14_pl,
+    .bt_brand_x                = 60,
+    .bt_brand_y                = 100,
+    .bt_brand_font             = &lv_font_montserrat_14_pl,
+    .bt_status_x               = 80,
+    .bt_status_y               = 122,
+    .bt_status_font            = &lv_font_montserrat_12_pl,
     .bt_slider_x               = 30,
     .bt_slider_y               = 230,
     .bt_slider_w               = 180,
@@ -256,6 +267,17 @@ static const ui_profile_t k_defaults = {
     .bt_mode_indic_y           = 1,
     .bt_clock_widget_x         = 95,
     .bt_clock_widget_y         = 0,
+    .bt_title_x                = 10,
+    .bt_title_y                = 150,
+    .bt_title_w                = 220,
+    .bt_title_font             = &lv_font_montserrat_14_pl,
+    .bt_artist_x               = 10,
+    .bt_artist_y               = 180,
+    .bt_artist_w               = 220,
+    .bt_artist_font            = &lv_font_montserrat_12_pl,
+    .bt_time_x                 = 90,
+    .bt_time_y                 = 240,
+    .bt_time_font              = &lv_font_montserrat_14_pl,
 
     // Settings
     .settings_title_y          = 10,
@@ -376,19 +398,19 @@ static const ui_profile_t k_defaults = {
     .playlist_header_font      = &lv_font_montserrat_14_pl,
     .playlist_row_font         = &lv_font_montserrat_12_pl,
 
-    // 320x240 — circle (100x100) centered at (160, 70), labels stacked below
-    .bt_circle_x               = 110,
-    .bt_circle_y               = 20,
-    .bt_circle_w               = 100,
-    .bt_circle_h               = 100,
-    .bt_icon_font              = &lv_font_montserrat_48,
+    // 320x240 — small BT icon top, brand + status, then track metadata
+    .bt_circle_x               = 130,
+    .bt_circle_y               = 25,
+    .bt_circle_w               = 60,
+    .bt_circle_h               = 60,
+    .bt_icon_font              = &lv_font_montserrat_18_pl,
     .bt_show_circle            = true,
-    .bt_brand_x                = 95,
-    .bt_brand_y                = 125,
-    .bt_brand_font             = &lv_font_montserrat_18_pl,
-    .bt_status_x               = 110,
-    .bt_status_y               = 160,
-    .bt_status_font            = &lv_font_montserrat_14_pl,
+    .bt_brand_x                = 110,
+    .bt_brand_y                = 90,
+    .bt_brand_font             = &lv_font_montserrat_14_pl,
+    .bt_status_x               = 135,
+    .bt_status_y               = 112,
+    .bt_status_font            = &lv_font_montserrat_12_pl,
     .bt_slider_x               = 70,
     .bt_slider_y               = 195,
     .bt_slider_w               = 180,
@@ -402,6 +424,17 @@ static const ui_profile_t k_defaults = {
     .bt_mode_indic_y           = 8,
     .bt_clock_widget_x         = 135,
     .bt_clock_widget_y         = 0,
+    .bt_title_x                = 10,
+    .bt_title_y                = 140,
+    .bt_title_w                = 300,
+    .bt_title_font             = &lv_font_montserrat_14_pl,
+    .bt_artist_x               = 10,
+    .bt_artist_y               = 165,
+    .bt_artist_w               = 300,
+    .bt_artist_font            = &lv_font_montserrat_12_pl,
+    .bt_time_x                 = 135,
+    .bt_time_y                 = 213,
+    .bt_time_font              = &lv_font_montserrat_14_pl,
 
     .settings_title_y          = 6,
     .settings_row_w            = 288,
@@ -595,6 +628,17 @@ static void load_bt(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "bt_mode_indic_y",        &p->bt_mode_indic_y);
     load_i16 (obj, "bt_clock_widget_x",      &p->bt_clock_widget_x);
     load_i16 (obj, "bt_clock_widget_y",      &p->bt_clock_widget_y);
+    load_i16 (obj, "bt_title_x",             &p->bt_title_x);
+    load_i16 (obj, "bt_title_y",             &p->bt_title_y);
+    load_i16 (obj, "bt_title_w",             &p->bt_title_w);
+    load_font(obj, "bt_title_font",          &p->bt_title_font);
+    load_i16 (obj, "bt_artist_x",            &p->bt_artist_x);
+    load_i16 (obj, "bt_artist_y",            &p->bt_artist_y);
+    load_i16 (obj, "bt_artist_w",            &p->bt_artist_w);
+    load_font(obj, "bt_artist_font",         &p->bt_artist_font);
+    load_i16 (obj, "bt_time_x",              &p->bt_time_x);
+    load_i16 (obj, "bt_time_y",              &p->bt_time_y);
+    load_font(obj, "bt_time_font",           &p->bt_time_font);
 }
 
 static void load_radio(const cJSON *obj, ui_profile_t *p)
@@ -680,6 +724,17 @@ static cJSON *dump_bt(const ui_profile_t *p)
     add_i16 (o, "bt_mode_indic_y",        p->bt_mode_indic_y);
     add_i16 (o, "bt_clock_widget_x",      p->bt_clock_widget_x);
     add_i16 (o, "bt_clock_widget_y",      p->bt_clock_widget_y);
+    add_i16 (o, "bt_title_x",             p->bt_title_x);
+    add_i16 (o, "bt_title_y",             p->bt_title_y);
+    add_i16 (o, "bt_title_w",             p->bt_title_w);
+    add_font(o, "bt_title_font",          p->bt_title_font);
+    add_i16 (o, "bt_artist_x",            p->bt_artist_x);
+    add_i16 (o, "bt_artist_y",            p->bt_artist_y);
+    add_i16 (o, "bt_artist_w",            p->bt_artist_w);
+    add_font(o, "bt_artist_font",         p->bt_artist_font);
+    add_i16 (o, "bt_time_x",              p->bt_time_x);
+    add_i16 (o, "bt_time_y",              p->bt_time_y);
+    add_font(o, "bt_time_font",           p->bt_time_font);
     return o;
 }
 

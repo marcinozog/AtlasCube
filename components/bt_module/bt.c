@@ -7,6 +7,8 @@
 #include "defines.h"
 #include "ws_server.h"
 #include "app_state.h"
+#include <stdlib.h>
+#include <string.h>
 
 static const char *TAG = "BT_MODULE";
 
@@ -111,6 +113,22 @@ void bt_send_raw(const char *cmd)
     uart_write_bytes(BT_UART_NUM, "\r\n", 2);
 }
 
+// Extract value following `key` up to CR/LF or end of buffer.
+// Returns true if the key was found.
+static bool bt_extract_field(const char *buf, const char *key, char *out, size_t out_size)
+{
+    const char *p = strstr(buf, key);
+    if (!p) return false;
+    p += strlen(key);
+
+    size_t i = 0;
+    while (*p && *p != '\r' && *p != '\n' && i + 1 < out_size) {
+        out[i++] = *p++;
+    }
+    out[i] = 0;
+    return true;
+}
+
 void bt_parse_cmd(const char *cmd) {
     if (strstr(cmd, "BT_CN")) {
         app_state_update(&(app_state_patch_t){
@@ -134,6 +152,49 @@ void bt_parse_cmd(const char *cmd) {
         app_state_update(&(app_state_patch_t){
             .has_bt_state   = true,
             .bt_state       = BT_DISCOVERABLE
+        });
+    }
+
+    if (strstr(cmd, "+SRC=NONE")) {
+        app_state_update(&(app_state_patch_t){
+            .has_bt_title       = true, .bt_title       = "",
+            .has_bt_artist      = true, .bt_artist      = "",
+            .has_bt_duration_ms = true, .bt_duration_ms = 0,
+            .has_bt_position_s  = true, .bt_position_s  = 0,
+        });
+    }
+
+    if (strstr(cmd, "BT_PA")) {
+        bt_send_raw("AT+GMETA");
+        bt_send_raw("AT+SMTIMEON");
+    }
+
+    char buf[128];
+
+    if (bt_extract_field(cmd, "+TITL=", buf, sizeof(buf))) {
+        app_state_update(&(app_state_patch_t){
+            .has_bt_title = true,
+            .bt_title     = buf
+        });
+    }
+    if (bt_extract_field(cmd, "+ARTS=", buf, sizeof(buf))) {
+        app_state_update(&(app_state_patch_t){
+            .has_bt_artist = true,
+            .bt_artist     = buf
+        });
+    }
+    if (bt_extract_field(cmd, "+PYTM=", buf, sizeof(buf))) {
+        int ms = atoi(buf);
+        app_state_update(&(app_state_patch_t){
+            .has_bt_duration_ms = true,
+            .bt_duration_ms     = ms
+        });
+    }
+    if (bt_extract_field(cmd, "+PYPS=", buf, sizeof(buf))) {
+        int s = atoi(buf);
+        app_state_update(&(app_state_patch_t){
+            .has_bt_position_s = true,
+            .bt_position_s     = s
         });
     }
     // else if (strstr(cmd, "+VOL1=")) {

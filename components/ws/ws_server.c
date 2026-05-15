@@ -346,6 +346,10 @@ static void send_full_state(void)
     cJSON_AddBoolToObject(json, "bt_enable", s->bt_enable);
     cJSON_AddNumberToObject(json, "bt_state", s->bt_state);
     cJSON_AddNumberToObject(json, "bt_volume", s->bt_volume);
+    cJSON_AddStringToObject(json, "bt_title",  s->bt_title);
+    cJSON_AddStringToObject(json, "bt_artist", s->bt_artist);
+    cJSON_AddNumberToObject(json, "bt_duration_ms", s->bt_duration_ms);
+    cJSON_AddNumberToObject(json, "bt_position_s",  s->bt_position_s);
     cJSON_AddStringToObject(json, "radio", state_str);
     cJSON_AddNumberToObject(json, "volume", s->volume);
     cJSON_AddStringToObject(json, "url", s->url);

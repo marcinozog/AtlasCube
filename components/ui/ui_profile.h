@@ -138,6 +138,19 @@ typedef struct {
     int16_t          bt_clock_widget_x;
     int16_t          bt_clock_widget_y;
 
+    // Track metadata (sent over UART by BT module)
+    int16_t          bt_title_x;
+    int16_t          bt_title_y;
+    int16_t          bt_title_w;               // width for scroll
+    const lv_font_t *bt_title_font;
+    int16_t          bt_artist_x;
+    int16_t          bt_artist_y;
+    int16_t          bt_artist_w;
+    const lv_font_t *bt_artist_font;
+    int16_t          bt_time_x;
+    int16_t          bt_time_y;
+    const lv_font_t *bt_time_font;
+
     // screen_settings
     int16_t          settings_title_y;
     int16_t          settings_row_w;

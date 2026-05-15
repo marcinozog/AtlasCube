@@ -22,6 +22,17 @@ static lv_obj_t *s_brand_label  = NULL;
 static lv_obj_t *s_vol_label    = NULL;
 static lv_obj_t *s_slider       = NULL;
 static lv_obj_t *s_status_label = NULL;
+static lv_obj_t *s_title_label  = NULL;
+static lv_obj_t *s_artist_label = NULL;
+static lv_obj_t *s_time_label   = NULL;
+
+static void format_time(int seconds, char *out, size_t out_size)
+{
+    if (seconds < 0) seconds = 0;
+    int m = seconds / 60;
+    int s = seconds % 60;
+    snprintf(out, out_size, "%d:%02d", m, s);
+}
 
 // ---------------------------------------------------------------------------
 
@@ -60,6 +71,17 @@ static void refresh_from_state(void)
     }
     else if(s->bt_state == BT_DISCOVERABLE) {
         lv_label_set_text(s_status_label, "Discoverable");
+    }
+
+    // Track metadata
+    if (s_title_label)  lv_label_set_text(s_title_label,  s->bt_title);
+    if (s_artist_label) lv_label_set_text(s_artist_label, s->bt_artist);
+    if (s_time_label) {
+        char cur[8], total[8], buf[24];
+        format_time(s->bt_position_s, cur, sizeof(cur));
+        format_time(s->bt_duration_ms / 1000, total, sizeof(total));
+        snprintf(buf, sizeof(buf), "%s / %s", cur, total);
+        lv_label_set_text(s_time_label, buf);
     }
 }
 
@@ -129,12 +151,37 @@ static void bt_create(lv_obj_t *parent)
     lv_obj_set_style_bg_color(s_slider, lv_color_hex(th->text_primary), LV_PART_KNOB);
     lv_slider_set_value(s_slider, app_state_get()->bt_volume, LV_ANIM_OFF);
     lv_obj_add_event_cb(s_slider, slider_event_cb, LV_EVENT_RELEASED, NULL);
+    lv_obj_add_flag(s_slider, LV_OBJ_FLAG_HIDDEN);
 
     s_vol_label = lv_label_create(parent);
     lv_label_set_text(s_vol_label, "0%");
     lv_obj_set_style_text_font(s_vol_label, p->bt_vol_label_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_vol_label, lv_color_hex(th->text_muted), LV_PART_MAIN);
     lv_obj_set_pos(s_vol_label, p->bt_vol_label_x, p->bt_vol_label_y);
+    lv_obj_add_flag(s_vol_label, LV_OBJ_FLAG_HIDDEN);
+
+    // Track metadata labels
+    s_title_label = lv_label_create(parent);
+    lv_label_set_long_mode(s_title_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_obj_set_width(s_title_label, p->bt_title_w);
+    lv_obj_set_style_text_font(s_title_label, p->bt_title_font, LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_title_label, lv_color_hex(th->text_primary), LV_PART_MAIN);
+    lv_obj_set_pos(s_title_label, p->bt_title_x, p->bt_title_y);
+    lv_label_set_text(s_title_label, "");
+
+    s_artist_label = lv_label_create(parent);
+    lv_label_set_long_mode(s_artist_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_obj_set_width(s_artist_label, p->bt_artist_w);
+    lv_obj_set_style_text_font(s_artist_label, p->bt_artist_font, LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_artist_label, lv_color_hex(th->text_secondary), LV_PART_MAIN);
+    lv_obj_set_pos(s_artist_label, p->bt_artist_x, p->bt_artist_y);
+    lv_label_set_text(s_artist_label, "");
+
+    s_time_label = lv_label_create(parent);
+    lv_obj_set_style_text_font(s_time_label, p->bt_time_font, LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_time_label, lv_color_hex(th->text_secondary), LV_PART_MAIN);
+    lv_obj_set_pos(s_time_label, p->bt_time_x, p->bt_time_y);
+    lv_label_set_text(s_time_label, "0:00 / 0:00");
 
     refresh_from_state();
 
@@ -147,6 +194,7 @@ static void bt_destroy(void)
     mode_indicator_destroy();
     clock_widget_destroy();
     s_root = s_circle = s_icon = s_brand_label = s_vol_label = s_slider = s_status_label = NULL;
+    s_title_label = s_artist_label = s_time_label = NULL;
     
     ESP_LOGI(TAG, "Destroyed");
 }
@@ -267,6 +315,19 @@ static void bt_apply_theme(void)
 
     lv_obj_set_style_text_color(s_vol_label,
         lv_color_hex(th->text_muted), LV_PART_MAIN);
+
+    if (s_title_label) {
+        lv_obj_set_style_text_color(s_title_label,
+            lv_color_hex(th->text_primary), LV_PART_MAIN);
+    }
+    if (s_artist_label) {
+        lv_obj_set_style_text_color(s_artist_label,
+            lv_color_hex(th->text_secondary), LV_PART_MAIN);
+    }
+    if (s_time_label) {
+        lv_obj_set_style_text_color(s_time_label,
+            lv_color_hex(th->text_secondary), LV_PART_MAIN);
+    }
 
     mode_indicator_apply_theme();
     clock_widget_apply_theme();

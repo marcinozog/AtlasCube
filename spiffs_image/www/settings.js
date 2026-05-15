@@ -6,8 +6,6 @@
 let currentSettings = null;
 let isApMode        = false;
 let brightnessTimeout;
-let scrsDelayTimeout;
-let dashboardTimeout;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tabs
@@ -118,100 +116,85 @@ function setDeviceEqEnabled(t) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Screensaver
+// Screensaver tab — UI-only handlers (commit via saveScreensaverTab())
 // ─────────────────────────────────────────────────────────────────────────────
-function setScrsaverDelay(t) {
-    clearTimeout(scrsDelayTimeout);
-    scrsDelayTimeout = setTimeout(() => {
-        let v = parseInt(t, 10);
-        if (isNaN(v) || v < 0) v = 0;
-        fetch('/api/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ scrsaver: { delay: v } })
-        }).catch(console.error);
-    }, 400);
-}
-
-function setScrsaverId(id) {
-    fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scrsaver: { id } })
-    }).catch(console.error);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Dashboard screensaver widget — debounced full-form push
-// ─────────────────────────────────────────────────────────────────────────────
-function setDashboard() {
-    clearTimeout(dashboardTimeout);
-    dashboardTimeout = setTimeout(() => {
-        const title     = (document.getElementById('dash_title')?.value     ?? '').trim();
-        const url       = (document.getElementById('dash_url')?.value       ?? '').trim();
-        const json_path = (document.getElementById('dash_json_path')?.value ?? '').trim();
-        const suffix    =  document.getElementById('dash_suffix')?.value    ?? '';
-        let   pollS     = parseInt(document.getElementById('dash_poll_s')?.value, 10);
-        if (isNaN(pollS) || pollS < 5) pollS = 5;
-        fetch('/api/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dashboard: {
-                title, url, json_path, suffix,
-                poll_interval_ms: pollS * 1000
-            }})
-        }).catch(console.error);
-    }, 500);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Dashboard notification
-// ─────────────────────────────────────────────────────────────────────────────
-let dashNotifyTimeout;
-
 function setDashboardNotifyEnabled(t) {
     document.getElementById('dashNotifyOn') ?.classList.toggle('active', t);
     document.getElementById('dashNotifyOff')?.classList.toggle('active', !t);
     document.getElementById('dash_notify_panel').style.display = t ? '' : 'none';
-    fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dashboard: { notify: { enabled: t } } })
-    }).catch(console.error);
 }
 
 function onDashboardValueTypeChange() {
     const t = document.getElementById('dash_value_type').value;
     document.getElementById('dash_notify_num').style.display = (t === 'number') ? '' : 'none';
     document.getElementById('dash_notify_str').style.display = (t === 'string') ? '' : 'none';
-    setDashboardNotify();
 }
 
-function setDashboardNotify() {
-    clearTimeout(dashNotifyTimeout);
-    dashNotifyTimeout = setTimeout(() => {
-        const get = id => document.getElementById(id);
-        const num = id => {
-            const v = parseFloat(get(id)?.value);
-            return isNaN(v) ? 0 : v;
-        };
-        const notify = {
-            value_type:  get('dash_value_type').value,
-            num_low_en:  get('dash_num_low_en').checked,
-            num_low:     num('dash_num_low'),
-            num_high_en: get('dash_num_high_en').checked,
-            num_high:    num('dash_num_high'),
-            str_eq_en:   get('dash_str_eq_en').checked,
-            str_eq:      get('dash_str_eq').value,
-            str_ne_en:   get('dash_str_ne_en').checked,
-            str_ne:      get('dash_str_ne').value,
-        };
-        fetch('/api/settings', {
+async function saveScreensaverTab() {
+    const btn = document.getElementById('scrs_save_btn');
+    if (btn) btn.disabled = true;
+
+    const get = id => document.getElementById(id);
+    const num = id => {
+        const v = parseFloat(get(id)?.value);
+        return isNaN(v) ? 0 : v;
+    };
+
+    let delay = parseInt(get('scrs_delay')?.value, 10);
+    if (isNaN(delay) || delay < 0) delay = 0;
+
+    let pollS = parseInt(get('dash_poll_s')?.value, 10);
+    if (isNaN(pollS) || pollS < 5) pollS = 5;
+
+    const enabled = !!get('dashNotifyOn')?.classList.contains('active');
+
+    const payload = {
+        scrsaver: {
+            delay,
+            id: get('scrs_id').value,
+        },
+        dashboard: {
+            title:            (get('dash_title')?.value     ?? '').trim(),
+            url:              (get('dash_url')?.value       ?? '').trim(),
+            json_path:        (get('dash_json_path')?.value ?? '').trim(),
+            suffix:            get('dash_suffix')?.value    ?? '',
+            poll_interval_ms:  pollS * 1000,
+            notify: {
+                enabled,
+                value_type:  get('dash_value_type').value,
+                num_low_en:  get('dash_num_low_en').checked,
+                num_low:     num('dash_num_low'),
+                num_high_en: get('dash_num_high_en').checked,
+                num_high:    num('dash_num_high'),
+                str_eq_en:   get('dash_str_eq_en').checked,
+                str_eq:      get('dash_str_eq').value,
+                str_ne_en:   get('dash_str_ne_en').checked,
+                str_ne:      get('dash_str_ne').value,
+            },
+        },
+    };
+
+    try {
+        const r = await fetch('/api/settings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dashboard: { notify } })
-        }).catch(console.error);
-    }, 500);
+            body: JSON.stringify(payload)
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        showScrsStatus('✅ Saved', 'ok');
+    } catch (e) {
+        showScrsStatus('❌ ' + e.message, 'error');
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+function showScrsStatus(text, cls) {
+    const el = document.getElementById('scrs_status');
+    if (!el) return;
+    el.innerText = text;
+    el.className = 'save-status ' + cls;
+    setTimeout(() => { el.innerText = ''; el.className = 'save-status'; }, 3000);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

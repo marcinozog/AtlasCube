@@ -77,14 +77,13 @@
         <div class="panel">
             <label class="field-label">Activation delay (seconds)</label>
             <input type="number" id="scrs_delay" class="field-input" min="0" max="3600" step="5"
-                   style="width:140px" oninput="setScrsaverDelay(this.value)" />
+                   style="width:140px" />
             <div class="field-hint">Idle time before the screensaver starts. 0 = OFF.</div>
         </div>
 
         <div class="panel">
             <label class="field-label">Style</label>
-            <select id="scrs_id" class="field-input" style="width:240px"
-                    onchange="setScrsaverId(this.value)">
+            <select id="scrs_id" class="field-input" style="width:240px">
                 <option value="clockhands">🕒 Clock hands</option>
                 <option value="starfield">✨ Starfield</option>
                 <option value="fireworks">🎆 Fireworks</option>
@@ -105,18 +104,18 @@
             <div class="field-group">
                 <label class="field-label">Title</label>
                 <input type="text" id="dash_title" class="field-input" maxlength="31"
-                       placeholder="USD/PLN" oninput="setDashboard()" />
+                       placeholder="USD/PLN" />
             </div>
             <div class="field-group">
                 <label class="field-label">URL</label>
                 <input type="text" id="dash_url" class="field-input" maxlength="255"
-                       placeholder="https://api.example.com/..." oninput="setDashboard()" />
+                       placeholder="https://api.example.com/..." />
                 <div class="field-hint">Must return JSON. HTTPS supported via cert bundle.</div>
             </div>
             <div class="field-group">
                 <label class="field-label">JSON path</label>
                 <input type="text" id="dash_json_path" class="field-input" maxlength="63"
-                       placeholder="rates[0].mid" oninput="setDashboard()" />
+                       placeholder="rates[0].mid" />
                 <div class="field-hint">
                     Dot/bracket path into the response, e.g. <code>rates[0].mid</code>,
                     <code>main.temp</code>, <code>data[2].value</code>. Empty = use root.
@@ -125,13 +124,13 @@
             <div class="field-group">
                 <label class="field-label">Suffix</label>
                 <input type="text" id="dash_suffix" class="field-input" maxlength="15"
-                       placeholder=" PLN" oninput="setDashboard()" />
+                       placeholder=" PLN" />
                 <div class="field-hint">Appended to the value. Leave empty for none.</div>
             </div>
             <div class="field-group">
                 <label class="field-label">Poll interval (seconds)</label>
                 <input type="number" id="dash_poll_s" class="field-input" min="5" max="3600" step="1"
-                       style="width:140px" oninput="setDashboard()" />
+                       style="width:140px" />
                 <div class="field-hint">Minimum 5 s. Default 60 s.</div>
             </div>
 
@@ -139,8 +138,8 @@
             <div class="field-group" style="margin-top:14px;border-top:1px solid var(--border, #333);padding-top:14px">
                 <label class="field-label">🔔 Notification</label>
                 <div class="theme-toggle" style="width:fit-content;margin-top:4px">
-                    <button class="theme-btn" id="dashNotifyOn"  onclick="setDashboardNotifyEnabled(true)">✅ On</button>
-                    <button class="theme-btn" id="dashNotifyOff" onclick="setDashboardNotifyEnabled(false)">❌ Off</button>
+                    <button type="button" class="theme-btn" id="dashNotifyOn"  onclick="setDashboardNotifyEnabled(true)">✅ On</button>
+                    <button type="button" class="theme-btn" id="dashNotifyOff" onclick="setDashboardNotifyEnabled(false)">❌ Off</button>
                 </div>
                 <div class="field-hint">
                     Plays a melody when the value crosses a threshold. Fires once per crossing;
@@ -162,19 +161,19 @@
                 <div id="dash_notify_num">
                     <div class="field-group">
                         <label class="field-label">
-                            <input type="checkbox" id="dash_num_low_en" onchange="setDashboardNotify()" />
+                            <input type="checkbox" id="dash_num_low_en" />
                             Alert when value &lt;
                         </label>
                         <input type="number" id="dash_num_low" class="field-input" step="any"
-                               style="width:160px" oninput="setDashboardNotify()" />
+                               style="width:160px" />
                     </div>
                     <div class="field-group">
                         <label class="field-label">
-                            <input type="checkbox" id="dash_num_high_en" onchange="setDashboardNotify()" />
+                            <input type="checkbox" id="dash_num_high_en" />
                             Alert when value &gt;
                         </label>
                         <input type="number" id="dash_num_high" class="field-input" step="any"
-                               style="width:160px" oninput="setDashboardNotify()" />
+                               style="width:160px" />
                     </div>
                 </div>
 
@@ -182,24 +181,27 @@
                 <div id="dash_notify_str">
                     <div class="field-group">
                         <label class="field-label">
-                            <input type="checkbox" id="dash_str_eq_en" onchange="setDashboardNotify()" />
+                            <input type="checkbox" id="dash_str_eq_en" />
                             Alert when value ==
                         </label>
                         <input type="text" id="dash_str_eq" class="field-input" maxlength="31"
-                               placeholder="rain" oninput="setDashboardNotify()" />
+                               placeholder="rain" />
                     </div>
                     <div class="field-group">
                         <label class="field-label">
-                            <input type="checkbox" id="dash_str_ne_en" onchange="setDashboardNotify()" />
+                            <input type="checkbox" id="dash_str_ne_en" />
                             Alert when value !=
                         </label>
                         <input type="text" id="dash_str_ne" class="field-input" maxlength="31"
-                               placeholder="ok" oninput="setDashboardNotify()" />
+                               placeholder="ok" />
                     </div>
                 </div>
 
             </div>
         </div>
+
+        <button id="scrs_save_btn" onclick="saveScreensaverTab()">💾 Save &amp; Apply</button>
+        <div id="scrs_status" class="save-status"></div>
     </section>
 
     <!-- ══════════════════════════════════════════

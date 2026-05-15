@@ -83,7 +83,19 @@ function connect() {
             }
             if (data.bt_state !== undefined) {
                 btState= data.bt_state;
-                updateBtStatus(); 
+                updateBtStatus();
+            }
+            if (data.bt_title !== undefined) {
+                const el = document.getElementById('bt_title');
+                if (el) el.innerText = data.bt_title?.length ? data.bt_title : '---';
+            }
+            if (data.bt_artist !== undefined) {
+                const el = document.getElementById('bt_artist');
+                if (el) el.innerText = data.bt_artist?.length ? data.bt_artist : '---';
+            }
+            if (data.bt_position_s !== undefined || data.bt_duration_ms !== undefined) {
+                const el = document.getElementById('bt_time');
+                if (el) el.innerText = formatBtTime(data.bt_position_s, data.bt_duration_ms);
             }
         }
 
@@ -97,6 +109,14 @@ function connect() {
 function send(obj) {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
     else console.warn('WS not connected');
+}
+
+function formatBtTime(posS, durMs) {
+    const fmt = (s) => {
+        s = Math.max(0, Math.floor(s || 0));
+        return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    };
+    return `${fmt(posS)} / ${fmt((durMs || 0) / 1000)}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
