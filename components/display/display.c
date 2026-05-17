@@ -44,6 +44,11 @@ void display_init(void)
     // Initialize the manager BEFORE starting the task (creates queue, registers callback)
     ui_manager_init();
 
+    ESP_LOGI(TAG, "Display initialized");
+}
+
+void display_start(void)
+{
     xTaskCreatePinnedToCore(
         lvgl_task,
         "lvgl",
@@ -53,8 +58,6 @@ void display_init(void)
         NULL,
         1   // CPU1
     );
-
-    ESP_LOGI(TAG, "Display initialized");
 }
 
 static void lvgl_task(void *arg)

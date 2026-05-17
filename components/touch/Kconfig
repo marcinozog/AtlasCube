@@ -1,0 +1,37 @@
+menu "Touch configuration"
+
+choice TOUCH_TYPE
+    prompt "Select touch driver"
+    default TOUCH_CST816D
+
+config TOUCH_CST816D
+    bool "CST816D"
+
+endchoice
+
+menu "Touch orientation"
+
+config TOUCH_MIRROR_X
+    bool "Mirror X axis"
+    default n
+    help
+        Flip touch coordinates along the X axis. Applied in the touch
+        IC's native frame, BEFORE swap_xy.
+
+config TOUCH_MIRROR_Y
+    bool "Mirror Y axis"
+    default n
+    help
+        Flip touch coordinates along the Y axis. Applied in the touch
+        IC's native frame, BEFORE swap_xy.
+
+config TOUCH_SWAP_XY
+    bool "Swap X and Y axes"
+    default n
+    help
+        Swap X and Y after mirroring. Use when the touch IC is mounted
+        rotated 90° relative to the panel.
+
+endmenu
+
+endmenu

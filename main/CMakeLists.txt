@@ -14,6 +14,7 @@ idf_component_register(
         bt_module
         services
         encoder
+        touch
 )
 
 target_compile_definitions(${COMPONENT_LIB} PRIVATE LV_CONF_INCLUDE_SIMPLE)

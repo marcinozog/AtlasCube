@@ -52,6 +52,15 @@
 #endif
 
 
+// ===== TOUCH =====
+// CST816D
+#define CTP_SCL     47
+#define CTP_SDA     48
+#define CTP_INT     -1
+#define CTP_RST     -1
+
+
+
 
 // ===== I2S PCM5102A =====
 

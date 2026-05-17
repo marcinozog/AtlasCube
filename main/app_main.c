@@ -19,6 +19,7 @@
 #include "ntp_service.h"
 #include "ui_manager.h"
 #include "encoder.h"
+#include "touch.h"
 #include "buzzer.h"
 #include "events_service.h"
 #include "ui_profile.h"
@@ -46,6 +47,8 @@ void app_main(void)
     ui_profile_load_from_file();   // layout overrides — must run before display_init()
     display_init();        // 4. ui_manager_init() → subscribe #1
     encoder_init();
+    touch_init();          // registers LVGL indev — must run before display_start()
+    display_start();       // starts lvgl_task; no LVGL state may be touched from other tasks afterwards
 
     // ── WiFi ──────────────────────────────────────────────────────────────────
     // If wifi.ssid is empty (first boot or missing file) → AP-only.
