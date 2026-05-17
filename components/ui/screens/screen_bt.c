@@ -3,6 +3,7 @@
 #include "ui_screen.h"
 #include "clock_widget.h"
 #include "mode_indicator_widget.h"
+#include "controls_overlay_widget.h"
 #include "ui_events.h"
 #include "ui_manager.h"
 #include "app_state.h"
@@ -191,12 +192,15 @@ static void bt_create(lv_obj_t *parent)
 
     refresh_from_state();
 
+    controls_overlay_create(parent);
+
     ESP_LOGI(TAG, "Created (bt_volume=%d, theme=%d)",
              app_state_get()->bt_volume, theme_current());
 }
 
 static void bt_destroy(void)
 {
+    controls_overlay_destroy();
     mode_indicator_destroy();
     clock_widget_destroy();
     s_root = s_circle = s_icon = s_brand_label = s_vol_label = s_slider = s_status_label = NULL;

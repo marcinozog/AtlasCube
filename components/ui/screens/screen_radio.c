@@ -6,6 +6,7 @@
 #include "clock_widget.h"
 #include "now_playing_widget.h"
 #include "mode_indicator_widget.h"
+#include "controls_overlay_widget.h"
 #include "app_state.h"
 #include "settings.h"
 #include "theme.h"
@@ -105,14 +106,17 @@ static void radio_create(lv_obj_t *parent)
     lv_obj_set_style_text_color(s_label_vol, lv_color_hex(th->text_secondary), LV_PART_MAIN);
     lv_obj_set_pos(s_label_vol, p->radio_vol_label_x, p->radio_vol_label_y);
 
-    
+
     refresh_from_state();
+
+    controls_overlay_create(parent);
 
     ESP_LOGI(TAG, "Created (theme=%d)", theme_current());
 }
 
 static void radio_destroy(void)
 {
+    controls_overlay_destroy();
     now_playing_widget_destroy();
     mode_indicator_destroy();
     clock_widget_destroy();

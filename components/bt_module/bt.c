@@ -164,6 +164,7 @@ void bt_parse_cmd(const char *cmd) {
         });
     }
 
+    // Get metadata
     if (strstr(cmd, "BT_PA")) {
         bt_send_raw("AT+GMETA");
         vTaskDelay(pdMS_TO_TICKS(100));
