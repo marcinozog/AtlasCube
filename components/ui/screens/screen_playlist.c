@@ -97,6 +97,30 @@ static void highlight_item(int idx)
     }
 }
 
+static void play_display_index(int disp_idx)
+{
+    if (disp_idx < 0 || disp_idx >= s_count) return;
+
+    app_state_t *s = app_state_get();
+    int real_idx = s_order[disp_idx];
+    if (real_idx != s->curr_index || s->radio_state != RADIO_STATE_PLAYING) {
+        ESP_LOGI(TAG, "Play display=%d real=%d", disp_idx, real_idx);
+        radio_play_index(real_idx);
+    }
+
+    if (s->bt_enable)
+        settings_set_bt_enable(false);
+
+    ui_navigate(SCREEN_RADIO);
+}
+
+static void row_click_cb(lv_event_t *e)
+{
+    lv_obj_t *row = lv_event_get_target(e);
+    if (!row) return;
+    play_display_index(lv_obj_get_index(row));
+}
+
 // --------------------------------------------------------------------------
 // Create / Destroy
 // --------------------------------------------------------------------------
@@ -166,6 +190,7 @@ static void playlist_create(lv_obj_t *parent)
         lv_obj_set_style_pad_left(row, p->playlist_row_pad_left, LV_PART_MAIN);
         lv_obj_set_style_pad_right(row, 0, LV_PART_MAIN);
         lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_add_event_cb(row, row_click_cb, LV_EVENT_CLICKED, NULL);
 
         lv_obj_t *lbl = lv_label_create(row);
         // '*' prefix marks favorites; constant width keeps numbers aligned.
@@ -225,20 +250,7 @@ static void playlist_on_input(ui_input_t input)
         }
 
         case UI_INPUT_ENCODER_PRESS:
-            app_state_t *s = app_state_get();
-            // Play the selected station and return to radio
-            if (s_selected >= 0 && s_selected < s_count) {
-                int real_idx = s_order[s_selected];
-                if (real_idx != s->curr_index || s->radio_state != RADIO_STATE_PLAYING) {
-                    ESP_LOGI(TAG, "Play display=%d real=%d", s_selected, real_idx);
-                    radio_play_index(real_idx);
-                }
-            }
-
-            if(s->bt_enable)
-                settings_set_bt_enable(false);
-
-            ui_navigate(SCREEN_RADIO);
+            play_display_index(s_selected);
             break;
 
         case UI_INPUT_ENCODER_LONG_PRESS:
