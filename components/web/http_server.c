@@ -28,10 +28,30 @@
 extern void ws_set_server(httpd_handle_t server);
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Authentication — Bearer token guard for all /api/ endpoints.
+// Token equals the configured WiFi password; empty password disables the check.
+// ─────────────────────────────────────────────────────────────────────────────
+static esp_err_t check_api_auth(httpd_req_t *req) {
+    const app_settings_t *s = settings_get();
+    if (!s->wifi.password[0]) return ESP_OK;
+    char auth[128] = {0};
+    httpd_req_get_hdr_value_str(req, "Authorization", auth, sizeof(auth));
+    if (strncmp(auth, "Bearer ", 7) != 0 || strcmp(auth + 7, s->wifi.password) != 0) {
+        httpd_resp_set_status(req, "401 Unauthorized");
+        httpd_resp_set_hdr(req, "WWW-Authenticate", "Bearer realm=\"AtlasCube\"");
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_sendstr(req, "{\"error\":\"Unauthorized\"}");
+        return ESP_FAIL;
+    }
+    return ESP_OK;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/settings  — returns full JSON with current settings state
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t api_settings_get_handler(httpd_req_t *req)
 {
+    if (check_api_auth(req) != ESP_OK) return ESP_FAIL;
     app_settings_t *s = settings_get();
 
     cJSON *json = cJSON_CreateObject();
@@ -121,6 +141,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t api_settings_post_handler(httpd_req_t *req)
 {
+    if (check_api_auth(req) != ESP_OK) return ESP_FAIL;
     int total = req->content_len;
 
     if (total <= 0 || total > 4096) {
@@ -312,6 +333,7 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t api_state_get_handler(httpd_req_t *req)
 {
+    if (check_api_auth(req) != ESP_OK) return ESP_FAIL;
     app_state_t *s = app_state_get();
 
     cJSON *json = cJSON_CreateObject();
