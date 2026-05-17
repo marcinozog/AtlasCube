@@ -4,6 +4,7 @@
 #include "clock_widget.h"
 #include "mode_indicator_widget.h"
 #include "controls_overlay_widget.h"
+#include "vol_overlay_widget.h"
 #include "ui_events.h"
 #include "ui_manager.h"
 #include "app_state.h"
@@ -22,7 +23,6 @@ static lv_obj_t *s_circle       = NULL;
 static lv_obj_t *s_icon         = NULL;
 static lv_obj_t *s_brand_label  = NULL;
 static lv_obj_t *s_vol_label    = NULL;
-static lv_obj_t *s_slider       = NULL;
 static lv_obj_t *s_status_label = NULL;
 static lv_obj_t *s_title_label  = NULL;
 static lv_obj_t *s_artist_label = NULL;
@@ -38,28 +38,15 @@ static void format_time(int seconds, char *out, size_t out_size)
 
 // ---------------------------------------------------------------------------
 
-static void slider_event_cb(lv_event_t *e)
-{
-    lv_obj_t *slider = lv_event_get_target(e);
-    int value = lv_slider_get_value(slider);
-    settings_set_bt_volume(value);   // → bt_set_volume + app_state + save
-}
-
 static void refresh_from_state(void)
 {
-    if (!s_status_label && !s_slider && !s_vol_label) return;
-    
+    if (!s_status_label && !s_vol_label) return;
+
     app_state_t *s = app_state_get();
 
-    // BT volume slider
-    if (!lv_obj_has_state(s_slider, LV_STATE_PRESSED)) {
-        lv_slider_set_value(s_slider, s->bt_volume, LV_ANIM_OFF);
-    }
-
     // Volume
-    lv_slider_set_value(s_slider, s->bt_volume, LV_ANIM_OFF);
     char vol_buf[16];
-    snprintf(vol_buf, sizeof(vol_buf), "%d%%", s->bt_volume);
+    snprintf(vol_buf, sizeof(vol_buf), "VOL: %d%%", s->bt_volume);
     lv_label_set_text(s_vol_label, vol_buf);
 
     // Connection status
@@ -149,23 +136,11 @@ static void bt_create(lv_obj_t *parent)
     // lv_obj_set_style_text_color(s_status_label,
     //     lv_color_hex(connected == BT_CONNECTED ? 0x00C853 : th->text_muted), LV_PART_MAIN);
 
-    s_slider = lv_slider_create(parent);
-    lv_slider_set_range(s_slider, 0, 100);
-    lv_obj_set_size(s_slider, p->bt_slider_w, p->bt_slider_h);
-    lv_obj_set_pos(s_slider, p->bt_slider_x, p->bt_slider_y);
-    lv_obj_set_style_bg_color(s_slider, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
-    lv_obj_set_style_bg_color(s_slider, lv_color_hex(th->bt_brand),     LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(s_slider, lv_color_hex(th->text_primary), LV_PART_KNOB);
-    lv_slider_set_value(s_slider, app_state_get()->bt_volume, LV_ANIM_OFF);
-    lv_obj_add_event_cb(s_slider, slider_event_cb, LV_EVENT_RELEASED, NULL);
-    lv_obj_add_flag(s_slider, LV_OBJ_FLAG_HIDDEN);
-
     s_vol_label = lv_label_create(parent);
-    lv_label_set_text(s_vol_label, "0%");
+    lv_label_set_text(s_vol_label, "VOL: 0%");
     lv_obj_set_style_text_font(s_vol_label, p->bt_vol_label_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_vol_label, lv_color_hex(th->text_muted), LV_PART_MAIN);
-    lv_obj_set_pos(s_vol_label, p->bt_vol_label_x, p->bt_vol_label_y);
-    lv_obj_add_flag(s_vol_label, LV_OBJ_FLAG_HIDDEN);
+    // Positioned below s_time_label after it's created, see end of bt_create().
 
     // Track metadata labels
     s_title_label = lv_label_create(parent);
@@ -190,6 +165,8 @@ static void bt_create(lv_obj_t *parent)
     lv_obj_set_pos(s_time_label, p->bt_time_x, p->bt_time_y);
     lv_label_set_text(s_time_label, "0:00 / 0:00");
 
+    lv_obj_align_to(s_vol_label, s_time_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 4);
+
     refresh_from_state();
 
     controls_overlay_create(parent);
@@ -201,9 +178,10 @@ static void bt_create(lv_obj_t *parent)
 static void bt_destroy(void)
 {
     controls_overlay_destroy();
+    vol_overlay_hide();
     mode_indicator_destroy();
     clock_widget_destroy();
-    s_root = s_circle = s_icon = s_brand_label = s_vol_label = s_slider = s_status_label = NULL;
+    s_root = s_circle = s_icon = s_brand_label = s_vol_label = s_status_label = NULL;
     s_title_label = s_artist_label = s_time_label = NULL;
     
     ESP_LOGI(TAG, "Destroyed");
@@ -217,41 +195,9 @@ static void bt_on_event(const ui_event_t *ev)
             mode_indicator_update();
             clock_widget_tick();
             break;
-        // case UI_EVT_TITLE_CHANGED:
-        //     break;
-        // case UI_EVT_VOLUME_CHANGED:
-        //     if (s_slider) {
-        //         lv_slider_set_value(s_slider, ev->volume, LV_ANIM_ON);
-        //         char buf[16];
-        //         snprintf(buf, sizeof(buf), "%d%%", ev->volume);
-        //         lv_label_set_text(s_vol_label, buf);
-        //     }
-        //     break;
         default:
             break;
     }
-
-    // if (ev->type == UI_EVT_STATE_CHANGED && s_slider) {
-    //     app_state_t *s = app_state_get();
-
-    //     // BT volume slider
-    //     if (!lv_obj_has_state(s_slider, LV_STATE_PRESSED)) {
-    //         lv_slider_set_value(s_slider, s->bt_volume, LV_ANIM_OFF);
-    //     }
-
-    //     // Connection status
-    //     const ui_theme_colors_t *th = theme_get();
-    //     lv_obj_set_style_text_color(s_status_label, lv_color_hex(th->status_ok), LV_PART_MAIN);
-    //     if(s->bt_state == BT_CONNECTED) {
-    //         lv_label_set_text(s_status_label, "Connected");
-    //     }
-    //     else if(s->bt_state == BT_DISCONNECTED) {
-    //         lv_label_set_text(s_status_label, "Not connected");
-    //     }
-    //     else if(s->bt_state == BT_DISCOVERABLE) {
-    //         lv_label_set_text(s_status_label, "Discoverable");
-    //     }
-    // }
 }
 
 static void bt_on_input(ui_input_t input)
@@ -267,13 +213,12 @@ static void bt_on_input(ui_input_t input)
 
             settings_set_bt_volume(vol);   // → bt_set_volume + app_state + save
 
-            // optymistyczna aktualizacja slidera
-            if (s_slider && !lv_obj_has_state(s_slider, LV_STATE_PRESSED)) {
-                lv_slider_set_value(s_slider, vol, LV_ANIM_OFF);
+            if (s_vol_label) {
                 char buf[16];
-                snprintf(buf, sizeof(buf), "%d%%", vol);
+                snprintf(buf, sizeof(buf), "VOL: %d%%", vol);
                 lv_label_set_text(s_vol_label, buf);
             }
+            vol_overlay_show(s_root, vol, true);
             break;
         }
         case UI_INPUT_ENCODER_PRESS: {
@@ -286,6 +231,9 @@ static void bt_on_input(ui_input_t input)
             s->bt_enable ? settings_set_bt_enable(false) : settings_set_bt_enable(true);
             break;
         }
+        case UI_INPUT_SWIPE_RIGHT:
+            settings_set_screen(SCREEN_RADIO);
+            break;
 
         default:
             break;
@@ -314,14 +262,6 @@ static void bt_apply_theme(void)
     // status (Connected / Not connected / Discoverable)
     lv_obj_set_style_text_color(s_status_label,
         lv_color_hex(th->status_ok), LV_PART_MAIN);
-
-    // slider — track, indicator (brand), knob
-    lv_obj_set_style_bg_color(s_slider,
-        lv_color_hex(th->bg_secondary), LV_PART_MAIN);
-    lv_obj_set_style_bg_color(s_slider,
-        lv_color_hex(th->bt_brand), LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(s_slider,
-        lv_color_hex(th->text_primary), LV_PART_KNOB);
 
     lv_obj_set_style_text_color(s_vol_label,
         lv_color_hex(th->text_muted), LV_PART_MAIN);

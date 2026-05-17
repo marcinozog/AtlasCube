@@ -7,6 +7,7 @@
 #include "now_playing_widget.h"
 #include "mode_indicator_widget.h"
 #include "controls_overlay_widget.h"
+#include "vol_overlay_widget.h"
 #include "app_state.h"
 #include "settings.h"
 #include "theme.h"
@@ -22,8 +23,6 @@ static const char *TAG = "SCR_RADIO";
 static lv_obj_t *s_root            = NULL;
 static lv_obj_t *s_label_state;
 static lv_obj_t *s_label_audio_info;
-static lv_obj_t *s_slider_vol;
-static lv_obj_t *s_label_vol;
 
 static const char *radio_state_str(radio_state_t st)
 {
@@ -45,19 +44,14 @@ static void refresh_from_state(void)
 
     lv_label_set_text(s_label_state, radio_state_str(s->radio_state));
 
-    lv_slider_set_value(s_slider_vol, s->volume, LV_ANIM_OFF);
-    char vol_buf[16];
-    snprintf(vol_buf, sizeof(vol_buf), "%d%%", s->volume);
-    lv_label_set_text(s_label_vol, vol_buf);
-
+    char info[80];
     if (s->sample_rate > 0) {
-        char info[64];
-        snprintf(info, sizeof(info), "%d Hz  %dch  %dkbps",
-                 s->sample_rate, s->channels, s->bitrate / 1000);
-        lv_label_set_text(s_label_audio_info, info);
+        snprintf(info, sizeof(info), "%d Hz  %dch  %dkbps   VOL: %d%%",
+                 s->sample_rate, s->channels, s->bitrate / 1000, s->volume);
     } else {
-        lv_label_set_text(s_label_audio_info, "");
+        snprintf(info, sizeof(info), "VOL: %d%%", s->volume);
     }
+    lv_label_set_text(s_label_audio_info, info);
 }
 
 static void radio_create(lv_obj_t *parent)
@@ -70,7 +64,7 @@ static void radio_create(lv_obj_t *parent)
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
 
     if (p->radio_show_np) {
-        now_playing_widget_create(parent, p->radio_np_x, p->radio_np_y);
+        now_playing_widget_create(parent, p->radio_np_x, p->radio_np_y, LV_TEXT_ALIGN_CENTER);
     }
     if (p->radio_show_mode_indicator) {
         mode_indicator_create(parent, p->radio_mode_indic_x, p->radio_mode_indic_y);
@@ -91,22 +85,6 @@ static void radio_create(lv_obj_t *parent)
     lv_obj_set_style_text_color(s_label_audio_info, lv_color_hex(th->text_muted), LV_PART_MAIN);
     lv_obj_set_pos(s_label_audio_info, p->radio_audio_info_x, p->radio_audio_info_y);
 
-    s_slider_vol = lv_slider_create(parent);
-    lv_obj_set_size(s_slider_vol, p->radio_slider_w, p->radio_slider_h);
-    lv_obj_set_pos(s_slider_vol, p->radio_slider_x, p->radio_slider_y);
-    lv_slider_set_range(s_slider_vol, 0, 100);
-    lv_slider_set_value(s_slider_vol, 0, LV_ANIM_OFF);
-    lv_obj_set_style_bg_color(s_slider_vol, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
-    lv_obj_set_style_bg_color(s_slider_vol, lv_color_hex(th->accent), LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(s_slider_vol, lv_color_hex(th->text_primary), LV_PART_KNOB);
-
-    s_label_vol = lv_label_create(parent);
-    lv_label_set_text(s_label_vol, "0%");
-    lv_obj_set_style_text_font(s_label_vol, p->radio_vol_label_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_label_vol, lv_color_hex(th->text_secondary), LV_PART_MAIN);
-    lv_obj_set_pos(s_label_vol, p->radio_vol_label_x, p->radio_vol_label_y);
-
-
     refresh_from_state();
 
     controls_overlay_create(parent);
@@ -117,15 +95,14 @@ static void radio_create(lv_obj_t *parent)
 static void radio_destroy(void)
 {
     controls_overlay_destroy();
+    vol_overlay_hide();
     now_playing_widget_destroy();
     mode_indicator_destroy();
     clock_widget_destroy();
     s_root             = NULL;
     s_label_state      = NULL;
     s_label_audio_info = NULL;
-    s_slider_vol       = NULL;
-    s_label_vol        = NULL;
-    
+
     ESP_LOGI(TAG, "Destroyed");
 }
 
@@ -140,14 +117,6 @@ static void radio_on_event(const ui_event_t *ev)
         case UI_EVT_TITLE_CHANGED:
             now_playing_widget_update();
             break;
-        // case UI_EVT_VOLUME_CHANGED:
-        //     if (s_slider_vol) {
-        //         lv_slider_set_value(s_slider_vol, ev->volume, LV_ANIM_ON);
-        //         char buf[16];
-        //         snprintf(buf, sizeof(buf), "%d%%", ev->volume);
-        //         lv_label_set_text(s_label_vol, buf);
-        //     }
-        //     break;
         case UI_EVT_RADIO_STATE:
             if (s_label_state)
                 lv_label_set_text(s_label_state, radio_state_str(ev->radio_state));
@@ -169,14 +138,7 @@ static void radio_on_input(ui_input_t input)
             if (vol > 100) vol = 100;
 
             settings_set_volume(vol);   // → audio_player + app_state + save
-
-            // optymistyczna aktualizacja slidera — nie czekamy na callback
-            if (s_slider_vol) {
-                lv_slider_set_value(s_slider_vol, vol, LV_ANIM_OFF);
-                char buf[16];
-                snprintf(buf, sizeof(buf), "%d%%", vol);
-                lv_label_set_text(s_label_vol, buf);
-            }
+            vol_overlay_show(s_root, vol, true);
             break;
         }
 
@@ -187,6 +149,18 @@ static void radio_on_input(ui_input_t input)
             break;
         }
         case UI_INPUT_ENCODER_LONG_PRESS:
+            ui_navigate(SCREEN_PLAYLIST);
+            break;
+        case UI_INPUT_SWIPE_LEFT: {
+            app_state_t *s = app_state_get();
+            if (s->bt_show_screen)
+                settings_set_screen(SCREEN_BT);
+            break;
+        }
+        case UI_INPUT_SWIPE_RIGHT:
+            settings_set_screen(SCREEN_CLOCK);
+            break;
+        case UI_INPUT_SWIPE_UP:
             ui_navigate(SCREEN_PLAYLIST);
             break;
 
@@ -207,16 +181,6 @@ static void radio_apply_theme(void)
 
     lv_obj_set_style_text_color(s_label_audio_info,
         lv_color_hex(th->text_muted), LV_PART_MAIN);
-
-    lv_obj_set_style_bg_color(s_slider_vol,
-        lv_color_hex(th->bg_secondary), LV_PART_MAIN);
-    lv_obj_set_style_bg_color(s_slider_vol,
-        lv_color_hex(th->accent), LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(s_slider_vol,
-        lv_color_hex(th->text_primary), LV_PART_KNOB);
-
-    lv_obj_set_style_text_color(s_label_vol,
-        lv_color_hex(th->text_secondary), LV_PART_MAIN);
 
     now_playing_widget_apply_theme();
     clock_widget_apply_theme();

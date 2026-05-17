@@ -2,6 +2,7 @@
 #include "screen_clock.h"
 #include "mode_indicator_widget.h"
 #include "event_indicator_widget.h"
+#include "vol_overlay_widget.h"
 #include "app_state.h"
 #include "settings.h"
 #include "theme.h"
@@ -17,12 +18,6 @@
 #include <stdio.h>
 #include <time.h>
 
-#define VOL_OVERLAY_TIMEOUT_MS 1500
-#define VOL_OVERLAY_W_LARGE  200
-#define VOL_OVERLAY_H_LARGE  100
-#define VOL_OVERLAY_W_SMALL  80
-#define VOL_OVERLAY_H_SMALL  36
-
 static const char *TAG = "SCR_CLOCK";
 
 static lv_obj_t  *s_root          = NULL;
@@ -32,9 +27,6 @@ static lv_obj_t  *s_strip_station = NULL;
 static lv_obj_t  *s_strip_title   = NULL;
 static lv_obj_t  *s_time_label    = NULL;
 static lv_obj_t  *s_date_label    = NULL;
-static lv_obj_t  *s_vol_overlay   = NULL;
-static lv_obj_t  *s_vol_label     = NULL;
-static lv_timer_t *s_vol_timer    = NULL;
 static lv_timer_t *s_clock_timer  = NULL;
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -100,66 +92,6 @@ static void strip_update(void)
         s->station_name[0] ? s->station_name : "Atlas Radio");
     lv_label_set_text(s_strip_title,
         s->title[0] ? s->title : "");
-}
-
-// ── volume overlay ──────────────────────────────────────────────────────────
-
-static void vol_overlay_hide_cb(lv_timer_t *t)
-{
-    (void)t;
-    if (s_vol_overlay) {
-        lv_obj_del(s_vol_overlay);
-        s_vol_overlay = NULL;
-        s_vol_label   = NULL;
-    }
-    if (s_vol_timer) {
-        lv_timer_del(s_vol_timer);
-        s_vol_timer = NULL;
-    }
-}
-
-static void vol_overlay_show(bool is_bt, int vol)
-{
-    if (!s_root) return;
-    const ui_theme_colors_t *th = theme_get();
-    bool large = clock_is_large_font();
-
-    char buf[16];
-    (void)is_bt;
-    snprintf(buf, sizeof(buf), "%d%%", vol);
-
-    if (!s_vol_overlay) {
-        s_vol_overlay = lv_obj_create(s_root);
-        lv_obj_remove_style_all(s_vol_overlay);
-        lv_obj_set_style_bg_color(s_vol_overlay, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
-        lv_obj_set_style_bg_opa(s_vol_overlay, LV_OPA_COVER, LV_PART_MAIN);
-        lv_obj_set_style_border_color(s_vol_overlay, lv_color_hex(th->accent), LV_PART_MAIN);
-        lv_obj_set_style_border_width(s_vol_overlay, 2, LV_PART_MAIN);
-        lv_obj_set_style_radius(s_vol_overlay, 8, LV_PART_MAIN);
-        lv_obj_set_style_pad_all(s_vol_overlay, 12, LV_PART_MAIN);
-        lv_obj_clear_flag(s_vol_overlay, LV_OBJ_FLAG_SCROLLABLE);
-
-        if (large) lv_obj_set_size(s_vol_overlay, VOL_OVERLAY_W_LARGE, VOL_OVERLAY_H_LARGE);
-        else       lv_obj_set_size(s_vol_overlay, VOL_OVERLAY_W_SMALL, VOL_OVERLAY_H_SMALL);
-
-        s_vol_label = lv_label_create(s_vol_overlay);
-        lv_obj_set_style_text_font(s_vol_label,
-            large ? &lv_font_montserrat_72 : &lv_font_montserrat_12_pl,
-            LV_PART_MAIN);
-        lv_obj_set_style_text_color(s_vol_label, lv_color_hex(th->accent), LV_PART_MAIN);
-    }
-
-    lv_label_set_text(s_vol_label, buf);
-    lv_obj_center(s_vol_label);
-    lv_obj_center(s_vol_overlay);
-    lv_obj_move_foreground(s_vol_overlay);
-
-    if (s_vol_timer) {
-        lv_timer_reset(s_vol_timer);
-    } else {
-        s_vol_timer = lv_timer_create(vol_overlay_hide_cb, VOL_OVERLAY_TIMEOUT_MS, NULL);
-        lv_timer_set_repeat_count(s_vol_timer, 1);
-    }
 }
 
 // ── create / destroy ────────────────────────────────────────────────────────
@@ -241,14 +173,13 @@ static void clock_create(lv_obj_t *parent)
 static void clock_destroy(void)
 {
     if (s_clock_timer) { lv_timer_del(s_clock_timer); s_clock_timer = NULL; }
-    if (s_vol_timer)   { lv_timer_del(s_vol_timer);   s_vol_timer   = NULL; }
+    vol_overlay_hide();
 
     event_indicator_destroy();
     mode_indicator_destroy();
     s_root = s_panel = s_strip = NULL;
     s_strip_station = s_strip_title = NULL;
     s_time_label    = s_date_label  = NULL;
-    s_vol_overlay   = s_vol_label   = NULL;
 
     ESP_LOGI(TAG, "Destroyed");
 }
@@ -283,7 +214,7 @@ static void clock_on_input(ui_input_t input)
                 if (vol > 100) vol = 100;
 
                 settings_set_volume(vol);
-                vol_overlay_show(false, vol);
+                vol_overlay_show(s_root, vol, clock_is_large_font());
             }
             else {
                 int vol = s->bt_volume;
@@ -292,7 +223,7 @@ static void clock_on_input(ui_input_t input)
                 if (vol > 100) vol = 100;
 
                 settings_set_bt_volume(vol);
-                vol_overlay_show(true, vol);
+                vol_overlay_show(s_root, vol, clock_is_large_font());
             }
             break;
         }
@@ -300,6 +231,12 @@ static void clock_on_input(ui_input_t input)
             settings_set_screen(SCREEN_RADIO);
             break;
         case UI_INPUT_ENCODER_LONG_PRESS:
+            ui_navigate(SCREEN_SETTINGS);
+            break;
+        case UI_INPUT_SWIPE_LEFT:
+            settings_set_screen(SCREEN_RADIO);
+            break;
+        case UI_INPUT_SWIPE_UP:
             ui_navigate(SCREEN_SETTINGS);
             break;
         default:

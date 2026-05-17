@@ -8,8 +8,11 @@ extern "C" {
 /**
  * "Now playing" widget: station name (always) + ICY title below (when available).
  * Safe to create multiple times on different screens.
+ *
+ * @param align horizontal text alignment applied to both station and title labels
+ *              (LV_TEXT_ALIGN_LEFT / _CENTER / _RIGHT).
  */
-void now_playing_widget_create(lv_obj_t *parent, int x, int y);
+void now_playing_widget_create(lv_obj_t *parent, int x, int y, lv_text_align_t align);
 void now_playing_widget_destroy(void);
 
 /** Refresh from current app_state — call from on_event(UI_EVT_STATE_CHANGED). */

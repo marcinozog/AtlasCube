@@ -72,18 +72,9 @@ typedef struct {
     int16_t          radio_state_y;
     const lv_font_t *radio_state_font;
 
-    int16_t          radio_audio_info_x;       // "44100 Hz  2ch  128kbps"
+    int16_t          radio_audio_info_x;       // "44100 Hz  2ch  128kbps   VOL: 42%"
     int16_t          radio_audio_info_y;
     const lv_font_t *radio_audio_info_font;
-
-    int16_t          radio_slider_x;
-    int16_t          radio_slider_y;
-    int16_t          radio_slider_w;
-    int16_t          radio_slider_h;
-
-    int16_t          radio_vol_label_x;
-    int16_t          radio_vol_label_y;
-    const lv_font_t *radio_vol_label_font;
 
     bool             radio_show_mode_indicator;
     bool             radio_show_clock;
@@ -122,14 +113,7 @@ typedef struct {
     int16_t          bt_status_y;
     const lv_font_t *bt_status_font;
 
-    int16_t          bt_slider_x;
-    int16_t          bt_slider_y;
-    int16_t          bt_slider_w;
-    int16_t          bt_slider_h;
-
-    int16_t          bt_vol_label_x;           // "Volume"
-    int16_t          bt_vol_label_y;
-    const lv_font_t *bt_vol_label_font;
+    const lv_font_t *bt_vol_label_font;        // "VOL: NN%", positioned below time label
 
     bool             bt_show_mode_indicator;
     bool             bt_show_clock;

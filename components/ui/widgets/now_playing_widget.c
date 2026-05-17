@@ -12,7 +12,7 @@ static const char *TAG = "NPW";
 static lv_obj_t *s_label_station = NULL;
 static lv_obj_t *s_label_title   = NULL;
 
-void now_playing_widget_create(lv_obj_t *parent, int x, int y)
+void now_playing_widget_create(lv_obj_t *parent, int x, int y, lv_text_align_t align)
 {
     const ui_theme_colors_t *th = theme_get();
 
@@ -22,6 +22,7 @@ void now_playing_widget_create(lv_obj_t *parent, int x, int y)
     lv_obj_set_style_text_font(s_label_station, &lv_font_montserrat_18_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_station,
         lv_color_hex(th->accent), LV_PART_MAIN);
+    lv_obj_set_style_text_align(s_label_station, align, LV_PART_MAIN);
     lv_obj_set_pos(s_label_station, x, y);
 
     s_label_title = lv_label_create(parent);
@@ -30,6 +31,7 @@ void now_playing_widget_create(lv_obj_t *parent, int x, int y)
     lv_obj_set_style_text_font(s_label_title, &lv_font_montserrat_14_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_title,
         lv_color_hex(th->text_secondary), LV_PART_MAIN);
+    lv_obj_set_style_text_align(s_label_title, align, LV_PART_MAIN);
     lv_obj_set_pos(s_label_title, x, y + 26);
 
     now_playing_widget_update();

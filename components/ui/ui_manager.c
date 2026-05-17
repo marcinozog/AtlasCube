@@ -257,12 +257,47 @@ void ui_input_send(ui_input_t input)
 }
 
 // --------------------------------------------------------------------------
+// Touch gesture dispatch — one screen-level handler, maps LVGL gesture
+// direction to UI_INPUT_SWIPE_* and pushes through the normal input pipeline.
+// LV_EVENT_GESTURE bubbles up from children by default (GESTURE_BUBBLE flag),
+// so attaching to lv_scr_act() once catches swipes anywhere on the screen.
+// --------------------------------------------------------------------------
+
+static void gesture_dispatch_cb(lv_event_t *e)
+{
+    (void)e;
+    lv_indev_t *indev = lv_indev_active();
+    if (!indev) return;
+
+    lv_dir_t dir = lv_indev_get_gesture_dir(indev);
+    ui_input_t in;
+    switch (dir) {
+        case LV_DIR_LEFT:   in = UI_INPUT_SWIPE_LEFT;  break;
+        case LV_DIR_RIGHT:  in = UI_INPUT_SWIPE_RIGHT; break;
+        case LV_DIR_TOP:    in = UI_INPUT_SWIPE_UP;    break;
+        case LV_DIR_BOTTOM: in = UI_INPUT_SWIPE_DOWN;  break;
+        default:            return;
+    }
+    // Suppress the trailing click on the same press — without this,
+    // controls_overlay (tap-to-show on screen_radio/bt) would pop up
+    // every time a swipe ends.
+    lv_indev_wait_release(indev);
+    ui_input_send(in);
+}
+
+// --------------------------------------------------------------------------
 // Main loop — the only place we touch LVGL
 // --------------------------------------------------------------------------
 
 void ui_manager_run(void)
 {
     s_last_input_us = esp_timer_get_time();
+
+    // Attach gesture handler to the (singleton) active screen object — it
+    // survives lv_obj_clean() between navigations because clean only removes
+    // children, not callbacks on the screen itself.
+    lv_obj_add_event_cb(lv_scr_act(), gesture_dispatch_cb, LV_EVENT_GESTURE, NULL);
+
     do_navigate(SCREEN_SPLASH);
 
     ui_event_t ev;

@@ -66,13 +66,6 @@ const BT_FIELDS = [
     { key: 'bt_status_y',    label: 'Status Y',        type: 'number' },
     { key: 'bt_status_font', label: 'Status font',     type: 'font'   },
 
-    { key: 'bt_slider_x',    label: 'Slider X',        type: 'number' },
-    { key: 'bt_slider_y',    label: 'Slider Y',        type: 'number' },
-    { key: 'bt_slider_w',    label: 'Slider W',        type: 'number' },
-    { key: 'bt_slider_h',    label: 'Slider H',        type: 'number' },
-
-    { key: 'bt_vol_label_x',     label: 'Vol label X',    type: 'number' },
-    { key: 'bt_vol_label_y',     label: 'Vol label Y',    type: 'number' },
     { key: 'bt_vol_label_font',  label: 'Vol label font', type: 'font'   },
 
     { key: 'bt_show_mode_indicator', label: 'Show mode indic.', type: 'bool' },
@@ -95,15 +88,6 @@ const RADIO_FIELDS = [
     { key: 'radio_audio_info_x',      label: 'Audio info X',     type: 'number' },
     { key: 'radio_audio_info_y',      label: 'Audio info Y',     type: 'number' },
     { key: 'radio_audio_info_font',   label: 'Audio info font',  type: 'font'   },
-
-    { key: 'radio_slider_x',          label: 'Slider X',         type: 'number' },
-    { key: 'radio_slider_y',          label: 'Slider Y',         type: 'number' },
-    { key: 'radio_slider_w',          label: 'Slider W',         type: 'number' },
-    { key: 'radio_slider_h',          label: 'Slider H',         type: 'number' },
-
-    { key: 'radio_vol_label_x',       label: 'Vol label X',      type: 'number' },
-    { key: 'radio_vol_label_y',       label: 'Vol label Y',      type: 'number' },
-    { key: 'radio_vol_label_font',    label: 'Vol label font',   type: 'font'   },
 
     { key: 'radio_show_mode_indicator', label: 'Show mode indic.', type: 'bool' },
     { key: 'radio_mode_indic_x',        label: 'Mode indic. X',    type: 'number' },
@@ -356,17 +340,6 @@ function renderBt(svg) {
     drawLabel(svg, b.bt_status_x, b.bt_status_y, b.bt_status_font, 'Connected',
               'status', { x: 'bt_status_x', y: 'bt_status_y' });
 
-    drawFreeElement(svg, {
-        x: b.bt_slider_x, y: b.bt_slider_y,
-        w: b.bt_slider_w, h: b.bt_slider_h,
-        label: 'slider', cls: 'slider-rect',
-        fields: { x: 'bt_slider_x', y: 'bt_slider_y',
-                  w: 'bt_slider_w', h: 'bt_slider_h' },
-    });
-
-    drawLabel(svg, b.bt_vol_label_x, b.bt_vol_label_y, b.bt_vol_label_font, 'Volume',
-              'vol', { x: 'bt_vol_label_x', y: 'bt_vol_label_y' });
-
     if (b.bt_show_mode_indicator) {
         drawFreeElement(svg, {
             x: b.bt_mode_indic_x, y: b.bt_mode_indic_y, w: 16, h: 16,
@@ -414,19 +387,8 @@ function renderRadio(svg) {
     drawLabel(svg, r.radio_state_x, r.radio_state_y, r.radio_state_font, 'PLAYING',
               'state', { x: 'radio_state_x', y: 'radio_state_y' });
     drawLabel(svg, r.radio_audio_info_x, r.radio_audio_info_y, r.radio_audio_info_font,
-              '44100 Hz  2ch  128kbps',
+              '44100 Hz  2ch  128kbps   VOL: 42%',
               'info', { x: 'radio_audio_info_x', y: 'radio_audio_info_y' });
-
-    drawFreeElement(svg, {
-        x: r.radio_slider_x, y: r.radio_slider_y,
-        w: r.radio_slider_w, h: r.radio_slider_h,
-        label: 'slider', cls: 'slider-rect',
-        fields: { x: 'radio_slider_x', y: 'radio_slider_y',
-                  w: 'radio_slider_w', h: 'radio_slider_h' },
-    });
-
-    drawLabel(svg, r.radio_vol_label_x, r.radio_vol_label_y, r.radio_vol_label_font,
-              '50%', 'vol', { x: 'radio_vol_label_x', y: 'radio_vol_label_y' });
 
     if (r.radio_show_mode_indicator) {
         drawFreeElement(svg, {

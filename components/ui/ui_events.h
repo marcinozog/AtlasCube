@@ -67,6 +67,10 @@ typedef enum {
     UI_INPUT_BTN_NEXT,
     UI_INPUT_BTN_OK,
     UI_INPUT_BTN_BACK,
+    UI_INPUT_SWIPE_LEFT,
+    UI_INPUT_SWIPE_RIGHT,
+    UI_INPUT_SWIPE_UP,
+    UI_INPUT_SWIPE_DOWN,
 } ui_input_t;
 
 typedef struct {

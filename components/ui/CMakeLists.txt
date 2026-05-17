@@ -27,6 +27,7 @@ idf_component_register(
         "widgets/mode_indicator_widget.c"
         "widgets/event_indicator_widget.c"
         "widgets/controls_overlay_widget.c"
+        "widgets/vol_overlay_widget.c"
         "fonts/lv_font_montserrat_12_pl.c"
         "fonts/lv_font_montserrat_14_pl.c"
         "fonts/lv_font_montserrat_18_pl.c"
