@@ -88,6 +88,9 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 - LVGL-based GUI — supports ILI9341 320×240 (SPI) and CO5300 240×296 round AMOLED (QSPI), switched via a single compile-time define
 - Screens: clock, playlist, equalizer, settings, Bluetooth, events, WiFi AP
 - Rotary encoder navigation (turn + press)
+- Capacitive touch (CST816D) — coexists with the rotary encoder; either input works at any time
+- Swipe gestures — horizontal swipes navigate between clock ↔ radio ↔ bt; swipe-up opens settings (clock) or playlist (radio); detection runs through LVGL on the existing pointer indev, no per-chip glue
+- On-screen controls overlay — tap a media screen to bring up a 5-button cross (play/pause, vol±, prev/next), auto-hides after a short timeout
 - Configurable layout (widget positions editable via JSON)
 - Screensavers — kick in after a configurable idle timeout; choose from clock hands, starfield, fireworks, plasma, Conway's Game of Life, blank (AMOLED-friendly "off"), or **Dashboard** (see below)
 
@@ -125,7 +128,8 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 | Flash | 8 MB |
 | PSRAM | OctoSPI, 80 MHz |
 | Display | ILI9341 320×240 (SPI) or CO5300 240×296 AMOLED (QSPI) — selected at compile time |
-| Input | Rotary encoder with push button |
+| Touch | CST816D capacitive controller (I2C) — gestures detected by LVGL on the standard pointer indev |
+| Input | Rotary encoder with push button + capacitive touch (swipes + tap-to-control overlay) |
 | I2S mux | 74HC157D — hardware switch between ESP32-S3 and QCC5125 I2S outputs; controlled via GPIO |
 | Audio out | I2S DAC / amplifier (fed from 74HC157D output) |
 | Bluetooth | QCC5125 external module, Bluetooth 5.1, A2DP + HFP |
@@ -258,7 +262,6 @@ Architecture and design notes in [`docs/`](docs/):
 ## Roadmap
 
 - **Enclosure** — 3D-printed case currently in design; firmware is developed and tested on the bare development board
-- **Touch input** — capacitive touch panel support
 - **SD card** — local storage for station logos, music files, and voice notification clips
 - **Additional displays** — SSD1322 (256×64 OLED) and ST7796 TFT support in progress (ILI9341 and CO5300 240×296 already supported)
 - **Web melody editor** — in-browser tool for composing custom buzzer notification tunes
