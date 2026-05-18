@@ -9,6 +9,27 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-05-18
+
+### Added
+- **ui:** Touch closes the event notification screen
+- **ui:** Touch closes the screensaver
+- **playlist:** play station on row tap
+- **ui:** volume widget and gestures
+- **ui:** controls overlay widget
+- **touch:** CST816D capacitive driver
+- **bluetooth:** audio metadata
+- **screensaver:** alarms for dashboard
+- **screensaver:** dashboard and blank
+- **ui:** add screensaver entry to settings menu
+
+### Changed
+- **screensaver:** live update setting for dashboard screensaver
+- **screensaver:** remove enable status (0s - OFF)
+
+### Fixed
+- **bluetooth:** fixed refresh title
+
 ## [0.4.0] - 2026-05-13
 
 ### Added
@@ -47,7 +68,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/marcinozog/AtlasCube/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/marcinozog/AtlasCube/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/marcinozog/AtlasCube/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/marcinozog/AtlasCube/compare/v0.1.0...v0.2.0
