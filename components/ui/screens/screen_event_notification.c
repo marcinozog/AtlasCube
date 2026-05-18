@@ -32,6 +32,15 @@ void screen_event_notification_set_return(ui_screen_id_t return_to)
     s_return_to = return_to;
 }
 
+// Tap anywhere dismisses the notification. Labels aren't clickable and
+// LV_EVENT_PRESSED doesn't bubble, so a transparent full-screen catcher on top
+// is the simplest way to capture taps over the whole screen.
+static void scr_touch_cb(lv_event_t *e)
+{
+    (void)e;
+    ui_input_send(UI_INPUT_BTN_OK);
+}
+
 static void scr_create(lv_obj_t *parent)
 {
     const ui_theme_colors_t *th = theme_get();
@@ -79,6 +88,13 @@ static void scr_create(lv_obj_t *parent)
     lv_obj_set_style_text_font(s_hint_label, &lv_font_montserrat_12_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_hint_label, lv_color_hex(th->text_muted), LV_PART_MAIN);
     lv_obj_align(s_hint_label, LV_ALIGN_BOTTOM_MID, 0, -8);
+
+    lv_obj_t *catcher = lv_obj_create(parent);
+    lv_obj_remove_style_all(catcher);
+    lv_obj_set_size(catcher, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_style_bg_opa(catcher, LV_OPA_TRANSP, 0);
+    lv_obj_clear_flag(catcher, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(catcher, scr_touch_cb, LV_EVENT_PRESSED, NULL);
 
     ESP_LOGI(TAG, "Shown: [%s] %s (return_to=%d)",
              s_pending_info.id, s_pending_info.title, s_return_to);
