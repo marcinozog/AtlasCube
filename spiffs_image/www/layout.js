@@ -66,6 +66,20 @@ const BT_FIELDS = [
     { key: 'bt_status_y',    label: 'Status Y',        type: 'number' },
     { key: 'bt_status_font', label: 'Status font',     type: 'font'   },
 
+    { key: 'bt_title_x',     label: 'Title X',         type: 'number' },
+    { key: 'bt_title_y',     label: 'Title Y',         type: 'number' },
+    { key: 'bt_title_w',     label: 'Title W',         type: 'number' },
+    { key: 'bt_title_font',  label: 'Title font',      type: 'font'   },
+
+    { key: 'bt_artist_x',    label: 'Artist X',        type: 'number' },
+    { key: 'bt_artist_y',    label: 'Artist Y',        type: 'number' },
+    { key: 'bt_artist_w',    label: 'Artist W',        type: 'number' },
+    { key: 'bt_artist_font', label: 'Artist font',     type: 'font'   },
+
+    { key: 'bt_time_x',      label: 'Time X',          type: 'number' },
+    { key: 'bt_time_y',      label: 'Time Y',          type: 'number' },
+    { key: 'bt_time_font',   label: 'Time font',       type: 'font'   },
+
     { key: 'bt_vol_label_font',  label: 'Vol label font', type: 'font'   },
 
     { key: 'bt_show_mode_indicator', label: 'Show mode indic.', type: 'bool' },
@@ -339,6 +353,36 @@ function renderBt(svg) {
               'brand', { x: 'bt_brand_x', y: 'bt_brand_y' });
     drawLabel(svg, b.bt_status_x, b.bt_status_y, b.bt_status_font, 'Connected',
               'status', { x: 'bt_status_x', y: 'bt_status_y' });
+
+    // Track title — scrolling label, fixed width
+    const titleFh = fontHeight(b.bt_title_font);
+    drawFreeElement(svg, {
+        x: b.bt_title_x, y: b.bt_title_y, w: b.bt_title_w, h: titleFh,
+        label: 'title', cls: 'label-rect',
+        fields: { x: 'bt_title_x', y: 'bt_title_y', w: 'bt_title_w' },
+        text: 'Track title', textSize: titleFh,
+    });
+
+    // Artist — scrolling label, fixed width
+    const artistFh = fontHeight(b.bt_artist_font);
+    drawFreeElement(svg, {
+        x: b.bt_artist_x, y: b.bt_artist_y, w: b.bt_artist_w, h: artistFh,
+        label: 'artist', cls: 'label-rect',
+        fields: { x: 'bt_artist_x', y: 'bt_artist_y', w: 'bt_artist_w' },
+        text: 'Artist', textSize: artistFh,
+    });
+
+    // Time "0:00 / 0:00"
+    drawLabel(svg, b.bt_time_x, b.bt_time_y, b.bt_time_font, '0:00 / 0:00',
+              'time', { x: 'bt_time_x', y: 'bt_time_y' });
+
+    // Vol label is placed below time by lv_obj_align_to in firmware — non-draggable preview
+    const timeFh   = fontHeight(b.bt_time_font);
+    const volFh    = fontHeight(b.bt_vol_label_font);
+    const volX     = b.bt_time_x;
+    const volY     = b.bt_time_y + timeFh + 4;
+    text(svg, volX, volY + volFh * 0.78, 'VOL: 50%', { 'font-size': volFh });
+    tag(svg, volX + 2, volY + 7, 'vol');
 
     if (b.bt_show_mode_indicator) {
         drawFreeElement(svg, {

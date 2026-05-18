@@ -162,6 +162,16 @@ static void do_navigate(ui_screen_id_t id)
     }
 }
 
+// Click-catcher on top of the screensaver: LV_EVENT_PRESSED doesn't bubble by
+// default (unlike gestures), so a plain tap on screensaver widgets would never
+// reach lv_scr_act(). The catcher posts UI_EVT_INPUT into the queue and the
+// main loop dismisses the overlay safely on its next iteration.
+static void ss_wake_cb(lv_event_t *e)
+{
+    (void)e;
+    ui_input_send(UI_INPUT_NONE);
+}
+
 static void activate_screensaver(int ss_id)
 {
     if (s_ss_overlay) return;
@@ -177,6 +187,13 @@ static void activate_screensaver(int ss_id)
     s_ss_overlay = ss;
     ESP_LOGI(TAG, "screensaver activate: %s", ss->name ? ss->name : "?");
     if (ss->create) ss->create(lv_scr_act());
+
+    lv_obj_t *catcher = lv_obj_create(lv_scr_act());
+    lv_obj_remove_style_all(catcher);
+    lv_obj_set_size(catcher, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_style_bg_opa(catcher, LV_OPA_TRANSP, 0);
+    lv_obj_clear_flag(catcher, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(catcher, ss_wake_cb, LV_EVENT_PRESSED, NULL);
 }
 
 static void dismiss_screensaver(void)
