@@ -13,4 +13,5 @@ idf_component_register(
         playlist
         events
         espressif__zlib
+        mqtt_svc
 )

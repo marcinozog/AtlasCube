@@ -16,6 +16,7 @@
 #include "events_service.h"
 #include "screensavers.h"
 #include "screensaver_dashboard.h"
+#include "mqtt_svc.h"
 #include "cJSON.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -102,6 +103,20 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(notify, "str_ne",      s->dashboard.notify_str_ne);
     cJSON_AddItemToObject  (dash, "notify", notify);
     cJSON_AddItemToObject(json, "dashboard", dash);
+
+    // mqtt — password is sent back as empty string (security, mirrors wifi)
+    cJSON *mqtt = cJSON_CreateObject();
+    cJSON_AddBoolToObject  (mqtt, "enabled",            s->mqtt.enabled);
+    cJSON_AddStringToObject(mqtt, "host",               s->mqtt.host);
+    cJSON_AddNumberToObject(mqtt, "port",               s->mqtt.port);
+    cJSON_AddStringToObject(mqtt, "username",           s->mqtt.username);
+    cJSON_AddStringToObject(mqtt, "password",           "");
+    cJSON_AddStringToObject(mqtt, "client_id",          s->mqtt.client_id);
+    cJSON_AddStringToObject(mqtt, "base_topic",         s->mqtt.base_topic);
+    cJSON_AddStringToObject(mqtt, "toggle_topic_cmd",   s->mqtt.toggle_topic_cmd);
+    cJSON_AddStringToObject(mqtt, "toggle_topic_state", s->mqtt.toggle_topic_state);
+    cJSON_AddStringToObject(mqtt, "toggle_label",       s->mqtt.toggle_label);
+    cJSON_AddItemToObject(json, "mqtt", mqtt);
 
 
     char *str = cJSON_PrintUnformatted(json);
@@ -283,6 +298,39 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             // Live-reload an active dashboard screensaver; no-op if inactive.
             screensaver_dashboard_settings_changed();
         }
+    }
+
+    // ── MQTT ──────────────────────────────────────────────────────────────────
+    cJSON *mqtt = cJSON_GetObjectItem(json, "mqtt");
+    if (cJSON_IsObject(mqtt)) {
+        app_settings_t *ms = settings_get();
+        cJSON *en   = cJSON_GetObjectItem(mqtt, "enabled");
+        cJSON *host = cJSON_GetObjectItem(mqtt, "host");
+        cJSON *port = cJSON_GetObjectItem(mqtt, "port");
+        cJSON *user = cJSON_GetObjectItem(mqtt, "username");
+        cJSON *pass = cJSON_GetObjectItem(mqtt, "password");
+        cJSON *cid  = cJSON_GetObjectItem(mqtt, "client_id");
+        cJSON *bt   = cJSON_GetObjectItem(mqtt, "base_topic");
+        cJSON *tc   = cJSON_GetObjectItem(mqtt, "toggle_topic_cmd");
+        cJSON *ts   = cJSON_GetObjectItem(mqtt, "toggle_topic_state");
+        cJSON *tl   = cJSON_GetObjectItem(mqtt, "toggle_label");
+
+        if (cJSON_IsBool  (en))   ms->mqtt.enabled = cJSON_IsTrue(en);
+        if (cJSON_IsString(host)) { ms->mqtt.host[0]      = '\0'; strncpy(ms->mqtt.host,      host->valuestring, sizeof(ms->mqtt.host)      - 1); }
+        if (cJSON_IsNumber(port)) ms->mqtt.port = port->valueint;
+        if (cJSON_IsString(user)) { ms->mqtt.username[0]  = '\0'; strncpy(ms->mqtt.username,  user->valuestring, sizeof(ms->mqtt.username)  - 1); }
+        // password: empty string from client = keep the old one (mirrors wifi behavior)
+        if (cJSON_IsString(pass) && pass->valuestring[0] != '\0') {
+            ms->mqtt.password[0] = '\0';
+            strncpy(ms->mqtt.password, pass->valuestring, sizeof(ms->mqtt.password) - 1);
+        }
+        if (cJSON_IsString(cid))  { ms->mqtt.client_id[0] = '\0'; strncpy(ms->mqtt.client_id, cid->valuestring,  sizeof(ms->mqtt.client_id) - 1); }
+        if (cJSON_IsString(bt))   { ms->mqtt.base_topic[0]= '\0'; strncpy(ms->mqtt.base_topic,bt->valuestring,   sizeof(ms->mqtt.base_topic)- 1); }
+        if (cJSON_IsString(tc))   { ms->mqtt.toggle_topic_cmd[0]  = '\0'; strncpy(ms->mqtt.toggle_topic_cmd,   tc->valuestring, sizeof(ms->mqtt.toggle_topic_cmd)   - 1); }
+        if (cJSON_IsString(ts))   { ms->mqtt.toggle_topic_state[0]= '\0'; strncpy(ms->mqtt.toggle_topic_state, ts->valuestring, sizeof(ms->mqtt.toggle_topic_state) - 1); }
+        if (cJSON_IsString(tl))   { ms->mqtt.toggle_label[0]      = '\0'; strncpy(ms->mqtt.toggle_label,       tl->valuestring, sizeof(ms->mqtt.toggle_label)       - 1); }
+        settings_save();
+        mqtt_svc_reconfigure();
     }
 
     // ── WIFI ──────────────────────────────────────────────────────────────────

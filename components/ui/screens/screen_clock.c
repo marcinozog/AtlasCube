@@ -236,6 +236,9 @@ static void clock_on_input(ui_input_t input)
         case UI_INPUT_SWIPE_LEFT:
             settings_set_screen(SCREEN_RADIO);
             break;
+        case UI_INPUT_SWIPE_RIGHT:
+            settings_set_screen(SCREEN_MQTT);
+            break;
         case UI_INPUT_SWIPE_UP:
             ui_navigate(SCREEN_SETTINGS);
             break;

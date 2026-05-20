@@ -20,6 +20,7 @@ typedef enum {
     SCREEN_EQ,
     SCREEN_EVENTS,
     SCREEN_EVENT_NOTIFICATION,
+    SCREEN_MQTT,
     SCREEN_COUNT
 } ui_screen_id_t;
 

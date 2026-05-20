@@ -356,6 +356,20 @@ function populateForm(s) {
         const sel = document.getElementById('scrs_id');
         if (sel) sel.value = s.scrsaver.id || 'clockhands';
     }
+    if (s.mqtt) {
+        const en = !!s.mqtt.enabled;
+        document.getElementById('mqttBtnOn') ?.classList.toggle('active', en);
+        document.getElementById('mqttBtnOff')?.classList.toggle('active', !en);
+        setVal('mqtt_host',               s.mqtt.host               || '');
+        setVal('mqtt_port',               s.mqtt.port               || 1883);
+        setVal('mqtt_username',           s.mqtt.username           || '');
+        // password never echoed
+        setVal('mqtt_client_id',          s.mqtt.client_id          || '');
+        setVal('mqtt_base_topic',         s.mqtt.base_topic         || '');
+        setVal('mqtt_toggle_label',       s.mqtt.toggle_label       || '');
+        setVal('mqtt_toggle_topic_cmd',   s.mqtt.toggle_topic_cmd   || '');
+        setVal('mqtt_toggle_topic_state', s.mqtt.toggle_topic_state || '');
+    }
     if (s.dashboard) {
         setVal('dash_title',     s.dashboard.title     ?? '');
         setVal('dash_url',       s.dashboard.url       ?? '');
@@ -445,6 +459,65 @@ async function saveSettings() {
     } finally {
         btn.disabled = false;
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MQTT
+// ─────────────────────────────────────────────────────────────────────────────
+function setMqttEnabled(t) {
+    document.getElementById('mqttBtnOn') ?.classList.toggle('active', t);
+    document.getElementById('mqttBtnOff')?.classList.toggle('active', !t);
+}
+
+async function saveMqtt() {
+    const btn = document.getElementById('mqtt_save_btn');
+    btn.disabled = true;
+
+    const enabled = document.getElementById('mqttBtnOn')?.classList.contains('active') || false;
+    const get = id => document.getElementById(id)?.value ?? '';
+
+    let port = parseInt(get('mqtt_port'), 10);
+    if (isNaN(port) || port < 1 || port > 65535) port = 1883;
+
+    const payload = { mqtt: {
+        enabled,
+        host:               get('mqtt_host').trim(),
+        port,
+        username:           get('mqtt_username').trim(),
+        password:           get('mqtt_password'),    // empty → keep old
+        client_id:          get('mqtt_client_id').trim(),
+        base_topic:         get('mqtt_base_topic').trim(),
+        toggle_label:       get('mqtt_toggle_label'),
+        toggle_topic_cmd:   get('mqtt_toggle_topic_cmd').trim(),
+        toggle_topic_state: get('mqtt_toggle_topic_state').trim(),
+    }};
+
+    try {
+        const r = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        showMqttStatus('✅ Saved. Client reconnecting…', 'ok');
+        // Clear password field so a second save does not re-send it accidentally
+        document.getElementById('mqtt_password').value = '';
+    } catch (e) {
+        showMqttStatus('❌ ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+let _mqttStatusTimer = null;
+function showMqttStatus(msg, type) {
+    const el = document.getElementById('mqtt_status');
+    if (!el) return;
+    el.innerText = msg;
+    el.className = 'save-status' + (type ? ' ' + type : '');
+    clearTimeout(_mqttStatusTimer);
+    if (type === 'ok') _mqttStatusTimer = setTimeout(
+        () => { el.innerText = ''; el.className = 'save-status'; }, 4000);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

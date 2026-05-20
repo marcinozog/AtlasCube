@@ -1,0 +1,12 @@
+menu "MQTT configuration"
+
+config MQTT_ENABLE
+    bool "Enable MQTT client"
+    default y
+    help
+        Build and link the MQTT client component. When disabled,
+        mqtt_svc_* calls compile to no-ops and the runtime settings tab
+        is hidden / inactive. Use this to shrink the firmware when MQTT
+        is not needed.
+
+endmenu

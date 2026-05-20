@@ -1,20 +1,15 @@
 #include "defines.h"
-// #include "freertos/FreeRTOS.h"
-// #include "freertos/task.h"
 #include "esp_log.h"
-// #include "esp_timer.h"
 #include "esp_app_desc.h"
 #include "nvs_flash.h"
 #include "playlist.h"
 #include "audio_player.h"
 #include "http_server.h"
 #include "wifi_manager.h"
-// #include "radio_service.h"
 #include "ws_server.h"
 #include "esp_spiffs.h"
 #include "display.h"
 #include "settings.h"
-// #include "app_state.h"
 #include "bt.h"
 #include "ntp_service.h"
 #include "ui_manager.h"
@@ -23,6 +18,7 @@
 #include "buzzer.h"
 #include "events_service.h"
 #include "ui_profile.h"
+#include "mqtt_svc.h"
 
 static const char *TAG = "MAIN";
 
@@ -74,6 +70,13 @@ void app_main(void)
     // ── Web / WebSocket ───────────────────────────────────────────────────────
     ws_init();          // app_state_subscribe #2
     http_server_start();// available on router IP (STA) and 192.168.4.1 (AP)
+
+    // ── MQTT ─────────────────────────────────────────────────────────────────
+    // Only meaningful in STA (broker is on the LAN). esp-mqtt has its own
+    // reconnect loop, so we just start it once.
+    if (wifi_get_run_mode() == WIFI_RUN_MODE_STA) {
+        mqtt_svc_init();
+    }
 
     // ── Apply settings to hardware (after UI and WS subscriptions!) ──────────
     // app_state_update() inside settings_apply() will notify all

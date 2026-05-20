@@ -75,6 +75,19 @@ typedef struct {
 
 
 typedef struct {
+    bool enabled;
+    char host[64];
+    int  port;
+    char username[32];
+    char password[64];
+    char client_id[32];
+    char base_topic[32];
+    char toggle_topic_cmd[96];
+    char toggle_topic_state[96];
+    char toggle_label[32];
+} mqtt_settings_t;
+
+typedef struct {
     audio_settings_t     audio;
     playlist_settings_t  playlist;
     display_settings_t   display;
@@ -83,6 +96,7 @@ typedef struct {
     wifi_settings_t      wifi;
     scrsaver_settings_t  scrsaver;
     dashboard_settings_t dashboard;
+    mqtt_settings_t      mqtt;
 } app_settings_t;
 
 esp_err_t settings_init(void);
@@ -112,3 +126,7 @@ void settings_set_dashboard(const char *title,
 
 // Notification fields are applied by http_server directly via the mutable
 // pointer returned by settings_get(), followed by settings_save().
+
+// MQTT — fields are applied by http_server directly via settings_get(); after
+// saving the http handler calls mqtt_svc_reconfigure() to apply the new
+// connection params. No per-field setter to keep the API small.

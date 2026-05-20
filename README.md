@@ -112,6 +112,7 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 - HTTP server + WebSocket for real-time state sync
 - NTP time sync with configurable timezone
 - Web UI served from SPIFFS (no internet required after flash)
+- MQTT client — remote control of the radio (play/stop/volume/station) and a configurable on-device toggle widget that drives any external MQTT switch (Tasmota, zigbee2mqtt, etc.); see [MQTT](#mqtt) below
 
 **Android app** *(in development)*
 - Remote control for playback, station switching, and volume
@@ -241,6 +242,84 @@ Available at the device IP (STA mode) or `192.168.4.1` (AP mode).
 | File editor | `/editor.html` |
 
 WebSocket endpoint: `ws://<device-ip>/ws` — pushes state changes (volume, track, radio state) in real time.
+
+---
+
+## MQTT
+
+The device runs an MQTT client that connects to a local broker (e.g. Mosquitto) on the LAN. Configure it from **Settings → MQTT** in the web UI: host, port, username/password, client ID, base topic. After saving, the client reconnects on the fly — no reboot needed.
+
+- **Compile-time switch**: `CONFIG_MQTT_ENABLE` (menuconfig → *MQTT configuration*). Default `y`; set `n` to drop the component entirely from the firmware.
+- **Connection**: plain TCP (LAN-only, no TLS), QoS 0, automatic reconnect (handled by `esp-mqtt`).
+- **Will / online status**: the device publishes `online` (retained) to `<base>/<client_id>/status` on connect, and the broker delivers `offline` (LWT, retained) on unexpected disconnect.
+- **Payload style**: plain text on hierarchical topics (Tasmota/HA-style) — easy to use from `mosquitto_pub` and to wire into Home Assistant via `command_topic`/`state_topic` in YAML.
+
+### Topic map
+
+All radio topics use the prefix `<base>/<client_id>/` — both segments configurable; defaults: `atlascube/atlascube/`.
+
+| Topic suffix | Direction | Payload | Notes |
+|---|---|---|---|
+| `cmd/play` | subscribe | any | resumes the currently selected station |
+| `cmd/stop` | subscribe | any | |
+| `cmd/next` / `cmd/prev` | subscribe | any | wraps around the playlist |
+| `cmd/volume` | subscribe | `0`–`100` | clamped |
+| `cmd/station` | subscribe | playlist index | 0-based |
+| `state/playing` | publish (retain) | `playing` \| `stopped` \| `buffering` \| `error` | |
+| `state/volume` | publish (retain) | `0`–`100` | |
+| `state/station_index` | publish (retain) | playlist index | |
+| `state/station` | publish (retain) | station name | from playlist entry |
+| `state/title` | publish (retain) | ICY title | "" when stopped |
+| `status` | publish (retain) + LWT | `online` \| `offline` | LWT delivers `offline` if the device drops |
+
+### External toggle widget
+
+The MQTT settings tab also configures **one user-defined switch** that appears as a dedicated on-device screen (swipe right from the clock). It targets any external MQTT switch.
+
+- **Command topic** — published on tap with payload `ON`/`OFF`. Example (Tasmota): `cmnd/livingroom/POWER`. Example (zigbee2mqtt accepts plain text on `/set`): `zigbee2mqtt/<name>/set`.
+- **State topic** — subscribed; updates the on-screen switch to reflect the device's real state, so the UI stays in sync if the device is toggled from elsewhere (HA, physical button, automation). Payload parser accepts:
+  - plain text: `ON`/`OFF`/`on`/`off`/`true`/`false`/`1`/`0`
+  - JSON with a `"state"` key (zigbee2mqtt's default state topic format)
+- **Label** — short string shown above the switch.
+
+### Examples
+
+Watch everything the device publishes:
+
+```bash
+mosquitto_sub -h 192.168.1.10 -v -t 'atlascube/#'
+```
+
+Control the radio:
+
+```bash
+mosquitto_pub -h 192.168.1.10 -t atlascube/atlascube/cmd/play
+mosquitto_pub -h 192.168.1.10 -t atlascube/atlascube/cmd/volume  -m 30
+mosquitto_pub -h 192.168.1.10 -t atlascube/atlascube/cmd/station -m 2
+```
+
+Minimal Home Assistant YAML:
+
+```yaml
+mqtt:
+  switch:
+    - name: AtlasCube Radio
+      command_topic: atlascube/atlascube/cmd/play
+      payload_off:   stopped       # use cmd/stop for off; or split into two switches
+      state_topic:   atlascube/atlascube/state/playing
+      payload_on:    playing
+  number:
+    - name: AtlasCube Volume
+      command_topic: atlascube/atlascube/cmd/volume
+      state_topic:   atlascube/atlascube/state/volume
+      min: 0
+      max: 100
+  sensor:
+    - name: AtlasCube Title
+      state_topic: atlascube/atlascube/state/title
+```
+
+> HA MQTT Discovery (auto-registration) is not implemented yet — entities are declared manually as above.
 
 **File editor**
 

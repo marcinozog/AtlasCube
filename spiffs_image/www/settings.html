@@ -28,6 +28,7 @@
         <button type="button" class="tab-btn" data-tab="colors"      onclick="selectTab('colors')">🎨 Colors</button>
         <button type="button" class="tab-btn" data-tab="wifi"        onclick="selectTab('wifi')">📡 WiFi</button>
         <button type="button" class="tab-btn" data-tab="ntp"         onclick="selectTab('ntp')">🕐 NTP</button>
+        <button type="button" class="tab-btn" data-tab="mqtt"        onclick="selectTab('mqtt')">📨 MQTT</button>
     </nav>
 
     <!-- ══════════════════════════════════════════
@@ -321,6 +322,65 @@
 
         <button id="save_btn" onclick="saveSettings()">💾 Save &amp; Apply</button>
         <div id="save_status" class="save-status"></div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         MQTT
+    ══════════════════════════════════════════ -->
+    <section class="tab-pane" id="tab-mqtt" data-tab="mqtt">
+        <div class="panel">
+            <label class="field-label">MQTT client</label>
+            <div class="theme-toggle" id="mqttEnabledToggle" style="width:fit-content">
+                <button class="theme-btn" id="mqttBtnOn"  onclick="setMqttEnabled(true)">✅ Enabled</button>
+                <button class="theme-btn" id="mqttBtnOff" onclick="setMqttEnabled(false)">❌ Disabled</button>
+            </div>
+            <div class="field-hint">When disabled, the device does not connect to the broker.</div>
+        </div>
+
+        <div class="panel">
+            <label class="field-label">Broker host</label>
+            <input type="text" id="mqtt_host" class="field-input" placeholder="192.168.1.10" />
+        </div>
+        <div class="panel">
+            <label class="field-label">Broker port</label>
+            <input type="number" id="mqtt_port" class="field-input" min="1" max="65535" placeholder="1883" style="width:140px" />
+        </div>
+        <div class="panel">
+            <label class="field-label">Username (optional)</label>
+            <input type="text" id="mqtt_username" class="field-input" autocomplete="off" />
+        </div>
+        <div class="panel">
+            <label class="field-label">Password (optional)</label>
+            <input type="password" id="mqtt_password" class="field-input" placeholder="••••••••" autocomplete="new-password" />
+            <div class="field-hint">Leave blank to keep the existing password.</div>
+        </div>
+        <div class="panel">
+            <label class="field-label">Client ID</label>
+            <input type="text" id="mqtt_client_id" class="field-input" placeholder="atlascube" />
+        </div>
+        <div class="panel">
+            <label class="field-label">Base topic</label>
+            <input type="text" id="mqtt_base_topic" class="field-input" placeholder="atlascube" />
+            <div class="field-hint">Device topics will be: &lt;base&gt;/&lt;client_id&gt;/state/* and /cmd/*.</div>
+        </div>
+
+        <div class="panel">
+            <label class="field-label">Toggle widget — label</label>
+            <input type="text" id="mqtt_toggle_label" class="field-input" placeholder="Switch" />
+        </div>
+        <div class="panel">
+            <label class="field-label">Toggle widget — command topic</label>
+            <input type="text" id="mqtt_toggle_topic_cmd" class="field-input" placeholder="home/light/cmnd/POWER" />
+            <div class="field-hint">Published on tap. Payload: <code>ON</code> / <code>OFF</code>.</div>
+        </div>
+        <div class="panel">
+            <label class="field-label">Toggle widget — state topic</label>
+            <input type="text" id="mqtt_toggle_topic_state" class="field-input" placeholder="home/light/stat/POWER" />
+            <div class="field-hint">Subscribed; updates the switch to reflect the real device state.</div>
+        </div>
+
+        <button id="mqtt_save_btn" onclick="saveMqtt()">💾 Save MQTT</button>
+        <div id="mqtt_status" class="save-status"></div>
     </section>
 
 </main>

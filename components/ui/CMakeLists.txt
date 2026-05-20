@@ -14,6 +14,7 @@ idf_component_register(
         "screens/screen_equalizer.c"
         "screens/screen_events.c"
         "screens/screen_event_notification.c"
+        "screens/screen_mqtt.c"
         "screensavers/screensaver_starfield.c"
         "screensavers/screensaver_fireworks.c"
         "screensavers/screensaver_plasma.c"
@@ -54,4 +55,5 @@ idf_component_register(
         esp_http_client         # screensaver_dashboard
         esp-tls                 # esp_crt_bundle for HTTPS
         buzzer                  # screensaver_dashboard notifications via melodies.h
+        mqtt_svc                # screen_mqtt toggle widget
 )
