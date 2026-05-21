@@ -7,7 +7,7 @@
 
 static const char *TAG = "CTRL_OVL";
 
-#define AUTOHIDE_MS 2500
+#define AUTOHIDE_MS 1500
 
 static lv_obj_t  *s_parent  = NULL;
 static lv_obj_t  *s_overlay = NULL;   // dim layer + buttons
