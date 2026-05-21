@@ -393,13 +393,27 @@ static void publish_widget(int idx, const char *payload)
 
 void mqtt_svc_publish_widget_bool(int idx, bool on)
 {
-    publish_widget(idx, on ? "ON" : "OFF");
+    if (idx < 0 || idx >= MQTT_MAX_WIDGETS) return;
+    mqtt_widget_t *w = &mqtt_config_get()->widgets[idx];
+    if (w->json_path[0]) {
+        char buf[64];
+        snprintf(buf, sizeof(buf), "{\"%s\":\"%s\"}", w->json_path, on ? "ON" : "OFF");
+        publish_widget(idx, buf);
+    } else {
+        publish_widget(idx, on ? "ON" : "OFF");
+    }
 }
 
 void mqtt_svc_publish_widget_int(int idx, int value)
 {
-    char buf[16];
-    snprintf(buf, sizeof(buf), "%d", value);
+    if (idx < 0 || idx >= MQTT_MAX_WIDGETS) return;
+    mqtt_widget_t *w = &mqtt_config_get()->widgets[idx];
+    char buf[64];
+    if (w->json_path[0]) {
+        snprintf(buf, sizeof(buf), "{\"%s\":%d}", w->json_path, value);
+    } else {
+        snprintf(buf, sizeof(buf), "%d", value);
+    }
     publish_widget(idx, buf);
 }
 
