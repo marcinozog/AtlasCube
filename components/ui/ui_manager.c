@@ -316,6 +316,9 @@ void ui_manager_run(void)
     // Attach gesture handler to the (singleton) active screen object — it
     // survives lv_obj_clean() between navigations because clean only removes
     // children, not callbacks on the screen itself.
+    // Clear scrollable flag so horizontal drags don't get swallowed as native
+    // scroll (which would suppress LV_EVENT_GESTURE).
+    lv_obj_clear_flag(lv_scr_act(), LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(lv_scr_act(), gesture_dispatch_cb, LV_EVENT_GESTURE, NULL);
 
     do_navigate(SCREEN_SPLASH);
