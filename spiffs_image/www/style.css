@@ -381,10 +381,10 @@ input[type="range"]::-webkit-slider-thumb:hover {
 .tool-btn {
     flex: 1;
     padding: 8px 6px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--accent);
     border-radius: var(--radius-sm);
-    background: var(--bg-panel);
-    color: var(--text-dim);
+    background: rgba(0,170,255,.08);
+    color: var(--accent);
     font-family: 'Chakra Petch', sans-serif;
     font-size: 12px;
     font-weight: 600;
@@ -398,15 +398,15 @@ input[type="range"]::-webkit-slider-thumb:hover {
 }
 
 .tool-btn:hover {
-    background: var(--accent-glow);
+    background: var(--accent);
     border-color: var(--accent);
-    color: var(--accent);
+    color: #fff;
 }
 
 .tool-btn.bt-on {
-    background: rgba(0,170,255,.15);
+    background: var(--accent);
     border-color: var(--accent);
-    color: var(--accent);
+    color: #fff;
 }
 
 .tool-link { text-decoration: none; }
@@ -624,15 +624,15 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .btn-secondary {
     padding: 8px 14px;
-    border: 1px solid var(--border);
+    border: 1px solid var(--accent);
     border-radius: var(--radius-sm);
-    background: var(--bg-panel);
-    color: var(--text);
+    background: rgba(0,170,255,.08);
+    color: var(--accent);
     font-family: 'Chakra Petch', sans-serif;
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: background .15s, border-color .15s;
+    transition: background .15s, color .15s, border-color .15s;
     white-space: nowrap;
 }
 
