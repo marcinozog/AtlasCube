@@ -76,6 +76,7 @@ static bool can_auto_screensaver_from(ui_screen_id_t id)
     if (id >= SCREEN_COUNT)              return false;
     if (id == SCREEN_SPLASH)             return false;
     if (id == SCREEN_EVENT_NOTIFICATION) return false;
+    if (id == SCREEN_WIFI)               return false;
     return true;
 }
 
