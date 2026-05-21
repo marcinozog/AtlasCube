@@ -1196,6 +1196,10 @@ static esp_err_t api_mqtt_post_handler(httpd_req_t *req)
     mqtt_config_save();
     mqtt_svc_reconfigure();
 
+    // Rebuild active screen so MQTT widget changes are visible immediately
+    ui_event_t ev = { .type = UI_EVT_PROFILE_CHANGED };
+    ui_event_send(&ev);
+
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, "{\"ok\":true}");
     return ESP_OK;
