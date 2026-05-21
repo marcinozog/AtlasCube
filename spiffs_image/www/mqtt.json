@@ -1,0 +1,77 @@
+{
+  "enabled": false,
+  "host": "",
+  "port": 1883,
+  "username": "",
+  "password": "",
+  "client_id": "",
+  "base_topic": "atlascube/kitchen",
+  "widgets": [
+    {
+      "type": "toggle",
+      "title": "Plug 3",
+      "topic_cmd": "zigbee2mqtt/powerplugs/plug3/set",
+      "topic_state": "zigbee2mqtt/powerplugs/plug3",
+      "json_path": "state",
+      "unit": "",
+      "min": 0,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "type": "label",
+      "title": "Front door",
+      "topic_cmd": "",
+      "topic_state": "zigbee2mqtt/doors/front",
+      "json_path": "contact",
+      "unit": "",
+      "min": 0,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "type": "slider",
+      "title": "Bulb of",
+      "topic_cmd": "zigbee2mqtt/bulbs/bulb1/set",
+      "topic_state": "zigbee2mqtt/bulbs/bulb1",
+      "json_path": "brightness",
+      "unit": "",
+      "min": 0,
+      "max": 254,
+      "step": 1
+    },
+    {
+      "type": "none",
+      "title": "",
+      "topic_cmd": "",
+      "topic_state": "",
+      "json_path": "",
+      "unit": "",
+      "min": 0,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "type": "none",
+      "title": "",
+      "topic_cmd": "",
+      "topic_state": "",
+      "json_path": "",
+      "unit": "",
+      "min": 0,
+      "max": 100,
+      "step": 1
+    },
+    {
+      "type": "none",
+      "title": "",
+      "topic_cmd": "",
+      "topic_state": "",
+      "json_path": "",
+      "unit": "",
+      "min": 0,
+      "max": 100,
+      "step": 1
+    }
+  ]
+}

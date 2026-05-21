@@ -8,8 +8,8 @@ phy_init,   data, phy,      0x11000,  0x1000
 # App
 factory,    app,  factory,  0x20000,  4M
 
-# Application data (e.g. config, station list, cache)
+# SPIFFS - main
 storage,    data, spiffs,           ,  4M
 
-# Reszta flasha (np. nagrywanie, DLNA cache, itd.)
+# SPIFFS - media, backup, etc.
 media,      data, spiffs,           ,  6M

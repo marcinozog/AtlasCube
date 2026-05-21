@@ -13,7 +13,7 @@ from pathlib import Path
 SRC_DIR    = Path(__file__).parent.parent / "www"
 DST_DIR    = Path(__file__).parent.parent / "web"
 EXTENSIONS = {".html", ".css", ".js", ".svg", ".ico"}
-COPY_FILES = {"data/playlist.csv", "settings.json", "theme.json", "events.json"}
+COPY_FILES = {"data/playlist.csv", "settings.json", "theme.json", "events.json", "mqtt.json"}
 
 def compress_file(src: Path):
     rel = src.relative_to(SRC_DIR)
