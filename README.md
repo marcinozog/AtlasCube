@@ -112,7 +112,7 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 - HTTP server + WebSocket for real-time state sync
 - NTP time sync with configurable timezone
 - Web UI served from SPIFFS (no internet required after flash)
-- MQTT client — remote control of the radio (play/stop/volume/station) and a configurable on-device toggle widget that drives any external MQTT switch (Tasmota, zigbee2mqtt, etc.); see [MQTT](#mqtt) below
+- MQTT client — remote control of the radio (play/stop/volume/station) plus up to 6 configurable widgets (toggle / slider / label) on a dedicated on-device screen, driving any external MQTT device (Tasmota, zigbee2mqtt, Home Assistant, …); see [MQTT](#mqtt) below
 
 **Android app** *(in development)*
 - Remote control for playback, station switching, and volume
@@ -240,6 +240,7 @@ Available at the device IP (STA mode) or `192.168.4.1` (AP mode).
 | Equalizer | `/eq.html` |
 | Layout editor | `/layout.html` |
 | File editor | `/editor.html` |
+| MQTT widgets | `/mqtt.html` |
 
 WebSocket endpoint: `ws://<device-ip>/ws` — pushes state changes (volume, track, radio state) in real time.
 
@@ -272,15 +273,26 @@ All radio topics use the prefix `<base_topic>/` (default: `atlascube/`). The MQT
 | `state/title` | publish (retain) | ICY title | "" when stopped |
 | `status` | publish (retain) + LWT | `online` \| `offline` | LWT delivers `offline` if the device drops |
 
-### External toggle widget
+### Widgets screen
 
-The MQTT settings tab also configures **one user-defined switch** that appears as a dedicated on-device screen (swipe right from the clock). It targets any external MQTT switch.
+A dedicated on-device screen (swipe right from the clock) hosts **up to 6 user-defined widgets** in a grid. Each slot is configured independently from `/mqtt.html` (linked from Settings → MQTT). Set a slot's *Type* to `None` to disable it.
 
-- **Command topic** — published on tap with payload `ON`/`OFF`. Example (Tasmota): `cmnd/livingroom/POWER`. Example (zigbee2mqtt accepts plain text on `/set`): `zigbee2mqtt/<name>/set`.
-- **State topic** — subscribed; updates the on-screen switch to reflect the device's real state, so the UI stays in sync if the device is toggled from elsewhere (HA, physical button, automation). Payload parser accepts:
-  - plain text: `ON`/`OFF`/`on`/`off`/`true`/`false`/`1`/`0`
-  - JSON with a `"state"` key (zigbee2mqtt's default state topic format)
-- **Label** — short string shown above the switch.
+**Widget types**
+
+- **Toggle** — publishes `ON`/`OFF` on the cmd topic when tapped; visual state follows the state topic (so the UI stays in sync if the device is toggled from HA, a physical button, an automation, …).
+- **Slider** — configurable `min` / `max` / `step`; publishes the numeric value on the cmd topic and tracks the state topic.
+- **Label** — read-only; displays the latest value from the state topic, with an optional `unit` suffix (`°C`, `%`, …).
+
+**Common fields**
+
+- **Title** — short string shown above the widget.
+- **Command topic** — published on user interaction (toggle/slider). Example (Tasmota): `cmnd/livingroom/POWER`. Example (zigbee2mqtt accepts plain text on `/set`): `zigbee2mqtt/<name>/set`.
+- **State topic** — subscribed on connect/reconnect; drives the widget's displayed value.
+- **JSON path** — when non-empty, extracts a single field from JSON payloads (works on both directions):
+  - *Incoming*: e.g. `state` pulls `"ON"` out of zigbee2mqtt's `{"state":"ON", ...}`.
+  - *Outgoing*: the cmd publish is wrapped as `{"<path>": <value>}` instead of raw text — handy for devices that expect JSON (zigbee2mqtt `{"brightness":128}`).
+  - Empty path = plain-text mode in both directions.
+- Plain-text payload parser accepts `ON`/`OFF`/`on`/`off`/`true`/`false`/`1`/`0` for booleans, bare numbers for sliders.
 
 ### Examples
 
