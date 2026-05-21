@@ -365,18 +365,9 @@
         </div>
 
         <div class="panel">
-            <label class="field-label">Toggle widget — label</label>
-            <input type="text" id="mqtt_toggle_label" class="field-input" placeholder="Switch" />
-        </div>
-        <div class="panel">
-            <label class="field-label">Toggle widget — command topic</label>
-            <input type="text" id="mqtt_toggle_topic_cmd" class="field-input" placeholder="home/light/cmnd/POWER" />
-            <div class="field-hint">Published on tap. Payload: <code>ON</code> / <code>OFF</code>.</div>
-        </div>
-        <div class="panel">
-            <label class="field-label">Toggle widget — state topic</label>
-            <input type="text" id="mqtt_toggle_topic_state" class="field-input" placeholder="home/light/stat/POWER" />
-            <div class="field-hint">Subscribed; updates the switch to reflect the real device state.</div>
+            <label class="field-label">On-device widgets</label>
+            <a href="/mqtt.html" class="tool-btn tool-link" style="width:fit-content;padding:8px 14px">🔧 Edit MQTT Widgets</a>
+            <div class="field-hint">Up to 6 widgets (toggle / slider / label) shown on the MQTT screen.</div>
         </div>
 
         <button id="mqtt_save_btn" onclick="saveMqtt()">💾 Save MQTT</button>

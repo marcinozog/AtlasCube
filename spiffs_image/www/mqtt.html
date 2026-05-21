@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AtlasCube – MQTT Widgets</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="app-header">
+    <div class="logo">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text">ATLAS <span class="logo-accent">CUBE</span></span>
+    </div>
+</header>
+
+<main class="card">
+    <a href="/settings.html#tab=mqtt" class="back-link">← Back to Settings</a>
+
+    <h2 style="margin:0 0 8px 0">📨 MQTT Widgets</h2>
+    <div class="field-hint" style="margin-bottom:16px">
+        Up to 6 widgets shown on the MQTT screen. Set <em>Type</em> to <code>None</code> to disable a slot.
+        State topics are subscribed at boot/reconnect; a non-empty <em>JSON path</em> extracts a single
+        field from JSON payloads (e.g. <code>state</code> for zigbee2mqtt).
+    </div>
+
+    <div id="widgets_container"></div>
+
+    <button id="mqtt_widgets_save_btn" onclick="saveWidgets()">💾 Save widgets</button>
+    <div id="mqtt_widgets_status" class="save-status"></div>
+</main>
+
+<script src="mqtt.js"></script>
+</body>
+</html>

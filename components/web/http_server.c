@@ -17,6 +17,7 @@
 #include "screensavers.h"
 #include "screensaver_dashboard.h"
 #include "mqtt_svc.h"
+#include "mqtt_config.h"
 #include "cJSON.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -103,20 +104,6 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(notify, "str_ne",      s->dashboard.notify_str_ne);
     cJSON_AddItemToObject  (dash, "notify", notify);
     cJSON_AddItemToObject(json, "dashboard", dash);
-
-    // mqtt — password is sent back as empty string (security, mirrors wifi)
-    cJSON *mqtt = cJSON_CreateObject();
-    cJSON_AddBoolToObject  (mqtt, "enabled",            s->mqtt.enabled);
-    cJSON_AddStringToObject(mqtt, "host",               s->mqtt.host);
-    cJSON_AddNumberToObject(mqtt, "port",               s->mqtt.port);
-    cJSON_AddStringToObject(mqtt, "username",           s->mqtt.username);
-    cJSON_AddStringToObject(mqtt, "password",           "");
-    cJSON_AddStringToObject(mqtt, "client_id",          s->mqtt.client_id);
-    cJSON_AddStringToObject(mqtt, "base_topic",         s->mqtt.base_topic);
-    cJSON_AddStringToObject(mqtt, "toggle_topic_cmd",   s->mqtt.toggle_topic_cmd);
-    cJSON_AddStringToObject(mqtt, "toggle_topic_state", s->mqtt.toggle_topic_state);
-    cJSON_AddStringToObject(mqtt, "toggle_label",       s->mqtt.toggle_label);
-    cJSON_AddItemToObject(json, "mqtt", mqtt);
 
 
     char *str = cJSON_PrintUnformatted(json);
@@ -298,39 +285,6 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             // Live-reload an active dashboard screensaver; no-op if inactive.
             screensaver_dashboard_settings_changed();
         }
-    }
-
-    // ── MQTT ──────────────────────────────────────────────────────────────────
-    cJSON *mqtt = cJSON_GetObjectItem(json, "mqtt");
-    if (cJSON_IsObject(mqtt)) {
-        app_settings_t *ms = settings_get();
-        cJSON *en   = cJSON_GetObjectItem(mqtt, "enabled");
-        cJSON *host = cJSON_GetObjectItem(mqtt, "host");
-        cJSON *port = cJSON_GetObjectItem(mqtt, "port");
-        cJSON *user = cJSON_GetObjectItem(mqtt, "username");
-        cJSON *pass = cJSON_GetObjectItem(mqtt, "password");
-        cJSON *cid  = cJSON_GetObjectItem(mqtt, "client_id");
-        cJSON *bt   = cJSON_GetObjectItem(mqtt, "base_topic");
-        cJSON *tc   = cJSON_GetObjectItem(mqtt, "toggle_topic_cmd");
-        cJSON *ts   = cJSON_GetObjectItem(mqtt, "toggle_topic_state");
-        cJSON *tl   = cJSON_GetObjectItem(mqtt, "toggle_label");
-
-        if (cJSON_IsBool  (en))   ms->mqtt.enabled = cJSON_IsTrue(en);
-        if (cJSON_IsString(host)) { ms->mqtt.host[0]      = '\0'; strncpy(ms->mqtt.host,      host->valuestring, sizeof(ms->mqtt.host)      - 1); }
-        if (cJSON_IsNumber(port)) ms->mqtt.port = port->valueint;
-        if (cJSON_IsString(user)) { ms->mqtt.username[0]  = '\0'; strncpy(ms->mqtt.username,  user->valuestring, sizeof(ms->mqtt.username)  - 1); }
-        // password: empty string from client = keep the old one (mirrors wifi behavior)
-        if (cJSON_IsString(pass) && pass->valuestring[0] != '\0') {
-            ms->mqtt.password[0] = '\0';
-            strncpy(ms->mqtt.password, pass->valuestring, sizeof(ms->mqtt.password) - 1);
-        }
-        if (cJSON_IsString(cid))  { ms->mqtt.client_id[0] = '\0'; strncpy(ms->mqtt.client_id, cid->valuestring,  sizeof(ms->mqtt.client_id) - 1); }
-        if (cJSON_IsString(bt))   { ms->mqtt.base_topic[0]= '\0'; strncpy(ms->mqtt.base_topic,bt->valuestring,   sizeof(ms->mqtt.base_topic)- 1); }
-        if (cJSON_IsString(tc))   { ms->mqtt.toggle_topic_cmd[0]  = '\0'; strncpy(ms->mqtt.toggle_topic_cmd,   tc->valuestring, sizeof(ms->mqtt.toggle_topic_cmd)   - 1); }
-        if (cJSON_IsString(ts))   { ms->mqtt.toggle_topic_state[0]= '\0'; strncpy(ms->mqtt.toggle_topic_state, ts->valuestring, sizeof(ms->mqtt.toggle_topic_state) - 1); }
-        if (cJSON_IsString(tl))   { ms->mqtt.toggle_label[0]      = '\0'; strncpy(ms->mqtt.toggle_label,       tl->valuestring, sizeof(ms->mqtt.toggle_label)       - 1); }
-        settings_save();
-        mqtt_svc_reconfigure();
     }
 
     // ── WIFI ──────────────────────────────────────────────────────────────────
@@ -1134,6 +1088,120 @@ static esp_err_t api_ui_profile_reset_handler(httpd_req_t *req)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// MQTT — GET/POST /api/mqtt — broker config + widget array (max 6)
+// Stored in /spiffs/mqtt.json by mqtt_config_*.
+// ─────────────────────────────────────────────────────────────────────────────
+static esp_err_t api_mqtt_get_handler(httpd_req_t *req)
+{
+    mqtt_config_t *c = mqtt_config_get();
+
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddBoolToObject  (json, "enabled",    c->enabled);
+    cJSON_AddStringToObject(json, "host",       c->host);
+    cJSON_AddNumberToObject(json, "port",       c->port);
+    cJSON_AddStringToObject(json, "username",   c->username);
+    cJSON_AddStringToObject(json, "password",   "");  // never echo
+    cJSON_AddStringToObject(json, "client_id",  c->client_id);
+    cJSON_AddStringToObject(json, "base_topic", c->base_topic);
+
+    cJSON *arr = cJSON_CreateArray();
+    for (int i = 0; i < MQTT_MAX_WIDGETS; ++i) {
+        mqtt_widget_t *w = &c->widgets[i];
+        cJSON *o = cJSON_CreateObject();
+        cJSON_AddStringToObject(o, "type",        mqtt_widget_type_name(w->type));
+        cJSON_AddStringToObject(o, "title",       w->title);
+        cJSON_AddStringToObject(o, "topic_cmd",   w->topic_cmd);
+        cJSON_AddStringToObject(o, "topic_state", w->topic_state);
+        cJSON_AddStringToObject(o, "json_path",   w->json_path);
+        cJSON_AddStringToObject(o, "unit",        w->unit);
+        cJSON_AddNumberToObject(o, "min",         w->min);
+        cJSON_AddNumberToObject(o, "max",         w->max);
+        cJSON_AddNumberToObject(o, "step",        w->step);
+        cJSON_AddItemToArray(arr, o);
+    }
+    cJSON_AddItemToObject(json, "widgets", arr);
+
+    char *str = cJSON_PrintUnformatted(json);
+    cJSON_Delete(json);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    httpd_resp_sendstr(req, str);
+    free(str);
+    return ESP_OK;
+}
+
+static void copy_str_field(char *dst, size_t dst_sz, const char *src)
+{
+    dst[0] = '\0';
+    if (src) strncpy(dst, src, dst_sz - 1);
+}
+
+static esp_err_t api_mqtt_post_handler(httpd_req_t *req)
+{
+    char *buf = NULL;
+    if (read_body(req, &buf, 16384) != ESP_OK) return ESP_FAIL;
+
+    cJSON *json = cJSON_Parse(buf);
+    free(buf);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    mqtt_config_t *c = mqtt_config_get();
+    cJSON *j;
+    j = cJSON_GetObjectItem(json, "enabled");    if (cJSON_IsBool(j))   c->enabled = cJSON_IsTrue(j);
+    j = cJSON_GetObjectItem(json, "host");       if (cJSON_IsString(j)) copy_str_field(c->host,       sizeof(c->host),       j->valuestring);
+    j = cJSON_GetObjectItem(json, "port");       if (cJSON_IsNumber(j)) c->port = j->valueint;
+    j = cJSON_GetObjectItem(json, "username");   if (cJSON_IsString(j)) copy_str_field(c->username,   sizeof(c->username),   j->valuestring);
+    // password: empty from client = keep the old one (mirrors wifi behavior)
+    j = cJSON_GetObjectItem(json, "password");
+    if (cJSON_IsString(j) && j->valuestring[0] != '\0') {
+        copy_str_field(c->password, sizeof(c->password), j->valuestring);
+    }
+    j = cJSON_GetObjectItem(json, "client_id");  if (cJSON_IsString(j)) copy_str_field(c->client_id,  sizeof(c->client_id),  j->valuestring);
+    j = cJSON_GetObjectItem(json, "base_topic"); if (cJSON_IsString(j)) copy_str_field(c->base_topic, sizeof(c->base_topic), j->valuestring);
+
+    cJSON *arr = cJSON_GetObjectItem(json, "widgets");
+    if (cJSON_IsArray(arr)) {
+        int n = cJSON_GetArraySize(arr);
+        if (n > MQTT_MAX_WIDGETS) n = MQTT_MAX_WIDGETS;
+        // Reset all slots first so a shorter list clears removed widgets
+        for (int i = 0; i < MQTT_MAX_WIDGETS; ++i) {
+            memset(&c->widgets[i], 0, sizeof(c->widgets[i]));
+            c->widgets[i].type = MQTT_W_NONE;
+            c->widgets[i].min  = 0; c->widgets[i].max = 100; c->widgets[i].step = 1;
+        }
+        for (int i = 0; i < n; ++i) {
+            cJSON *o = cJSON_GetArrayItem(arr, i);
+            if (!cJSON_IsObject(o)) continue;
+            mqtt_widget_t *w = &c->widgets[i];
+            cJSON *k;
+            k = cJSON_GetObjectItem(o, "type");        if (cJSON_IsString(k)) w->type = mqtt_widget_type_from_name(k->valuestring);
+            k = cJSON_GetObjectItem(o, "title");       if (cJSON_IsString(k)) copy_str_field(w->title,       sizeof(w->title),       k->valuestring);
+            k = cJSON_GetObjectItem(o, "topic_cmd");   if (cJSON_IsString(k)) copy_str_field(w->topic_cmd,   sizeof(w->topic_cmd),   k->valuestring);
+            k = cJSON_GetObjectItem(o, "topic_state"); if (cJSON_IsString(k)) copy_str_field(w->topic_state, sizeof(w->topic_state), k->valuestring);
+            k = cJSON_GetObjectItem(o, "json_path");   if (cJSON_IsString(k)) copy_str_field(w->json_path,   sizeof(w->json_path),   k->valuestring);
+            k = cJSON_GetObjectItem(o, "unit");        if (cJSON_IsString(k)) copy_str_field(w->unit,        sizeof(w->unit),        k->valuestring);
+            k = cJSON_GetObjectItem(o, "min");         if (cJSON_IsNumber(k)) w->min  = k->valueint;
+            k = cJSON_GetObjectItem(o, "max");         if (cJSON_IsNumber(k)) w->max  = k->valueint;
+            k = cJSON_GetObjectItem(o, "step");        if (cJSON_IsNumber(k)) w->step = k->valueint;
+            if (w->step < 1) w->step = 1;
+        }
+    }
+
+    cJSON_Delete(json);
+
+    mqtt_config_save();
+    mqtt_svc_reconfigure();
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true}");
+    return ESP_OK;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // FILE EDITOR — list + save raw text into /spiffs (html/css/js → .gz, else raw)
 // GET /api/files            — JSON [{name, size, gz}] of editable files
 // PUT /api/files/<name>     — body = plain text; server gzips when applicable
@@ -1491,7 +1559,7 @@ void http_server_start(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn      = httpd_uri_match_wildcard;
-    config.max_uri_handlers  = 28;
+    config.max_uri_handlers  = 32;
     // max_open_sockets: each lwIP socket uses ~2KB internal RAM for buffers
     // TCP + control. On ESP32 with tight internal heap (radio TLS, WiFi, LVGL)
     // 13 sockets caused the TLS audio stream to drop on page open.
@@ -1661,6 +1729,21 @@ void http_server_start(void)
         .handler = api_ui_profile_reset_handler,
     };
     httpd_register_uri_handler(server, &api_ui_reset);
+
+    // ── MQTT ──────────────────────────────────────────────────────────────────
+    httpd_uri_t api_mqtt_get = {
+        .uri     = "/api/mqtt",
+        .method  = HTTP_GET,
+        .handler = api_mqtt_get_handler,
+    };
+    httpd_register_uri_handler(server, &api_mqtt_get);
+
+    httpd_uri_t api_mqtt_post = {
+        .uri     = "/api/mqtt",
+        .method  = HTTP_POST,
+        .handler = api_mqtt_post_handler,
+    };
+    httpd_register_uri_handler(server, &api_mqtt_post);
 
     // ── FILE EDITOR ───────────────────────────────────────────────────────────
     httpd_uri_t api_files_get = {

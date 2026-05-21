@@ -3,6 +3,7 @@
 #if CONFIG_MQTT_ENABLE
 
 #include "mqtt_svc.h"
+#include "mqtt_config.h"
 #include "mqtt_client.h"
 #include "esp_log.h"
 #include "esp_event.h"
@@ -10,7 +11,6 @@
 #include "freertos/task.h"
 #include "app_state.h"
 #include "settings.h"
-#include "audio_player.h"
 #include "radio_service.h"
 #include "playlist.h"
 #include <stdio.h>
@@ -21,7 +21,7 @@ static const char *TAG = "MQTT";
 
 static esp_mqtt_client_handle_t s_client = NULL;
 static bool                     s_connected = false;
-static mqtt_svc_toggle_state_cb_t s_toggle_cb = NULL;
+static mqtt_svc_widget_state_cb_t s_widget_cb = NULL;
 
 // Cached values for state diffing — publish only on real change.
 static radio_state_t s_last_radio_state = (radio_state_t)-1;
@@ -35,8 +35,8 @@ static char          s_last_station[64] = {0};
 // ─────────────────────────────────────────────────────────────────────────────
 static void make_topic(char *out, size_t out_sz, const char *suffix)
 {
-    app_settings_t *s = settings_get();
-    const char *base = s->mqtt.base_topic[0] ? s->mqtt.base_topic : "atlascube";
+    mqtt_config_t *c = mqtt_config_get();
+    const char *base = c->base_topic[0] ? c->base_topic : "atlascube";
     snprintf(out, out_sz, "%s/%s", base, suffix);
 }
 
@@ -51,10 +51,6 @@ static const char *radio_state_str(radio_state_t st)
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Publish radio state — called from app_state subscriber. Retain so HA gets
-// the last state on (re)connect without waiting for the next change.
-// ─────────────────────────────────────────────────────────────────────────────
 static void publish_str(const char *suffix, const char *payload, bool retain)
 {
     if (!s_connected || !s_client) return;
@@ -117,8 +113,7 @@ static void on_state_change(void)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Command dispatcher — payload is a null-terminated C string copied from
-// event->data (esp-mqtt does not null-terminate, we copy first).
+// Command dispatcher (radio control)
 // ─────────────────────────────────────────────────────────────────────────────
 static void handle_cmd(const char *suffix, const char *payload)
 {
@@ -161,8 +156,6 @@ static void handle_cmd(const char *suffix, const char *payload)
     }
 }
 
-// Extracts the "<...>/cmd/<suffix>" tail from a full topic. Returns NULL if
-// the topic does not match the cmd prefix for this device.
 static const char *cmd_suffix(const char *topic, int topic_len)
 {
     char prefix[128];
@@ -173,63 +166,95 @@ static const char *cmd_suffix(const char *topic, int topic_len)
     return topic + plen;
 }
 
-// Returns 1/0 for ON/OFF, -1 if the payload does not look like a recognized
-// boolean. Accepts:
-//   - plain text: ON / OFF / on / off / true / false / 1 / 0
-//   - JSON with a "state" key, e.g. {"state":"ON",...} as published by
-//     zigbee2mqtt — we look for the substring "state":"ON" / "state":"OFF"
-//     (case-insensitive on the value, tolerant of optional whitespace).
-static int parse_bool_payload(const char *payload, int payload_len)
+// ─────────────────────────────────────────────────────────────────────────────
+// JSON path extraction — minimal "key":value finder, no nesting.
+// Writes extracted value (or copy of input) into `out` (null-terminated).
+// Returns true on success.
+// ─────────────────────────────────────────────────────────────────────────────
+static bool extract_json_value(const char *payload, int payload_len,
+                               const char *key,
+                               char *out, size_t out_sz)
 {
-    if (payload_len <= 0) return -1;
+    if (out_sz == 0) return false;
+    out[0] = '\0';
 
-    // Plain text — first non-space chars
-    int i = 0;
-    while (i < payload_len && (payload[i] == ' ' || payload[i] == '\t')) i++;
-    int rem = payload_len - i;
-    const char *p = payload + i;
+    // Build "key" search needle
+    char needle[64];
+    int  needle_len = snprintf(needle, sizeof(needle), "\"%s\"", key);
+    if (needle_len <= 0 || needle_len >= (int)sizeof(needle)) return false;
 
-    if (rem >= 3 && strncasecmp(p, "off", 3) == 0)   return 0;
-    if (rem >= 5 && strncasecmp(p, "false", 5) == 0) return 0;
-    if (rem >= 2 && strncasecmp(p, "on", 2) == 0)    return 1;
-    if (rem >= 4 && strncasecmp(p, "true", 4) == 0)  return 1;
-    if (rem >= 1 && p[0] == '0')                     return 0;
-    if (rem >= 1 && p[0] == '1')                     return 1;
-
-    // JSON-like — find the "state" key. Stack copy so we can null-terminate
-    // for strstr; zigbee2mqtt state JSONs are typically a few hundred bytes.
+    // Cap copy for strstr
     char buf[512];
     int n = payload_len < (int)sizeof(buf) - 1 ? payload_len : (int)sizeof(buf) - 1;
     memcpy(buf, payload, n);
     buf[n] = '\0';
-    const char *k = strstr(buf, "\"state\"");
-    if (k) {
-        k += 7;
-        while (*k == ' ' || *k == ':' || *k == '\t' || *k == '"') k++;
-        if (strncasecmp(k, "ON",  2) == 0) return 1;
-        if (strncasecmp(k, "OFF", 3) == 0) return 0;
+
+    const char *k = strstr(buf, needle);
+    if (!k) return false;
+    k += needle_len;
+    while (*k == ' ' || *k == ':' || *k == '\t') k++;
+
+    if (*k == '"') {
+        k++;
+        size_t i = 0;
+        while (*k && *k != '"' && i < out_sz - 1) out[i++] = *k++;
+        out[i] = '\0';
+        return true;
     }
-    return -1;
+    // Bare number / bool / null
+    size_t i = 0;
+    while (*k && *k != ',' && *k != '}' && *k != ' ' && *k != '\n' && *k != '\r' && i < out_sz - 1)
+        out[i++] = *k++;
+    out[i] = '\0';
+    return i > 0;
 }
 
-static void match_toggle_state(const char *topic, int topic_len,
-                               const char *payload, int payload_len)
+// ─────────────────────────────────────────────────────────────────────────────
+// Per-widget state dispatch
+// ─────────────────────────────────────────────────────────────────────────────
+static void dispatch_widget_state(const char *topic, int topic_len,
+                                  const char *payload, int payload_len)
 {
-    app_settings_t *s = settings_get();
-    if (!s->mqtt.toggle_topic_state[0]) return;
+    mqtt_config_t *c = mqtt_config_get();
+    for (int i = 0; i < MQTT_MAX_WIDGETS; ++i) {
+        mqtt_widget_t *w = &c->widgets[i];
+        if (w->type == MQTT_W_NONE)      continue;
+        if (w->topic_state[0] == '\0')   continue;
+        size_t tlen = strlen(w->topic_state);
+        if (tlen != (size_t)topic_len)   continue;
+        if (strncmp(topic, w->topic_state, tlen) != 0) continue;
 
-    size_t tlen = strlen(s->mqtt.toggle_topic_state);
-    if (tlen != (size_t)topic_len) return;
-    if (strncmp(topic, s->mqtt.toggle_topic_state, tlen) != 0) return;
-
-    int v = parse_bool_payload(payload, payload_len);
-    if (v < 0) return;
-    if (s_toggle_cb) s_toggle_cb(v == 1);
+        char value[64];
+        if (w->json_path[0]) {
+            if (!extract_json_value(payload, payload_len, w->json_path,
+                                    value, sizeof(value))) {
+                continue;   // key not present in this message
+            }
+        } else {
+            int n = payload_len < (int)sizeof(value) - 1
+                  ? payload_len : (int)sizeof(value) - 1;
+            memcpy(value, payload, n);
+            value[n] = '\0';
+        }
+        if (s_widget_cb) s_widget_cb(i, value);
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MQTT event handler — runs in the esp-mqtt task. Do not call LVGL from here.
+// MQTT event handler
 // ─────────────────────────────────────────────────────────────────────────────
+static void subscribe_widget_states(void)
+{
+    if (!s_client) return;
+    mqtt_config_t *c = mqtt_config_get();
+    for (int i = 0; i < MQTT_MAX_WIDGETS; ++i) {
+        mqtt_widget_t *w = &c->widgets[i];
+        if (w->type == MQTT_W_NONE)    continue;
+        if (w->topic_state[0] == '\0') continue;
+        esp_mqtt_client_subscribe(s_client, w->topic_state, 0);
+    }
+}
+
 static void on_mqtt_event(void *handler_args, esp_event_base_t base,
                           int32_t event_id, void *event_data)
 {
@@ -241,22 +266,14 @@ static void on_mqtt_event(void *handler_args, esp_event_base_t base,
             ESP_LOGI(TAG, "connected");
             s_connected = true;
 
-            // Status (online) — retained, overrides LWT
             publish_str("status", "online", true);
 
-            // Subscribe to all device-scoped commands
             char topic[160];
             make_topic(topic, sizeof(topic), "cmd/+");
             esp_mqtt_client_subscribe(s_client, topic, 0);
 
-            // Subscribe to the toggle state topic if configured
-            app_settings_t *s = settings_get();
-            if (s->mqtt.toggle_topic_state[0]) {
-                esp_mqtt_client_subscribe(s_client, s->mqtt.toggle_topic_state, 0);
-            }
+            subscribe_widget_states();
 
-            // Push full state so HA / dashboards converge on reconnect.
-            // Force a re-publish by resetting the diff cache.
             s_last_radio_state = (radio_state_t)-1;
             s_last_volume = s_last_index = -1;
             s_last_title[0] = s_last_station[0] = '\0';
@@ -268,7 +285,6 @@ static void on_mqtt_event(void *handler_args, esp_event_base_t base,
             s_connected = false;
             break;
         case MQTT_EVENT_DATA: {
-            // esp-mqtt does not null-terminate; copy into a heap buffer.
             char *topic = (char *)malloc(ev->topic_len + 1);
             char *data  = (char *)malloc(ev->data_len  + 1);
             if (!topic || !data) { free(topic); free(data); break; }
@@ -279,7 +295,7 @@ static void on_mqtt_event(void *handler_args, esp_event_base_t base,
             if (suffix) {
                 handle_cmd(suffix, data);
             } else {
-                match_toggle_state(topic, ev->topic_len, data, ev->data_len);
+                dispatch_widget_state(topic, ev->topic_len, data, ev->data_len);
             }
             free(topic); free(data);
             break;
@@ -306,30 +322,29 @@ static void stop_client(void)
 
 static void start_client(void)
 {
-    app_settings_t *s = settings_get();
+    mqtt_config_t *c = mqtt_config_get();
 
-    if (!s->mqtt.enabled) {
-        ESP_LOGI(TAG, "disabled in settings");
+    if (!c->enabled) {
+        ESP_LOGI(TAG, "disabled in config");
         return;
     }
-    if (s->mqtt.host[0] == '\0') {
+    if (c->host[0] == '\0') {
         ESP_LOGW(TAG, "host empty — not starting");
         return;
     }
 
-    int port = s->mqtt.port > 0 ? s->mqtt.port : 1883;
-
+    int port = c->port > 0 ? c->port : 1883;
     char uri[96];
-    snprintf(uri, sizeof(uri), "mqtt://%s:%d", s->mqtt.host, port);
+    snprintf(uri, sizeof(uri), "mqtt://%s:%d", c->host, port);
 
     char lwt_topic[160];
     make_topic(lwt_topic, sizeof(lwt_topic), "status");
 
     esp_mqtt_client_config_t cfg = {
         .broker.address.uri = uri,
-        .credentials.client_id = s->mqtt.client_id[0] ? s->mqtt.client_id : NULL,
-        .credentials.username  = s->mqtt.username[0]  ? s->mqtt.username  : NULL,
-        .credentials.authentication.password = s->mqtt.password[0] ? s->mqtt.password : NULL,
+        .credentials.client_id = c->client_id[0] ? c->client_id : NULL,
+        .credentials.username  = c->username[0]  ? c->username  : NULL,
+        .credentials.authentication.password = c->password[0] ? c->password : NULL,
         .session.last_will = {
             .topic   = lwt_topic,
             .msg     = "offline",
@@ -352,6 +367,7 @@ static void start_client(void)
 
 void mqtt_svc_init(void)
 {
+    mqtt_config_load();
     app_state_subscribe(on_state_change);
     start_client();
 }
@@ -362,24 +378,34 @@ void mqtt_svc_reconfigure(void)
     start_client();
 }
 
-bool mqtt_svc_is_connected(void)
+bool mqtt_svc_is_connected(void) { return s_connected; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Widget publish
+// ─────────────────────────────────────────────────────────────────────────────
+static void publish_widget(int idx, const char *payload)
 {
-    return s_connected;
+    if (!s_connected || idx < 0 || idx >= MQTT_MAX_WIDGETS) return;
+    mqtt_widget_t *w = &mqtt_config_get()->widgets[idx];
+    if (w->topic_cmd[0] == '\0') return;
+    esp_mqtt_client_publish(s_client, w->topic_cmd, payload, 0, 0, 0);
 }
 
-void mqtt_svc_publish_toggle(bool on)
+void mqtt_svc_publish_widget_bool(int idx, bool on)
 {
-    if (!s_connected) return;
-    app_settings_t *s = settings_get();
-    if (!s->mqtt.toggle_topic_cmd[0]) return;
-    const char *payload = on ? "ON" : "OFF";
-    esp_mqtt_client_publish(s_client, s->mqtt.toggle_topic_cmd,
-                            payload, 0, 0, 0);
+    publish_widget(idx, on ? "ON" : "OFF");
 }
 
-void mqtt_svc_set_toggle_state_cb(mqtt_svc_toggle_state_cb_t cb)
+void mqtt_svc_publish_widget_int(int idx, int value)
 {
-    s_toggle_cb = cb;
+    char buf[16];
+    snprintf(buf, sizeof(buf), "%d", value);
+    publish_widget(idx, buf);
+}
+
+void mqtt_svc_set_widget_state_cb(mqtt_svc_widget_state_cb_t cb)
+{
+    s_widget_cb = cb;
 }
 
 #endif /* CONFIG_MQTT_ENABLE */

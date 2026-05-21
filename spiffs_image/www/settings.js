@@ -356,20 +356,6 @@ function populateForm(s) {
         const sel = document.getElementById('scrs_id');
         if (sel) sel.value = s.scrsaver.id || 'clockhands';
     }
-    if (s.mqtt) {
-        const en = !!s.mqtt.enabled;
-        document.getElementById('mqttBtnOn') ?.classList.toggle('active', en);
-        document.getElementById('mqttBtnOff')?.classList.toggle('active', !en);
-        setVal('mqtt_host',               s.mqtt.host               || '');
-        setVal('mqtt_port',               s.mqtt.port               || 1883);
-        setVal('mqtt_username',           s.mqtt.username           || '');
-        // password never echoed
-        setVal('mqtt_client_id',          s.mqtt.client_id          || '');
-        setVal('mqtt_base_topic',         s.mqtt.base_topic         || '');
-        setVal('mqtt_toggle_label',       s.mqtt.toggle_label       || '');
-        setVal('mqtt_toggle_topic_cmd',   s.mqtt.toggle_topic_cmd   || '');
-        setVal('mqtt_toggle_topic_state', s.mqtt.toggle_topic_state || '');
-    }
     if (s.dashboard) {
         setVal('dash_title',     s.dashboard.title     ?? '');
         setVal('dash_url',       s.dashboard.url       ?? '');
@@ -462,11 +448,30 @@ async function saveSettings() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MQTT
+// MQTT — broker config only; widget editor lives at /mqtt.html
+// State is fetched/saved via /api/mqtt (not /api/settings).
 // ─────────────────────────────────────────────────────────────────────────────
 function setMqttEnabled(t) {
     document.getElementById('mqttBtnOn') ?.classList.toggle('active', t);
     document.getElementById('mqttBtnOff')?.classList.toggle('active', !t);
+}
+
+async function loadMqtt() {
+    try {
+        const r = await fetch('/api/mqtt', { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const c = await r.json();
+        const en = !!c.enabled;
+        document.getElementById('mqttBtnOn') ?.classList.toggle('active', en);
+        document.getElementById('mqttBtnOff')?.classList.toggle('active', !en);
+        setVal('mqtt_host',       c.host       || '');
+        setVal('mqtt_port',       c.port       || 1883);
+        setVal('mqtt_username',   c.username   || '');
+        setVal('mqtt_client_id',  c.client_id  || '');
+        setVal('mqtt_base_topic', c.base_topic || '');
+    } catch (e) {
+        console.error('loadMqtt', e);
+    }
 }
 
 async function saveMqtt() {
@@ -479,28 +484,25 @@ async function saveMqtt() {
     let port = parseInt(get('mqtt_port'), 10);
     if (isNaN(port) || port < 1 || port > 65535) port = 1883;
 
-    const payload = { mqtt: {
+    const payload = {
         enabled,
-        host:               get('mqtt_host').trim(),
+        host:       get('mqtt_host').trim(),
         port,
-        username:           get('mqtt_username').trim(),
-        password:           get('mqtt_password'),    // empty → keep old
-        client_id:          get('mqtt_client_id').trim(),
-        base_topic:         get('mqtt_base_topic').trim(),
-        toggle_label:       get('mqtt_toggle_label'),
-        toggle_topic_cmd:   get('mqtt_toggle_topic_cmd').trim(),
-        toggle_topic_state: get('mqtt_toggle_topic_state').trim(),
-    }};
+        username:   get('mqtt_username').trim(),
+        password:   get('mqtt_password'),       // empty → keep old
+        client_id:  get('mqtt_client_id').trim(),
+        base_topic: get('mqtt_base_topic').trim(),
+        // widgets omitted — editor at /mqtt.html owns that array
+    };
 
     try {
-        const r = await fetch('/api/settings', {
+        const r = await fetch('/api/mqtt', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         showMqttStatus('✅ Saved. Client reconnecting…', 'ok');
-        // Clear password field so a second save does not re-send it accidentally
         document.getElementById('mqtt_password').value = '';
     } catch (e) {
         showMqttStatus('❌ ' + e.message, 'error');
@@ -667,3 +669,4 @@ function showColorsStatus(msg, type) {
 initTabs();
 loadSettings();
 loadColors();
+loadMqtt();

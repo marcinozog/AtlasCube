@@ -1,6 +1,7 @@
 idf_component_register(
     SRCS
         "mqtt_svc.c"
+        "mqtt_config.c"
     INCLUDE_DIRS
         "."
     REQUIRES
@@ -11,4 +12,5 @@ idf_component_register(
         settings_ex
         audio
         playlist
+        spiffs
 )

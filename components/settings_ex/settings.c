@@ -62,17 +62,6 @@ esp_err_t settings_init(void)
         s_settings.dashboard.notify_str_eq[0]   = '\0';
         s_settings.dashboard.notify_str_ne_en   = false;
         s_settings.dashboard.notify_str_ne[0]   = '\0';
-        // MQTT — disabled by default; user fills the host etc. from the web UI
-        s_settings.mqtt.enabled = false;
-        s_settings.mqtt.host[0] = '\0';
-        s_settings.mqtt.port    = 1883;
-        s_settings.mqtt.username[0]  = '\0';
-        s_settings.mqtt.password[0]  = '\0';
-        strncpy(s_settings.mqtt.client_id,  "atlascube", sizeof(s_settings.mqtt.client_id)  - 1);
-        strncpy(s_settings.mqtt.base_topic, "atlascube", sizeof(s_settings.mqtt.base_topic) - 1);
-        s_settings.mqtt.toggle_topic_cmd[0]   = '\0';
-        s_settings.mqtt.toggle_topic_state[0] = '\0';
-        strncpy(s_settings.mqtt.toggle_label, "Switch", sizeof(s_settings.mqtt.toggle_label) - 1);
 
         save_to_file();
     }
@@ -283,42 +272,6 @@ static esp_err_t load_from_file(void)
         }
     }
 
-    // ── MQTT ──────────────────────────────────────────────────────────────────
-    // Defaults first; load_from_file overrides only present fields
-    s_settings.mqtt.enabled = false;
-    s_settings.mqtt.host[0] = '\0';
-    s_settings.mqtt.port    = 1883;
-    s_settings.mqtt.username[0]  = '\0';
-    s_settings.mqtt.password[0]  = '\0';
-    strncpy(s_settings.mqtt.client_id,  "atlascube", sizeof(s_settings.mqtt.client_id)  - 1);
-    strncpy(s_settings.mqtt.base_topic, "atlascube", sizeof(s_settings.mqtt.base_topic) - 1);
-    s_settings.mqtt.toggle_topic_cmd[0]   = '\0';
-    s_settings.mqtt.toggle_topic_state[0] = '\0';
-    strncpy(s_settings.mqtt.toggle_label, "Switch", sizeof(s_settings.mqtt.toggle_label) - 1);
-    cJSON *mqtt = cJSON_GetObjectItem(json, "mqtt");
-    if (cJSON_IsObject(mqtt)) {
-        cJSON *en   = cJSON_GetObjectItem(mqtt, "enabled");
-        cJSON *host = cJSON_GetObjectItem(mqtt, "host");
-        cJSON *port = cJSON_GetObjectItem(mqtt, "port");
-        cJSON *user = cJSON_GetObjectItem(mqtt, "username");
-        cJSON *pass = cJSON_GetObjectItem(mqtt, "password");
-        cJSON *cid  = cJSON_GetObjectItem(mqtt, "client_id");
-        cJSON *bt   = cJSON_GetObjectItem(mqtt, "base_topic");
-        cJSON *tc   = cJSON_GetObjectItem(mqtt, "toggle_topic_cmd");
-        cJSON *ts   = cJSON_GetObjectItem(mqtt, "toggle_topic_state");
-        cJSON *tl   = cJSON_GetObjectItem(mqtt, "toggle_label");
-        if (cJSON_IsBool  (en))   s_settings.mqtt.enabled = cJSON_IsTrue(en);
-        if (cJSON_IsString(host)) { s_settings.mqtt.host[0]    = '\0'; strncpy(s_settings.mqtt.host,    host->valuestring, sizeof(s_settings.mqtt.host)    - 1); }
-        if (cJSON_IsNumber(port)) s_settings.mqtt.port = port->valueint;
-        if (cJSON_IsString(user)) { s_settings.mqtt.username[0]= '\0'; strncpy(s_settings.mqtt.username,user->valuestring, sizeof(s_settings.mqtt.username)- 1); }
-        if (cJSON_IsString(pass)) { s_settings.mqtt.password[0]= '\0'; strncpy(s_settings.mqtt.password,pass->valuestring, sizeof(s_settings.mqtt.password)- 1); }
-        if (cJSON_IsString(cid))  { s_settings.mqtt.client_id[0]='\0'; strncpy(s_settings.mqtt.client_id, cid->valuestring,  sizeof(s_settings.mqtt.client_id) - 1); }
-        if (cJSON_IsString(bt))   { s_settings.mqtt.base_topic[0]='\0';strncpy(s_settings.mqtt.base_topic,bt->valuestring,  sizeof(s_settings.mqtt.base_topic) - 1); }
-        if (cJSON_IsString(tc))   { s_settings.mqtt.toggle_topic_cmd[0]  ='\0'; strncpy(s_settings.mqtt.toggle_topic_cmd,   tc->valuestring, sizeof(s_settings.mqtt.toggle_topic_cmd)   - 1); }
-        if (cJSON_IsString(ts))   { s_settings.mqtt.toggle_topic_state[0]='\0'; strncpy(s_settings.mqtt.toggle_topic_state, ts->valuestring, sizeof(s_settings.mqtt.toggle_topic_state) - 1); }
-        if (cJSON_IsString(tl))   { s_settings.mqtt.toggle_label[0]      ='\0'; strncpy(s_settings.mqtt.toggle_label,       tl->valuestring, sizeof(s_settings.mqtt.toggle_label)       - 1); }
-    }
-
     // ── WIFI ──────────────────────────────────────────────────────────────────
     cJSON *wifi_obj = cJSON_GetObjectItem(json, "wifi");
     if (cJSON_IsObject(wifi_obj)) {
@@ -425,20 +378,6 @@ static esp_err_t save_to_file(void)
     cJSON_AddStringToObject(notify, "str_ne",      s_settings.dashboard.notify_str_ne);
     cJSON_AddItemToObject  (dash, "notify", notify);
     cJSON_AddItemToObject(json, "dashboard", dash);
-
-    // mqtt
-    cJSON *mqtt = cJSON_CreateObject();
-    cJSON_AddBoolToObject  (mqtt, "enabled",            s_settings.mqtt.enabled);
-    cJSON_AddStringToObject(mqtt, "host",               s_settings.mqtt.host);
-    cJSON_AddNumberToObject(mqtt, "port",               s_settings.mqtt.port);
-    cJSON_AddStringToObject(mqtt, "username",           s_settings.mqtt.username);
-    cJSON_AddStringToObject(mqtt, "password",           s_settings.mqtt.password);
-    cJSON_AddStringToObject(mqtt, "client_id",          s_settings.mqtt.client_id);
-    cJSON_AddStringToObject(mqtt, "base_topic",         s_settings.mqtt.base_topic);
-    cJSON_AddStringToObject(mqtt, "toggle_topic_cmd",   s_settings.mqtt.toggle_topic_cmd);
-    cJSON_AddStringToObject(mqtt, "toggle_topic_state", s_settings.mqtt.toggle_topic_state);
-    cJSON_AddStringToObject(mqtt, "toggle_label",       s_settings.mqtt.toggle_label);
-    cJSON_AddItemToObject(json, "mqtt", mqtt);
 
     char *str = cJSON_PrintUnformatted(json);
 

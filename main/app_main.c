@@ -19,6 +19,7 @@
 #include "events_service.h"
 #include "ui_profile.h"
 #include "mqtt_svc.h"
+#include "mqtt_config.h"
 
 static const char *TAG = "MAIN";
 
@@ -33,6 +34,11 @@ void app_main(void)
 
     nvs_flash_init();
     init_fs();
+
+    // mqtt config must load after fs is mounted; before http_server starts
+    // so /api/mqtt GET sees real data. mqtt_svc_init() also calls load again
+    // (idempotent) so it's safe to read here for early consumers.
+    mqtt_config_load();
 
     // ── Basic initialization (order matters!) ────────────────────────────────
     app_state_init();      // 1. initializes s_cbs[]
