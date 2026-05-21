@@ -251,12 +251,12 @@ The device runs an MQTT client that connects to a local broker (e.g. Mosquitto) 
 
 - **Compile-time switch**: `CONFIG_MQTT_ENABLE` (menuconfig → *MQTT configuration*). Default `y`; set `n` to drop the component entirely from the firmware.
 - **Connection**: plain TCP (LAN-only, no TLS), QoS 0, automatic reconnect (handled by `esp-mqtt`).
-- **Will / online status**: the device publishes `online` (retained) to `<base>/<client_id>/status` on connect, and the broker delivers `offline` (LWT, retained) on unexpected disconnect.
+- **Will / online status**: the device publishes `online` (retained) to `<base_topic>/status` on connect, and the broker delivers `offline` (LWT, retained) on unexpected disconnect.
 - **Payload style**: plain text on hierarchical topics (Tasmota/HA-style) — easy to use from `mosquitto_pub` and to wire into Home Assistant via `command_topic`/`state_topic` in YAML.
 
 ### Topic map
 
-All radio topics use the prefix `<base>/<client_id>/` — both segments configurable; defaults: `atlascube/atlascube/`.
+All radio topics use the prefix `<base_topic>/` (default: `atlascube/`). The MQTT `client_id` is a separate broker-level identifier and does not appear in topic names.
 
 | Topic suffix | Direction | Payload | Notes |
 |---|---|---|---|
@@ -293,9 +293,9 @@ mosquitto_sub -h 192.168.1.10 -v -t 'atlascube/#'
 Control the radio:
 
 ```bash
-mosquitto_pub -h 192.168.1.10 -t atlascube/atlascube/cmd/play
-mosquitto_pub -h 192.168.1.10 -t atlascube/atlascube/cmd/volume  -m 30
-mosquitto_pub -h 192.168.1.10 -t atlascube/atlascube/cmd/station -m 2
+mosquitto_pub -h 192.168.1.10 -t atlascube/cmd/play
+mosquitto_pub -h 192.168.1.10 -t atlascube/cmd/volume  -m 30
+mosquitto_pub -h 192.168.1.10 -t atlascube/cmd/station -m 2
 ```
 
 Minimal Home Assistant YAML:
@@ -304,19 +304,19 @@ Minimal Home Assistant YAML:
 mqtt:
   switch:
     - name: AtlasCube Radio
-      command_topic: atlascube/atlascube/cmd/play
+      command_topic: atlascube/cmd/play
       payload_off:   stopped       # use cmd/stop for off; or split into two switches
-      state_topic:   atlascube/atlascube/state/playing
+      state_topic:   atlascube/state/playing
       payload_on:    playing
   number:
     - name: AtlasCube Volume
-      command_topic: atlascube/atlascube/cmd/volume
-      state_topic:   atlascube/atlascube/state/volume
+      command_topic: atlascube/cmd/volume
+      state_topic:   atlascube/state/volume
       min: 0
       max: 100
   sensor:
     - name: AtlasCube Title
-      state_topic: atlascube/atlascube/state/title
+      state_topic: atlascube/state/title
 ```
 
 > HA MQTT Discovery (auto-registration) is not implemented yet — entities are declared manually as above.

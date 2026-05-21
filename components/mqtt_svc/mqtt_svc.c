@@ -37,8 +37,7 @@ static void make_topic(char *out, size_t out_sz, const char *suffix)
 {
     app_settings_t *s = settings_get();
     const char *base = s->mqtt.base_topic[0] ? s->mqtt.base_topic : "atlascube";
-    const char *cid  = s->mqtt.client_id[0]  ? s->mqtt.client_id  : "device";
-    snprintf(out, out_sz, "%s/%s/%s", base, cid, suffix);
+    snprintf(out, out_sz, "%s/%s", base, suffix);
 }
 
 static const char *radio_state_str(radio_state_t st)

@@ -331,8 +331,8 @@
         <div class="panel">
             <label class="field-label">MQTT client</label>
             <div class="theme-toggle" id="mqttEnabledToggle" style="width:fit-content">
-                <button class="theme-btn" id="mqttBtnOn"  onclick="setMqttEnabled(true)">✅ Enabled</button>
-                <button class="theme-btn" id="mqttBtnOff" onclick="setMqttEnabled(false)">❌ Disabled</button>
+                <button class="theme-btn" id="mqttBtnOn"  onclick="setMqttEnabled(true)">✅ On</button>
+                <button class="theme-btn" id="mqttBtnOff" onclick="setMqttEnabled(false)">❌ Off</button>
             </div>
             <div class="field-hint">When disabled, the device does not connect to the broker.</div>
         </div>
@@ -361,7 +361,7 @@
         <div class="panel">
             <label class="field-label">Base topic</label>
             <input type="text" id="mqtt_base_topic" class="field-input" placeholder="atlascube" />
-            <div class="field-hint">Device topics will be: &lt;base&gt;/&lt;client_id&gt;/state/* and /cmd/*.</div>
+            <div class="field-hint">Device topics will be: &lt;base&gt;/state/* and &lt;base&gt;/cmd/*.</div>
         </div>
 
         <div class="panel">
