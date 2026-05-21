@@ -10,6 +10,40 @@ const $sel  = document.getElementById('file_select');
 const $code = document.getElementById('code');
 const $meta = document.getElementById('file_meta');
 const $st   = document.getElementById('status');
+const $js   = document.getElementById('json_status');
+
+function isJsonFile(name) {
+    return !!name && name.toLowerCase().endsWith('.json');
+}
+
+function setJsonStatus(kind, msg) {
+    if (!kind) { $js.className = 'json-status hidden'; $js.textContent = ''; return; }
+    $js.className = 'json-status ' + kind;
+    $js.textContent = msg;
+}
+
+/* Parse error position → 1-based line/col for the user. */
+function jsonErrorLocation(text, err) {
+    const m = /position\s+(\d+)/i.exec(err && err.message || '');
+    if (!m) return null;
+    const pos = Math.min(parseInt(m[1], 10), text.length);
+    let line = 1, col = 1;
+    for (let i = 0; i < pos; i++) {
+        if (text.charCodeAt(i) === 10) { line++; col = 1; } else { col++; }
+    }
+    return { line, col };
+}
+
+function validateJson(text) {
+    if (!text.trim()) { setJsonStatus('ok', '✓ empty'); return; }
+    try {
+        JSON.parse(text);
+        setJsonStatus('ok', '✓ valid JSON');
+    } catch (e) {
+        const loc = jsonErrorLocation(text, e);
+        setJsonStatus('err', '✗ ' + (loc ? 'line ' + loc.line + ', col ' + loc.col + ': ' : '') + e.message);
+    }
+}
 
 function setStatus(msg, kind) {
     $st.className = 'status' + (kind ? ' ' + kind : '');
@@ -72,14 +106,25 @@ async function loadFile() {
         // GET via normal file route — browser transparently decompresses gzip
         const r = await fetch('/' + encodePath(currentName), { cache: 'no-store' });
         if (!r.ok) throw new Error('HTTP ' + r.status);
-        const text = await r.text();
+        let text = await r.text();
+
+        let prettyNote = '';
+        if (isJsonFile(currentName) && text.trim()) {
+            try {
+                text = JSON.stringify(JSON.parse(text), null, 2);
+                prettyNote = ' (pretty-printed)';
+            } catch (_) { /* leave raw so user can fix syntax */ }
+        }
+
         $code.value = text;
         $code.scrollTop = 0;
         $meta.textContent =
             (currentIsGz ? 'gz · ' : 'raw · ') +
             fmtSize(opt.dataset.size) + ' flash · ' +
             text.length + ' chars';
-        setStatus('Loaded ' + currentName, 'ok');
+        setStatus('Loaded ' + currentName + prettyNote, 'ok');
+
+        if (isJsonFile(currentName)) { validateJson(text); } else { setJsonStatus(null); }
     } catch (e) {
         setStatus('Load failed: ' + e.message, 'err');
     }
@@ -127,6 +172,13 @@ function downloadFile() {
 }
 
 $sel.addEventListener('change', loadFile);
+
+let _jsonValidateTimer = null;
+$code.addEventListener('input', () => {
+    if (!isJsonFile(currentName)) return;
+    clearTimeout(_jsonValidateTimer);
+    _jsonValidateTimer = setTimeout(() => validateJson($code.value), 200);
+});
 
 $code.addEventListener('keydown', (e) => {
     if (e.key === 'Tab') {

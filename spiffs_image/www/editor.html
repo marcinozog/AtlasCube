@@ -93,6 +93,10 @@
         .editor-footer .status.ok   { color: var(--green); }
         .editor-footer .status.err  { color: var(--red);   }
         .editor-footer .status.warn { color: var(--orange); }
+        .editor-footer .json-status { color: var(--text-dim); margin-left: 12px; }
+        .editor-footer .json-status.ok  { color: var(--green); }
+        .editor-footer .json-status.err { color: var(--red);   }
+        .editor-footer .json-status.hidden { display: none; }
     </style>
 </head>
 <body>
@@ -122,6 +126,7 @@
     <div class="editor-footer">
         <span class="hint">Tab = 4 spaces · Ctrl+S = save · HTML/CSS/JS gzipped on save · JSON/CSV stored raw</span>
         <span class="status" id="status">Ready</span>
+        <span class="json-status hidden" id="json_status"></span>
     </div>
 
 </main>
