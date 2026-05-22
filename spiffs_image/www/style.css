@@ -139,6 +139,7 @@ body {
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 10px 12px;
+    margin: 10px 0px;
     transition: background .25s, border-color .25s;
 }
 
