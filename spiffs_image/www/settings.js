@@ -90,6 +90,70 @@ function setDisplayBrightness(t) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Night dimming schedule (display)
+// ─────────────────────────────────────────────────────────────────────────────
+function setDimScheduleEnabled(t) {
+    document.getElementById('dimSchedOn') ?.classList.toggle('active', t);
+    document.getElementById('dimSchedOff')?.classList.toggle('active', !t);
+    const panel = document.getElementById('dim_sched_panel');
+    if (panel) panel.style.opacity = t ? '1' : '0.5';
+}
+
+function parseHHMM(s) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(s || '');
+    if (!m) return null;
+    const h = parseInt(m[1], 10), mi = parseInt(m[2], 10);
+    if (h < 0 || h > 23 || mi < 0 || mi > 59) return null;
+    return { h, m: mi };
+}
+
+function fmtHHMM(h, m) {
+    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+
+async function saveDimSchedule() {
+    const btn = document.getElementById('dim_sched_save_btn');
+    if (btn) btn.disabled = true;
+
+    const dim    = parseHHMM(document.getElementById('dim_time').value);
+    const bright = parseHHMM(document.getElementById('bright_time').value);
+    if (!dim || !bright) {
+        showDimSchedStatus('❌ Invalid time', 'error');
+        if (btn) btn.disabled = false;
+        return;
+    }
+    const br = parseInt(document.getElementById('dim_brightness_slider').value, 10);
+    const enabled = !!document.getElementById('dimSchedOn')?.classList.contains('active');
+
+    try {
+        const r = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ display: { dim_schedule: {
+                enabled,
+                dim_hour: dim.h, dim_minute: dim.m,
+                dim_brightness: br,
+                bright_hour: bright.h, bright_minute: bright.m,
+            }}})
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        showDimSchedStatus('✅ Saved', 'ok');
+    } catch (e) {
+        showDimSchedStatus('❌ ' + e.message, 'error');
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+}
+
+function showDimSchedStatus(text, cls) {
+    const el = document.getElementById('dim_sched_status');
+    if (!el) return;
+    el.innerText = text;
+    el.className = 'save-status ' + cls;
+    setTimeout(() => { el.innerText = ''; el.className = 'save-status'; }, 3000);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Bluetooth screen (display)
 // ─────────────────────────────────────────────────────────────────────────────
 function setDeviceBTScreen(t) {
@@ -339,6 +403,19 @@ function populateForm(s) {
             document.getElementById('disp_bright_slider').value = b;
             document.getElementById('disp_bright_value').innerText = b;
         }
+
+        const ds = s.display.dim_schedule || {};
+        const en = !!ds.enabled;
+        document.getElementById('dimSchedOn') ?.classList.toggle('active', en);
+        document.getElementById('dimSchedOff')?.classList.toggle('active', !en);
+        const panel = document.getElementById('dim_sched_panel');
+        if (panel) panel.style.opacity = en ? '1' : '0.5';
+        setVal('dim_time',    fmtHHMM(ds.dim_hour    ?? 22, ds.dim_minute    ?? 0));
+        setVal('bright_time', fmtHHMM(ds.bright_hour ??  7, ds.bright_minute ?? 0));
+        const dbv = ds.dim_brightness ?? 20;
+        setVal('dim_brightness_slider', dbv);
+        const dbl = document.getElementById('dim_brightness_value');
+        if (dbl) dbl.textContent = dbv;
     }
     if (s.bluetooth) {
         const t = s.bluetooth.show_screen || false;

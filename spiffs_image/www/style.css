@@ -707,6 +707,7 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
     margin-top: 4px;
 }
 
+#dim_sched_save_btn,
 #save_btn,
 #scrs_save_btn,
 #mqtt_save_btn,
@@ -726,10 +727,12 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
     box-shadow: 0 0 14px var(--accent-glow);
     transition: background .15s;
 }
+#dim_sched_save_btn:hover:not(:disabled),
 #save_btn:hover:not(:disabled),
 #scrs_save_btn:hover:not(:disabled),
 #mqtt_save_btn:hover:not(:disabled),
 #mqtt_widgets_save_btn:hover:not(:disabled) { background: var(--accent-dim); }
+#dim_sched_save_btn:disabled,
 #save_btn:disabled,
 #scrs_save_btn:disabled,
 #mqtt_save_btn:disabled,

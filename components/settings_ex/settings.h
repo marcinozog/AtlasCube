@@ -16,9 +16,19 @@ typedef struct {
 } playlist_settings_t;
 
 typedef struct {
+    bool enabled;
+    int  dim_hour;
+    int  dim_minute;
+    int  dim_brightness;     // 0–100, applied between dim_time and bright_time
+    int  bright_hour;
+    int  bright_minute;
+} dim_schedule_t;
+
+typedef struct {
     ui_screen_id_t  screen;
     int             brightness;
     ui_theme_t      theme;
+    dim_schedule_t  dim_schedule;
 } display_settings_t;
 
 typedef struct {
@@ -96,6 +106,9 @@ void settings_set_eq_enabled(bool enabled);
 void settings_set_curr_index(int index);
 void settings_set_screen(ui_screen_id_t screen);
 void settings_set_brightness(int brightness);
+void settings_set_dim_schedule(bool enabled,
+                               int dim_hour, int dim_minute, int dim_brightness,
+                               int bright_hour, int bright_minute);
 void settings_set_bt_enable(bool enable);
 void settings_set_bt_show_screen(bool show);
 void settings_set_bt_volume(int volume);

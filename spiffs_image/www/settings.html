@@ -53,6 +53,36 @@
         </div>
 
         <div class="panel">
+            <label class="field-label">🌙 Night dimming schedule</label>
+            <div class="theme-toggle" id="dimSchedToggle" style="width:fit-content">
+                <button type="button" class="theme-btn" id="dimSchedOn"  onclick="setDimScheduleEnabled(true)">✅ On</button>
+                <button type="button" class="theme-btn" id="dimSchedOff" onclick="setDimScheduleEnabled(false)">❌ Off</button>
+            </div>
+            <div class="field-hint">Dims the display between two times of day. Requires NTP-synced clock.</div>
+
+            <div id="dim_sched_panel" style="margin-top:10px">
+                <div class="field-group">
+                    <label class="field-label">Dim at</label>
+                    <input type="time" id="dim_time" class="field-input" style="width:140px" />
+                </div>
+                <div class="field-group">
+                    <label class="field-label">Dim brightness</label>
+                    <div class="slider-row">
+                        <input type="range" min="0" max="100" id="dim_brightness_slider"
+                               oninput="document.getElementById('dim_brightness_value').textContent = this.value" />
+                        <span id="dim_brightness_value" class="slider-value">20</span>
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label class="field-label">Brighten at</label>
+                    <input type="time" id="bright_time" class="field-input" style="width:140px" />
+                </div>
+                <button type="button" id="dim_sched_save_btn" onclick="saveDimSchedule()">💾 Save schedule</button>
+                <div id="dim_sched_status" class="save-status"></div>
+            </div>
+        </div>
+
+        <div class="panel">
             <label class="field-label">Show/hide Bluetooth screen</label>
             <div class="theme-toggle" id="btScreenToggle" style="width:fit-content">
                 <button class="theme-btn" id="settingsBtnBTshow" onclick="setDeviceBTScreen(true)">✅ Show</button>

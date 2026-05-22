@@ -17,6 +17,7 @@
 #include "touch.h"
 #include "buzzer.h"
 #include "events_service.h"
+#include "dim_schedule.h"
 #include "ui_profile.h"
 #include "mqtt_svc.h"
 #include "mqtt_config.h"
@@ -51,6 +52,7 @@ void app_main(void)
     encoder_init();
     touch_init();          // registers LVGL indev — must run before display_start()
     display_start();       // starts lvgl_task; no LVGL state may be touched from other tasks afterwards
+    dim_schedule_init();   // periodic check of dim/bright window; no-op until NTP syncs
 
     // ── WiFi ──────────────────────────────────────────────────────────────────
     // If wifi.ssid is empty (first boot or missing file) → AP-only.

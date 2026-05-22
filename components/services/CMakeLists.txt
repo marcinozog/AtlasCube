@@ -1,15 +1,17 @@
 idf_component_register(
-    SRCS 
+    SRCS
         "radio_service.c"
-         "ntp_service.c"  
-        # "service_events.c"   # odkomentujesz jak zaczniesz używać
-    INCLUDE_DIRS 
+         "ntp_service.c"
+         "dim_schedule.c"
+    INCLUDE_DIRS
         "."
-    REQUIRES 
+    REQUIRES
         app_state
         ui
         audio
         esp_netif
         lwip
-        playlist 
+        playlist
+        display
+        settings_ex
 )

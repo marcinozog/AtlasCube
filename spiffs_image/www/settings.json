@@ -10,7 +10,15 @@
   "display": {
     "screen": 3,
     "brightness": 100,
-    "theme": "dark"
+    "theme": "dark",
+    "dim_schedule": {
+      "enabled": false,
+      "dim_hour": 22,
+      "dim_minute": 0,
+      "dim_brightness": 20,
+      "bright_hour": 7,
+      "bright_minute": 0
+    }
   },
   "bluetooth": {
     "enable": false,

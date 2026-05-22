@@ -33,6 +33,12 @@ esp_err_t settings_init(void)
         s_settings.display.brightness       = 80;
         s_settings.display.screen           = SCREEN_CLOCK;
         s_settings.display.theme            = THEME_DARK;
+        s_settings.display.dim_schedule.enabled        = false;
+        s_settings.display.dim_schedule.dim_hour       = 22;
+        s_settings.display.dim_schedule.dim_minute     = 0;
+        s_settings.display.dim_schedule.dim_brightness = 20;
+        s_settings.display.dim_schedule.bright_hour    = 7;
+        s_settings.display.dim_schedule.bright_minute  = 0;
         s_settings.bluetooth.enable         = false;
         s_settings.bluetooth.show_screen    = true;
         s_settings.bluetooth.volume         = 15;
@@ -157,6 +163,25 @@ static esp_err_t load_from_file(void)
         if (cJSON_IsString(th)) {
             s_settings.display.theme =
                 (strcmp(th->valuestring, "light") == 0) ? THEME_LIGHT : THEME_DARK;
+        }
+
+        // dim schedule defaults (used if section is missing or partial)
+        s_settings.display.dim_schedule.enabled        = false;
+        s_settings.display.dim_schedule.dim_hour       = 22;
+        s_settings.display.dim_schedule.dim_minute     = 0;
+        s_settings.display.dim_schedule.dim_brightness = 20;
+        s_settings.display.dim_schedule.bright_hour    = 7;
+        s_settings.display.dim_schedule.bright_minute  = 0;
+
+        cJSON *dim = cJSON_GetObjectItem(display, "dim_schedule");
+        if (cJSON_IsObject(dim)) {
+            cJSON *j;
+            j = cJSON_GetObjectItem(dim, "enabled");        if (cJSON_IsBool(j))   s_settings.display.dim_schedule.enabled        = cJSON_IsTrue(j);
+            j = cJSON_GetObjectItem(dim, "dim_hour");       if (cJSON_IsNumber(j)) s_settings.display.dim_schedule.dim_hour       = j->valueint;
+            j = cJSON_GetObjectItem(dim, "dim_minute");     if (cJSON_IsNumber(j)) s_settings.display.dim_schedule.dim_minute     = j->valueint;
+            j = cJSON_GetObjectItem(dim, "dim_brightness"); if (cJSON_IsNumber(j)) s_settings.display.dim_schedule.dim_brightness = j->valueint;
+            j = cJSON_GetObjectItem(dim, "bright_hour");    if (cJSON_IsNumber(j)) s_settings.display.dim_schedule.bright_hour    = j->valueint;
+            j = cJSON_GetObjectItem(dim, "bright_minute");  if (cJSON_IsNumber(j)) s_settings.display.dim_schedule.bright_minute  = j->valueint;
         }
     }
     
@@ -329,6 +354,14 @@ static esp_err_t save_to_file(void)
     cJSON_AddNumberToObject(display, "brightness", s_settings.display.brightness);
     cJSON_AddStringToObject(display, "theme",
         s_settings.display.theme == THEME_LIGHT ? "light" : "dark");
+    cJSON *dim = cJSON_CreateObject();
+    cJSON_AddBoolToObject  (dim, "enabled",        s_settings.display.dim_schedule.enabled);
+    cJSON_AddNumberToObject(dim, "dim_hour",       s_settings.display.dim_schedule.dim_hour);
+    cJSON_AddNumberToObject(dim, "dim_minute",     s_settings.display.dim_schedule.dim_minute);
+    cJSON_AddNumberToObject(dim, "dim_brightness", s_settings.display.dim_schedule.dim_brightness);
+    cJSON_AddNumberToObject(dim, "bright_hour",    s_settings.display.dim_schedule.bright_hour);
+    cJSON_AddNumberToObject(dim, "bright_minute",  s_settings.display.dim_schedule.bright_minute);
+    cJSON_AddItemToObject(display, "dim_schedule", dim);
     cJSON_AddItemToObject(json, "display", display);
 
     // bluetooth
@@ -486,6 +519,23 @@ void settings_set_brightness(int brightness)
     app_state_update(&(app_state_patch_t) {.has_display_brightness = true, .display_brightness = brightness});
     display_set_backlight(s_settings.display.brightness);
     save_to_file();
+}
+
+static int clampi(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+void settings_set_dim_schedule(bool enabled,
+                               int dim_hour, int dim_minute, int dim_brightness,
+                               int bright_hour, int bright_minute)
+{
+    s_settings.display.dim_schedule.enabled        = enabled;
+    s_settings.display.dim_schedule.dim_hour       = clampi(dim_hour,       0, 23);
+    s_settings.display.dim_schedule.dim_minute     = clampi(dim_minute,     0, 59);
+    s_settings.display.dim_schedule.dim_brightness = clampi(dim_brightness, 0, 100);
+    s_settings.display.dim_schedule.bright_hour    = clampi(bright_hour,    0, 23);
+    s_settings.display.dim_schedule.bright_minute  = clampi(bright_minute,  0, 59);
+    save_to_file();
+    // Caller (HTTP handler) invokes dim_schedule_apply_now() — kept out of this
+    // module to avoid a settings_ex ↔ services circular dependency.
 }
 
 void settings_set_bt_enable(bool enable)

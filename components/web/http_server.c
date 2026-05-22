@@ -5,6 +5,7 @@
 #include "ws_server.h"
 #include "settings.h"
 #include "ntp_service.h"
+#include "dim_schedule.h"
 #include "app_state.h"
 #include "wifi_manager.h"
 #include "theme.h"
@@ -55,6 +56,14 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(display, "brightness", s->display.brightness);
     cJSON_AddStringToObject(display, "theme",
         s->display.theme == THEME_LIGHT ? "light" : "dark");
+    cJSON *dim = cJSON_CreateObject();
+    cJSON_AddBoolToObject  (dim, "enabled",        s->display.dim_schedule.enabled);
+    cJSON_AddNumberToObject(dim, "dim_hour",       s->display.dim_schedule.dim_hour);
+    cJSON_AddNumberToObject(dim, "dim_minute",     s->display.dim_schedule.dim_minute);
+    cJSON_AddNumberToObject(dim, "dim_brightness", s->display.dim_schedule.dim_brightness);
+    cJSON_AddNumberToObject(dim, "bright_hour",    s->display.dim_schedule.bright_hour);
+    cJSON_AddNumberToObject(dim, "bright_minute",  s->display.dim_schedule.bright_minute);
+    cJSON_AddItemToObject(display, "dim_schedule", dim);
     cJSON_AddItemToObject(json, "display", display);
 
     // bluetooth
@@ -166,6 +175,7 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         if (cJSON_IsString(srv1) && cJSON_IsString(srv2) && cJSON_IsString(tz)) {
             settings_set_ntp(srv1->valuestring, srv2->valuestring, tz->valuestring);
             ntp_service_reconfigure(srv1->valuestring, srv2->valuestring, tz->valuestring);
+            dim_schedule_apply_now();   // TZ change shifts the dim window
         } else {
             ESP_LOGW("HTTP", "/api/settings POST: ntp section incomplete, skipping");
         }
@@ -207,6 +217,28 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
                            ? THEME_LIGHT : THEME_DARK;
             ESP_LOGI("HTTP", "POST theme: string='%s' → enum=%d", th->valuestring, (int)t);
             settings_set_theme(t);
+        }
+        cJSON *dim = cJSON_GetObjectItem(display, "dim_schedule");
+        if (cJSON_IsObject(dim)) {
+            // start from current values so partial updates are allowed
+            app_settings_t *cur = settings_get();
+            bool en = cur->display.dim_schedule.enabled;
+            int  dh = cur->display.dim_schedule.dim_hour;
+            int  dm = cur->display.dim_schedule.dim_minute;
+            int  db = cur->display.dim_schedule.dim_brightness;
+            int  bh = cur->display.dim_schedule.bright_hour;
+            int  bm = cur->display.dim_schedule.bright_minute;
+            cJSON *j;
+            j = cJSON_GetObjectItem(dim, "enabled");        if (cJSON_IsBool(j))   en = cJSON_IsTrue(j);
+            j = cJSON_GetObjectItem(dim, "dim_hour");       if (cJSON_IsNumber(j)) dh = j->valueint;
+            j = cJSON_GetObjectItem(dim, "dim_minute");     if (cJSON_IsNumber(j)) dm = j->valueint;
+            j = cJSON_GetObjectItem(dim, "dim_brightness"); if (cJSON_IsNumber(j)) db = j->valueint;
+            j = cJSON_GetObjectItem(dim, "bright_hour");    if (cJSON_IsNumber(j)) bh = j->valueint;
+            j = cJSON_GetObjectItem(dim, "bright_minute");  if (cJSON_IsNumber(j)) bm = j->valueint;
+            ESP_LOGI("HTTP", "POST dim_schedule: en=%d %02d:%02d→%d%% %02d:%02d",
+                     en, dh, dm, db, bh, bm);
+            settings_set_dim_schedule(en, dh, dm, db, bh, bm);
+            dim_schedule_apply_now();
         }
     }
 
