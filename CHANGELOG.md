@@ -9,6 +9,25 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-05-22
+
+### Added
+- **ui:** mqtt screensaver
+- **www:** pretty-print and validate JSON in file editor
+- **web:** rebuild active screen after MQTT config save
+- **mqtt:** mqtt widgets
+- **mqtt:** mqtt client
+- **ui:** controls widget resets screensaver idle timer
+
+### Changed
+- **widget:** changed control widget auto hide time
+- **mqtt:** remove client id from base topic
+
+### Fixed
+- **mqtt:** wrap widget command payload in JSON when json_path is set
+- **ui:** clear scrollable flag for main screens
+- **screensaver:** disable screensaver in wifi ap mode
+
 ## [0.5.0] - 2026-05-18
 
 ### Added
@@ -68,7 +87,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/marcinozog/AtlasCube/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/marcinozog/AtlasCube/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/marcinozog/AtlasCube/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/marcinozog/AtlasCube/compare/v0.2.0...v0.3.0
