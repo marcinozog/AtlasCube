@@ -1121,6 +1121,13 @@ static esp_err_t api_mqtt_get_handler(httpd_req_t *req)
     }
     cJSON_AddItemToObject(json, "widgets", arr);
 
+    cJSON *ss = cJSON_CreateObject();
+    cJSON_AddStringToObject(ss, "title",       c->screensaver.title);
+    cJSON_AddStringToObject(ss, "topic_state", c->screensaver.topic_state);
+    cJSON_AddStringToObject(ss, "json_path",   c->screensaver.json_path);
+    cJSON_AddStringToObject(ss, "unit",        c->screensaver.unit);
+    cJSON_AddItemToObject(json, "screensaver", ss);
+
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
 
@@ -1189,6 +1196,16 @@ static esp_err_t api_mqtt_post_handler(httpd_req_t *req)
             k = cJSON_GetObjectItem(o, "step");        if (cJSON_IsNumber(k)) w->step = k->valueint;
             if (w->step < 1) w->step = 1;
         }
+    }
+
+    cJSON *ss = cJSON_GetObjectItem(json, "screensaver");
+    if (cJSON_IsObject(ss)) {
+        cJSON *k;
+        memset(&c->screensaver, 0, sizeof(c->screensaver));
+        k = cJSON_GetObjectItem(ss, "title");       if (cJSON_IsString(k)) copy_str_field(c->screensaver.title,       sizeof(c->screensaver.title),       k->valuestring);
+        k = cJSON_GetObjectItem(ss, "topic_state"); if (cJSON_IsString(k)) copy_str_field(c->screensaver.topic_state, sizeof(c->screensaver.topic_state), k->valuestring);
+        k = cJSON_GetObjectItem(ss, "json_path");   if (cJSON_IsString(k)) copy_str_field(c->screensaver.json_path,   sizeof(c->screensaver.json_path),   k->valuestring);
+        k = cJSON_GetObjectItem(ss, "unit");        if (cJSON_IsString(k)) copy_str_field(c->screensaver.unit,        sizeof(c->screensaver.unit),        k->valuestring);
     }
 
     cJSON_Delete(json);

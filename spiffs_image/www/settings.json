@@ -27,7 +27,7 @@
     "password": ""
   },
   "scrsaver": {
-    "delay": 60,
+    "delay": 120,
     "id": "dashboard"
   },
   "dashboard": {

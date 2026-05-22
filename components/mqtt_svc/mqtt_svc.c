@@ -22,6 +22,11 @@ static const char *TAG = "MQTT";
 static esp_mqtt_client_handle_t s_client = NULL;
 static bool                     s_connected = false;
 static mqtt_svc_widget_state_cb_t s_widget_cb = NULL;
+static mqtt_svc_ss_state_cb_t     s_ss_cb     = NULL;
+// Last value seen on the screensaver topic — replayed when a new ss_cb
+// registers so the screensaver shows data immediately on activation
+// instead of waiting for the next broker push.
+static char s_ss_last_value[64] = {0};
 
 // Cached values for state diffing — publish only on real change.
 static radio_state_t s_last_radio_state = (radio_state_t)-1;
@@ -253,6 +258,36 @@ static void subscribe_widget_states(void)
         if (w->topic_state[0] == '\0') continue;
         esp_mqtt_client_subscribe(s_client, w->topic_state, 0);
     }
+    if (c->screensaver.topic_state[0]) {
+        esp_mqtt_client_subscribe(s_client, c->screensaver.topic_state, 0);
+    }
+}
+
+static void dispatch_screensaver_state(const char *topic, int topic_len,
+                                       const char *payload, int payload_len)
+{
+    mqtt_config_t *c = mqtt_config_get();
+    const char *st = c->screensaver.topic_state;
+    if (!st[0]) return;
+    size_t tlen = strlen(st);
+    if (tlen != (size_t)topic_len) return;
+    if (strncmp(topic, st, tlen) != 0) return;
+
+    char value[64];
+    if (c->screensaver.json_path[0]) {
+        if (!extract_json_value(payload, payload_len, c->screensaver.json_path,
+                                value, sizeof(value))) {
+            return;
+        }
+    } else {
+        int n = payload_len < (int)sizeof(value) - 1
+              ? payload_len : (int)sizeof(value) - 1;
+        memcpy(value, payload, n);
+        value[n] = '\0';
+    }
+    strncpy(s_ss_last_value, value, sizeof(s_ss_last_value) - 1);
+    s_ss_last_value[sizeof(s_ss_last_value) - 1] = '\0';
+    if (s_ss_cb) s_ss_cb(value);
 }
 
 static void on_mqtt_event(void *handler_args, esp_event_base_t base,
@@ -295,7 +330,11 @@ static void on_mqtt_event(void *handler_args, esp_event_base_t base,
             if (suffix) {
                 handle_cmd(suffix, data);
             } else {
-                dispatch_widget_state(topic, ev->topic_len, data, ev->data_len);
+                // Both dispatchers are independent subscribers — same topic
+                // may legitimately drive a widget and the screensaver in
+                // parallel, so neither short-circuits the other.
+                dispatch_screensaver_state(topic, ev->topic_len, data, ev->data_len);
+                dispatch_widget_state    (topic, ev->topic_len, data, ev->data_len);
             }
             free(topic); free(data);
             break;
@@ -375,6 +414,9 @@ void mqtt_svc_init(void)
 void mqtt_svc_reconfigure(void)
 {
     stop_client();
+    // Drop the cached screensaver value — the topic may have just changed
+    // and the cache is keyed by "whatever the current screensaver topic is".
+    s_ss_last_value[0] = '\0';
     start_client();
 }
 
@@ -420,6 +462,12 @@ void mqtt_svc_publish_widget_int(int idx, int value)
 void mqtt_svc_set_widget_state_cb(mqtt_svc_widget_state_cb_t cb)
 {
     s_widget_cb = cb;
+}
+
+void mqtt_svc_set_ss_state_cb(mqtt_svc_ss_state_cb_t cb)
+{
+    s_ss_cb = cb;
+    if (cb && s_ss_last_value[0]) cb(s_ss_last_value);
 }
 
 #endif /* CONFIG_MQTT_ENABLE */

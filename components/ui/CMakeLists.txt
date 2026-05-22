@@ -21,6 +21,7 @@ idf_component_register(
         "screensavers/screensaver_clockhands.c"
         "screensavers/screensaver_life.c"
         "screensavers/screensaver_dashboard.c"
+        "screensavers/screensaver_mqtt.c"
         "screensavers/screensaver_blank.c"
         "screensavers/screensavers.c"
         "widgets/clock_widget.c"

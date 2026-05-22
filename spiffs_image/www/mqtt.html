@@ -29,7 +29,14 @@
 
     <div id="widgets_container"></div>
 
-    <button id="mqtt_widgets_save_btn" onclick="saveWidgets()">💾 Save widgets</button>
+    <h2 style="margin:24px 0 8px 0">📡 Screensaver label</h2>
+    <div class="field-hint" style="margin-bottom:16px">
+        Single label shown on the MQTT screensaver. Independent of the widget list above —
+        leave <em>State topic</em> empty to disable.
+    </div>
+    <div id="screensaver_container"></div>
+
+    <button id="mqtt_widgets_save_btn" onclick="saveWidgets()">💾 Save</button>
     <div id="mqtt_widgets_status" class="save-status"></div>
 </main>
 

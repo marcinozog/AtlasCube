@@ -118,6 +118,39 @@ function buildCard(idx, w) {
     return card;
 }
 
+function buildScreensaverCard(ss) {
+    const s = ss || { title: '', topic_state: '', json_path: '', unit: '' };
+    const card = el('div', { class: 'panel', style: 'margin-bottom:12px' });
+
+    card.appendChild(el('div', { class: 'field-group' },
+        el('label', { class: 'field-label' }, 'Title'),
+        el('input', { type: 'text', id: 'ss_title', class: 'field-input',
+                      maxlength: 23, value: s.title || '' })));
+
+    card.appendChild(el('div', { class: 'field-group' },
+        el('label', { class: 'field-label' }, 'State topic'),
+        el('input', { type: 'text', id: 'ss_state', class: 'field-input',
+                      placeholder: 'home/sensor/temp', value: s.topic_state || '' }),
+        el('div', { class: 'field-hint' },
+            'Empty = screensaver disabled.')));
+
+    card.appendChild(el('div', { class: 'field-group' },
+        el('label', { class: 'field-label' }, 'JSON path (optional)'),
+        el('input', { type: 'text', id: 'ss_json', class: 'field-input',
+                      placeholder: 'temperature', maxlength: 47,
+                      value: s.json_path || '' }),
+        el('div', { class: 'field-hint' },
+            'Top-level key to extract from JSON payloads. Leave empty for plain text.')));
+
+    card.appendChild(el('div', { class: 'field-group' },
+        el('label', { class: 'field-label' }, 'Unit (optional)'),
+        el('input', { type: 'text', id: 'ss_unit', class: 'field-input',
+                      style: 'width:120px', placeholder: '°C, %, ...',
+                      maxlength: 7, value: s.unit || '' })));
+
+    return card;
+}
+
 function renderAll(cfg) {
     const root = document.getElementById('widgets_container');
     root.innerHTML = '';
@@ -125,6 +158,9 @@ function renderAll(cfg) {
     for (let i = 0; i < MQTT_MAX_WIDGETS; ++i) {
         root.appendChild(buildCard(i, widgets[i]));
     }
+    const ssRoot = document.getElementById('screensaver_container');
+    ssRoot.innerHTML = '';
+    ssRoot.appendChild(buildScreensaverCard(cfg && cfg.screensaver));
 }
 
 async function loadAll() {
@@ -162,12 +198,22 @@ function collect() {
     return widgets;
 }
 
+function collectScreensaver() {
+    const g = id => document.getElementById(id)?.value ?? '';
+    return {
+        title:       g('ss_title').trim(),
+        topic_state: g('ss_state').trim(),
+        json_path:   g('ss_json').trim(),
+        unit:        g('ss_unit'),
+    };
+}
+
 async function saveWidgets() {
     const btn = document.getElementById('mqtt_widgets_save_btn');
     btn.disabled = true;
     try {
         // Merge widgets into the existing config so we don't drop broker fields
-        const payload = { ...(_cfg || {}), widgets: collect() };
+        const payload = { ...(_cfg || {}), widgets: collect(), screensaver: collectScreensaver() };
         delete payload.password;        // never send echoed (empty) password back
         const r = await fetch('/api/mqtt', {
             method: 'POST',

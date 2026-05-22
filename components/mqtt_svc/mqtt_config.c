@@ -51,6 +51,10 @@ static void apply_defaults(void)
         s_cfg.widgets[i].max  = 100;
         s_cfg.widgets[i].step = 1;
     }
+    s_cfg.screensaver.title[0]       = '\0';
+    s_cfg.screensaver.topic_state[0] = '\0';
+    s_cfg.screensaver.json_path[0]   = '\0';
+    s_cfg.screensaver.unit[0]        = '\0';
 }
 
 static void parse_widget(cJSON *w, mqtt_widget_t *out)
@@ -125,6 +129,14 @@ esp_err_t mqtt_config_load(void)
         }
     }
 
+    cJSON *ss = cJSON_GetObjectItem(json, "screensaver");
+    if (cJSON_IsObject(ss)) {
+        j = cJSON_GetObjectItem(ss, "title");       if (cJSON_IsString(j)) copy_str(s_cfg.screensaver.title,       sizeof(s_cfg.screensaver.title),       j->valuestring);
+        j = cJSON_GetObjectItem(ss, "topic_state"); if (cJSON_IsString(j)) copy_str(s_cfg.screensaver.topic_state, sizeof(s_cfg.screensaver.topic_state), j->valuestring);
+        j = cJSON_GetObjectItem(ss, "json_path");   if (cJSON_IsString(j)) copy_str(s_cfg.screensaver.json_path,   sizeof(s_cfg.screensaver.json_path),   j->valuestring);
+        j = cJSON_GetObjectItem(ss, "unit");        if (cJSON_IsString(j)) copy_str(s_cfg.screensaver.unit,        sizeof(s_cfg.screensaver.unit),        j->valuestring);
+    }
+
     cJSON_Delete(json);
     return ESP_OK;
 }
@@ -156,6 +168,13 @@ esp_err_t mqtt_config_save(void)
         cJSON_AddItemToArray(arr, o);
     }
     cJSON_AddItemToObject(json, "widgets", arr);
+
+    cJSON *ss = cJSON_CreateObject();
+    cJSON_AddStringToObject(ss, "title",       s_cfg.screensaver.title);
+    cJSON_AddStringToObject(ss, "topic_state", s_cfg.screensaver.topic_state);
+    cJSON_AddStringToObject(ss, "json_path",   s_cfg.screensaver.json_path);
+    cJSON_AddStringToObject(ss, "unit",        s_cfg.screensaver.unit);
+    cJSON_AddItemToObject(json, "screensaver", ss);
 
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);

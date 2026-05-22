@@ -28,14 +28,22 @@ typedef struct {
 } mqtt_widget_t;
 
 typedef struct {
-    bool          enabled;
-    char          host[64];
-    int           port;
-    char          username[32];
-    char          password[64];
-    char          client_id[32];
-    char          base_topic[32];
-    mqtt_widget_t widgets[MQTT_MAX_WIDGETS];
+    char title[24];
+    char topic_state[96];
+    char json_path[48];
+    char unit[8];
+} mqtt_ss_config_t;
+
+typedef struct {
+    bool             enabled;
+    char             host[64];
+    int              port;
+    char             username[32];
+    char             password[64];
+    char             client_id[32];
+    char             base_topic[32];
+    mqtt_widget_t    widgets[MQTT_MAX_WIDGETS];
+    mqtt_ss_config_t screensaver;
 } mqtt_config_t;
 
 esp_err_t      mqtt_config_load(void);
