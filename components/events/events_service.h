@@ -23,6 +23,7 @@ typedef enum {
     EV_NAMEDAY,
     EV_REMINDER,
     EV_ANNIVERSARY,
+    EV_ALARM,
     EV_TYPE_COUNT
 } event_type_t;
 
@@ -49,6 +50,10 @@ typedef struct {
 
     event_recurrence_t recurrence;
     bool               enabled;
+
+    // Used only when type == EV_ALARM: 0-based index into the playlist
+    // (resolved at fire time via playlist_get()).
+    int                station;
 } event_t;
 
 // --------------------------------------------------------------------------

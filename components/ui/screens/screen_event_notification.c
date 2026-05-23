@@ -121,7 +121,12 @@ static void scr_apply_theme(void)
 static void scr_on_input(ui_input_t input)
 {
     if (input == UI_INPUT_ENCODER_PRESS || input == UI_INPUT_BTN_OK) {
-        ui_navigate(s_return_to);
+        // Alarm: stream is already playing — drop straight to the radio
+        // screen so the user sees what woke them up and can stop/skip it.
+        ui_screen_id_t target = s_pending_info.is_alarm
+            ? SCREEN_RADIO
+            : s_return_to;
+        ui_navigate(target);
     }
 }
 

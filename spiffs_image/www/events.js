@@ -9,6 +9,7 @@ const TYPE_ICON = {
     nameday:     '🌹',
     anniversary: '💍',
     reminder:    '⏰',
+    alarm:       '⏰',
 };
 
 const TYPE_LABEL = {
@@ -16,6 +17,7 @@ const TYPE_LABEL = {
     nameday:     'Name day',
     anniversary: 'Anniversary',
     reminder:    'Reminder',
+    alarm:       'Alarm',
 };
 
 const REC_LABEL = {
@@ -27,7 +29,28 @@ const REC_LABEL = {
 };
 
 let events    = [];
+let stations  = [];      // playlist entries, fetched once for the alarm picker
 let editingId = null;    // null = add mode, string = edit mode
+
+async function loadStations() {
+    try {
+        const res = await fetch('/api/playlist', { cache: 'no-store' });
+        stations = await res.json();
+    } catch (e) {
+        console.error('Playlist load error', e);
+        stations = [];
+    }
+    const sel = document.getElementById('ev_station');
+    sel.innerHTML = stations.length
+        ? stations.map((s, i) =>
+            `<option value="${i}">${i + 1}. ${escapeHtml(s.name || '(unnamed)')}</option>`).join('')
+        : '<option value="0" disabled>Playlist empty — add stations first</option>';
+}
+
+function evTypeChanged() {
+    const isAlarm = document.getElementById('ev_type').value === 'alarm';
+    document.getElementById('ev_station_group').style.display = isAlarm ? '' : 'none';
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Load / Render
@@ -68,11 +91,18 @@ function makeRow(ev) {
     const timeStr = `${pad2(ev.hour)}:${pad2(ev.minute)}`;
     const recStr  = REC_LABEL[ev.recurrence] || ev.recurrence;
 
+    let extra = '';
+    if (ev.type === 'alarm') {
+        const st = stations[ev.station];
+        const name = st ? st.name : `#${ev.station}`;
+        extra = ` · 📻 ${escapeHtml(name)}`;
+    }
+
     row.innerHTML = `
         <div class="ev-icon">${TYPE_ICON[ev.type] || '•'}</div>
         <div class="ev-info">
             <div class="ev-title">${escapeHtml(ev.title)}</div>
-            <div class="ev-meta">${dateStr} · ${timeStr}</div>
+            <div class="ev-meta">${dateStr} · ${timeStr}${extra}</div>
         </div>
         <span class="ev-tag">${recStr}</span>
         <label class="ev-tag" style="cursor:pointer">
@@ -114,6 +144,8 @@ function evFormReset() {
     document.getElementById('ev_time').value = nowTimeStr();
     document.getElementById('ev_recurrence').value = 'none';
     document.getElementById('ev_enabled').checked = true;
+    document.getElementById('ev_station').value = '0';
+    evTypeChanged();
     setStatus('', '');
 }
 
@@ -131,6 +163,8 @@ function evEdit(id) {
     document.getElementById('ev_time').value     = `${pad2(ev.hour)}:${pad2(ev.minute)}`;
     document.getElementById('ev_recurrence').value = ev.recurrence;
     document.getElementById('ev_enabled').checked = !!ev.enabled;
+    document.getElementById('ev_station').value = String(ev.station ?? 0);
+    evTypeChanged();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -146,8 +180,16 @@ function formToEvent() {
     const title = document.getElementById('ev_title').value.trim();
     if (!title) { setStatus('Title required', 'error'); return null; }
 
+    const type    = document.getElementById('ev_type').value;
+    const station = parseInt(document.getElementById('ev_station').value, 10) || 0;
+
+    if (type === 'alarm' && stations.length === 0) {
+        setStatus('Add at least one station to the playlist first', 'error');
+        return null;
+    }
+
     return {
-        type:       document.getElementById('ev_type').value,
+        type,
         title,
         year:       y,
         month:      m,
@@ -156,6 +198,7 @@ function formToEvent() {
         minute,
         recurrence: document.getElementById('ev_recurrence').value,
         enabled:    document.getElementById('ev_enabled').checked,
+        station,
     };
 }
 
@@ -254,5 +297,8 @@ function escapeHtml(s) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────────────────────────────────────
-evFormReset();
-evLoad();
+(async () => {
+    await loadStations();
+    evFormReset();
+    await evLoad();
+})();

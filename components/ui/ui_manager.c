@@ -223,8 +223,9 @@ static void on_event_fired(const event_t *e)
     ui_event_t uie = { .type = UI_EVT_EVENT_FIRED };
     strncpy(uie.event_info.id,    e->id,    sizeof(uie.event_info.id)    - 1);
     strncpy(uie.event_info.title, e->title, sizeof(uie.event_info.title) - 1);
-    uie.event_info.hour   = e->hour;
-    uie.event_info.minute = e->minute;
+    uie.event_info.hour     = e->hour;
+    uie.event_info.minute   = e->minute;
+    uie.event_info.is_alarm = (e->type == EV_ALARM);
     strncpy(uie.event_info.type_label, events_type_label(e->type),
             sizeof(uie.event_info.type_label) - 1);
     ui_event_send(&uie);

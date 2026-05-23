@@ -35,17 +35,23 @@
         <div class="ev-grid">
             <div class="field-group">
                 <label class="field-label">Type</label>
-                <select id="ev_type" class="field-input">
+                <select id="ev_type" class="field-input" onchange="evTypeChanged()">
                     <option value="birthday">🎂 Birthday</option>
                     <option value="nameday">🌹 Name day</option>
                     <option value="anniversary">💍 Anniversary</option>
                     <option value="reminder" selected>⏰ Reminder</option>
+                    <option value="alarm">⏰ Alarm (radio)</option>
                 </select>
             </div>
 
             <div class="field-group">
                 <label class="field-label">Title</label>
                 <input type="text" id="ev_title" class="field-input" maxlength="63" placeholder="e.g. Ania's birthday" />
+            </div>
+
+            <div class="field-group" id="ev_station_group" style="display:none">
+                <label class="field-label">Station</label>
+                <select id="ev_station" class="field-input"></select>
             </div>
 
             <div class="field-group">
