@@ -225,6 +225,20 @@ idf.py spiffs_create_partition_image storage spiffs_image/web
 idf.py flash
 ```
 
+**Single merged image (for distribution)**
+
+Combines bootloader, partition table, app, and SPIFFS into one file that can be flashed from offset `0x0` with `esptool` or a web flasher:
+
+```bash
+idf.py merge-bin -o AtlasCube.bin
+```
+
+Flash with:
+
+```bash
+esptool.py write_flash 0x0 AtlasCube.bin
+```
+
 ---
 
 ## Web UI
