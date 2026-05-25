@@ -14,34 +14,34 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 
 <table>
   <tr>
-    <td align="center"><img src="https://atlascube.net/images/scr_clock_d.jpg" width="200"><br><sub>Clock — dark</sub></td>
-    <td align="center"><img src="https://atlascube.net/images/scr_clock_l.jpg" width="200"><br><sub>Clock — light</sub></td>
-    <td align="center"><img src="https://atlascube.net/images/scr_radio_d.jpg" width="200"><br><sub>Radio — dark</sub></td>
-    <td align="center"><img src="https://atlascube.net/images/scr_radio_l.jpg" width="200"><br><sub>Radio — light</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_clock_d.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_clock_d.jpg" width="200"></a><br><sub>Clock — dark</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_clock_l.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_clock_l.jpg" width="200"></a><br><sub>Clock — light</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_radio_d.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_radio_d.jpg" width="200"></a><br><sub>Radio — dark</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_radio_l.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_radio_l.jpg" width="200"></a><br><sub>Radio — light</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="https://atlascube.net/images/scr_clock_d_2.jpg" width="200"><br><sub>Clock — dark</sub></td>
-    <td align="center"><img src="https://atlascube.net/images/scr_clock_l_2.jpg" width="200"><br><sub>Clock — light</sub></td>
-    <td align="center"><img src="https://atlascube.net/images/scr_radio_d_2.jpg" width="200"><br><sub>Radio — dark</sub></td>
-    <td align="center"><img src="https://atlascube.net/images/scr_radio_l_2.jpg" width="200"><br><sub>Radio — light</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_clock_d_2.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_clock_d_2.jpg" width="200"></a><br><sub>Clock — dark</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_clock_l_2.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_clock_l_2.jpg" width="200"></a><br><sub>Clock — light</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_radio_d_2.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_radio_d_2.jpg" width="200"></a><br><sub>Radio — dark</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_radio_l_2.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_radio_l_2.jpg" width="200"></a><br><sub>Radio — light</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="https://atlascube.net/images/scr_playlist_d.jpg" width="200"><br><sub>Playlist — dark</sub></td>
-    <td align="center"><img src="https://atlascube.net/images/scr_playlist_l.jpg" width="200"><br><sub>Playlist — light</sub></td>
-    <td align="center"><img src="https://atlascube.net/images/scr_settings_d.jpg" width="200"><br><sub>Settings — dark</sub></td>
-    <td align="center"><img src="https://atlascube.net/images/scr_settings_l.jpg" width="200"><br><sub>Settings — light</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_playlist_d.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_playlist_d.jpg" width="200"></a><br><sub>Playlist — dark</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_playlist_l.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_playlist_l.jpg" width="200"></a><br><sub>Playlist — light</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_settings_d.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_settings_d.jpg" width="200"></a><br><sub>Settings — dark</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_settings_l.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_settings_l.jpg" width="200"></a><br><sub>Settings — light</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="https://atlascube.net/images/scr_event_noti_d.jpg" width="200"><br><sub>Event — dark</sub></td>
-    <td align="center"><img src="https://atlascube.net/images/scr_event_noti_l.jpg" width="200"><br><sub>Event — light</sub></td>
-    <td align="center"><img src="https://atlascube.net/images/scr_eq_l.jpg" width="200"><br><sub>Equalizer</sub></td>
-    <td align="center"><img src="https://atlascube.net/images/scr_bt_d.jpg" width="200"><br><sub>Bluetooth</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_event_noti_d.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_event_noti_d.jpg" width="200"></a><br><sub>Event — dark</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_event_noti_l.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_event_noti_l.jpg" width="200"></a><br><sub>Event — light</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_eq_l.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_eq_l.jpg" width="200"></a><br><sub>Equalizer</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/scr_bt_d.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/scr_bt_d.jpg" width="200"></a><br><sub>Bluetooth</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="https://atlascube.net/images/diagram_ili9341.jpg" width="200"><br><sub>Diagram with ILI9341</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/diagram_ili9341.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/diagram_ili9341.jpg" width="200"></a><br><sub>Diagram with ILI9341</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="https://atlascube.net/images/diagram_co5300.jpg" width="200"><br><sub>Diagram with CO5300</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/diagram_co5300.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/diagram_co5300.jpg" width="200"></a><br><sub>Diagram with CO5300</sub></td>
   </tr>
 </table>
 
@@ -49,24 +49,24 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 
 <table>
   <tr>
-    <td align="center"><img src="https://atlascube.net/images/www_index.png" width="400"><br><sub>Radio</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/www_index.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_index.png" width="400"></a><br><sub>Radio</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="https://atlascube.net/images/www_layouts.png" width="400"><br><sub>Layouts editor</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/www_layouts.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_layouts.png" width="400"></a><br><sub>Layouts editor</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="https://atlascube.net/images/www_settings_1.png" width="400"><br><sub>Settings</sub></td>
-    <td align="center"><img src="https://atlascube.net/images/www_settings_2.png" width="400"><br><sub>Settings (cont.)</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/www_settings_1.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_1.png" width="400"></a><br><sub>Settings</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/www_settings_2.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_2.png" width="400"></a><br><sub>Settings (cont.)</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="https://atlascube.net/images/www_editor.png" width="400"><br><sub>Editor</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/www_editor.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_editor.png" width="400"></a><br><sub>Editor</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="https://atlascube.net/images/www_playlist.png" width="400"><br><sub>Playlist</sub></td>
-    <td align="center"><img src="https://atlascube.net/images/www_events.png" width="400"><br><sub>Events</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/www_playlist.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_playlist.png" width="400"></a><br><sub>Playlist</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/www_events.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_events.png" width="400"></a><br><sub>Events</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="https://atlascube.net/images/www_eq.png" width="400"><br><sub>Equalizer</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/www_eq.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_eq.png" width="400"></a><br><sub>Equalizer</sub></td>
     <td align="center"></td>
   </tr>
 </table>
