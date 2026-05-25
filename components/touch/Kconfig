@@ -7,31 +7,12 @@ choice TOUCH_TYPE
 config TOUCH_CST816D
     bool "CST816D"
 
+config TOUCH_FT6336U
+    bool "FT6336U"
+
 endchoice
 
-menu "Touch orientation"
-
-config TOUCH_MIRROR_X
-    bool "Mirror X axis"
-    default n
-    help
-        Flip touch coordinates along the X axis. Applied in the touch
-        IC's native frame, BEFORE swap_xy.
-
-config TOUCH_MIRROR_Y
-    bool "Mirror Y axis"
-    default n
-    help
-        Flip touch coordinates along the Y axis. Applied in the touch
-        IC's native frame, BEFORE swap_xy.
-
-config TOUCH_SWAP_XY
-    bool "Swap X and Y axes"
-    default n
-    help
-        Swap X and Y after mirroring. Use when the touch IC is mounted
-        rotated 90° relative to the panel.
-
-endmenu
+# Touch orientation (swap_xy, mirror_x, mirror_y) is defined per UI_PROFILE_*
+# in components/ui/ui_profile.h — not exposed here.
 
 endmenu

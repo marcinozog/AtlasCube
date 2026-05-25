@@ -10,6 +10,9 @@
 #if CONFIG_TOUCH_CST816D
 #include "cst816d.h"
 #endif
+#if CONFIG_TOUCH_FT6336U
+#include "ft6336u.h"
+#endif
 
 static const char *TAG = "TOUCH";
 
@@ -26,6 +29,8 @@ static bool touch_driver_read(uint16_t *x, uint16_t *y)
 {
 #if CONFIG_TOUCH_CST816D
     return cst816d_read(x, y);
+#elif CONFIG_TOUCH_FT6336U
+    return ft6336u_read(x, y);
 #else
     (void)x; (void)y;
     return false;
@@ -48,14 +53,14 @@ static void touch_lvgl_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 
     uint16_t x = 0, y = 0;
     if (touch_driver_read(&x, &y)) {
-#if CONFIG_TOUCH_MIRROR_X
+#if TOUCH_SWAP_XY
+        { uint16_t t = x; x = y; y = t; }
+#endif
+#if TOUCH_MIRROR_X
         x = DISPLAY_WIDTH  - 1 - x;
 #endif
-#if CONFIG_TOUCH_MIRROR_Y
+#if TOUCH_MIRROR_Y
         y = DISPLAY_HEIGHT - 1 - y;
-#endif
-#if CONFIG_TOUCH_SWAP_XY
-        { uint16_t t = x; x = y; y = t; }
 #endif
         data->point.x = x;
         data->point.y = y;
@@ -103,6 +108,8 @@ void touch_init(void)
     // ── Driver ───────────────────────────────────────────────────────────
 #if CONFIG_TOUCH_CST816D
     cst816d_init(s_bus, CTP_RST);
+#elif CONFIG_TOUCH_FT6336U
+    ft6336u_init(s_bus, CTP_RST);
 #else
     ESP_LOGE(TAG, "No touch driver selected in Kconfig");
     return;

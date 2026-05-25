@@ -6,16 +6,26 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-// Display dimensions derived from UI_PROFILE_* (defines.h)
+// Display dimensions and touch orientation derived from UI_PROFILE_* (defines.h).
+// TOUCH_* are applied in this order: swap_xy → mirror_x → mirror_y (in display frame).
 #if defined(UI_PROFILE_240X296)
     #define DISPLAY_WIDTH   240
     #define DISPLAY_HEIGHT  296
+    #define TOUCH_SWAP_XY   0
+    #define TOUCH_MIRROR_X  1
+    #define TOUCH_MIRROR_Y  1
 #elif defined(UI_PROFILE_320x240)
     #define DISPLAY_WIDTH   320
     #define DISPLAY_HEIGHT  240
+    #define TOUCH_SWAP_XY   1
+    #define TOUCH_MIRROR_X  1
+    #define TOUCH_MIRROR_Y  0
 #elif defined(UI_PROFILE_MONO_128X64)
     #define DISPLAY_WIDTH   128
     #define DISPLAY_HEIGHT  64
+    #define TOUCH_SWAP_XY   0
+    #define TOUCH_MIRROR_X  0
+    #define TOUCH_MIRROR_Y  0
 #else
     #error "Unknown UI_PROFILE"
 #endif

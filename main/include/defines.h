@@ -17,8 +17,8 @@
 
 // ===== UI =====
 
-#define UI_PROFILE_240X296
-// #define UI_PROFILE_320x240
+// #define UI_PROFILE_240X296
+#define UI_PROFILE_320x240
 // #define UI_PROFILE_MONO_128X64
 
 
@@ -33,9 +33,9 @@
 #define LCD_PIN_MOSI  11
 #define LCD_PIN_CLK   12
 #define LCD_PIN_CS    41
-#define LCD_PIN_DC    39
-#define LCD_PIN_RST   38
-#define LCD_LED       40
+#define LCD_PIN_DC    2 //39
+#define LCD_PIN_RST   42 //38
+#define LCD_LED       1 //40
 
 #elif CONFIG_DISPLAY_CO5300
 
@@ -53,7 +53,7 @@
 
 
 // ===== TOUCH =====
-// CST816D
+// Driver selected via CONFIG_TOUCH_* in sdkconfig.defaults (CST816D / FT6336U)
 #define CTP_SCL     47
 #define CTP_SDA     48
 #define CTP_INT     -1
