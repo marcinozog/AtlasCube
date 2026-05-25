@@ -43,6 +43,7 @@ static lv_obj_t *s_row_eq            = NULL;
 static lv_obj_t *s_row_ss            = NULL;
 static lv_obj_t *s_row_events        = NULL;
 static lv_obj_t *s_slider_bright     = NULL;
+static lv_obj_t *s_slider_ss         = NULL;
 static lv_obj_t *s_label_bright_val  = NULL;
 static lv_obj_t *s_label_theme_val   = NULL;
 static lv_obj_t *s_label_mode_val    = NULL;
@@ -88,11 +89,11 @@ static void update_hint(void)
 {
     if (!s_hint) return;
     if (s_editing) {
-        lv_label_set_text(s_hint, "turn=change  press=done");
+        lv_label_set_text(s_hint, "turn=change  press=done  swipe>=back");
     } else if (focus_opens_screen(s_focus)) {
-        lv_label_set_text(s_hint, "turn=nav  press=open  long=back");
+        lv_label_set_text(s_hint, "turn=nav  press=open  swipe<>/long=back");
     } else {
-        lv_label_set_text(s_hint, "turn=nav  press=edit  long=back");
+        lv_label_set_text(s_hint, "turn=nav  press=edit  swipe<>/long=back");
     }
 }
 
@@ -144,6 +145,7 @@ static void update_ss_label(void)
     else
         snprintf(buf, sizeof(buf), "%ds", ss);
     lv_label_set_text(s_label_ss_val, buf);
+    if (s_slider_ss) lv_slider_set_value(s_slider_ss, ss, LV_ANIM_OFF);
 }
 
 /* ── CPU usage (per core, %) ────────────────────────────────────────────────
@@ -226,6 +228,79 @@ static void mem_timer_cb(lv_timer_t *t)
     update_mem_bar();
 }
 
+/* ── touch: brightness slider ───────────────────────────────────────────── */
+
+static void slider_bright_released_cb(lv_event_t *e)
+{
+    lv_obj_t *sld = lv_event_get_target(e);
+    int br = (int)lv_slider_get_value(sld);
+    settings_set_brightness(br);
+    update_brightness_label();
+    if (s_focus != FOCUS_BRIGHTNESS) {
+        s_focus = FOCUS_BRIGHTNESS;
+        s_editing = false;
+        update_focus_visuals();
+        update_hint();
+    }
+}
+
+static void slider_ss_released_cb(lv_event_t *e)
+{
+    lv_obj_t *sld = lv_event_get_target(e);
+    int ss = (int)lv_slider_get_value(sld);
+    /* quantize to 5s steps (matches encoder behaviour) */
+    ss = (ss + 2) / 5 * 5;
+    settings_set_scrsaver_delay(ss);
+    update_ss_label();
+    if (s_focus != FOCUS_SS) {
+        s_focus = FOCUS_SS;
+        s_editing = false;
+        update_focus_visuals();
+        update_hint();
+    }
+}
+
+/* ── touch: click on a row ──────────────────────────────────────────────── */
+
+static void row_click_cb(lv_event_t *e)
+{
+    settings_focus_t idx = (settings_focus_t)(uintptr_t)lv_event_get_user_data(e);
+
+    /* tap on a non-focused row → just focus it (and leave edit mode) */
+    if (idx != s_focus) {
+        s_focus = idx;
+        s_editing = false;
+        update_focus_visuals();
+        update_hint();
+        return;
+    }
+
+    /* tap on the already focused row → action */
+    if (idx == FOCUS_EQ) {
+        ui_navigate(SCREEN_EQ);
+    } else if (idx == FOCUS_EVENTS) {
+        ui_navigate(SCREEN_EVENTS);
+    } else if (idx == FOCUS_THEME) {
+        ui_theme_t next = (theme_current() == THEME_DARK) ? THEME_LIGHT : THEME_DARK;
+        settings_set_theme(next);
+        update_theme_label();
+    } else if (idx == FOCUS_MODE) {
+        settings_set_bt_enable(!app_state_get()->bt_enable);
+        update_mode_label();
+    } else if (idx == FOCUS_BT_SCREEN) {
+        settings_set_bt_show_screen(!app_state_get()->bt_show_screen);
+        update_bt_screen_label();
+    } else if (idx == FOCUS_DSP) {
+        settings_set_eq_enabled(!app_state_get()->eq_enabled);
+        update_dsp_label();
+    } else {
+        /* BRIGHTNESS / SS → toggle edit mode, encoder changes the value */
+        s_editing = !s_editing;
+        update_focus_visuals();
+        update_hint();
+    }
+}
+
 /* ── row factory ────────────────────────────────────────────────────────── */
 
 static lv_obj_t *make_row(lv_obj_t *parent, int y_ofs, const char *title)
@@ -294,6 +369,7 @@ static void settings_create(lv_obj_t *parent)
 
     /* ── row: Brightness ── */
     s_row_bright = make_row(s_rows_cont, 0, "Brightness");
+    lv_obj_add_event_cb(s_row_bright, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_BRIGHTNESS);
 
     s_slider_bright = lv_slider_create(s_row_bright);
     lv_obj_set_size(s_slider_bright, p->settings_slider_w, p->settings_slider_h);
@@ -302,8 +378,11 @@ static void settings_create(lv_obj_t *parent)
     lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->accent),     LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->text_muted), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(s_slider_bright, LV_OPA_COVER, LV_PART_MAIN);
-    /* slider is visual only — input is handled by on_input */
-    lv_obj_clear_flag(s_slider_bright, LV_OBJ_FLAG_CLICKABLE);
+    /* Keep press ownership on the slider even if the finger drifts outside
+       its bounds during drag — otherwise LV_EVENT_RELEASED is routed to
+       whichever widget happens to be under the finger on release. */
+    lv_obj_add_flag(s_slider_bright, LV_OBJ_FLAG_PRESS_LOCK);
+    lv_obj_add_event_cb(s_slider_bright, slider_bright_released_cb, LV_EVENT_RELEASED, NULL);
 
     s_label_bright_val = lv_label_create(s_row_bright);
     lv_obj_set_style_text_font(s_label_bright_val, p->settings_value_font, LV_PART_MAIN);
@@ -312,6 +391,7 @@ static void settings_create(lv_obj_t *parent)
 
     /* ── row: Theme ── */
     s_row_theme = make_row(s_rows_cont, p->settings_row2_y - p->settings_row1_y, "Theme");
+    lv_obj_add_event_cb(s_row_theme, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_THEME);
 
     s_label_theme_val = lv_label_create(s_row_theme);
     lv_obj_set_style_text_font(s_label_theme_val, p->settings_value_font, LV_PART_MAIN);
@@ -320,6 +400,7 @@ static void settings_create(lv_obj_t *parent)
 
     /* ── row: Mode ── */
     s_row_mode = make_row(s_rows_cont, p->settings_row3_y - p->settings_row1_y, "Mode");
+    lv_obj_add_event_cb(s_row_mode, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_MODE);
 
     s_label_mode_val = lv_label_create(s_row_mode);
     lv_obj_set_style_text_font(s_label_mode_val, p->settings_value_font, LV_PART_MAIN);
@@ -330,6 +411,7 @@ static void settings_create(lv_obj_t *parent)
     int row4_y_ofs = (p->settings_row3_y - p->settings_row1_y)
                    + (p->settings_row2_y - p->settings_row1_y);
     s_row_bt_screen = make_row(s_rows_cont, row4_y_ofs, "BT Screen");
+    lv_obj_add_event_cb(s_row_bt_screen, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_BT_SCREEN);
 
     s_label_bt_screen_val = lv_label_create(s_row_bt_screen);
     lv_obj_set_style_text_font(s_label_bt_screen_val, p->settings_value_font, LV_PART_MAIN);
@@ -340,6 +422,7 @@ static void settings_create(lv_obj_t *parent)
     int row5_y_ofs = (p->settings_row3_y - p->settings_row1_y)
                    + 2 * (p->settings_row2_y - p->settings_row1_y);
     s_row_dsp = make_row(s_rows_cont, row5_y_ofs, "DSP");
+    lv_obj_add_event_cb(s_row_dsp, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_DSP);
 
     s_label_dsp_val = lv_label_create(s_row_dsp);
     lv_obj_set_style_text_font(s_label_dsp_val, p->settings_value_font, LV_PART_MAIN);
@@ -350,6 +433,7 @@ static void settings_create(lv_obj_t *parent)
     int row6_y_ofs = (p->settings_row3_y - p->settings_row1_y)
                    + 3 * (p->settings_row2_y - p->settings_row1_y);
     s_row_eq = make_row(s_rows_cont, row6_y_ofs, "Equalizer");
+    lv_obj_add_event_cb(s_row_eq, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_EQ);
 
     s_label_eq_val = lv_label_create(s_row_eq);
     lv_obj_set_style_text_font(s_label_eq_val, p->settings_value_font, LV_PART_MAIN);
@@ -361,16 +445,28 @@ static void settings_create(lv_obj_t *parent)
     int row7_y_ofs = (p->settings_row3_y - p->settings_row1_y)
                    + 4 * (p->settings_row2_y - p->settings_row1_y);
     s_row_ss = make_row(s_rows_cont, row7_y_ofs, "Screensaver");
+    lv_obj_add_event_cb(s_row_ss, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_SS);
+
+    s_slider_ss = lv_slider_create(s_row_ss);
+    lv_obj_set_size(s_slider_ss, p->settings_slider_w, p->settings_slider_h);
+    lv_obj_align(s_slider_ss, LV_ALIGN_BOTTOM_LEFT, 0, -2);
+    lv_slider_set_range(s_slider_ss, 0, 600);
+    lv_obj_set_style_bg_color(s_slider_ss, lv_color_hex(th->accent),     LV_PART_INDICATOR);
+    lv_obj_set_style_bg_color(s_slider_ss, lv_color_hex(th->text_muted), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(s_slider_ss, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_add_flag(s_slider_ss, LV_OBJ_FLAG_PRESS_LOCK);
+    lv_obj_add_event_cb(s_slider_ss, slider_ss_released_cb, LV_EVENT_RELEASED, NULL);
 
     s_label_ss_val = lv_label_create(s_row_ss);
     lv_obj_set_style_text_font(s_label_ss_val, p->settings_value_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_ss_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_align(s_label_ss_val, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_align(s_label_ss_val, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
 
     /* ── row: Events ── */
     int row8_y_ofs = (p->settings_row3_y - p->settings_row1_y)
                    + 5 * (p->settings_row2_y - p->settings_row1_y);
     s_row_events = make_row(s_rows_cont, row8_y_ofs, "Events");
+    lv_obj_add_event_cb(s_row_events, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_EVENTS);
 
     s_label_events_val = lv_label_create(s_row_events);
     lv_obj_set_style_text_font(s_label_events_val, p->settings_value_font, LV_PART_MAIN);
@@ -408,7 +504,7 @@ static void settings_destroy(void)
     if (s_mem_timer) { lv_timer_delete(s_mem_timer); s_mem_timer = NULL; }
     s_root = s_title = s_rows_cont = NULL;
     s_row_bright = s_row_theme = s_row_mode = s_row_bt_screen = s_row_dsp = s_row_eq = s_row_ss = s_row_events = NULL;
-    s_slider_bright = s_label_bright_val = NULL;
+    s_slider_bright = s_slider_ss = s_label_bright_val = NULL;
     s_label_theme_val = s_label_mode_val = s_label_bt_screen_val = s_label_dsp_val = s_label_eq_val = s_label_events_val = NULL;
     s_mem_bar = s_hint = NULL;
     ESP_LOGI(TAG, "Destroyed");
@@ -494,6 +590,8 @@ static void settings_on_input(ui_input_t input)
 
         case UI_INPUT_BTN_BACK:
         case UI_INPUT_ENCODER_LONG_PRESS:
+        case UI_INPUT_SWIPE_RIGHT:
+        case UI_INPUT_SWIPE_LEFT:
             ui_navigate(SCREEN_CLOCK);
             break;
 
@@ -523,6 +621,10 @@ static void settings_apply_theme(void)
 
     lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->accent),    LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->text_muted), LV_PART_MAIN);
+    if (s_slider_ss) {
+        lv_obj_set_style_bg_color(s_slider_ss, lv_color_hex(th->accent),    LV_PART_INDICATOR);
+        lv_obj_set_style_bg_color(s_slider_ss, lv_color_hex(th->text_muted), LV_PART_MAIN);
+    }
     lv_obj_set_style_text_color(s_label_bright_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_theme_val,  lv_color_hex(th->text_primary), LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_mode_val,   lv_color_hex(th->text_primary), LV_PART_MAIN);

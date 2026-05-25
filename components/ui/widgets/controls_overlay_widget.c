@@ -47,23 +47,15 @@ static void overlay_hide(void)
     if (s_timer) { lv_timer_del(s_timer); s_timer = NULL; }
 }
 
-// LVGL touch callbacks fire on the UI thread but bypass ui_manager's event
-// queue, so ui_manager has no way to know the user interacted. We post a
-// neutral UI_EVT_INPUT (UI_INPUT_NONE) just so the UI_EVT_INPUT handler in
-// ui_manager_run() resets s_last_input_us — otherwise the screensaver fires
-// while the user is actively tapping controls. Screen on_input() switches
-// have no case for UI_INPUT_NONE, so it's a no-op there.
 static void parent_clicked_cb(lv_event_t *e)
 {
     (void)e;
-    ui_input_send(UI_INPUT_NONE);   // keep screensaver idle timer alive
     if (!s_overlay) return;
     if (lv_obj_has_flag(s_overlay, LV_OBJ_FLAG_HIDDEN)) overlay_show();
 }
 
 static void btn_clicked_cb(lv_event_t *e)
 {
-    ui_input_send(UI_INPUT_NONE);   // keep screensaver idle timer alive
     ctrl_id_t btn = (ctrl_id_t)(intptr_t)lv_event_get_user_data(e);
     // ESP_LOGI(TAG, "btn_c: %d", id);
     app_state_t *s = app_state_get();
@@ -128,7 +120,6 @@ static void btn_clicked_cb(lv_event_t *e)
 
 static void btn_long_repeat_cb(lv_event_t *e)
 {
-    ui_input_send(UI_INPUT_NONE);   // keep screensaver idle timer alive
     ctrl_id_t btn = (ctrl_id_t)(intptr_t)lv_event_get_user_data(e);
     // ESP_LOGI(TAG, "btn_l: %d", id);
     app_state_t *s = app_state_get();

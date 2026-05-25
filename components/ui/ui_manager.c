@@ -277,6 +277,16 @@ void ui_input_send(ui_input_t input)
     ui_event_send(&ev);
 }
 
+// Pointer-indev press hook: LVGL touch widgets bypass the ui_manager event
+// queue, so without this the idle timer would keep ticking while the user
+// taps. Registered once per pointer indev at startup; fires before widget
+// dispatch, so it works regardless of which widget catches the press.
+static void pointer_press_note_cb(lv_event_t *e)
+{
+    (void)e;
+    s_last_input_us = esp_timer_get_time();
+}
+
 // --------------------------------------------------------------------------
 // Touch gesture dispatch — one screen-level handler, maps LVGL gesture
 // direction to UI_INPUT_SWIPE_* and pushes through the normal input pipeline.
@@ -321,6 +331,12 @@ void ui_manager_run(void)
     // scroll (which would suppress LV_EVENT_GESTURE).
     lv_obj_clear_flag(lv_scr_act(), LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(lv_scr_act(), gesture_dispatch_cb, LV_EVENT_GESTURE, NULL);
+
+    for (lv_indev_t *id = lv_indev_get_next(NULL); id; id = lv_indev_get_next(id)) {
+        if (lv_indev_get_type(id) == LV_INDEV_TYPE_POINTER) {
+            lv_indev_add_event_cb(id, pointer_press_note_cb, LV_EVENT_PRESSED, NULL);
+        }
+    }
 
     do_navigate(SCREEN_SPLASH);
 
