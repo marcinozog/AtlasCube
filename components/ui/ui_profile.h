@@ -20,6 +20,12 @@
     #define TOUCH_SWAP_XY   1
     #define TOUCH_MIRROR_X  1
     #define TOUCH_MIRROR_Y  0
+#elif defined(UI_PROFILE_480x320)
+    #define DISPLAY_WIDTH   480
+    #define DISPLAY_HEIGHT  320
+    #define TOUCH_SWAP_XY   1
+    #define TOUCH_MIRROR_X  1
+    #define TOUCH_MIRROR_Y  0
 #elif defined(UI_PROFILE_MONO_128X64)
     #define DISPLAY_WIDTH   128
     #define DISPLAY_HEIGHT  64
