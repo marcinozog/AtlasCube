@@ -188,6 +188,11 @@ function setDashboardNotifyEnabled(t) {
     document.getElementById('dash_notify_panel').style.display = t ? '' : 'none';
 }
 
+function onScreensaverStyleChange() {
+    const isDash = document.getElementById('scrs_id').value === 'dashboard';
+    document.getElementById('dashboard_panel').style.display = isDash ? '' : 'none';
+}
+
 function onDashboardValueTypeChange() {
     const t = document.getElementById('dash_value_type').value;
     document.getElementById('dash_notify_num').style.display = (t === 'number') ? '' : 'none';
@@ -432,6 +437,7 @@ function populateForm(s) {
         setVal('scrs_delay', s.scrsaver.delay ?? 60);
         const sel = document.getElementById('scrs_id');
         if (sel) sel.value = s.scrsaver.id || 'clockhands';
+        onScreensaverStyleChange();
     }
     if (s.dashboard) {
         setVal('dash_title',     s.dashboard.title     ?? '');
