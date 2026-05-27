@@ -29,6 +29,7 @@
         <button type="button" class="tab-btn" data-tab="wifi"        onclick="selectTab('wifi')">📡 WiFi</button>
         <button type="button" class="tab-btn" data-tab="ntp"         onclick="selectTab('ntp')">🕐 NTP</button>
         <button type="button" class="tab-btn" data-tab="mqtt"        onclick="selectTab('mqtt')">📨 MQTT</button>
+        <button type="button" class="tab-btn" data-tab="tools"       onclick="selectTab('tools')">🛠️ Tools</button>
     </nav>
 
     <!-- ══════════════════════════════════════════
@@ -93,11 +94,6 @@
         <div class="panel">
             <label class="field-label">Screen layout editor</label>
             <a href="/layout.html" class="tool-btn tool-link" style="width:fit-content;padding:8px 14px">🖼️ Open Layout Editor</a>
-        </div>
-
-        <div class="panel">
-            <label class="field-label">Web files editor</label>
-            <a href="/editor.html" class="tool-btn tool-link" style="width:fit-content;padding:8px 14px">📝 Open File Editor</a>
         </div>
     </section>
 
@@ -403,6 +399,16 @@
 
         <button id="mqtt_save_btn" onclick="saveMqtt()">💾 Save MQTT</button>
         <div id="mqtt_status" class="save-status"></div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         Tools
+    ══════════════════════════════════════════ -->
+    <section class="tab-pane" id="tab-tools" data-tab="tools">
+        <div class="panel">
+            <label class="field-label">Web files editor</label>
+            <a href="/editor.html" class="tool-btn tool-link" style="width:fit-content;padding:8px 14px">📝 Open File Editor</a>
+        </div>
     </section>
 
 </main>
