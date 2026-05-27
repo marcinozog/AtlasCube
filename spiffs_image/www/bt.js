@@ -7,6 +7,7 @@ let ws;
 let btVolTimeout;
 let btEnabled = false;
 let btState   = -1;
+let btLogAutoScroll = true;
 
 const btStateMap = {
     "BT_CONNECTED":0, "BT_DISCONNECTED":1, "BT_DISCOVERABLE":2
@@ -56,8 +57,7 @@ function connect() {
         }
 
         if (data.type === 'bt_log') {
-            const el = document.getElementById('bt_log');
-            if (el) { el.innerText += data.data + '\n'; el.scrollTop = el.scrollHeight; }
+            appendBtLog(data.data);
         }
     };
 }
@@ -123,7 +123,29 @@ function btCtrl(at) {
     send({ cmd: 'bt_cmd', value: at });
 }
 
+// Append a line, auto-scrolling only while the user is following the bottom.
+function appendBtLog(line) {
+    const el = document.getElementById('bt_log');
+    if (!el) return;
+    el.innerText += line + '\n';
+    if (btLogAutoScroll) el.scrollTop = el.scrollHeight;
+}
+
+function clearBtLog() {
+    const el = document.getElementById('bt_log');
+    if (el) el.innerText = '';
+    btLogAutoScroll = true;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────────────────────────────────────
 connect();
+
+const logEl = document.getElementById('bt_log');
+if (logEl) {
+    // Scrolling up pauses auto-scroll; returning to the bottom resumes it.
+    logEl.addEventListener('scroll', () => {
+        btLogAutoScroll = logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 8;
+    });
+}

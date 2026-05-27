@@ -62,7 +62,10 @@
 
     <!-- ── Console ── -->
     <section class="panel">
-        <div class="panel-label">CONSOLE</div>
+        <div class="panel-label panel-label--row">
+            CONSOLE
+            <button class="bt-toggle-btn" onclick="clearBtLog()">🗑 Clear</button>
+        </div>
         <pre id="bt_log" class="bt-log"></pre>
         <div class="bt-send-row">
             <input id="bt_input" class="bt-input" placeholder="AT+STATE" />
