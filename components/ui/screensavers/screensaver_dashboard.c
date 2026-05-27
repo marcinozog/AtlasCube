@@ -1,6 +1,7 @@
 #include "screensaver_dashboard.h"
 #include "ui_screen.h"
 #include "ui_profile.h"
+#include "theme.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -438,6 +439,7 @@ static const lv_font_t *big_font_for_display(void)
 static void build_widget(lv_obj_t *parent, int i)
 {
     const dashboard_widget_t *w = &s_widgets[i];
+    const ui_theme_colors_t  *th = theme_get();
 
     lv_obj_t *card = lv_obj_create(parent);
     lv_obj_remove_style_all(card);
@@ -451,7 +453,7 @@ static void build_widget(lv_obj_t *parent, int i)
     lv_obj_t *title = lv_label_create(card);
     lv_label_set_text(title, w->title);
     lv_obj_set_style_text_font(title, &lv_font_montserrat_18_pl, LV_PART_MAIN);
-    lv_obj_set_style_text_color(title, lv_color_hex(0x808080), LV_PART_MAIN);
+    lv_obj_set_style_text_color(title, lv_color_hex(th->text_muted), LV_PART_MAIN);
 
     lv_obj_t *value = lv_label_create(card);
     lv_label_set_text(value, "—");
@@ -459,7 +461,7 @@ static void build_widget(lv_obj_t *parent, int i)
                             ? big_font_for_display()
                             : &lv_font_montserrat_18_pl;
     lv_obj_set_style_text_font(value, font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(value, lv_color_white(), LV_PART_MAIN);
+    lv_obj_set_style_text_color(value, lv_color_hex(th->text_primary), LV_PART_MAIN);
 
     s_value_lbl[i] = value;
 }
@@ -482,7 +484,7 @@ static void dashboard_create(lv_obj_t *parent)
     s_root = lv_obj_create(parent);
     lv_obj_remove_style_all(s_root);
     lv_obj_set_size(s_root, W, H);
-    lv_obj_set_style_bg_color(s_root, lv_color_black(), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(s_root, lv_color_hex(theme_get()->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(s_root, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_clear_flag(s_root, LV_OBJ_FLAG_SCROLLABLE);
 

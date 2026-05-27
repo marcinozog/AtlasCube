@@ -1,6 +1,7 @@
 #include "screensaver_clockhands.h"
 #include "ui_screen.h"
 #include "ui_profile.h"
+#include "theme.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include <math.h>
@@ -67,7 +68,7 @@ static lv_obj_t *make_hand(lv_obj_t *parent, lv_point_precise_t pts[2],
     return l;
 }
 
-static void draw_face(lv_obj_t *parent, int radius)
+static void draw_face(lv_obj_t *parent, int radius, const ui_theme_colors_t *th)
 {
     for (int i = 0; i < 12; i++) {
         float a = (float)i * (2.0f * 3.14159265f / 12.0f);
@@ -83,7 +84,7 @@ static void draw_face(lv_obj_t *parent, int radius)
         lv_line_set_points(tick, s_pt_tick[i], 2);
         lv_obj_set_style_line_width(tick, (i % 3 == 0) ? 4 : 2, LV_PART_MAIN);
         lv_obj_set_style_line_color(tick,
-            (i % 3 == 0) ? lv_color_white() : lv_color_hex(0x808080),
+            lv_color_hex((i % 3 == 0) ? th->text_primary : th->text_muted),
             LV_PART_MAIN);
         lv_obj_set_style_line_rounded(tick, false, LV_PART_MAIN);
     }
@@ -102,25 +103,27 @@ static void clockhands_create(lv_obj_t *parent)
     s_r_min  = (int)(radius * 0.80f);
     s_r_hour = (int)(radius * 0.55f);
 
+    const ui_theme_colors_t *th = theme_get();
+
     s_root = lv_obj_create(parent);
     lv_obj_remove_style_all(s_root);
     lv_obj_set_size(s_root, W, H);
-    lv_obj_set_style_bg_color(s_root, lv_color_black(), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(s_root, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(s_root, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_clear_flag(s_root, LV_OBJ_FLAG_SCROLLABLE);
 
-    draw_face(s_root, radius);
+    draw_face(s_root, radius, th);
 
-    s_hand_h = make_hand(s_root, s_pt_h, 8, 0xFFFFFF);
-    s_hand_m = make_hand(s_root, s_pt_m, 5, 0xFFFFFF);
-    s_hand_s = make_hand(s_root, s_pt_s, 2, 0xE03030);
+    s_hand_h = make_hand(s_root, s_pt_h, 8, th->text_primary);
+    s_hand_m = make_hand(s_root, s_pt_m, 5, th->text_primary);
+    s_hand_s = make_hand(s_root, s_pt_s, 2, th->accent);
 
     lv_obj_t *hub = lv_obj_create(s_root);
     lv_obj_remove_style_all(hub);
     lv_obj_set_size(hub, 12, 12);
     lv_obj_set_pos(hub, s_cx - 6, s_cy - 6);
     lv_obj_set_style_radius(hub, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(hub, lv_color_hex(0xE03030), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(hub, lv_color_hex(th->accent), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(hub, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_clear_flag(hub, LV_OBJ_FLAG_SCROLLABLE);
 
