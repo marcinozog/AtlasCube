@@ -4,12 +4,10 @@
 // State
 // ─────────────────────────────────────────────────────────────────────────────
 let ws;
-let volTimeout, eqTimeout, btVolTimeout;
+let volTimeout, eqTimeout;
 let currentStation      = null;
 let currentStationIndex = null;
 let stationsList        = [];
-let btEnabled           = false;
-let btState             = -1;
 
 const codecMap = {
     0:"UNK", 1:"RAW", 2:"WAV", 3:"MP3", 4:"AAC", 5:"OPUS",
@@ -18,10 +16,6 @@ const codecMap = {
 };
 
 const freqs = ["31","62","125","250","500","1k","2k","4k","8k","16k"];
-
-const btStateMap = {
-    "BT_CONNECTED":0, "BT_DISCONNECTED":1, "BT_DISCOVERABLE":2
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WebSocket
@@ -71,37 +65,6 @@ function connect() {
                 }
             }
             if (data.eq !== undefined) setEqUI(data.eq);
-            if (data.bt_enable !== undefined) {
-                btEnabled = data.bt_enable;
-                updateBtButton();
-            }
-            if (data.bt_volume !== undefined) {
-                const sl = document.getElementById('bt_volume_slider');
-                const lb = document.getElementById('bt_vol_value');
-                if (sl) sl.value = data.bt_volume;
-                if (lb) lb.innerText = data.bt_volume;
-            }
-            if (data.bt_state !== undefined) {
-                btState= data.bt_state;
-                updateBtStatus();
-            }
-            if (data.bt_title !== undefined) {
-                const el = document.getElementById('bt_title');
-                if (el) el.innerText = data.bt_title?.length ? data.bt_title : '---';
-            }
-            if (data.bt_artist !== undefined) {
-                const el = document.getElementById('bt_artist');
-                if (el) el.innerText = data.bt_artist?.length ? data.bt_artist : '---';
-            }
-            if (data.bt_position_s !== undefined || data.bt_duration_ms !== undefined) {
-                const el = document.getElementById('bt_time');
-                if (el) el.innerText = formatBtTime(data.bt_position_s, data.bt_duration_ms);
-            }
-        }
-
-        if (data.type === 'bt_log') {
-            const el = document.getElementById('bt_log');
-            if (el) { el.innerText += data.data + '\n'; el.scrollTop = el.scrollHeight; }
         }
     };
 }
@@ -109,14 +72,6 @@ function connect() {
 function send(obj) {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
     else console.warn('WS not connected');
-}
-
-function formatBtTime(posS, durMs) {
-    const fmt = (s) => {
-        s = Math.max(0, Math.floor(s || 0));
-        return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-    };
-    return `${fmt(posS)} / ${fmt((durMs || 0) / 1000)}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -284,63 +239,6 @@ function resetEQ() {
 
 function openEq()  { document.getElementById('eq_modal').classList.remove('hidden'); }
 function closeEq() { document.getElementById('eq_modal').classList.add('hidden'); }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Bluetooth
-// ─────────────────────────────────────────────────────────────────────────────
-function toggleBtMode() {
-    btEnabled = !btEnabled;
-    send({ cmd: 'bt_enable', value: btEnabled });
-    updateBtButton();
-}
-
-function updateBtStatus() {
-    const el = document.getElementById('bt_status');
-    if (!el) return;
-    if (btState == btStateMap["BT_CONNECTED"]) {
-        el.textContent = '⬤ connected';
-        el.className = 'bt-status connected';
-    } else if ((btState == btStateMap["BT_DISCONNECTED"])) {
-        el.textContent = '⬤ disconnected';
-        el.className = 'bt-status disconnected';
-    }
-    else if ((btState == btStateMap["BT_DISCOVERABLE"])) {
-        el.textContent = '⬤ discoverable';
-        el.className = 'bt-status discoverable';
-    }
-}
-
-function updateBtButton() {
-    const label = btEnabled ? '🔵 BT ON' : '⚪ BT OFF';
-
-    // toolbar button - now bt_console
-    // const btn = document.getElementById('bt_btn');
-    // if (btn) {
-    //     btn.innerText = label;
-    //     btn.classList.toggle('bt-on', btEnabled);
-    // }
-
-    // modal toggle button
-    const toggleBtn = document.getElementById('bt_toggle_btn');
-    if (toggleBtn) {
-        toggleBtn.innerText = label;
-        toggleBtn.classList.toggle('bt-on', btEnabled);
-    }
-}
-
-function onBtVolumeChange(v) {
-    document.getElementById('bt_vol_value').innerText = v;
-    clearTimeout(btVolTimeout);
-    btVolTimeout = setTimeout(() => send({ cmd: 'bt_volume', value: parseInt(v) }), 150);
-}
-
-function sendBt() {
-    const v = document.getElementById('bt_input').value;
-    send({ cmd: 'bt_cmd', value: v });
-}
-
-function openBtConsole()  { document.getElementById('bt_modal').classList.remove('hidden'); }
-function closeBtConsole() { document.getElementById('bt_modal').classList.add('hidden'); }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Screens

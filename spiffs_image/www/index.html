@@ -60,40 +60,10 @@
         <div id="stations" class="stations-list"></div>
     </section>
 
-    <!-- ── Bluetooth ── -->
-    <section class="panel">
-        <div class="panel-label panel-label--row">
-            BLUETOOTH
-            <span id="bt_status" class="bt-status">⬤ disconnected</span>
-        </div>
-        <div class="screen-switcher">
-            <button class="bt-toggle-btn" id="bt_toggle_btn" onclick="toggleBtMode()">⚪ BT OFF</button>
-        </div>
-
-        <!-- BT Now Playing -->
-        <div class="now-playing" style="margin-top: 10px;">
-            <div class="np-inner">
-                <div id="bt_title"  class="station-name">---</div>
-                <div id="bt_artist" class="track-title">---</div>
-            </div>
-            <div id="bt_time" class="audio-info">0:00 / 0:00</div>
-        </div>
-
-        <!-- BT Volume -->
-        <div class="panel" style="margin-top: 10px;">
-            <div class="slider-row">
-                <span class="slider-label">📶 BT Volume</span>
-                <span id="bt_vol_value" class="slider-value">8</span>
-            </div>
-            <input type="range" min="0" max="100" value="30"
-                   id="bt_volume_slider" oninput="onBtVolumeChange(this.value)" />
-        </div>
-    </section>
-
     <!-- ── Toolbar ── -->
     <div class="toolbar">
         <button class="tool-btn" onclick="openEq()">🎛 EQ</button>
-        <button class="tool-btn" id="bt_console" onclick="openBtConsole()">⚪ BT Console</button>
+        <a href="/bt.html" class="tool-btn tool-link">🔵 Bluetooth</a>
         <a href="/playlist.html" class="tool-btn tool-link">📻 Playlist</a>
         <a href="/events.html" class="tool-btn tool-link">🗓 Events</a>
         <a href="/settings.html" class="tool-btn tool-link">⚙ Settings</a>
@@ -120,39 +90,6 @@
         <div class="eq-footer">
             <button class="btn-secondary" onclick="resetEQ()">↺ Reset</button>
             <button class="btn-secondary" onclick="closeEq()">Close</button>
-        </div>
-    </div>
-</div>
-
-<!-- ═══════════════════════ MODAL: BT CONSOLE ═══════════════════════ -->
-<div id="bt_modal" class="modal hidden" onclick="onModalBgClick(event,'bt_modal')">
-    <div class="modal-content">
-        <div class="modal-header">
-            <span class="modal-title">🔵 Bluetooth</span>
-            <div style="display:flex;gap:8px;align-items:center">
-                <!-- <button class="bt-toggle-btn" id="bt_toggle_btn" onclick="toggleBtMode()">⚪ BT OFF</button> -->
-                <button class="modal-close" onclick="closeBtConsole()">✕</button>
-            </div>
-        </div>
-
-        <!-- BT Volume -->
-        <div class="panel">
-            <div class="slider-row">
-                <span class="slider-label">📶 BT Volume</span>
-                <span id="bt_vol_value" class="slider-value">8</span>
-            </div>
-            <input type="range" min="0" max="15" value="8"
-                   id="bt_volume_slider" oninput="onBtVolumeChange(this.value)" />
-        </div>
-
-        <!-- BT Log -->
-        <div class="panel-label" style="margin-top:12px">CONSOLE</div>
-        <pre id="bt_log" class="bt-log"></pre>
-
-        <!-- BT Send -->
-        <div class="bt-send-row">
-            <input id="bt_input" class="bt-input" placeholder="AT+STATE" />
-            <button class="btn-secondary btn-send" onclick="sendBt()">Send</button>
         </div>
     </div>
 </div>
