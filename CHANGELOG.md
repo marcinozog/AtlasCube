@@ -9,6 +9,28 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-05-28
+
+### Added
+- **web:** group editors in Tools tab, rename EQ button to Radio EQ
+- **display:** add ST7796U 480x320 driver and UI profile
+- **web:** move Web files editor to a new Tools settings tab
+- **web:** add Clear button and follow/pause auto-scroll to BT console
+- **web:** move Bluetooth panel to dedicated bt.html page
+- **ui:** dark/light theme for clockhands and dashboard screensavers
+- **ui:** touch support in settings + global idle-timer hook
+- **ui:** modified ui profile for ILI9341
+- **touch:** FT6336U driver, rebuild touch orientation
+- **events:** alarm type with radio stream wake-up
+- **display:** night dimming schedule
+
+### Changed
+- **config:** pick HW variant only in defines.h
+
+### Fixed
+- **display:** shrink ST7796 LVGL buffer to fit internal DRAM budget
+- **web:** show Dashboard widget settings only when Dashboard style selected
+
 ## [0.6.0] - 2026-05-22
 
 ### Added
@@ -87,7 +109,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/marcinozog/AtlasCube/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/marcinozog/AtlasCube/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/marcinozog/AtlasCube/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/marcinozog/AtlasCube/compare/v0.3.0...v0.4.0
