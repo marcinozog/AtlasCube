@@ -35,10 +35,13 @@ jobs:
           target: esp32s3
           path: '.'
           command: |
+            set -euo pipefail
             export ADF_PATH="$PWD/esp-adf"
             bash scripts/patch-esp-adf.sh
             idf.py build
-            idf.py merge-bin -o AtlasCube-${{ matrix.variant }}.bin
+            idf.py merge-bin -o "AtlasCube-${{ matrix.variant }}.bin"
+            echo "--- Looking for merged binary ---"
+            ls -la "AtlasCube-${{ matrix.variant }}.bin"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -46,6 +49,7 @@ jobs:
           name: AtlasCube-${{ matrix.variant }}
           path: AtlasCube-${{ matrix.variant }}.bin
           retention-days: 30
+          if-no-files-found: error
 
   release:
     name: Release
