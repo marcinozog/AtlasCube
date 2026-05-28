@@ -151,7 +151,15 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 
 ## Quick start — flash prebuilt firmware
 
-You don't need ESP-IDF or a toolchain to put AtlasCube on the device. Every push to `main` builds firmware for all supported displays in CI, and tagged releases publish ready-to-flash images.
+You don't need ESP-IDF or a toolchain to put AtlasCube on the device. Tagged releases publish ready-to-flash images, and there's a one-click installer in the browser.
+
+### Easiest: flash from your browser
+
+Open **[atlascube.net/flash](https://atlascube.net/flash/)** in Chrome / Edge / Opera / Brave, pick your display variant, plug the device in over USB, click Install. Zero CLI, zero install. (Firefox and Safari don't support WebSerial.)
+
+> First flash: hold the **BOOT** button while plugging USB, then release — puts ESP32-S3 into download mode. Required because the running firmware drives native USB-CDC and ignores the auto-reset.
+
+### Or: flash from CLI with esptool
 
 **1. Pick your display variant:**
 
