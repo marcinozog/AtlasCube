@@ -1,6 +1,6 @@
 # AtlasCube
 
-[![Build firmware](https://github.com/marcinozog/AtlasCube/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/marcinozog/AtlasCube/actions/workflows/build.yml)
+[![Build firmware](https://github.com/marcinozog/AtlasCube/actions/workflows/build.yml/badge.svg)](https://github.com/marcinozog/AtlasCube/actions/workflows/build.yml)
 
 A hobby project — internet radio and smart clock built on a custom ESP32-S3 board (AtlasCube). Streams internet radio, shows a clock, manages reminders, and exposes a web UI for configuration. Everything runs on the device with no cloud dependency.
 
