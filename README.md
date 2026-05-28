@@ -1,5 +1,7 @@
 # AtlasCube
 
+[![Build firmware](https://github.com/marcinozog/AtlasCube/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/marcinozog/AtlasCube/actions/workflows/build.yml)
+
 A hobby project — internet radio and smart clock built on a custom ESP32-S3 board (AtlasCube). Streams internet radio, shows a clock, manages reminders, and exposes a web UI for configuration. Everything runs on the device with no cloud dependency.
 
 🌐 **[atlascube.net](https://atlascube.net)**
@@ -147,77 +149,110 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 
 ---
 
+## Quick start — flash prebuilt firmware
+
+You don't need ESP-IDF or a toolchain to put AtlasCube on the device. Every push to `main` builds firmware for all supported displays in CI, and tagged releases publish ready-to-flash images.
+
+**1. Pick your display variant:**
+
+| File | Display | Touch |
+|---|---|---|
+| `AtlasCube-ili9341.bin` | ILI9341 320×240 (SPI) | FT6336U |
+| `AtlasCube-st7796.bin`  | ST7796U 480×320 (SPI) | FT6336U |
+| `AtlasCube-co5300.bin`  | CO5300 240×296 (QSPI AMOLED) | CST816D |
+
+**2. Download** the matching `.bin` from the [latest Release](https://github.com/marcinozog/AtlasCube/releases/latest).
+
+**3. Flash** with [esptool](https://github.com/espressif/esptool) (one-time `pip install esptool`):
+
+```bash
+esptool.py --chip esp32s3 -p <PORT> write_flash 0x0 AtlasCube-<variant>.bin
+```
+
+Substitute `<PORT>` with your serial port (`/dev/ttyUSB0`, `COM3`, …).
+
+**4. First boot:** the device starts an AP named `AtlasCube-XXXXXX`. Connect, open `192.168.4.1` and configure Wi-Fi.
+
+That's it — no ESP-IDF, no ESP-ADF, no patches. The rest of this README describes the dev build, needed only when you want to modify the firmware.
+
+---
+
 ## Build
 
 **Requirements**
 
 - [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf)
 - [ESP-ADF v2.8](https://github.com/espressif/esp-adf)
-- Custom AtlasCube board support (symlink into `esp-adf/components/audio_board/`)
 
-**ESP-ADF submodules (required)**
+**One-shot setup**
 
-After cloning ESP-ADF, initialize the required submodules — they contain pre-compiled libraries and are not populated by a plain clone:
-
-```bash
-git -C $ADF_PATH submodule update --init components/esp-adf-libs components/esp-sr
-```
-
-**AtlasCube board support**
-
-ESP-ADF requires a board definition to compile — it uses it to initialize the audio codec, I2S pins, PA enable, and other hardware specifics. Every supported board in `esp-adf/components/audio_board/` is a separate subdirectory with `board.c`, `board.h`, and `board_pins_config.c`. The `esp32_s3_atlascube` component in this repo follows that same structure and was modelled after the existing ESP32-S3 board definitions shipped with ESP-ADF.
-
-1. Add the board symlink:
-
-```bat
-mklink /D %ADF_PATH%\components\audio_board\esp32_s3_atlascube <path-to-repo>\components\audio_board\esp32_s3_atlascube
-```
-
-2. Register the board in `esp-adf/components/audio_board/Kconfig.projbuild`:
-
-```kconfig
-config ESP32_S3_ATLASCUBE_BOARD
-    bool "ESP32-S3-AtlasCube"
-```
-
-3. Register the board in `esp-adf/components/audio_board/CMakeLists.txt`:
-
-```cmake
-if (CONFIG_ESP32_S3_ATLASCUBE_BOARD)
-    message(STATUS "Current board name is " CONFIG_ESP32_S3_ATLASCUBE_BOARD)
-    list(APPEND COMPONENT_ADD_INCLUDEDIRS ./esp32_s3_atlascube)
-    set(COMPONENT_SRCS
-        ./esp32_s3_atlascube/board.c
-        ./esp32_s3_atlascube/board_pins_config.c
-    )
-endif()
-```
-
-4. Register the board in `esp-adf/components/audio_board/component.mk`:
-
-```makefile
-ifdef CONFIG_ESP32_S3_ATLASCUBE_BOARD
-COMPONENT_ADD_INCLUDEDIRS += ./esp32_s3_atlascube
-COMPONENT_SRCDIRS += ./esp32_s3_atlascube
-endif
-```
-
-5. `sdkconfig.defaults` already contains the board selection:
-
-```
-CONFIG_ESP32_S3_ATLASCUBE_BOARD=y
-```
-
-**ESP-IDF FreeRTOS patch (required)**
-
-ESP-ADF needs `xTaskCreateRestrictedPinnedToCore` which is not present in stock ESP-IDF v5.5.x. Apply the bundled patch once after installing ESP-IDF:
+After cloning ESP-IDF and ESP-ADF, run the bundled setup script:
 
 ```bash
-git -C $IDF_PATH apply --ignore-whitespace $ADF_PATH/idf_patches/idf_v5.5_freertos.patch
+ADF_PATH=<path-to-esp-adf> IDF_PATH=<path-to-esp-idf> bash scripts/patch-esp-adf.sh
 ```
 
-Without this patch the firmware boots but the MP3 decoder task fails to start at runtime:
-`E AUDIO_THREAD: Not found right xTaskCreateRestrictedPinnedToCore`
+The script is idempotent (safe to re-run) and does the following:
+
+- Initializes ESP-ADF submodules `components/esp-adf-libs` and `components/esp-sr` (pre-compiled libraries not pulled by a plain clone).
+- Copies the AtlasCube board definition into `esp-adf/components/audio_board/esp32_s3_atlascube/`.
+- Patches `Kconfig.projbuild`, `CMakeLists.txt` and `component.mk` in `esp-adf/components/audio_board/` to register the board.
+- Applies the FreeRTOS patch (`idf_v5.5_freertos.patch`) on ESP-IDF — required for `xTaskCreateRestrictedPinnedToCore`, without which the MP3 decoder task fails at runtime (`E AUDIO_THREAD: Not found right xTaskCreateRestrictedPinnedToCore`).
+
+`sdkconfig.defaults` already contains `CONFIG_ESP32_S3_ATLASCUBE_BOARD=y`.
+
+<details>
+<summary>What the script does — manual steps, for reference</summary>
+
+If you'd rather do it by hand (or are debugging the script):
+
+1. **ESP-ADF submodules:**
+   ```bash
+   git -C $ADF_PATH submodule update --init components/esp-adf-libs components/esp-sr
+   ```
+2. **Board sources** — copy or symlink:
+   ```bat
+   mklink /D %ADF_PATH%\components\audio_board\esp32_s3_atlascube <path-to-repo>\components\audio_board\esp32_s3_atlascube
+   ```
+3. **Register in `esp-adf/components/audio_board/Kconfig.projbuild`** (inside the `AUDIO_BOARD` choice):
+   ```kconfig
+   config ESP32_S3_ATLASCUBE_BOARD
+       bool "ESP32-S3-AtlasCube"
+   ```
+4. **Register in `esp-adf/components/audio_board/CMakeLists.txt`** (before `register_component()`):
+   ```cmake
+   if (CONFIG_ESP32_S3_ATLASCUBE_BOARD)
+       message(STATUS "Current board name is " CONFIG_ESP32_S3_ATLASCUBE_BOARD)
+       list(APPEND COMPONENT_ADD_INCLUDEDIRS ./esp32_s3_atlascube)
+       set(COMPONENT_SRCS
+           ./esp32_s3_atlascube/board.c
+           ./esp32_s3_atlascube/board_pins_config.c
+       )
+   endif()
+   ```
+5. **Register in `esp-adf/components/audio_board/component.mk`** (legacy GNU Make build):
+   ```makefile
+   ifdef CONFIG_ESP32_S3_ATLASCUBE_BOARD
+   COMPONENT_ADD_INCLUDEDIRS += ./esp32_s3_atlascube
+   COMPONENT_SRCDIRS += ./esp32_s3_atlascube
+   endif
+   ```
+6. **FreeRTOS patch on ESP-IDF:**
+   ```bash
+   git -C $IDF_PATH apply --ignore-whitespace $ADF_PATH/idf_patches/idf_v5.5_freertos.patch
+   ```
+
+</details>
+
+**Pick the hardware variant**
+
+The active variant lives in [`main/include/defines.h`](main/include/defines.h) — three independent `#define` groups: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. Edit by hand, or use the helper:
+
+```bash
+bash scripts/select-variant.sh ili9341   # or st7796 / co5300
+```
+
+After switching the variant, run `idf.py fullclean` so `sdkconfig` is regenerated from the new combination.
 
 **Build and flash**
 
