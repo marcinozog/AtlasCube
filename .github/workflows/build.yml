@@ -41,13 +41,13 @@ jobs:
             idf.py build
             idf.py merge-bin -o "AtlasCube-${{ matrix.variant }}.bin"
             echo "--- Looking for merged binary ---"
-            ls -la "AtlasCube-${{ matrix.variant }}.bin"
+            ls -la "build/AtlasCube-${{ matrix.variant }}.bin"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: AtlasCube-${{ matrix.variant }}
-          path: AtlasCube-${{ matrix.variant }}.bin
+          path: build/AtlasCube-${{ matrix.variant }}.bin
           retention-days: 30
           if-no-files-found: error
 
