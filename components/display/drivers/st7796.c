@@ -10,7 +10,7 @@
 
 static const char *TAG = "ST7796";
 
-#define LVGL_BUF_LINES 40
+#define LVGL_BUF_LINES 20
 
 #define LCD_BL_LEDC_TIMER    LEDC_TIMER_0
 #define LCD_BL_LEDC_CHANNEL  LEDC_CHANNEL_0

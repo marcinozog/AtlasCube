@@ -108,3 +108,46 @@ Reference implementation: [components/display/drivers/co5300.c](../components/di
 > The ILI9341 driver does **not** need this — its backlight is on a
 > separate LEDC PWM channel, not on SPI, so there is only one task
 > (LVGL) ever touching the bus.
+
+## 3. LVGL partial buffer vs internal DRAM budget
+
+**Symptom we hit:** right after switching the active profile from
+`UI_PROFILE_320x240` (ILI9341) to `UI_PROFILE_480x320` (ST7796U), radio
+playback stopped starting. The ESP-ADF pipeline reported:
+
+```
+E AUDIO_THREAD: Error creating task dsp
+E AUDIO_THREAD: Error creating task i2s
+I AUDIO_PIPELINE: ... Dram largest free: 1984 Bytes
+```
+
+**Why it happens:** the SPI LCD drivers allocate the LVGL partial
+buffer as DMA-capable internal RAM:
+
+```c
+buf = heap_caps_malloc(DISPLAY_WIDTH * LVGL_BUF_LINES * sizeof(lv_color_t),
+                       MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+```
+
+With `LVGL_BUF_LINES = 40` (carried over from the 320-px ILI9341
+driver), a 480-px panel pulls **480 × 40 × 2 B = 38 400 B** out of
+internal DRAM in one contiguous block. ESP-ADF's `dsp` and `i2s` audio
+elements need their task stacks in internal RAM too — once the LVGL
+buffer, Wi-Fi/lwIP, and the rest of the firmware have taken their
+share, the largest free internal block is too small for an audio task
+stack and `audio_thread_create` fails.
+
+**Fix:** size `LVGL_BUF_LINES` per panel so the buffer stays around
+~20 kB. For 480-px panels that means `20` (≈19.2 kB) rather than `40`.
+LVGL renders partials fine at that height; no visible difference, ~19 kB
+of internal DRAM freed.
+
+```c
+// components/display/drivers/st7796.c
+#define LVGL_BUF_LINES 20   // 480 * 20 * 2 = 19 200 B in DMA+INTERNAL
+```
+
+> If you ever port a wider panel (≥ 640 px), drop `LVGL_BUF_LINES`
+> further (10–16). The hard signal is `Dram largest free` in the
+> pipeline MEM log — if it's < a few kB, audio task creation will fail
+> intermittently even if the buffer alloc itself succeeded.
