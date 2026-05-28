@@ -8,13 +8,8 @@ CONFIG_PARTITION_TABLE_MD5=y
 
 CONFIG_ESP32_S3_ATLASCUBE_BOARD=y
 
-# CONFIG_DISPLAY_CO5300=y
-# CONFIG_DISPLAY_ILI9341=y
-CONFIG_DISPLAY_ST7796=y
-# CONFIG_DISPLAY_SSD1322=y
-
-# CONFIG_TOUCH_CST816D=y
-CONFIG_TOUCH_FT6336U=y
+# Display + touch driver selection lives in main/include/defines.h.
+# Top-level CMakeLists.txt parses it and generates build/sdkconfig.variant.
 
 CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
 CONFIG_SPIRAM=y

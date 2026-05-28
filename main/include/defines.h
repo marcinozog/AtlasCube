@@ -11,16 +11,27 @@
 // WTD -> 37 -> PSRAM 33, 34, 35, 36, 37
 
 // ===== USER CONFIG =====
-// UI layout: pick UI_PROFILE_* below
-// Display driver: pick CONFIG_DISPLAY_* in sdkconfig.defaults (or via menuconfig)
+// Three independent hardware choices below — uncomment exactly one in each group.
+// CMake reads this file and auto-generates sdkconfig.variant — no need to touch sdkconfig.
+// After changing a variant: `idf.py fullclean && idf.py build`
 
 
-// ===== UI =====
+// ===== DISPLAY DRIVER =====
+// #define DISPLAY_ILI9341
+#define DISPLAY_ST7796
+// #define DISPLAY_CO5300
 
+
+// ===== UI PROFILE =====
 // #define UI_PROFILE_240X296
 // #define UI_PROFILE_320x240
 #define UI_PROFILE_480x320
 // #define UI_PROFILE_MONO_128X64
+
+
+// ===== TOUCH DRIVER =====
+#define TOUCH_FT6336U
+// #define TOUCH_CST816D
 
 
 // ===== DISPLAY =====
