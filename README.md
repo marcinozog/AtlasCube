@@ -50,13 +50,21 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 <table>
   <tr>
     <td align="center"><a href="https://atlascube.net/images/www_index.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_index.png" width="400"></a><br><sub>Radio</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/www_bt.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_bt.png" width="400"></a><br><sub>Bluetooth</sub></td>
   </tr>
   <tr>
     <td align="center"><a href="https://atlascube.net/images/www_layouts.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_layouts.png" width="400"></a><br><sub>Layouts editor</sub></td>
   </tr>
   <tr>
-    <td align="center"><a href="https://atlascube.net/images/www_settings_1.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_1.png" width="400"></a><br><sub>Settings</sub></td>
-    <td align="center"><a href="https://atlascube.net/images/www_settings_2.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_2.png" width="400"></a><br><sub>Settings (cont.)</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/www_settings_disp.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_disp.png" width="400"></a><br><sub>Display</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/www_settings_mqtt.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_mqtt.png" width="400"></a><br><sub>MQTT</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://atlascube.net/images/www_settings_ss.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_ss.png" width="400"></a><br><sub>Screensavers</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/www_settings_theme.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_theme.png" width="400"></a><br><sub>Theme</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><a href="https://atlascube.net/images/www_settings_tools.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_tools.png" width="400"></a><br><sub>Tools</sub></td>
   </tr>
   <tr>
     <td align="center"><a href="https://atlascube.net/images/www_editor.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_editor.png" width="400"></a><br><sub>Editor</sub></td>
@@ -85,7 +93,7 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 - Automatic retry on stream loss
 
 **UI**
-- LVGL-based GUI — supports ILI9341 320×240 (SPI) and CO5300 240×296 round AMOLED (QSPI), switched via a single compile-time define
+- LVGL-based GUI — supports ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), and CO5300 240×296 round AMOLED (QSPI), switched via a single compile-time define
 - Screens: clock, playlist, equalizer, settings, Bluetooth, events, WiFi AP
 - Rotary encoder navigation (turn + press)
 - Capacitive touch (CST816D) — coexists with the rotary encoder; either input works at any time
@@ -128,7 +136,7 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 | Board | Atlas Hub (custom) |
 | Flash | 8 MB |
 | PSRAM | OctoSPI, 80 MHz |
-| Display | ILI9341 320×240 (SPI) or CO5300 240×296 AMOLED (QSPI) — selected at compile time |
+| Display | ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), or CO5300 240×296 AMOLED (QSPI) — selected at compile time |
 | Touch | CST816D capacitive controller (I2C) — gestures detected by LVGL on the standard pointer indev |
 | Input | Rotary encoder with push button + capacitive touch (swipes + tap-to-control overlay) |
 | I2S mux | 74HC157D — hardware switch between ESP32-S3 and QCC5125 I2S outputs; controlled via GPIO |
@@ -360,7 +368,7 @@ Architecture and design notes in [`docs/`](docs/):
 - [`audio_pipeline.md`](docs/audio_pipeline.md) — streaming pipeline, DSP, TCP tuning, task affinity
 - [`events.md`](docs/events.md) — reminder/event system design
 - [`layout_editor.md`](docs/layout_editor.md) — UI layout customization
-- [`display_drivers.md`](docs/display_drivers.md) — display driver gotchas (QSPI AMOLED even-boundary, shared SPI mutex)
+- [`display_drivers.md`](docs/display_drivers.md) — display driver gotchas (QSPI AMOLED even-boundary, shared SPI mutex, LVGL buffer vs internal DRAM budget)
 
 ---
 
@@ -368,7 +376,7 @@ Architecture and design notes in [`docs/`](docs/):
 
 - **Enclosure** — 3D-printed case currently in design; firmware is developed and tested on the bare development board
 - **SD card** — local storage for station logos, music files, and voice notification clips
-- **Additional displays** — SSD1322 (256×64 OLED) and ST7796 TFT support in progress (ILI9341 and CO5300 240×296 already supported)
+- **Additional displays** — SSD1322 (256×64 OLED) support in progress (ILI9341 320×240, ST7796U 480×320, and CO5300 240×296 already supported)
 - **Web melody editor** — in-browser tool for composing custom buzzer notification tunes
 
 ---
