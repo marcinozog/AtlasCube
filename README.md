@@ -96,7 +96,7 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 - LVGL-based GUI — supports ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), and CO5300 240×296 round AMOLED (QSPI), switched via a single compile-time define
 - Screens: clock, playlist, equalizer, settings, Bluetooth, events, WiFi AP
 - Rotary encoder navigation (turn + press)
-- Capacitive touch (CST816D) — coexists with the rotary encoder; either input works at any time
+- Capacitive touch — CST816D (CO5300 round AMOLED) or FT6336U (ST7796U 480×320), both on I2C; coexists with the rotary encoder, either input works at any time
 - Swipe gestures — horizontal swipes navigate between clock ↔ radio ↔ bt; swipe-up opens settings (clock) or playlist (radio); detection runs through LVGL on the existing pointer indev, no per-chip glue
 - On-screen controls overlay — tap a media screen to bring up a 5-button cross (play/pause, vol±, prev/next), auto-hides after a short timeout
 - Configurable layout (widget positions editable via JSON)
@@ -137,7 +137,7 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 | Flash | 8 MB |
 | PSRAM | OctoSPI, 80 MHz |
 | Display | ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), or CO5300 240×296 AMOLED (QSPI) — selected at compile time |
-| Touch | CST816D capacitive controller (I2C) — gestures detected by LVGL on the standard pointer indev |
+| Touch | CST816D or FT6336U capacitive controller (I2C) — gestures detected by LVGL on the standard pointer indev |
 | Input | Rotary encoder with push button + capacitive touch (swipes + tap-to-control overlay) |
 | I2S mux | 74HC157D — hardware switch between ESP32-S3 and QCC5125 I2S outputs; controlled via GPIO |
 | Audio out | I2S DAC / amplifier (fed from 74HC157D output) |
