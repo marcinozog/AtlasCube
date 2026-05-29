@@ -114,9 +114,10 @@ A hobby project — internet radio and smart clock built on a custom ESP32-S3 bo
 - Polling runs in a dedicated FreeRTOS task only while the screensaver is active — no background traffic when another screen is shown
 
 **Events & reminders**
-- Birthdays, namedays, anniversaries, plain reminders
+- Birthdays, namedays, anniversaries, plain reminders, alarms (radio)
 - Recurring: daily / weekly / monthly / yearly
 - On-screen fullscreen notification + buzzer melody at trigger time; melodies are programmable in firmware (web-based editor planned)
+- Alarm type — at trigger time starts a configured playlist station (the stream itself is the "ringtone", keeps playing after dismiss until the radio is stopped) instead of the buzzer
 - CRUD via web UI
 
 **Connectivity**
