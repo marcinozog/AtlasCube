@@ -67,10 +67,13 @@ static void configure_ap(void)
     wifi_config_t cfg = {0};
     memcpy(cfg.ap.ssid,     WIFI_AP_SSID, strlen(WIFI_AP_SSID));
     memcpy(cfg.ap.password, WIFI_AP_PASS, strlen(WIFI_AP_PASS));
-    cfg.ap.ssid_len       = strlen(WIFI_AP_SSID);
-    cfg.ap.channel        = WIFI_AP_CHANNEL;
-    cfg.ap.max_connection = WIFI_AP_MAX_CONN;
-    cfg.ap.authmode       = WIFI_AUTH_WPA2_PSK;
+    cfg.ap.ssid_len         = strlen(WIFI_AP_SSID);
+    cfg.ap.channel          = WIFI_AP_CHANNEL;
+    cfg.ap.max_connection   = WIFI_AP_MAX_CONN;
+    cfg.ap.authmode         = WIFI_AUTH_WPA2_PSK;
+    cfg.ap.pairwise_cipher  = WIFI_CIPHER_TYPE_CCMP;
+    cfg.ap.pmf_cfg.capable  = true;
+    cfg.ap.pmf_cfg.required = false;
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &cfg));
 }
 
@@ -84,6 +87,7 @@ void wifi_init(const char *ssid, const char *pass)
 
     wifi_init_config_t init_cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&init_cfg));
+    ESP_ERROR_CHECK(esp_wifi_set_country_code("PL", true));
 
     ESP_ERROR_CHECK(esp_event_handler_instance_register(
         WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL, NULL));
