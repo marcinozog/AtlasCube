@@ -1,17 +1,15 @@
 CONFIG_FREERTOS_ENABLE_BACKWARD_COMPATIBILITY=y
 
 CONFIG_PARTITION_TABLE_CUSTOM=y
-CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions8MB.csv"
-CONFIG_PARTITION_TABLE_FILENAME="partitions8MB.csv"
 CONFIG_PARTITION_TABLE_OFFSET=0x8000
 CONFIG_PARTITION_TABLE_MD5=y
 
 CONFIG_ESP32_S3_ATLASCUBE_BOARD=y
 
-# Display + touch driver selection lives in main/include/defines.h.
-# Top-level CMakeLists.txt parses it and generates build/sdkconfig.variant.
+# Display + touch driver + flash size selection lives in main/include/defines.h.
+# Top-level CMakeLists.txt parses it and generates build/sdkconfig.variant
+# (CONFIG_DISPLAY_*, CONFIG_TOUCH_*, CONFIG_ESPTOOLPY_FLASHSIZE_*, CONFIG_PARTITION_TABLE_*FILENAME).
 
-CONFIG_ESPTOOLPY_FLASHSIZE_8MB=y
 CONFIG_SPIRAM=y
 CONFIG_SPIRAM_MODE_OCT=y
 CONFIG_SPIRAM_SPEED_80M=y

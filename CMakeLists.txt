@@ -21,20 +21,30 @@ string(REGEX MATCH "\n[ \t]*#define[ \t]+TOUCH_(CST816D|FT6336U)[^A-Za-z0-9_]"
        _ "${_atlas_defines}")
 set(ATLAS_TOUCH "${CMAKE_MATCH_1}")
 
+string(REGEX MATCH "\n[ \t]*#define[ \t]+FLASH_(8MB|16MB)[^A-Za-z0-9_]"
+       _ "${_atlas_defines}")
+set(ATLAS_FLASH "${CMAKE_MATCH_1}")
+
 if(NOT ATLAS_DISPLAY)
     message(FATAL_ERROR "No active DISPLAY_* define in ${DEFINES_H}")
 endif()
 if(NOT ATLAS_TOUCH)
     message(FATAL_ERROR "No active TOUCH_* define in ${DEFINES_H}")
 endif()
+if(NOT ATLAS_FLASH)
+    message(FATAL_ERROR "No active FLASH_* define in ${DEFINES_H}")
+endif()
 
-message(STATUS "AtlasCube variant: DISPLAY=${ATLAS_DISPLAY}, TOUCH=${ATLAS_TOUCH}")
+message(STATUS "AtlasCube variant: DISPLAY=${ATLAS_DISPLAY}, TOUCH=${ATLAS_TOUCH}, FLASH=${ATLAS_FLASH}")
 
 set(VARIANT_SDKCONFIG "${CMAKE_BINARY_DIR}/sdkconfig.variant")
 file(WRITE "${VARIANT_SDKCONFIG}"
     "# Auto-generated from main/include/defines.h — do not edit\n"
     "CONFIG_DISPLAY_${ATLAS_DISPLAY}=y\n"
     "CONFIG_TOUCH_${ATLAS_TOUCH}=y\n"
+    "CONFIG_ESPTOOLPY_FLASHSIZE_${ATLAS_FLASH}=y\n"
+    "CONFIG_PARTITION_TABLE_CUSTOM_FILENAME=\"partitions${ATLAS_FLASH}.csv\"\n"
+    "CONFIG_PARTITION_TABLE_FILENAME=\"partitions${ATLAS_FLASH}.csv\"\n"
 )
 set(SDKCONFIG_DEFAULTS "sdkconfig.defaults;${VARIANT_SDKCONFIG}")
 # ─────────────────────────────────────────────────────────────────────────────

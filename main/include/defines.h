@@ -16,6 +16,11 @@
 // After changing a variant: `idf.py fullclean && idf.py build`
 
 
+// ===== FLASH SIZE =====
+// #define FLASH_8MB
+#define FLASH_16MB
+
+
 // ===== DISPLAY DRIVER =====
 // #define DISPLAY_ILI9341
 #define DISPLAY_ST7796
