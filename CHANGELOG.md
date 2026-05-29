@@ -9,6 +9,18 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-29
+
+### Added
+- **build:** select flash size per variant via defines.h
+- **ui:** event indicator on radio screen + live refresh on add/edit/delete
+- **events:** per-alarm volume override
+
+### Fixed
+- **wifi:** improve AP compatibility with modern phones
+- **ui:** adjust screen radio
+- **ui:** controls overlay reads mode from owner, not app_state
+
 ## [0.7.0] - 2026-05-28
 
 ### Added
@@ -109,7 +121,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/marcinozog/AtlasCube/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/marcinozog/AtlasCube/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/marcinozog/AtlasCube/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/marcinozog/AtlasCube/compare/v0.4.0...v0.5.0
