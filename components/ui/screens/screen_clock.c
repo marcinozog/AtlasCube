@@ -191,6 +191,7 @@ static void clock_on_event(const ui_event_t *ev)
             strip_update();
             update_clock_display();
             mode_indicator_update();
+            event_indicator_update();
             break;
         case UI_EVT_TITLE_CHANGED:
             strip_update();

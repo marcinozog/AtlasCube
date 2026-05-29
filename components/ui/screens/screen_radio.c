@@ -6,6 +6,7 @@
 #include "clock_widget.h"
 #include "now_playing_widget.h"
 #include "mode_indicator_widget.h"
+#include "event_indicator_widget.h"
 #include "controls_overlay_widget.h"
 #include "vol_overlay_widget.h"
 #include "app_state.h"
@@ -72,6 +73,9 @@ static void radio_create(lv_obj_t *parent)
     if (p->radio_show_clock) {
         clock_widget_create(parent, p->radio_clock_widget_x, p->radio_clock_widget_y, false);
     }
+    if (p->radio_show_event_indicator) {
+        event_indicator_create(parent, p->radio_event_indic_x, p->radio_event_indic_y);
+    }
 
     s_label_state = lv_label_create(parent);
     lv_label_set_text(s_label_state, "");
@@ -98,6 +102,7 @@ static void radio_destroy(void)
     vol_overlay_hide();
     now_playing_widget_destroy();
     mode_indicator_destroy();
+    event_indicator_destroy();
     clock_widget_destroy();
     s_root             = NULL;
     s_label_state      = NULL;
@@ -112,6 +117,7 @@ static void radio_on_event(const ui_event_t *ev)
         case UI_EVT_STATE_CHANGED:
             refresh_from_state();
             mode_indicator_update();
+            event_indicator_update();
             clock_widget_tick();
             break;
         case UI_EVT_TITLE_CHANGED:
@@ -185,6 +191,7 @@ static void radio_apply_theme(void)
     now_playing_widget_apply_theme();
     clock_widget_apply_theme();
     mode_indicator_apply_theme();
+    event_indicator_apply_theme();
 
     lv_obj_invalidate(s_root);
 }

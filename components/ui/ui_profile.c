@@ -59,10 +59,13 @@ static const ui_profile_t k_defaults = {
     .radio_audio_info_font     = &lv_font_montserrat_12_pl,
     .radio_show_mode_indicator = false,
     .radio_show_clock          = false,
+    .radio_show_event_indicator = false,
     .radio_mode_indic_x        = 108,
     .radio_mode_indic_y        = 8,
     .radio_clock_widget_x      = 39,
     .radio_clock_widget_y      = 0,
+    .radio_event_indic_x       = 90,
+    .radio_event_indic_y       = 8,
 
     .playlist_header_h         = 14,
     .playlist_item_h           = 12,
@@ -202,10 +205,13 @@ static const ui_profile_t k_defaults = {
     .radio_audio_info_font     = &lv_font_montserrat_12_pl,
     .radio_show_mode_indicator = true,
     .radio_show_clock          = true,
+    .radio_show_event_indicator = true,
     .radio_mode_indic_x        = 158,
     .radio_mode_indic_y        = 1,
     .radio_clock_widget_x      = 95,
     .radio_clock_widget_y      = 0,
+    .radio_event_indic_x       = 138,
+    .radio_event_indic_y       = 1,
 
     // Playlist: We use the screen height for more list items
     .playlist_header_h         = 45,
@@ -352,10 +358,13 @@ static const ui_profile_t k_defaults = {
     .radio_audio_info_font     = &lv_font_montserrat_12_pl,
     .radio_show_mode_indicator = true,
     .radio_show_clock          = true,
+    .radio_show_event_indicator = true,
     .radio_mode_indic_x        = 300,
     .radio_mode_indic_y        = 2,
     .radio_clock_widget_x      = 135,
     .radio_clock_widget_y      = 0,
+    .radio_event_indic_x       = 282,
+    .radio_event_indic_y       = 2,
 
     .playlist_header_h         = 26,
     .playlist_item_h           = 28,
@@ -495,10 +504,13 @@ static const ui_profile_t k_defaults = {
     .radio_audio_info_font     = &lv_font_montserrat_14_pl,
     .radio_show_mode_indicator = true,
     .radio_show_clock          = true,
+    .radio_show_event_indicator = true,
     .radio_mode_indic_x        = 452,
     .radio_mode_indic_y        = 4,
     .radio_clock_widget_x      = 202,
     .radio_clock_widget_y      = 0,
+    .radio_event_indic_x       = 424,
+    .radio_event_indic_y       = 4,
 
     .playlist_header_h         = 34,
     .playlist_item_h           = 38,
@@ -752,12 +764,15 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_audio_info_x",        &p->radio_audio_info_x);
     load_i16 (obj, "radio_audio_info_y",        &p->radio_audio_info_y);
     load_font(obj, "radio_audio_info_font",     &p->radio_audio_info_font);
-    load_bool(obj, "radio_show_mode_indicator", &p->radio_show_mode_indicator);
-    load_bool(obj, "radio_show_clock",          &p->radio_show_clock);
-    load_i16 (obj, "radio_mode_indic_x",        &p->radio_mode_indic_x);
-    load_i16 (obj, "radio_mode_indic_y",        &p->radio_mode_indic_y);
-    load_i16 (obj, "radio_clock_widget_x",      &p->radio_clock_widget_x);
-    load_i16 (obj, "radio_clock_widget_y",      &p->radio_clock_widget_y);
+    load_bool(obj, "radio_show_mode_indicator",  &p->radio_show_mode_indicator);
+    load_bool(obj, "radio_show_clock",           &p->radio_show_clock);
+    load_bool(obj, "radio_show_event_indicator", &p->radio_show_event_indicator);
+    load_i16 (obj, "radio_mode_indic_x",         &p->radio_mode_indic_x);
+    load_i16 (obj, "radio_mode_indic_y",         &p->radio_mode_indic_y);
+    load_i16 (obj, "radio_clock_widget_x",       &p->radio_clock_widget_x);
+    load_i16 (obj, "radio_clock_widget_y",       &p->radio_clock_widget_y);
+    load_i16 (obj, "radio_event_indic_x",        &p->radio_event_indic_x);
+    load_i16 (obj, "radio_event_indic_y",        &p->radio_event_indic_y);
 }
 
 static cJSON *dump_radio(const ui_profile_t *p)
@@ -772,12 +787,15 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_audio_info_x",        p->radio_audio_info_x);
     add_i16 (o, "radio_audio_info_y",        p->radio_audio_info_y);
     add_font(o, "radio_audio_info_font",     p->radio_audio_info_font);
-    add_bool(o, "radio_show_mode_indicator", p->radio_show_mode_indicator);
-    add_bool(o, "radio_show_clock",          p->radio_show_clock);
-    add_i16 (o, "radio_mode_indic_x",        p->radio_mode_indic_x);
-    add_i16 (o, "radio_mode_indic_y",        p->radio_mode_indic_y);
-    add_i16 (o, "radio_clock_widget_x",      p->radio_clock_widget_x);
-    add_i16 (o, "radio_clock_widget_y",      p->radio_clock_widget_y);
+    add_bool(o, "radio_show_mode_indicator",  p->radio_show_mode_indicator);
+    add_bool(o, "radio_show_clock",           p->radio_show_clock);
+    add_bool(o, "radio_show_event_indicator", p->radio_show_event_indicator);
+    add_i16 (o, "radio_mode_indic_x",         p->radio_mode_indic_x);
+    add_i16 (o, "radio_mode_indic_y",         p->radio_mode_indic_y);
+    add_i16 (o, "radio_clock_widget_x",       p->radio_clock_widget_x);
+    add_i16 (o, "radio_clock_widget_y",       p->radio_clock_widget_y);
+    add_i16 (o, "radio_event_indic_x",        p->radio_event_indic_x);
+    add_i16 (o, "radio_event_indic_y",        p->radio_event_indic_y);
     return o;
 }
 

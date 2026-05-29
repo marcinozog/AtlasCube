@@ -881,6 +881,11 @@ static esp_err_t api_events_post_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
+    // Refresh event_indicator on the active screen without waiting for its
+    // 30 s timer or a screen switch.
+    ui_event_t st = { .type = UI_EVT_STATE_CHANGED };
+    ui_event_send(&st);
+
     cJSON *out = event_to_json(&e);
     char *str = cJSON_PrintUnformatted(out);
     cJSON_Delete(out);
@@ -934,6 +939,9 @@ static esp_err_t api_events_put_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
+    ui_event_t st = { .type = UI_EVT_STATE_CHANGED };
+    ui_event_send(&st);
+
     cJSON *out = event_to_json(&updated);
     char *str = cJSON_PrintUnformatted(out);
     cJSON_Delete(out);
@@ -964,6 +972,9 @@ static esp_err_t api_events_delete_handler(httpd_req_t *req)
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Delete failed");
         return ESP_FAIL;
     }
+
+    ui_event_t st = { .type = UI_EVT_STATE_CHANGED };
+    ui_event_send(&st);
 
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, "{\"ok\":true}");

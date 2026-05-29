@@ -103,12 +103,15 @@ const RADIO_FIELDS = [
     { key: 'radio_audio_info_y',      label: 'Audio info Y',     type: 'number' },
     { key: 'radio_audio_info_font',   label: 'Audio info font',  type: 'font'   },
 
-    { key: 'radio_show_mode_indicator', label: 'Show mode indic.', type: 'bool' },
-    { key: 'radio_mode_indic_x',        label: 'Mode indic. X',    type: 'number' },
-    { key: 'radio_mode_indic_y',        label: 'Mode indic. Y',    type: 'number' },
-    { key: 'radio_show_clock',          label: 'Show clock',       type: 'bool' },
-    { key: 'radio_clock_widget_x',      label: 'Clock X',          type: 'number' },
-    { key: 'radio_clock_widget_y',      label: 'Clock Y',          type: 'number' },
+    { key: 'radio_show_mode_indicator',  label: 'Show mode indic.',  type: 'bool' },
+    { key: 'radio_mode_indic_x',         label: 'Mode indic. X',     type: 'number' },
+    { key: 'radio_mode_indic_y',         label: 'Mode indic. Y',     type: 'number' },
+    { key: 'radio_show_clock',           label: 'Show clock',        type: 'bool' },
+    { key: 'radio_clock_widget_x',       label: 'Clock X',           type: 'number' },
+    { key: 'radio_clock_widget_y',       label: 'Clock Y',           type: 'number' },
+    { key: 'radio_show_event_indicator', label: 'Show event indic.', type: 'bool' },
+    { key: 'radio_event_indic_x',        label: 'Event indic. X',    type: 'number' },
+    { key: 'radio_event_indic_y',        label: 'Event indic. Y',    type: 'number' },
 ];
 
 // ── Sections registry ──────────────────────────────────────────────────────
@@ -447,6 +450,13 @@ function renderRadio(svg) {
             label: 'clock', cls: 'label-rect',
             fields: { x: 'radio_clock_widget_x', y: 'radio_clock_widget_y' },
             text: '00:00', textSize: 18,
+        });
+    }
+    if (r.radio_show_event_indicator) {
+        drawFreeElement(svg, {
+            x: r.radio_event_indic_x, y: r.radio_event_indic_y, w: 16, h: 16,
+            label: 'evt', cls: 'label-rect',
+            fields: { x: 'radio_event_indic_x', y: 'radio_event_indic_y' },
         });
     }
 }

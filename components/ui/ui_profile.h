@@ -94,10 +94,13 @@ typedef struct {
 
     bool             radio_show_mode_indicator;
     bool             radio_show_clock;
+    bool             radio_show_event_indicator;
     int16_t          radio_mode_indic_x;
     int16_t          radio_mode_indic_y;
     int16_t          radio_clock_widget_x;
     int16_t          radio_clock_widget_y;
+    int16_t          radio_event_indic_x;
+    int16_t          radio_event_indic_y;
 
     // screen_playlist
     int16_t          playlist_header_h;
