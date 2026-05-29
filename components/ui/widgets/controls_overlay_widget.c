@@ -13,6 +13,7 @@ static lv_obj_t  *s_parent  = NULL;
 static lv_obj_t  *s_overlay = NULL;   // dim layer + buttons
 static lv_timer_t *s_timer  = NULL;
 static lv_obj_t *s_play_lbl = NULL;
+static controls_overlay_mode_t s_mode = CTRL_OVL_MODE_RADIO;
 
 static void overlay_hide(void);
 
@@ -59,9 +60,8 @@ static void btn_clicked_cb(lv_event_t *e)
     ctrl_id_t btn = (ctrl_id_t)(intptr_t)lv_event_get_user_data(e);
     // ESP_LOGI(TAG, "btn_c: %d", id);
     app_state_t *s = app_state_get();
-    ui_screen_id_t scr = s->screen;
 
-    if (scr == SCREEN_RADIO) {
+    if (s_mode == CTRL_OVL_MODE_RADIO) {
         switch (btn) {
             case CTRL_VOL_UP:
             case CTRL_VOL_DN: {
@@ -94,7 +94,7 @@ static void btn_clicked_cb(lv_event_t *e)
             default: break;
         }
     }
-    else if (scr == SCREEN_BT) {
+    else if (s_mode == CTRL_OVL_MODE_BT) {
         switch (btn) {
             case CTRL_VOL_UP:
             case CTRL_VOL_DN: {
@@ -123,9 +123,8 @@ static void btn_long_repeat_cb(lv_event_t *e)
     ctrl_id_t btn = (ctrl_id_t)(intptr_t)lv_event_get_user_data(e);
     // ESP_LOGI(TAG, "btn_l: %d", id);
     app_state_t *s = app_state_get();
-    ui_screen_id_t scr = s->screen;
 
-    if (scr == SCREEN_RADIO) {
+    if (s_mode == CTRL_OVL_MODE_RADIO) {
         switch (btn) {
             case CTRL_VOL_UP:
             case CTRL_VOL_DN: {
@@ -140,7 +139,7 @@ static void btn_long_repeat_cb(lv_event_t *e)
             default: break;
         }
     }
-    else if (scr == SCREEN_BT) {
+    else if (s_mode == CTRL_OVL_MODE_BT) {
         switch (btn) {
             case CTRL_VOL_UP:
             case CTRL_VOL_DN: {
@@ -201,10 +200,11 @@ static lv_obj_t *make_btn(lv_obj_t *parent, const char *symbol, const intptr_t i
     return btn;
 }
 
-void controls_overlay_create(lv_obj_t *parent)
+void controls_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
 {
     if (!parent || s_overlay) return;
     s_parent = parent;
+    s_mode   = mode;
     const ui_theme_colors_t *th = theme_get();
 
     // Make screen background tap-aware (label children won't bubble by

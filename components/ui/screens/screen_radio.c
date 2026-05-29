@@ -87,7 +87,7 @@ static void radio_create(lv_obj_t *parent)
 
     refresh_from_state();
 
-    controls_overlay_create(parent);
+    controls_overlay_create(parent, CTRL_OVL_MODE_RADIO);
 
     ESP_LOGI(TAG, "Created (theme=%d)", theme_current());
 }

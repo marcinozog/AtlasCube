@@ -169,7 +169,7 @@ static void bt_create(lv_obj_t *parent)
 
     refresh_from_state();
 
-    controls_overlay_create(parent);
+    controls_overlay_create(parent, CTRL_OVL_MODE_BT);
 
     ESP_LOGI(TAG, "Created (bt_volume=%d, theme=%d)",
              app_state_get()->bt_volume, theme_current());
