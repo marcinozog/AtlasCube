@@ -54,6 +54,11 @@ typedef struct {
     // Used only when type == EV_ALARM: 0-based index into the playlist
     // (resolved at fire time via playlist_get()).
     int                station;
+
+    // Used only when type == EV_ALARM: 0..100, applied via settings_set_volume()
+    // at fire time so the radio rings at a predictable level regardless of the
+    // user's last volume setting.
+    int                volume;
 } event_t;
 
 // --------------------------------------------------------------------------

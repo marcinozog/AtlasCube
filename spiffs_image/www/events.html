@@ -54,6 +54,12 @@
                 <select id="ev_station" class="field-input"></select>
             </div>
 
+            <div class="field-group" id="ev_volume_group" style="display:none">
+                <label class="field-label">Volume <span id="ev_volume_val">50</span></label>
+                <input type="range" id="ev_volume" class="field-input" min="0" max="100" step="1" value="50"
+                       oninput="document.getElementById('ev_volume_val').textContent = this.value" />
+            </div>
+
             <div class="field-group">
                 <label class="field-label">Date</label>
                 <input type="date" id="ev_date" class="field-input" />

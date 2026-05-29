@@ -4,6 +4,7 @@
 #include "melodies.h"
 #include "playlist.h"
 #include "radio_service.h"
+#include "settings.h"
 #include "cJSON.h"
 #include "defines.h"
 #include "esp_attr.h"
@@ -170,6 +171,11 @@ static esp_err_t load_from_file(void)
         j = cJSON_GetObjectItem(it, "station");
         if (cJSON_IsNumber(j)) e.station = j->valueint;
 
+        j = cJSON_GetObjectItem(it, "volume");
+        if (cJSON_IsNumber(j)) e.volume = j->valueint;
+        if (e.volume < 0)   e.volume = 0;
+        if (e.volume > 100) e.volume = 100;
+
         s_events[s_count++] = e;
     }
 
@@ -197,6 +203,7 @@ static esp_err_t save_to_file(void)
         cJSON_AddStringToObject(o, "recurrence",         rec_to_str(e->recurrence));
         cJSON_AddBoolToObject  (o, "enabled",            e->enabled);
         cJSON_AddNumberToObject(o, "station",            e->station);
+        cJSON_AddNumberToObject(o, "volume",             e->volume);
         cJSON_AddItemToArray(arr, o);
     }
 
@@ -275,6 +282,7 @@ static void fire_event(const event_t *e)
         // the radio.
         int n = playlist_get_count();
         if (e->station >= 0 && e->station < n) {
+            settings_set_volume(e->volume);
             radio_play_index(e->station);
         } else {
             ESP_LOGW(TAG, "Alarm station %d out of range (playlist=%d) → silent",

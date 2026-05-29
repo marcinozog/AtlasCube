@@ -50,6 +50,7 @@ async function loadStations() {
 function evTypeChanged() {
     const isAlarm = document.getElementById('ev_type').value === 'alarm';
     document.getElementById('ev_station_group').style.display = isAlarm ? '' : 'none';
+    document.getElementById('ev_volume_group').style.display  = isAlarm ? '' : 'none';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -95,7 +96,7 @@ function makeRow(ev) {
     if (ev.type === 'alarm') {
         const st = stations[ev.station];
         const name = st ? st.name : `#${ev.station}`;
-        extra = ` · 📻 ${escapeHtml(name)}`;
+        extra = ` · 📻 ${escapeHtml(name)} · 🔊 ${ev.volume ?? 0}`;
     }
 
     row.innerHTML = `
@@ -145,6 +146,8 @@ function evFormReset() {
     document.getElementById('ev_recurrence').value = 'none';
     document.getElementById('ev_enabled').checked = true;
     document.getElementById('ev_station').value = '0';
+    document.getElementById('ev_volume').value = '50';
+    document.getElementById('ev_volume_val').textContent = '50';
     evTypeChanged();
     setStatus('', '');
 }
@@ -164,6 +167,9 @@ function evEdit(id) {
     document.getElementById('ev_recurrence').value = ev.recurrence;
     document.getElementById('ev_enabled').checked = !!ev.enabled;
     document.getElementById('ev_station').value = String(ev.station ?? 0);
+    const vol = ev.volume ?? 50;
+    document.getElementById('ev_volume').value = String(vol);
+    document.getElementById('ev_volume_val').textContent = String(vol);
     evTypeChanged();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -182,6 +188,10 @@ function formToEvent() {
 
     const type    = document.getElementById('ev_type').value;
     const station = parseInt(document.getElementById('ev_station').value, 10) || 0;
+    let   volume  = parseInt(document.getElementById('ev_volume').value, 10);
+    if (isNaN(volume)) volume = 50;
+    if (volume < 0)   volume = 0;
+    if (volume > 100) volume = 100;
 
     if (type === 'alarm' && stations.length === 0) {
         setStatus('Add at least one station to the playlist first', 'error');
@@ -199,6 +209,7 @@ function formToEvent() {
         recurrence: document.getElementById('ev_recurrence').value,
         enabled:    document.getElementById('ev_enabled').checked,
         station,
+        volume,
     };
 }
 

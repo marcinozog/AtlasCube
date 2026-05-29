@@ -707,6 +707,7 @@ static cJSON *event_to_json(const event_t *e)
     cJSON_AddStringToObject(o, "recurrence",        ev_rec_str(e->recurrence));
     cJSON_AddBoolToObject  (o, "enabled",           e->enabled);
     cJSON_AddNumberToObject(o, "station",           e->station);
+    cJSON_AddNumberToObject(o, "volume",            e->volume);
     return o;
 }
 
@@ -739,6 +740,9 @@ static void event_patch_from_json(event_t *e, const cJSON *obj)
 
     j = cJSON_GetObjectItem(obj, "station");
     if (cJSON_IsNumber(j)) e->station = j->valueint;
+
+    j = cJSON_GetObjectItem(obj, "volume");
+    if (cJSON_IsNumber(j)) e->volume = j->valueint;
 }
 
 // Validates field by field. Returns NULL if ok, otherwise an error message.
@@ -755,6 +759,7 @@ static const char *event_validate(const event_t *e)
         int n = playlist_get_count();
         if (n <= 0)                            return "playlist empty";
         if (e->station < 0 || e->station >= n) return "station out of range";
+        if (e->volume  < 0 || e->volume  > 100) return "volume out of range";
     }
     return NULL;
 }
