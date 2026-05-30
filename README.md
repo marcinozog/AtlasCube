@@ -276,16 +276,35 @@ idf.py flash
 
 **Flash web UI (SPIFFS)**
 
+The web UI assets live in the `storage` SPIFFS partition. Bundling is **off by
+default** — so a plain `idf.py build` / `flash` stays fast when you only touch
+firmware — and is enabled per-build through the `ATLAS_SPIFFS` env var. After
+changing anything in `spiffs_image/www/`, regenerate the gzipped assets and
+flash with the bundle:
+
 ```bash
-idf.py spiffs_create_partition_image storage spiffs_image/web
-idf.py flash
+python spiffs_image/tools/compress_web.py   # www/ -> web/*.gz
+ATLAS_SPIFFS=1 idf.py reconfigure           # register the SPIFFS image
+ATLAS_SPIFFS=1 idf.py flash
 ```
+
+On Windows a helper wraps the whole sequence (and resets back to the fast,
+no-SPIFFS config afterwards so the IDE flash buttons stay quick):
+
+```powershell
+./scripts/flash-web.ps1 -p COM5 flash
+```
+
+> `ATLAS_SPIFFS` is read at CMake **configure** time, so flipping it requires
+> `idf.py reconfigure` (the helper does this for you).
 
 **Single merged image (for distribution)**
 
-Combines bootloader, partition table, app, and SPIFFS into one file that can be flashed from offset `0x0` with `esptool` or a web flasher:
+Combines bootloader, partition table, app, and SPIFFS into one file that can be flashed from offset `0x0` with `esptool` or a web flasher. Set `ATLAS_SPIFFS=1` (and compress the assets first) so the web UI is included:
 
 ```bash
+python spiffs_image/tools/compress_web.py
+ATLAS_SPIFFS=1 idf.py build
 idf.py merge-bin -o AtlasCube.bin
 ```
 
@@ -294,6 +313,8 @@ Flash with:
 ```bash
 esptool.py write_flash 0x0 AtlasCube.bin
 ```
+
+CI builds always set `ATLAS_SPIFFS=1`, so the per-variant release binaries already bundle the web UI.
 
 ---
 
@@ -313,6 +334,8 @@ Available at the device IP (STA mode) or `192.168.4.1` (AP mode).
 | MQTT widgets | `/mqtt.html` |
 
 WebSocket endpoint: `ws://<device-ip>/ws` — pushes state changes (volume, track, radio state) in real time.
+
+The running firmware version (from `git describe`) is shown in the web UI header and on the Wi-Fi setup page — a quick way to confirm exactly what was flashed.
 
 ---
 

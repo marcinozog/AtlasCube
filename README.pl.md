@@ -276,16 +276,34 @@ idf.py flash
 
 **Flash web UI (SPIFFS)**
 
+Pliki web UI trafiają do partycji SPIFFS `storage`. Dołączanie jest **domyślnie
+wyłączone** — żeby zwykły `idf.py build` / `flash` był szybki, gdy ruszasz tylko
+firmware — i włącza się per-build zmienną `ATLAS_SPIFFS`. Po zmianie czegokolwiek
+w `spiffs_image/www/` przegeneruj skompresowane assety i wgraj z dołączonym SPIFFS:
+
 ```bash
-idf.py spiffs_create_partition_image storage spiffs_image/web
-idf.py flash
+python spiffs_image/tools/compress_web.py   # www/ -> web/*.gz
+ATLAS_SPIFFS=1 idf.py reconfigure           # rejestruje obraz SPIFFS
+ATLAS_SPIFFS=1 idf.py flash
 ```
+
+Na Windows jest helper, który opakowuje całą sekwencję (i na końcu wraca do
+szybkiej konfiguracji bez SPIFFS, żeby przyciski flash w IDE dalej były szybkie):
+
+```powershell
+./scripts/flash-web.ps1 -p COM5 flash
+```
+
+> `ATLAS_SPIFFS` jest czytane na etapie **configure** CMake, więc przełączenie
+> wymaga `idf.py reconfigure` (helper robi to za Ciebie).
 
 **Pojedynczy scalony obraz (do dystrybucji)**
 
-Sklejony bootloader, partition table, aplikacja i SPIFFS w jednym pliku — wgrywany od offsetu `0x0` przez `esptool` albo web flasher:
+Sklejony bootloader, partition table, aplikacja i SPIFFS w jednym pliku — wgrywany od offsetu `0x0` przez `esptool` albo web flasher. Ustaw `ATLAS_SPIFFS=1` (i wcześniej skompresuj assety), żeby web UI było w środku:
 
 ```bash
+python spiffs_image/tools/compress_web.py
+ATLAS_SPIFFS=1 idf.py build
 idf.py merge-bin -o AtlasCube.bin
 ```
 
@@ -294,6 +312,8 @@ Flash:
 ```bash
 esptool.py write_flash 0x0 AtlasCube.bin
 ```
+
+Buildy CI zawsze ustawiają `ATLAS_SPIFFS=1`, więc opublikowane binarki release per wariant mają już web UI w środku.
 
 ---
 
@@ -313,6 +333,8 @@ Dostępne pod IP urządzenia (tryb STA) albo pod `192.168.4.1` (tryb AP).
 | Widgety MQTT | `/mqtt.html` |
 
 Endpoint WebSocket: `ws://<ip-urzadzenia>/ws` — wypycha zmiany stanu (głośność, utwór, stan radia) na żywo.
+
+Wersja działającego firmware (z `git describe`) jest pokazywana w nagłówku web UI oraz na stronie konfiguracji Wi-Fi — szybki sposób na potwierdzenie, co dokładnie się wgrało.
 
 ---
 
