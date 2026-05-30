@@ -99,7 +99,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Automatic retry on stream loss
 
 **UI**
-- LVGL-based GUI — supports ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), and CO5300 240×296 round AMOLED (QSPI), switched via a single compile-time define
+- LVGL-based GUI — supports ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), CO5300 240×296 round AMOLED (QSPI), and SSD1322 256×64 mono OLED (SPI), switched via a single compile-time define
 - Screens: clock, playlist, equalizer, settings, Bluetooth, events, WiFi AP
 - Rotary encoder navigation (turn + press)
 - Capacitive touch — CST816D (CO5300 round AMOLED) or FT6336U (ST7796U 480×320), both on I2C; coexists with the rotary encoder, either input works at any time
@@ -143,7 +143,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 | Board | Atlas Hub (custom) |
 | Flash | 8 MB |
 | PSRAM | OctoSPI, 80 MHz |
-| Display | ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), or CO5300 240×296 AMOLED (QSPI) — selected at compile time |
+| Display | ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), CO5300 240×296 AMOLED (QSPI), or SSD1322 256×64 mono OLED (SPI) — selected at compile time |
 | Touch | CST816D or FT6336U capacitive controller (I2C) — gestures detected by LVGL on the standard pointer indev |
 | Input | Rotary encoder with push button + capacitive touch (swipes + tap-to-control overlay) |
 | I2S mux | 74HC157D — hardware switch between ESP32-S3 and QCC5125 I2S outputs; controlled via GPIO |
@@ -173,6 +173,7 @@ Open **[atlascube.net/flash](https://atlascube.net/flash/)** in Chrome / Edge / 
 | `AtlasCube-ili9341.bin` | ILI9341 320×240 (SPI) | FT6336U |
 | `AtlasCube-st7796.bin`  | ST7796U 480×320 (SPI) | FT6336U |
 | `AtlasCube-co5300.bin`  | CO5300 240×296 (QSPI AMOLED) | CST816D |
+| `AtlasCube-ssd1322.bin` | SSD1322 256×64 (mono OLED, SPI) | — (encoder) |
 
 **2. Download** the matching `.bin` from the [latest Release](https://github.com/marcinozog/AtlasCube/releases/latest).
 
@@ -447,7 +448,6 @@ Architecture and design notes in [`docs/`](docs/):
 
 - **Enclosure** — 3D-printed case currently in design; firmware is developed and tested on the bare development board
 - **SD card** — local storage for station logos, music files, and voice notification clips
-- **Additional displays** — SSD1322 (256×64 mono OLED): driver, UI profile and a `TOUCH_NONE` option are in the tree as a build-from-source variant (`select-variant.sh ssd1322`); pending hardware verification and a CI/release binary. ILI9341 320×240, ST7796U 480×320 and CO5300 240×296 are fully supported.
 - **Web melody editor** — in-browser tool for composing custom buzzer notification tunes
 
 ---

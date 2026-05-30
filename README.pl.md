@@ -99,7 +99,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Automatyczne wznawianie po utracie strumienia
 
 **UI**
-- GUI na LVGL — obsługuje ILI9341 320×240 (SPI), ST7796U 480×320 (SPI) i CO5300 240×296 (okrągły AMOLED, QSPI); wybór jednym `#define`
+- GUI na LVGL — obsługuje ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), CO5300 240×296 (okrągły AMOLED, QSPI) i SSD1322 256×64 (mono OLED, SPI); wybór jednym `#define`
 - Ekrany: zegar, playlista, korektor, ustawienia, Bluetooth, wydarzenia, WiFi AP
 - Nawigacja enkoderem (obrót + klik)
 - Dotyk pojemnościowy — CST816D (okrągły AMOLED) albo FT6336U (ST7796U), oba po I2C; działa równolegle z enkoderem
@@ -143,7 +143,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 | Płytka | Atlas Hub (autorska) |
 | Flash | 8 MB |
 | PSRAM | OctoSPI, 80 MHz |
-| Wyświetlacz | ILI9341 320×240 (SPI), ST7796U 480×320 (SPI) albo CO5300 240×296 AMOLED (QSPI) — wybór przy kompilacji |
+| Wyświetlacz | ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), CO5300 240×296 AMOLED (QSPI) albo SSD1322 256×64 mono OLED (SPI) — wybór przy kompilacji |
 | Dotyk | Kontroler pojemnościowy CST816D albo FT6336U (I2C) — gesty po stronie LVGL na zwykłym indevie wskaźnika |
 | Wejście | Enkoder z przyciskiem + dotyk (swipe i tap nakładki sterującej) |
 | I2S mux | 74HC157D — sprzętowy przełącznik między wyjściem I2S z ESP32-S3 a QCC5125; sterowany GPIO |
@@ -173,6 +173,7 @@ Wchodzisz na **[atlascube.net/flash](https://atlascube.net/flash/)** w Chrome / 
 | `AtlasCube-ili9341.bin` | ILI9341 320×240 (SPI) | FT6336U |
 | `AtlasCube-st7796.bin`  | ST7796U 480×320 (SPI) | FT6336U |
 | `AtlasCube-co5300.bin`  | CO5300 240×296 (QSPI AMOLED) | CST816D |
+| `AtlasCube-ssd1322.bin` | SSD1322 256×64 (mono OLED, SPI) | — (enkoder) |
 
 **2. Pobierz** odpowiedni `.bin` z [najnowszego Release'a](https://github.com/marcinozog/AtlasCube/releases/latest).
 
@@ -446,7 +447,6 @@ Notatki architektury i decyzji projektowych w [`docs/`](docs/):
 
 - **Obudowa** — drukowana 3D, w trakcie projektowania; firmware aktualnie chodzi na gołej płytce deweloperskiej
 - **Karta SD** — lokalny storage na logo stacji, pliki muzyczne i nagrania powiadomień głosowych
-- **Kolejne wyświetlacze** — SSD1322 (256×64 mono OLED): sterownik, profil UI i opcja `TOUCH_NONE` są już w repo jako wariant do samodzielnego zbudowania (`select-variant.sh ssd1322`); przed weryfikacją na sprzęcie i bez binarki w CI/release. ILI9341 320×240, ST7796U 480×320 i CO5300 240×296 w pełni wspierane.
 - **Webowy edytor melodii** — narzędzie w przeglądarce do komponowania własnych melodii na buzzer
 
 ---

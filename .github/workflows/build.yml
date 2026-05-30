@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [ili9341, st7796, co5300]
+        variant: [ili9341, st7796, co5300, ssd1322]
 
     steps:
       - name: Checkout
