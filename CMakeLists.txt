@@ -60,5 +60,11 @@ set(PROJECT_VER_FROM_GIT 1)
 
 project(atlascube)
 
-# Uncomment the following to load the contents of spiffs_image/web into the ESP flash memory
-# spiffs_create_partition_image(storage spiffs_image/web FLASH_IN_PROJECT)
+# Bundle spiffs_image/web into the `storage` SPIFFS partition.
+# Off by default for fast code-only flashing. Enable per-build with:
+#   ATLAS_SPIFFS=1 idf.py build         (Linux/macOS)
+#   $env:ATLAS_SPIFFS=1; idf.py build   (PowerShell)
+# CI/release always sets ATLAS_SPIFFS=1 so the flashed firmware ships the web UI.
+if(DEFINED ENV{ATLAS_SPIFFS} AND NOT "$ENV{ATLAS_SPIFFS}" STREQUAL "0")
+    spiffs_create_partition_image(storage spiffs_image/web FLASH_IN_PROJECT)
+endif()
