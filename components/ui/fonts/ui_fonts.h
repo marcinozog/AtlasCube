@@ -8,6 +8,8 @@ extern "C" {
 // Custom fonts shipped in components/ui/fonts/*.c.
 // Built-in LVGL fonts (e.g. lv_font_montserrat_48) are declared by lvgl.h
 // when enabled via Kconfig (CONFIG_LV_FONT_MONTSERRAT_*).
+LV_FONT_DECLARE(lv_font_montserrat_8_pl);
+LV_FONT_DECLARE(lv_font_montserrat_10_pl);
 LV_FONT_DECLARE(lv_font_montserrat_12_pl);
 LV_FONT_DECLARE(lv_font_montserrat_14_pl);
 LV_FONT_DECLARE(lv_font_montserrat_18_pl);
