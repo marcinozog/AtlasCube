@@ -17,7 +17,7 @@ string(REGEX MATCH "\n[ \t]*#define[ \t]+DISPLAY_(ILI9341|ST7796|CO5300|SSD1322)
        _ "${_atlas_defines}")
 set(ATLAS_DISPLAY "${CMAKE_MATCH_1}")
 
-string(REGEX MATCH "\n[ \t]*#define[ \t]+TOUCH_(CST816D|FT6336U)[^A-Za-z0-9_]"
+string(REGEX MATCH "\n[ \t]*#define[ \t]+TOUCH_(CST816D|FT6336U|NONE)[^A-Za-z0-9_]"
        _ "${_atlas_defines}")
 set(ATLAS_TOUCH "${CMAKE_MATCH_1}")
 

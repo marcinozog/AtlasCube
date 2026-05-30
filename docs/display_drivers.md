@@ -151,3 +151,32 @@ of internal DRAM freed.
 > further (10–16). The hard signal is `Dram largest free` in the
 > pipeline MEM log — if it's < a few kB, audio task creation will fail
 > intermittently even if the buffer alloc itself succeeded.
+
+## 4. SSD1322 — 4-bit grayscale, not RGB
+
+The SSD1322 (256×64 OLED, `UI_PROFILE_MONO_256X64`) is the odd one out:
+the other drivers push RGB565 straight to the panel, but the SSD1322 is a
+16-level grayscale controller. Three consequences:
+
+- **No backlight pin.** It's a self-emissive OLED, so there is no LEDC PWM
+  channel. `display_set_backlight()` writes the contrast-current register
+  (`0xC1`) instead — same 0–100 API, mapped to 0x00–0xFF.
+- **2 pixels per byte.** GDDRAM packs two 4-bit pixels into each byte (high
+  nibble = left pixel). LVGL still renders RGB565 (`LV_COLOR_DEPTH=16`), so
+  `flush_cb` converts each pixel to luma (`Rec.601` weighting) and packs the
+  whole frame into a `DISPLAY_WIDTH*DISPLAY_HEIGHT/2`-byte buffer.
+- **Column address = 4 pixels.** One column address spans 4 horizontal
+  pixels, and a 256-wide panel is centered in the 480-px GDDRAM → column
+  offset `0x1C` (`SSD1322_COL_OFFSET`). Nudge it by ±1 if the image is
+  shifted horizontally; toggle bit 4 of the `0xA0` re-map byte if it's
+  mirrored.
+
+Because the column granularity is 4 px, partial flushes would need X snapped
+to multiples of 4 (cf. the CASET/RASET rule in §1). Rather than carry a
+rounder, the driver renders **full-screen in PSRAM** (`MALLOC_CAP_SPIRAM`,
+`LV_DISPLAY_RENDER_MODE_FULL`) and pushes the whole 8 KB packed frame each
+flush. The panel is tiny, so the full-frame cost is negligible, and keeping
+the render buffer in PSRAM sidesteps the internal-DRAM budget from §3 — only
+the 8 KB DMA scratch buffer lives in internal RAM.
+
+Reference implementation: [components/display/drivers/ssd1322.c](../components/display/drivers/ssd1322.c).

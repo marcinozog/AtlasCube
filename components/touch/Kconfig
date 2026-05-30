@@ -10,6 +10,9 @@ config TOUCH_CST816D
 config TOUCH_FT6336U
     bool "FT6336U"
 
+config TOUCH_NONE
+    bool "None (no touch — e.g. mono OLED driven by encoder)"
+
 endchoice
 
 # Touch orientation (swap_xy, mirror_x, mirror_y) is defined per UI_PROFILE_*

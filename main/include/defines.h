@@ -23,20 +23,24 @@
 
 // ===== DISPLAY DRIVER =====
 // #define DISPLAY_ILI9341
-#define DISPLAY_ST7796
+// #define DISPLAY_ST7796
 // #define DISPLAY_CO5300
+#define DISPLAY_SSD1322
+
 
 
 // ===== UI PROFILE =====
 // #define UI_PROFILE_240X296
 // #define UI_PROFILE_320x240
-#define UI_PROFILE_480x320
+// #define UI_PROFILE_480x320
 // #define UI_PROFILE_MONO_128X64
+#define UI_PROFILE_MONO_256X64
 
 
 // ===== TOUCH DRIVER =====
-#define TOUCH_FT6336U
+// #define TOUCH_FT6336U
 // #define TOUCH_CST816D
+#define TOUCH_NONE
 
 
 // ===== DISPLAY =====
@@ -73,6 +77,15 @@
 #define DISPLAY_PIN_D2      41
 #define DISPLAY_PIN_D3      42
 #define DISPLAY_PIN_RST     1
+
+#elif CONFIG_DISPLAY_SSD1322
+
+// SSD1322 256x64 4-wire SPI mono OLED — no backlight pin (contrast-controlled).
+#define LCD_PIN_MOSI  11
+#define LCD_PIN_CLK   12
+#define LCD_PIN_CS    41
+#define LCD_PIN_DC    2
+#define LCD_PIN_RST   42
 
 #else
     #error "Unknown DISPLAY_TYPE"

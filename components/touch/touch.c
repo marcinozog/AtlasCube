@@ -72,7 +72,10 @@ static void touch_lvgl_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 
 void touch_init(void)
 {
-#if (CTP_SCL < 0) || (CTP_SDA < 0)
+#if CONFIG_TOUCH_NONE
+    ESP_LOGI(TAG, "Touch disabled (TOUCH_NONE)");
+    return;
+#elif (CTP_SCL < 0) || (CTP_SDA < 0)
     ESP_LOGW(TAG, "Touch I2C pins not configured (SCL=%d SDA=%d) — skipped",
              CTP_SCL, CTP_SDA);
     return;

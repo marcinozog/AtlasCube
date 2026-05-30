@@ -81,7 +81,14 @@ static void update_focus_visuals(void)
         lv_obj_set_style_border_width(rows[i], w, LV_PART_MAIN);
     }
     if (rows[s_focus]) {
-        lv_obj_scroll_to_view(rows[s_focus], LV_ANIM_ON);
+        // On the first row, snap fully to the top so the scrollable header
+        // (title / memory bar) comes back into view; scroll_to_view alone
+        // never returns past the focused row.
+        if (s_focus == 0) {
+            lv_obj_scroll_to_y(s_rows_cont, 0, LV_ANIM_ON);
+        } else {
+            lv_obj_scroll_to_view(rows[s_focus], LV_ANIM_ON);
+        }
     }
 }
 
@@ -99,12 +106,12 @@ static void update_hint(void)
 
 static void update_brightness_label(void)
 {
-    if (!s_label_bright_val || !s_slider_bright) return;
+    if (!s_label_bright_val) return;
     int br = app_state_get()->brightness;
     char buf[16];
     snprintf(buf, sizeof(buf), "%d%%", br);
     lv_label_set_text(s_label_bright_val, buf);
-    lv_slider_set_value(s_slider_bright, br, LV_ANIM_OFF);
+    if (s_slider_bright) lv_slider_set_value(s_slider_bright, br, LV_ANIM_OFF);
 }
 
 static void update_theme_label(void)
@@ -316,7 +323,9 @@ static lv_obj_t *make_row(lv_obj_t *parent, int y_ofs, const char *title)
     lv_obj_set_style_border_width(row, 2, LV_PART_MAIN);
     lv_obj_set_style_border_color(row, lv_color_hex(th->text_muted), LV_PART_MAIN);
     lv_obj_set_style_radius(row, 6, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(row, 10, LV_PART_MAIN);
+    // Card padding from the profile — short panels use a tight value so the
+    // label's content box doesn't collapse (cf. settings_row_pad).
+    lv_obj_set_style_pad_all(row, p->settings_row_pad, LV_PART_MAIN);
     lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_t *lbl = lv_label_create(row);
@@ -339,25 +348,17 @@ static void settings_create(lv_obj_t *parent)
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
 
-    /* title */
-    s_title = lv_label_create(parent);
-    lv_label_set_text(s_title, "Settings");
-    lv_obj_set_style_text_font(s_title, p->settings_title_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_title, lv_color_hex(th->accent), LV_PART_MAIN);
-    lv_obj_align(s_title, LV_ALIGN_TOP_MID, 0, p->settings_title_y);
-
-    /* ── read-only memory bar (right below the title) ── */
+    int title_h   = lv_font_get_line_height(p->settings_title_font);
+    int hint_h    = lv_font_get_line_height(p->settings_hint_font);
     int mem_bar_h = lv_font_get_line_height(p->settings_hint_font);
-    s_mem_bar = lv_label_create(parent);
-    lv_obj_set_style_text_font(s_mem_bar, p->settings_hint_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_mem_bar, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_align(s_mem_bar, LV_ALIGN_TOP_MID, 0, p->settings_row1_y);
-    update_mem_bar();
+    bool title_in_list = p->settings_title_in_list;
 
-    /* ── scrollable rows container (between memory bar and hint) ── */
-    int hint_h = lv_font_get_line_height(p->settings_hint_font);
-    int rows_start_y = p->settings_row1_y + mem_bar_h + 2;
-    int rows_cont_h = DISPLAY_HEIGHT + p->settings_hint_y - hint_h - rows_start_y - 4;
+    /* When the title scrolls with the list (small panels) the container fills
+       from the very top; otherwise it starts below the fixed title. */
+    int rows_start_y = title_in_list ? 0 : (p->settings_title_y + title_h + 2);
+    int rows_cont_h  = DISPLAY_HEIGHT + p->settings_hint_y - hint_h - rows_start_y - 4;
+
+    /* ── scrollable rows container ── */
     s_rows_cont = lv_obj_create(parent);
     lv_obj_set_size(s_rows_cont, p->settings_row_w + 12, rows_cont_h);
     lv_obj_align(s_rows_cont, LV_ALIGN_TOP_MID, 0, rows_start_y);
@@ -367,22 +368,50 @@ static void settings_create(lv_obj_t *parent)
     lv_obj_set_scroll_dir(s_rows_cont, LV_DIR_VER);
     lv_obj_set_scrollbar_mode(s_rows_cont, LV_SCROLLBAR_MODE_AUTO);
 
+    /* Running y for stacked header items that live inside the scroll list. */
+    int header_y = 0;
+
+    /* title — fixed on the screen, or the first scrollable item in the list */
+    s_title = lv_label_create(title_in_list ? s_rows_cont : parent);
+    lv_label_set_text(s_title, "Settings");
+    lv_obj_set_style_text_font(s_title, p->settings_title_font, LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_title, lv_color_hex(th->accent), LV_PART_MAIN);
+    if (title_in_list) {
+        lv_obj_align(s_title, LV_ALIGN_TOP_MID, 0, header_y);
+        header_y += title_h + 1;
+    } else {
+        lv_obj_align(s_title, LV_ALIGN_TOP_MID, 0, p->settings_title_y);
+    }
+
+    /* ── read-only memory bar — scrolls with the list ── */
+    s_mem_bar = lv_label_create(s_rows_cont);
+    lv_obj_set_style_text_font(s_mem_bar, p->settings_hint_font, LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_mem_bar, lv_color_hex(th->text_muted), LV_PART_MAIN);
+    lv_obj_align(s_mem_bar, LV_ALIGN_TOP_MID, 0, header_y);
+    update_mem_bar();
+    header_y += mem_bar_h + 2;
+
+    /* All interactive rows are pushed below the header items. */
+    int row_base = header_y;
+
     /* ── row: Brightness ── */
-    s_row_bright = make_row(s_rows_cont, 0, "Brightness");
+    s_row_bright = make_row(s_rows_cont, row_base, "Brightness");
     lv_obj_add_event_cb(s_row_bright, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_BRIGHTNESS);
 
-    s_slider_bright = lv_slider_create(s_row_bright);
-    lv_obj_set_size(s_slider_bright, p->settings_slider_w, p->settings_slider_h);
-    lv_obj_align(s_slider_bright, LV_ALIGN_BOTTOM_LEFT, 0, -2);
-    lv_slider_set_range(s_slider_bright, 10, 100);
-    lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->accent),     LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->text_muted), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(s_slider_bright, LV_OPA_COVER, LV_PART_MAIN);
-    /* Keep press ownership on the slider even if the finger drifts outside
-       its bounds during drag — otherwise LV_EVENT_RELEASED is routed to
-       whichever widget happens to be under the finger on release. */
-    lv_obj_add_flag(s_slider_bright, LV_OBJ_FLAG_PRESS_LOCK);
-    lv_obj_add_event_cb(s_slider_bright, slider_bright_released_cb, LV_EVENT_RELEASED, NULL);
+    if (p->settings_show_slider) {
+        s_slider_bright = lv_slider_create(s_row_bright);
+        lv_obj_set_size(s_slider_bright, p->settings_slider_w, p->settings_slider_h);
+        lv_obj_align(s_slider_bright, LV_ALIGN_BOTTOM_LEFT, 0, -2);
+        lv_slider_set_range(s_slider_bright, 10, 100);
+        lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->accent),     LV_PART_INDICATOR);
+        lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->text_muted), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(s_slider_bright, LV_OPA_COVER, LV_PART_MAIN);
+        /* Keep press ownership on the slider even if the finger drifts outside
+           its bounds during drag — otherwise LV_EVENT_RELEASED is routed to
+           whichever widget happens to be under the finger on release. */
+        lv_obj_add_flag(s_slider_bright, LV_OBJ_FLAG_PRESS_LOCK);
+        lv_obj_add_event_cb(s_slider_bright, slider_bright_released_cb, LV_EVENT_RELEASED, NULL);
+    }
 
     s_label_bright_val = lv_label_create(s_row_bright);
     lv_obj_set_style_text_font(s_label_bright_val, p->settings_value_font, LV_PART_MAIN);
@@ -390,7 +419,7 @@ static void settings_create(lv_obj_t *parent)
     lv_obj_align(s_label_bright_val, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
 
     /* ── row: Theme ── */
-    s_row_theme = make_row(s_rows_cont, p->settings_row2_y - p->settings_row1_y, "Theme");
+    s_row_theme = make_row(s_rows_cont, row_base + (p->settings_row2_y - p->settings_row1_y), "Theme");
     lv_obj_add_event_cb(s_row_theme, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_THEME);
 
     s_label_theme_val = lv_label_create(s_row_theme);
@@ -399,7 +428,7 @@ static void settings_create(lv_obj_t *parent)
     lv_obj_align(s_label_theme_val, LV_ALIGN_BOTTOM_MID, 0, 0);
 
     /* ── row: Mode ── */
-    s_row_mode = make_row(s_rows_cont, p->settings_row3_y - p->settings_row1_y, "Mode");
+    s_row_mode = make_row(s_rows_cont, row_base + (p->settings_row3_y - p->settings_row1_y), "Mode");
     lv_obj_add_event_cb(s_row_mode, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_MODE);
 
     s_label_mode_val = lv_label_create(s_row_mode);
@@ -410,7 +439,7 @@ static void settings_create(lv_obj_t *parent)
     /* ── row: BT Screen ── */
     int row4_y_ofs = (p->settings_row3_y - p->settings_row1_y)
                    + (p->settings_row2_y - p->settings_row1_y);
-    s_row_bt_screen = make_row(s_rows_cont, row4_y_ofs, "BT Screen");
+    s_row_bt_screen = make_row(s_rows_cont, row_base + row4_y_ofs, "BT Screen");
     lv_obj_add_event_cb(s_row_bt_screen, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_BT_SCREEN);
 
     s_label_bt_screen_val = lv_label_create(s_row_bt_screen);
@@ -421,7 +450,7 @@ static void settings_create(lv_obj_t *parent)
     /* ── row: DSP (EQ on/off) ── */
     int row5_y_ofs = (p->settings_row3_y - p->settings_row1_y)
                    + 2 * (p->settings_row2_y - p->settings_row1_y);
-    s_row_dsp = make_row(s_rows_cont, row5_y_ofs, "DSP");
+    s_row_dsp = make_row(s_rows_cont, row_base + row5_y_ofs, "DSP");
     lv_obj_add_event_cb(s_row_dsp, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_DSP);
 
     s_label_dsp_val = lv_label_create(s_row_dsp);
@@ -432,7 +461,7 @@ static void settings_create(lv_obj_t *parent)
     /* ── row: Equalizer ── */
     int row6_y_ofs = (p->settings_row3_y - p->settings_row1_y)
                    + 3 * (p->settings_row2_y - p->settings_row1_y);
-    s_row_eq = make_row(s_rows_cont, row6_y_ofs, "Equalizer");
+    s_row_eq = make_row(s_rows_cont, row_base + row6_y_ofs, "Equalizer");
     lv_obj_add_event_cb(s_row_eq, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_EQ);
 
     s_label_eq_val = lv_label_create(s_row_eq);
@@ -444,18 +473,20 @@ static void settings_create(lv_obj_t *parent)
     /* ── row: Screensaver ── */
     int row7_y_ofs = (p->settings_row3_y - p->settings_row1_y)
                    + 4 * (p->settings_row2_y - p->settings_row1_y);
-    s_row_ss = make_row(s_rows_cont, row7_y_ofs, "Screensaver");
+    s_row_ss = make_row(s_rows_cont, row_base + row7_y_ofs, "Screensaver");
     lv_obj_add_event_cb(s_row_ss, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_SS);
 
-    s_slider_ss = lv_slider_create(s_row_ss);
-    lv_obj_set_size(s_slider_ss, p->settings_slider_w, p->settings_slider_h);
-    lv_obj_align(s_slider_ss, LV_ALIGN_BOTTOM_LEFT, 0, -2);
-    lv_slider_set_range(s_slider_ss, 0, 600);
-    lv_obj_set_style_bg_color(s_slider_ss, lv_color_hex(th->accent),     LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(s_slider_ss, lv_color_hex(th->text_muted), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(s_slider_ss, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_add_flag(s_slider_ss, LV_OBJ_FLAG_PRESS_LOCK);
-    lv_obj_add_event_cb(s_slider_ss, slider_ss_released_cb, LV_EVENT_RELEASED, NULL);
+    if (p->settings_show_slider) {
+        s_slider_ss = lv_slider_create(s_row_ss);
+        lv_obj_set_size(s_slider_ss, p->settings_slider_w, p->settings_slider_h);
+        lv_obj_align(s_slider_ss, LV_ALIGN_BOTTOM_LEFT, 0, -2);
+        lv_slider_set_range(s_slider_ss, 0, 600);
+        lv_obj_set_style_bg_color(s_slider_ss, lv_color_hex(th->accent),     LV_PART_INDICATOR);
+        lv_obj_set_style_bg_color(s_slider_ss, lv_color_hex(th->text_muted), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(s_slider_ss, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_add_flag(s_slider_ss, LV_OBJ_FLAG_PRESS_LOCK);
+        lv_obj_add_event_cb(s_slider_ss, slider_ss_released_cb, LV_EVENT_RELEASED, NULL);
+    }
 
     s_label_ss_val = lv_label_create(s_row_ss);
     lv_obj_set_style_text_font(s_label_ss_val, p->settings_value_font, LV_PART_MAIN);
@@ -465,7 +496,7 @@ static void settings_create(lv_obj_t *parent)
     /* ── row: Events ── */
     int row8_y_ofs = (p->settings_row3_y - p->settings_row1_y)
                    + 5 * (p->settings_row2_y - p->settings_row1_y);
-    s_row_events = make_row(s_rows_cont, row8_y_ofs, "Events");
+    s_row_events = make_row(s_rows_cont, row_base + row8_y_ofs, "Events");
     lv_obj_add_event_cb(s_row_events, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_EVENTS);
 
     s_label_events_val = lv_label_create(s_row_events);
@@ -619,8 +650,10 @@ static void settings_apply_theme(void)
         if (lbl) lv_obj_set_style_text_color(lbl, lv_color_hex(th->text_secondary), LV_PART_MAIN);
     }
 
-    lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->accent),    LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->text_muted), LV_PART_MAIN);
+    if (s_slider_bright) {
+        lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->accent),    LV_PART_INDICATOR);
+        lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->text_muted), LV_PART_MAIN);
+    }
     if (s_slider_ss) {
         lv_obj_set_style_bg_color(s_slider_ss, lv_color_hex(th->accent),    LV_PART_INDICATOR);
         lv_obj_set_style_bg_color(s_slider_ss, lv_color_hex(th->text_muted), LV_PART_MAIN);

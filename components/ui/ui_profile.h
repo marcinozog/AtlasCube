@@ -32,6 +32,12 @@
     #define TOUCH_SWAP_XY   0
     #define TOUCH_MIRROR_X  0
     #define TOUCH_MIRROR_Y  0
+#elif defined(UI_PROFILE_MONO_256X64)
+    #define DISPLAY_WIDTH   256
+    #define DISPLAY_HEIGHT  64
+    #define TOUCH_SWAP_XY   0
+    #define TOUCH_MIRROR_X  0
+    #define TOUCH_MIRROR_Y  0
 #else
     #error "Unknown UI_PROFILE"
 #endif
@@ -158,12 +164,15 @@ typedef struct {
     int16_t          settings_title_y;
     int16_t          settings_row_w;
     int16_t          settings_row_h;
+    int16_t          settings_row_pad;      // inner card padding (px)
     int16_t          settings_row1_y;
     int16_t          settings_row2_y;
     int16_t          settings_row3_y;
     int16_t          settings_slider_w;
     int16_t          settings_slider_h;
+    bool             settings_show_slider;  // draw value slider (off on touchless/short panels)
     int16_t          settings_hint_y;       // from bottom (negative)
+    bool             settings_title_in_list; // title scrolls with the list (small panels)
     const lv_font_t *settings_title_font;
     const lv_font_t *settings_row_font;
     const lv_font_t *settings_value_font;
