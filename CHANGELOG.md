@@ -9,6 +9,11 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-05-30
+
+### Fixed
+- **build:** ship SPIFFS web assets in CI/release binaries
+
 ## [0.8.0] - 2026-05-29
 
 ### Added
@@ -121,7 +126,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/marcinozog/AtlasCube/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/marcinozog/AtlasCube/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/marcinozog/AtlasCube/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/marcinozog/AtlasCube/compare/v0.5.0...v0.6.0
