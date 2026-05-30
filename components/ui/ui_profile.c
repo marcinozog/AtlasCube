@@ -1071,6 +1071,21 @@ esp_err_t ui_profile_load_from_file(void)
         return ESP_FAIL;
     }
 
+    // Reject a layout saved for a different panel size: the overrides are
+    // absolute pixel coords, so a 256x64 file on a 480x320 build would scatter
+    // the widgets. Apply only when the stamped dimensions match the compiled
+    // profile (a file without w/h is treated as a mismatch — re-save to stamp).
+    cJSON *jw = cJSON_GetObjectItem(json, "w");
+    cJSON *jh = cJSON_GetObjectItem(json, "h");
+    int file_w = cJSON_IsNumber(jw) ? jw->valueint : 0;
+    int file_h = cJSON_IsNumber(jh) ? jh->valueint : 0;
+    if (file_w != DISPLAY_WIDTH || file_h != DISPLAY_HEIGHT) {
+        ESP_LOGW(TAG, "%s is for %dx%d, firmware is %dx%d — ignoring overrides, using defaults",
+                 UI_PROFILE_FILE, file_w, file_h, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+        cJSON_Delete(json);
+        return ESP_OK;   // runtime already holds defaults from ui_profile_reset()
+    }
+
     load_clock(cJSON_GetObjectItem(json, "clock"), &s_runtime);
     load_bt   (cJSON_GetObjectItem(json, "bt"),    &s_runtime);
     load_radio(cJSON_GetObjectItem(json, "radio"), &s_runtime);
@@ -1124,6 +1139,10 @@ esp_err_t ui_profile_save_to_file(void)
     ensure_initialized();
 
     cJSON *json = cJSON_CreateObject();
+    // Stamp the panel size so load can reject a file saved for a different LCD
+    // (see ui_profile_load_from_file).
+    cJSON_AddNumberToObject(json, "w", DISPLAY_WIDTH);
+    cJSON_AddNumberToObject(json, "h", DISPLAY_HEIGHT);
     cJSON_AddItemToObject(json, "clock", dump_clock(&s_runtime));
     cJSON_AddItemToObject(json, "bt",    dump_bt   (&s_runtime));
     cJSON_AddItemToObject(json, "radio", dump_radio(&s_runtime));

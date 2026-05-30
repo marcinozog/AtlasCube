@@ -54,9 +54,12 @@ events, wifi), each with a dozen-ish fields:
 
 **The clock section uses absolute LCD pixels (top-left origin)** for all
 "free elements" (panel, strip, time label, date label). No edge
-anchoring — each element has `_x`, `_y`, `_w`, `_h`. Consequence:
-swapping to a different LCD size requires a profile reset, since hard
-pixel coords don't auto-scale.
+anchoring — each element has `_x`, `_y`, `_w`, `_h`. These hard pixel
+coords don't auto-scale, so a layout saved for one LCD size is
+meaningless on another. The JSON is stamped with `w`/`h` on save, and
+`ui_profile_load_from_file()` skips it when they don't match the compiled
+`DISPLAY_WIDTH/HEIGHT` — switching LCD size falls back to the
+compile-time defaults automatically (no manual reset needed).
 
 Strip station/title are exceptions — they're labels inside the strip,
 with only a Y offset (X centered relative to `clock_strip_label_w`).
@@ -248,6 +251,11 @@ are all section-agnostic.
 - **No file on first boot** — `ui_profile_load_from_file()` returns
   `ESP_ERR_NOT_FOUND`, runtime stays at defaults. First POST creates
   the file.
+- **File saved for a different LCD size** — the file stores `w`/`h`; on
+  load, a mismatch with the compiled `DISPLAY_WIDTH/HEIGHT` is logged and
+  the overrides are skipped (defaults used), so a stale layout can't
+  scatter widgets after a variant switch. A legacy file without `w`/`h`
+  counts as a mismatch — re-save once to stamp it.
 - **Broken JSON** — `cJSON_Parse` returns `NULL`, fall back to defaults.
   The file is not overwritten on load — the next save will heal it.
 - **Unknown font id in JSON** — `ui_font_by_id()` returns `NULL`,
