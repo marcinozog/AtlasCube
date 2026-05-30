@@ -257,8 +257,24 @@ function onModalBgClick(e, id) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Firmware version — lets users confirm what was flashed
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadVersion() {
+    try {
+        const res = await fetch('/api/state', { cache: 'no-store' });
+        const s   = await res.json();
+        if (s && s.version) {
+            document.getElementById('fwVersion').textContent = s.version;
+        }
+    } catch (_) {
+        /* ignore — version is non-critical */
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────────────────────────────────────
 connect();
 loadPlaylist();
 renderEQ();
+loadVersion();

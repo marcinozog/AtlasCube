@@ -77,6 +77,13 @@ body {
     color: var(--accent);
 }
 
+.fw-version {
+    font-size: 11px;
+    color: var(--text-dim, #555);
+    letter-spacing: .04em;
+    white-space: nowrap;
+}
+
 /* ── Theme toggle ── */
 .theme-toggle {
     display: flex;

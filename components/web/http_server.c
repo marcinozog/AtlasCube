@@ -1,6 +1,7 @@
 #include "esp_log.h"
 #include "esp_http_server.h"
 #include "esp_system.h"
+#include "esp_app_desc.h"
 #include "radio_service.h"
 #include "ws_server.h"
 #include "settings.h"
@@ -361,6 +362,8 @@ static esp_err_t api_state_get_handler(httpd_req_t *req)
     // WiFi mode — useful for the settings page UI
     cJSON_AddStringToObject(json, "wifi_mode",
         wifi_get_run_mode() == WIFI_RUN_MODE_AP ? "ap" : "sta");
+    // Firmware version (git describe) — lets the web UI confirm what was flashed
+    cJSON_AddStringToObject(json, "version", esp_app_get_description()->version);
 
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);

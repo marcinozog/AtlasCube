@@ -113,6 +113,13 @@
     color: #555;
     margin-top: 20px;
   }
+  .fw-version {
+    text-align: center;
+    font-size: 11px;
+    color: #555;
+    margin-top: 14px;
+    letter-spacing: 0.5px;
+  }
 </style>
 </head>
 <body>
@@ -144,6 +151,7 @@
 
   <div class="status" id="status"></div>
   <div class="hint">Device will restart automatically after saving</div>
+  <div class="fw-version" id="fwVersion"></div>
 </div>
 
 <script>
@@ -153,6 +161,16 @@
   document.getElementById('show-toggle').addEventListener('change', function () {
     document.getElementById('pass').type = this.checked ? 'text' : 'password';
   });
+
+  // Show firmware version so users can confirm what was flashed
+  fetch('/api/state', { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (s) {
+      if (s && s.version) {
+        document.getElementById('fwVersion').textContent = 'Firmware ' + s.version;
+      }
+    })
+    .catch(function () { /* ignore — version is non-critical */ });
 
   document.getElementById('form').addEventListener('submit', async function (e) {
     e.preventDefault();
