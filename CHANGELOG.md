@@ -9,6 +9,20 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-05-30
+
+### Added
+- **ui:** fonts added
+- **ui:** auto-fit splash logo to the panel
+- **display:** add SSD1322 256x64 mono variant
+- **web:** show firmware version in UI and wifi setup
+
+### Changed
+- **screensaver:** changed default
+
+### Fixed
+- **scripts:** default flash-web.ps1 to flash when no args
+
 ## [0.8.1] - 2026-05-30
 
 ### Fixed
@@ -126,7 +140,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/marcinozog/AtlasCube/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/marcinozog/AtlasCube/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/marcinozog/AtlasCube/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/marcinozog/AtlasCube/compare/v0.6.0...v0.7.0
