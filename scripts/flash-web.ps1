@@ -5,6 +5,7 @@
 #   e.g.     ./scripts/flash-web.ps1 -p COM5 flash monitor
 $env:ATLAS_SPIFFS = "1"
 python spiffs_image/tools/compress_web.py
+# Force a reconfigure so CMake picks up ATLAS_SPIFFS=1 (env changes don't retrigger configure)
 idf.py reconfigure
 if ($args.Count -gt 0) { idf.py @args } else { idf.py flash }
 # Reset project back to fast (no-SPIFFS) config so extension buttons stay quick
