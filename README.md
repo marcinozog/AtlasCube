@@ -262,7 +262,7 @@ If you'd rather do it by hand (or are debugging the script):
 The active variant lives in [`main/include/defines.h`](main/include/defines.h) — three independent `#define` groups: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. Edit by hand, or use the helper:
 
 ```bash
-bash scripts/select-variant.sh ili9341   # or st7796 / co5300
+bash scripts/select-variant.sh ili9341   # or st7796 / co5300 / ssd1322
 ```
 
 After switching the variant, run `idf.py fullclean` so `sdkconfig` is regenerated from the new combination.
@@ -447,7 +447,7 @@ Architecture and design notes in [`docs/`](docs/):
 
 - **Enclosure** — 3D-printed case currently in design; firmware is developed and tested on the bare development board
 - **SD card** — local storage for station logos, music files, and voice notification clips
-- **Additional displays** — SSD1322 (256×64 OLED) support in progress (ILI9341 320×240, ST7796U 480×320, and CO5300 240×296 already supported)
+- **Additional displays** — SSD1322 (256×64 mono OLED): driver, UI profile and a `TOUCH_NONE` option are in the tree as a build-from-source variant (`select-variant.sh ssd1322`); pending hardware verification and a CI/release binary. ILI9341 320×240, ST7796U 480×320 and CO5300 240×296 are fully supported.
 - **Web melody editor** — in-browser tool for composing custom buzzer notification tunes
 
 ---

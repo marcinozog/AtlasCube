@@ -262,7 +262,7 @@ Jakbyś chciał zrobić to z palca (albo debugujesz skrypt):
 Aktywny wariant siedzi w [`main/include/defines.h`](main/include/defines.h) — trzy niezależne grupy `#define`: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. Możesz przerobić ręcznie albo użyć helpera:
 
 ```bash
-bash scripts/select-variant.sh ili9341   # albo st7796 / co5300
+bash scripts/select-variant.sh ili9341   # albo st7796 / co5300 / ssd1322
 ```
 
 Po zmianie wariantu puść `idf.py fullclean`, żeby `sdkconfig` wygenerował się od nowa dla nowej kombinacji.
@@ -446,7 +446,7 @@ Notatki architektury i decyzji projektowych w [`docs/`](docs/):
 
 - **Obudowa** — drukowana 3D, w trakcie projektowania; firmware aktualnie chodzi na gołej płytce deweloperskiej
 - **Karta SD** — lokalny storage na logo stacji, pliki muzyczne i nagrania powiadomień głosowych
-- **Kolejne wyświetlacze** — w drodze wsparcie SSD1322 (256×64 OLED) (ILI9341 320×240, ST7796U 480×320 i CO5300 240×296 już chodzą)
+- **Kolejne wyświetlacze** — SSD1322 (256×64 mono OLED): sterownik, profil UI i opcja `TOUCH_NONE` są już w repo jako wariant do samodzielnego zbudowania (`select-variant.sh ssd1322`); przed weryfikacją na sprzęcie i bez binarki w CI/release. ILI9341 320×240, ST7796U 480×320 i CO5300 240×296 w pełni wspierane.
 - **Webowy edytor melodii** — narzędzie w przeglądarce do komponowania własnych melodii na buzzer
 
 ---
