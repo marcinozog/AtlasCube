@@ -9,6 +9,11 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-05-31
+
+### Fixed
+- **build:** set esp32s3 target in build.py; add Windows build guide
+
 ## [0.9.2] - 2026-05-31
 
 ## [0.9.1] - 2026-05-30
@@ -147,7 +152,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.9.2...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.9.3...HEAD
+[0.9.3]: https://github.com/marcinozog/AtlasCube/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/marcinozog/AtlasCube/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/marcinozog/AtlasCube/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/marcinozog/AtlasCube/compare/v0.8.1...v0.9.0
