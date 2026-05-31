@@ -12,6 +12,8 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 
 ⚡ **[Wgranie firmware z przeglądarki](https://atlascube.net/flash)** — gotowy firmware leci przez USB prosto z przeglądarek Chromium (Chrome / Edge / Opera / Brave) po WebSerial. Bez ESP-IDF, bez esptool, bez konsoli.
 
+🔧 **[Zbuduj pod własny sprzęt](docs/build-windows.md)** — inny wyświetlacz albo własny układ pinów? Zbuduj obraz ze źródeł. Przepis krok po kroku na Windows (jeden instalator + `python build.py`).
+
 ---
 
 ## Zrzuty ekranu

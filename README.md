@@ -12,6 +12,8 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 
 ⚡ **[Flash firmware from browser](https://atlascube.net/flash)** — install prebuilt firmware directly over USB from Chromium-based browsers (Chrome / Edge / Opera / Brave) via WebSerial. No ESP-IDF, no esptool, no CLI.
 
+🔧 **[Build for your own hardware](docs/build-windows.md)** — different display or your own pin layout? Build a custom image from source. Step-by-step Windows walkthrough (one installer + `python build.py`).
+
 ---
 
 ## Screenshots
