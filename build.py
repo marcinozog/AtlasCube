@@ -36,6 +36,8 @@ BOARD_NAME = "esp32_s3_atlascube"
 IDF_VERSION = "v5.5.4"
 ADF_VERSION = "v2.8"
 ADF_REPO = "https://github.com/espressif/esp-adf.git"
+TARGET = "esp32s3"
+EIM_URL = "https://github.com/espressif/idf-im-ui/releases/latest"
 
 # variant -> (DISPLAY, UI_PROFILE, TOUCH, FLASH); mirrors the old select-variant.sh table
 VARIANTS = {
@@ -88,8 +90,12 @@ def git_ok(args):
 def resolve_idf():
     idf = os.environ.get("IDF_PATH")
     if not idf or not Path(idf).is_dir():
-        die("IDF_PATH is not set. Run this from an ESP-IDF environment "
-            "(the 'ESP-IDF PowerShell', or after running export.ps1/export.sh).")
+        die("IDF_PATH is not set — run this from inside an ESP-IDF environment.\n"
+            f"       Easiest on Windows: install ESP-IDF {IDF_VERSION} with the ESP-IDF\n"
+            f"       Installation Manager ({EIM_URL}),\n"
+            "       then open the ESP-IDF terminal it creates and re-run this script.\n"
+            "       (Already have ESP-IDF? Run its export.ps1 / export.sh first.)\n"
+            "       See docs/build-windows.md for the full walkthrough.")
     idf_py = Path(idf) / "tools" / "idf.py"
     if not idf_py.is_file():
         die(f"idf.py not found at {idf_py} — is IDF_PATH correct?")
@@ -259,8 +265,11 @@ def build(idf_py, variant, do_clean, do_build, with_spiffs):
         return
 
     if do_clean:
-        step("idf.py fullclean")
-        run(idf_cmd(idf_py, "fullclean"))
+        # set-target both selects ESP32-S3 (idf.py otherwise defaults to plain
+        # esp32, whose smaller IRAM overflows at link time) and forces a clean
+        # reconfigure so the freshly-switched variant in defines.h takes effect.
+        step(f"idf.py set-target {TARGET}")
+        run(idf_cmd(idf_py, "set-target", TARGET))
 
     step("idf.py build")
     run(idf_cmd(idf_py, "build"))
@@ -300,7 +309,7 @@ def main():
                     help="hardware variant (omit for an interactive menu)")
     ap.add_argument("--adf-path", help="path to esp-adf checkout (default: $ADF_PATH or ./esp-adf, cloned if absent)")
     ap.add_argument("--skip-build", action="store_true", help="set up variant + patches + assets, but don't compile")
-    ap.add_argument("--no-clean", action="store_true", help="skip idf.py fullclean before build (faster, dev only)")
+    ap.add_argument("--no-clean", action="store_true", help="skip the set-target/clean reconfigure before build (faster, dev only; assumes target already esp32s3)")
     ap.add_argument("--no-spiffs", action="store_true", help="don't bundle the web UI (smaller, no atlascube web pages)")
     args = ap.parse_args()
 

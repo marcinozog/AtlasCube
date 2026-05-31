@@ -203,6 +203,8 @@ That's it — no ESP-IDF, no ESP-ADF, no patches. The rest of this README descri
 
 **One-command build (recommended)**
 
+> On Windows? Follow [docs/build-windows.md](docs/build-windows.md) for the full step-by-step (ESP-IDF Installation Manager + `build.py`).
+
 Install [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf) (the official installer is the only manual step on Windows), open the ESP-IDF environment, then from the repo root run:
 
 ```bash

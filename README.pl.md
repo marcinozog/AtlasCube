@@ -203,6 +203,8 @@ Tyle — bez ESP-IDF, bez ESP-ADF, bez patchy. Reszta README to build dewelopers
 
 **Build jedną komendą (zalecane)**
 
+> Na Windows? Pełny przepis krok po kroku jest w [docs/build-windows.md](docs/build-windows.md) (ESP-IDF Installation Manager + `build.py`).
+
 Zainstaluj [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf) (na Windows oficjalny instalator to jedyny ręczny krok), otwórz środowisko ESP-IDF i z katalogu repo odpal:
 
 ```bash
