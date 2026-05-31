@@ -201,16 +201,20 @@ Tyle — bez ESP-IDF, bez ESP-ADF, bez patchy. Reszta README to build dewelopers
 - [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf)
 - [ESP-ADF v2.8](https://github.com/espressif/esp-adf)
 
-**Jednorazowy setup**
+**Build jedną komendą (zalecane)**
 
-Po sklonowaniu ESP-IDF i ESP-ADF puść dołączony skrypt:
+Zainstaluj [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf) (na Windows oficjalny instalator to jedyny ręczny krok), otwórz środowisko ESP-IDF i z katalogu repo odpal:
 
 ```bash
-ADF_PATH=<ścieżka-do-esp-adf> IDF_PATH=<ścieżka-do-esp-idf> bash scripts/patch-esp-adf.sh
+python build.py co5300       # albo ili9341 / st7796 / ssd1322
+python build.py              # interaktywne menu wariantu
 ```
 
-Skrypt jest idempotentny (można puszczać wielokrotnie) i robi tyle:
+`build.py` to jeden, wieloplatformowy punkt wejścia (Windows, Linux, CI). Klonuje ESP-ADF v2.8 jeśli go nie ma, ustawia wariant w `defines.h`, aplikuje wszystkie patche ESP-ADF/ESP-IDF, kompresuje web UI, buduje i produkuje gotowy do wgrania `build/AtlasCube-<wariant>.bin`. Jest idempotentny — można puszczać wielokrotnie. Przydatne flagi: `--skip-build` (tylko setup), `--no-spiffs`, `--adf-path <ścieżka>`.
 
+Robi tyle:
+
+- Klonuje ESP-ADF v2.8 do `./esp-adf`, jeśli `ADF_PATH` nie jest ustawiony.
 - Inicjalizuje submoduły ESP-ADF `components/esp-adf-libs` i `components/esp-sr` (czysty clone ich nie pobiera, bo to gotowe biblioteki binarne).
 - Wrzuca definicję płytki AtlasCube do `esp-adf/components/audio_board/esp32_s3_atlascube/`.
 - Patchuje `Kconfig.projbuild`, `CMakeLists.txt` i `component.mk` w `esp-adf/components/audio_board/`, żeby płytka się zarejestrowała.
@@ -219,9 +223,9 @@ Skrypt jest idempotentny (można puszczać wielokrotnie) i robi tyle:
 `sdkconfig.defaults` już zawiera `CONFIG_ESP32_S3_ATLASCUBE_BOARD=y`.
 
 <details>
-<summary>Co robi skrypt — kroki ręczne, do podejrzenia</summary>
+<summary>Kroki ręczne — co build.py automatyzuje, do podejrzenia / debugowania</summary>
 
-Jakbyś chciał zrobić to z palca (albo debugujesz skrypt):
+Jakbyś chciał zrobić to z palca (albo debugujesz setup):
 
 1. **Submoduły ESP-ADF:**
    ```bash
@@ -263,15 +267,13 @@ Jakbyś chciał zrobić to z palca (albo debugujesz skrypt):
 
 **Wybór wariantu sprzętowego**
 
-Aktywny wariant siedzi w [`main/include/defines.h`](main/include/defines.h) — trzy niezależne grupy `#define`: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. Możesz przerobić ręcznie albo użyć helpera:
+Aktywny wariant siedzi w [`main/include/defines.h`](main/include/defines.h) — trzy niezależne grupy `#define`: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. `build.py <wariant>` przełącza je za Ciebie; ręcznie — odkomentuj dokładnie jeden wpis w każdej grupie.
 
-```bash
-bash scripts/select-variant.sh ili9341   # albo st7796 / co5300 / ssd1322
-```
+Po ręcznej zmianie wariantu puść `idf.py fullclean`, żeby `sdkconfig` wygenerował się od nowa dla nowej kombinacji (`build.py` robi to automatycznie).
 
-Po zmianie wariantu puść `idf.py fullclean`, żeby `sdkconfig` wygenerował się od nowa dla nowej kombinacji.
+**Build i flash ręcznie**
 
-**Build i flash**
+Gdy wariant i patche są na miejscu (`build.py --skip-build` robi sam setup), działa standardowy flow ESP-IDF:
 
 ```bash
 idf.py build

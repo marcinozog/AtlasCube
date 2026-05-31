@@ -201,16 +201,20 @@ That's it — no ESP-IDF, no ESP-ADF, no patches. The rest of this README descri
 - [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf)
 - [ESP-ADF v2.8](https://github.com/espressif/esp-adf)
 
-**One-shot setup**
+**One-command build (recommended)**
 
-After cloning ESP-IDF and ESP-ADF, run the bundled setup script:
+Install [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf) (the official installer is the only manual step on Windows), open the ESP-IDF environment, then from the repo root run:
 
 ```bash
-ADF_PATH=<path-to-esp-adf> IDF_PATH=<path-to-esp-idf> bash scripts/patch-esp-adf.sh
+python build.py co5300       # or ili9341 / st7796 / ssd1322
+python build.py              # interactive variant menu
 ```
 
-The script is idempotent (safe to re-run) and does the following:
+`build.py` is the single cross-platform entry point (Windows, Linux, CI). It clones ESP-ADF v2.8 if absent, selects the variant in `defines.h`, applies all ESP-ADF/ESP-IDF patches, compresses the web UI, builds, and produces a flashable `build/AtlasCube-<variant>.bin`. It is idempotent — safe to re-run. Useful flags: `--skip-build` (set up only), `--no-spiffs`, `--adf-path <path>`.
 
+It does the following:
+
+- Clones ESP-ADF v2.8 into `./esp-adf` if `ADF_PATH` is not already set.
 - Initializes ESP-ADF submodules `components/esp-adf-libs` and `components/esp-sr` (pre-compiled libraries not pulled by a plain clone).
 - Copies the AtlasCube board definition into `esp-adf/components/audio_board/esp32_s3_atlascube/`.
 - Patches `Kconfig.projbuild`, `CMakeLists.txt` and `component.mk` in `esp-adf/components/audio_board/` to register the board.
@@ -219,9 +223,9 @@ The script is idempotent (safe to re-run) and does the following:
 `sdkconfig.defaults` already contains `CONFIG_ESP32_S3_ATLASCUBE_BOARD=y`.
 
 <details>
-<summary>What the script does — manual steps, for reference</summary>
+<summary>Manual steps — what build.py automates, for reference / debugging</summary>
 
-If you'd rather do it by hand (or are debugging the script):
+If you'd rather do it by hand (or are debugging the setup):
 
 1. **ESP-ADF submodules:**
    ```bash
@@ -263,15 +267,13 @@ If you'd rather do it by hand (or are debugging the script):
 
 **Pick the hardware variant**
 
-The active variant lives in [`main/include/defines.h`](main/include/defines.h) — three independent `#define` groups: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. Edit by hand, or use the helper:
+The active variant lives in [`main/include/defines.h`](main/include/defines.h) — three independent `#define` groups: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. `build.py <variant>` toggles them for you; to switch by hand, uncomment exactly one in each group.
 
-```bash
-bash scripts/select-variant.sh ili9341   # or st7796 / co5300 / ssd1322
-```
+After switching the variant by hand, run `idf.py fullclean` so `sdkconfig` is regenerated from the new combination (`build.py` does this automatically).
 
-After switching the variant, run `idf.py fullclean` so `sdkconfig` is regenerated from the new combination.
+**Build and flash manually**
 
-**Build and flash**
+Once the variant and patches are in place (`build.py --skip-build` does just the setup), the usual ESP-IDF flow works:
 
 ```bash
 idf.py build

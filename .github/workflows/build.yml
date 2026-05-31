@@ -22,9 +22,6 @@ jobs:
           git clone --branch v2.8 --depth 1 \
               https://github.com/espressif/esp-adf.git esp-adf
 
-      - name: Select variant
-        run: bash scripts/select-variant.sh ${{ matrix.variant }}
-
       - name: Build firmware
         uses: espressif/esp-idf-ci-action@v1
         with:
@@ -33,12 +30,10 @@ jobs:
           path: '.'
           command: |
             set -euo pipefail
-            export ADF_PATH="$PWD/esp-adf"
-            export ATLAS_SPIFFS=1
-            python spiffs_image/tools/compress_web.py
-            bash scripts/patch-esp-adf.sh
-            idf.py build
-            idf.py merge-bin -o "AtlasCube-${{ matrix.variant }}.bin"
+            # build.py is the single entry point shared with local/Windows builds:
+            # it selects the variant, patches ESP-ADF/IDF, compresses the web UI,
+            # builds, and merges the image. --no-clean: the CI checkout is always fresh.
+            python build.py ${{ matrix.variant }} --adf-path "$PWD/esp-adf" --no-clean
             echo "--- Looking for merged binary ---"
             ls -la "build/AtlasCube-${{ matrix.variant }}.bin"
 

@@ -25,6 +25,11 @@ compile_commands.json
 # ===== ESP-IDF =====
 idf_component.yml.lock
 
+# ESP-ADF checkout when build.py clones it into the repo (default ./esp-adf)
+esp-adf/
+
+__pycache__/
+
 # ===== Partition table / flashing =====
 flash_project_args
 flasher_args.json
