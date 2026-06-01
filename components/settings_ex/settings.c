@@ -179,7 +179,7 @@ static esp_err_t load_from_file(void)
         s_settings.display.dim_schedule.radio_off      = false;
         s_settings.display.dim_schedule.radio_on       = false;
         s_settings.display.dim_schedule.radio_station  = 0;
-        s_settings.display.dim_schedule.radio_volume   = 50;
+        s_settings.display.dim_schedule.radio_volume   = 25;
 
         cJSON *dim = cJSON_GetObjectItem(display, "dim_schedule");
         if (cJSON_IsObject(dim)) {

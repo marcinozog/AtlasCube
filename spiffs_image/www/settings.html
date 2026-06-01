@@ -23,6 +23,7 @@
     <!-- Tab navigation -->
     <nav class="tab-nav" id="settingsTabNav" role="tablist">
         <button type="button" class="tab-btn" data-tab="display"     onclick="selectTab('display')">🖥️ Display</button>
+        <button type="button" class="tab-btn" data-tab="night"       onclick="selectTab('night')">🌙 Sleep &amp; Wake</button>
         <button type="button" class="tab-btn" data-tab="screensaver" onclick="selectTab('screensaver')">🌀 Screensaver</button>
         <button type="button" class="tab-btn" data-tab="audio"       onclick="selectTab('audio')">🎚️ Audio</button>
         <button type="button" class="tab-btn" data-tab="colors"      onclick="selectTab('colors')">🎨 Colors</button>
@@ -54,12 +55,25 @@
         </div>
 
         <div class="panel">
-            <label class="field-label">🌙 Night dimming schedule</label>
+            <label class="field-label">Show/hide Bluetooth screen</label>
+            <div class="theme-toggle" id="btScreenToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnBTshow" onclick="setDeviceBTScreen(true)">✅ Show</button>
+                <button class="theme-btn" id="settingsBtnBThide" onclick="setDeviceBTScreen(false)">❌ Hide</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         Sleep & Wake
+    ══════════════════════════════════════════ -->
+    <section class="tab-pane" id="tab-night" data-tab="night">
+        <div class="panel">
+            <label class="field-label">🌙 Sleep &amp; Wake schedule</label>
             <div class="theme-toggle" id="dimSchedToggle" style="width:fit-content">
                 <button type="button" class="theme-btn" id="dimSchedOn"  onclick="setDimScheduleEnabled(true)">✅ On</button>
                 <button type="button" class="theme-btn" id="dimSchedOff" onclick="setDimScheduleEnabled(false)">❌ Off</button>
             </div>
-            <div class="field-hint">Dims the display between two times of day. Requires NTP-synced clock.</div>
+            <div class="field-hint">At the evening time dims the screen and can stop the radio; at the morning time brightens and can start a station (fades in). Requires NTP-synced clock.</div>
 
             <div id="dim_sched_panel" style="margin-top:10px">
                 <div class="field-group">
@@ -104,14 +118,6 @@
 
                 <button type="button" id="dim_sched_save_btn" onclick="saveDimSchedule()">💾 Save schedule</button>
                 <div id="dim_sched_status" class="save-status"></div>
-            </div>
-        </div>
-
-        <div class="panel">
-            <label class="field-label">Show/hide Bluetooth screen</label>
-            <div class="theme-toggle" id="btScreenToggle" style="width:fit-content">
-                <button class="theme-btn" id="settingsBtnBTshow" onclick="setDeviceBTScreen(true)">✅ Show</button>
-                <button class="theme-btn" id="settingsBtnBThide" onclick="setDeviceBTScreen(false)">❌ Hide</button>
             </div>
         </div>
     </section>
