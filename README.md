@@ -304,6 +304,11 @@ python scripts/flash-web.py -p COM5 flash
 > `ATLAS_SPIFFS` is read at CMake **configure** time, so flipping it requires
 > `idf.py reconfigure` (the helper does this for you).
 
+> Switching the HW variant in `defines.h`? The helper detects a stale
+> `sdkconfig` (the old display/touch defines linger because changed
+> `sdkconfig.defaults` aren't re-applied) and offers to delete it for a clean
+> build. Pass `--clean` to force it without the prompt.
+
 **Single merged image (for distribution)**
 
 Combines bootloader, partition table, app, and SPIFFS into one file that can be flashed from offset `0x0` with `esptool` or a web flasher. Set `ATLAS_SPIFFS=1` (and compress the assets first) so the web UI is included:

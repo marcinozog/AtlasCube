@@ -303,6 +303,11 @@ python scripts/flash-web.py -p COM5 flash
 > `ATLAS_SPIFFS` jest czytane na etapie **configure** CMake, więc przełączenie
 > wymaga `idf.py reconfigure` (helper robi to za Ciebie).
 
+> Zmieniasz wariant sprzętowy w `defines.h`? Helper wykrywa nieaktualny
+> `sdkconfig` (stare definicje wyświetlacza/dotyku zostają, bo zmienione
+> `sdkconfig.defaults` nie są ponownie aplikowane) i proponuje go usunąć dla
+> czystego buildu. Flaga `--clean` wymusza to bez pytania.
+
 **Pojedynczy scalony obraz (do dystrybucji)**
 
 Sklejony bootloader, partition table, aplikacja i SPIFFS w jednym pliku — wgrywany od offsetu `0x0` przez `esptool` albo web flasher. Ustaw `ATLAS_SPIFFS=1` (i wcześniej skompresuj assety), żeby web UI było w środku:

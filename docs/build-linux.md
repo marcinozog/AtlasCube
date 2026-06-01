@@ -90,6 +90,9 @@ python scripts/flash-web.py -p /dev/ttyACM0 flash
 Substitute your serial port for `/dev/ttyACM0` (see Troubleshooting for how to
 find it).
 
+> If you switched the HW variant in `defines.h`, the helper detects the stale
+> `sdkconfig` and offers to clean it (or pass `--clean` to force it).
+
 ## Useful flags
 
 | Flag | Effect |
