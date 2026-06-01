@@ -22,6 +22,12 @@ typedef struct {
     int  dim_brightness;     // 0–100, applied between dim_time and bright_time
     int  bright_hour;
     int  bright_minute;
+
+    // Night-mode audio actions tied to the same two edges (all optional).
+    bool radio_off;          // at the evening (dim) edge: stop the radio
+    bool radio_on;           // at the morning (bright) edge: start the radio
+    int  radio_station;      // 0-based playlist index used when radio_on
+    int  radio_volume;       // 0–100 target volume, reached via a fade-in
 } dim_schedule_t;
 
 typedef struct {
@@ -106,9 +112,7 @@ void settings_set_eq_enabled(bool enabled);
 void settings_set_curr_index(int index);
 void settings_set_screen(ui_screen_id_t screen);
 void settings_set_brightness(int brightness);
-void settings_set_dim_schedule(bool enabled,
-                               int dim_hour, int dim_minute, int dim_brightness,
-                               int bright_hour, int bright_minute);
+void settings_set_night_schedule(const dim_schedule_t *ns);
 void settings_set_bt_enable(bool enable);
 void settings_set_bt_show_screen(bool show);
 void settings_set_bt_volume(int volume);

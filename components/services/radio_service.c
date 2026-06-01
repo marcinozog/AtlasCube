@@ -4,9 +4,34 @@
 #include "settings.h"
 #include "playlist.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include <string.h>
 
 static const char *TAG = "RADIO_SERVICE";
+
+// ── volume fade-in (night-mode wake) ────────────────────────────────────────
+// A periodic esp_timer steps the live output volume (audio_player_set_volume,
+// no SPIFFS write) from 0 toward the target, then persists the final value
+// once via settings_set_volume(). The handle is created lazily and reused.
+#define RAMP_STEP_MS 200
+
+static esp_timer_handle_t s_ramp_timer;
+static int s_ramp_target;
+static int s_ramp_total;   // number of steps
+static int s_ramp_idx;     // steps done
+
+static void ramp_tick(void *arg)
+{
+    (void)arg;
+    s_ramp_idx++;
+    if (s_ramp_idx >= s_ramp_total) {
+        esp_timer_stop(s_ramp_timer);
+        settings_set_volume(s_ramp_target);   // persist final value + app_state, once
+        return;
+    }
+    int vol = s_ramp_target * s_ramp_idx / s_ramp_total;   // 0 → target
+    audio_player_set_volume(vol);
+}
 
 
 
@@ -85,6 +110,8 @@ void radio_stop(void)
 {
     ESP_LOGI(TAG, "Stop");
 
+    if (s_ramp_timer) esp_timer_stop(s_ramp_timer);   // cancel a fade-in in progress
+
     audio_player_stop();
 
     app_state_update(&(app_state_patch_t){
@@ -111,4 +138,36 @@ const char* radio_get_current_url(void)
 const char* radio_get_current_url(void)
 {
     return app_state_get()->url;
+}
+
+
+void radio_volume_ramp_to(int target_pct, int duration_ms)
+{
+    if (target_pct < 0)   target_pct = 0;
+    if (target_pct > 100) target_pct = 100;
+
+    if (duration_ms <= 0) {            // no ramp requested → set directly
+        settings_set_volume(target_pct);
+        return;
+    }
+
+    if (!s_ramp_timer) {
+        const esp_timer_create_args_t args = {
+            .callback = ramp_tick,
+            .name     = "vol_ramp",
+        };
+        if (esp_timer_create(&args, &s_ramp_timer) != ESP_OK) {
+            settings_set_volume(target_pct);   // fallback: instant
+            return;
+        }
+    }
+    esp_timer_stop(s_ramp_timer);      // cancel any in-flight ramp
+
+    s_ramp_target = target_pct;
+    s_ramp_total  = duration_ms / RAMP_STEP_MS;
+    if (s_ramp_total < 1) s_ramp_total = 1;
+    s_ramp_idx    = 0;
+
+    audio_player_set_volume(0);        // start quiet
+    esp_timer_start_periodic(s_ramp_timer, RAMP_STEP_MS * 1000);
 }

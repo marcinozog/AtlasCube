@@ -124,6 +124,10 @@ async function saveDimSchedule() {
     }
     const br = parseInt(document.getElementById('dim_brightness_slider').value, 10);
     const enabled = !!document.getElementById('dimSchedOn')?.classList.contains('active');
+    const radioOff = !!document.getElementById('night_radio_off')?.checked;
+    const radioOn  = !!document.getElementById('night_radio_on')?.checked;
+    const station  = parseInt(document.getElementById('night_station')?.value, 10) || 0;
+    const volume   = parseInt(document.getElementById('night_volume_slider')?.value, 10);
 
     try {
         const r = await fetch('/api/settings', {
@@ -134,6 +138,10 @@ async function saveDimSchedule() {
                 dim_hour: dim.h, dim_minute: dim.m,
                 dim_brightness: br,
                 bright_hour: bright.h, bright_minute: bright.m,
+                radio_off: radioOff,
+                radio_on: radioOn,
+                radio_station: station,
+                radio_volume: volume,
             }}})
         });
         if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -151,6 +159,21 @@ function showDimSchedStatus(text, cls) {
     el.innerText = text;
     el.className = 'save-status ' + cls;
     setTimeout(() => { el.innerText = ''; el.className = 'save-status'; }, 3000);
+}
+
+// Populate the night-mode wake station picker from the playlist.
+async function loadNightStations(selected) {
+    const sel = document.getElementById('night_station');
+    if (!sel) return;
+    let stations = [];
+    try {
+        const res = await fetch('/api/playlist', { cache: 'no-store' });
+        stations = await res.json();
+    } catch (e) { stations = []; }
+    sel.innerHTML = stations.length
+        ? stations.map((s, i) => `<option value="${i}">${i}: ${s.name}</option>`).join('')
+        : '<option value="0" disabled>Playlist empty — add stations first</option>';
+    if (selected !== undefined && stations.length) sel.value = String(selected);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -421,6 +444,16 @@ function populateForm(s) {
         setVal('dim_brightness_slider', dbv);
         const dbl = document.getElementById('dim_brightness_value');
         if (dbl) dbl.textContent = dbv;
+
+        const cbOff = document.getElementById('night_radio_off');
+        if (cbOff) cbOff.checked = !!ds.radio_off;
+        const cbOn = document.getElementById('night_radio_on');
+        if (cbOn) cbOn.checked = !!ds.radio_on;
+        const nv = ds.radio_volume ?? 50;
+        setVal('night_volume_slider', nv);
+        const nvl = document.getElementById('night_volume_value');
+        if (nvl) nvl.textContent = nv;
+        loadNightStations(ds.radio_station ?? 0);
     }
     if (s.bluetooth) {
         const t = s.bluetooth.show_screen || false;

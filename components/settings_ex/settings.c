@@ -39,6 +39,10 @@ esp_err_t settings_init(void)
         s_settings.display.dim_schedule.dim_brightness = 20;
         s_settings.display.dim_schedule.bright_hour    = 7;
         s_settings.display.dim_schedule.bright_minute  = 0;
+        s_settings.display.dim_schedule.radio_off      = false;
+        s_settings.display.dim_schedule.radio_on       = false;
+        s_settings.display.dim_schedule.radio_station  = 0;
+        s_settings.display.dim_schedule.radio_volume   = 25;
         s_settings.bluetooth.enable         = false;
         s_settings.bluetooth.show_screen    = true;
         s_settings.bluetooth.volume         = 15;
@@ -172,6 +176,10 @@ static esp_err_t load_from_file(void)
         s_settings.display.dim_schedule.dim_brightness = 20;
         s_settings.display.dim_schedule.bright_hour    = 7;
         s_settings.display.dim_schedule.bright_minute  = 0;
+        s_settings.display.dim_schedule.radio_off      = false;
+        s_settings.display.dim_schedule.radio_on       = false;
+        s_settings.display.dim_schedule.radio_station  = 0;
+        s_settings.display.dim_schedule.radio_volume   = 50;
 
         cJSON *dim = cJSON_GetObjectItem(display, "dim_schedule");
         if (cJSON_IsObject(dim)) {
@@ -182,6 +190,10 @@ static esp_err_t load_from_file(void)
             j = cJSON_GetObjectItem(dim, "dim_brightness"); if (cJSON_IsNumber(j)) s_settings.display.dim_schedule.dim_brightness = j->valueint;
             j = cJSON_GetObjectItem(dim, "bright_hour");    if (cJSON_IsNumber(j)) s_settings.display.dim_schedule.bright_hour    = j->valueint;
             j = cJSON_GetObjectItem(dim, "bright_minute");  if (cJSON_IsNumber(j)) s_settings.display.dim_schedule.bright_minute  = j->valueint;
+            j = cJSON_GetObjectItem(dim, "radio_off");      if (cJSON_IsBool(j))   s_settings.display.dim_schedule.radio_off      = cJSON_IsTrue(j);
+            j = cJSON_GetObjectItem(dim, "radio_on");       if (cJSON_IsBool(j))   s_settings.display.dim_schedule.radio_on       = cJSON_IsTrue(j);
+            j = cJSON_GetObjectItem(dim, "radio_station");  if (cJSON_IsNumber(j)) s_settings.display.dim_schedule.radio_station  = j->valueint;
+            j = cJSON_GetObjectItem(dim, "radio_volume");   if (cJSON_IsNumber(j)) s_settings.display.dim_schedule.radio_volume   = j->valueint;
         }
     }
     
@@ -361,6 +373,10 @@ static esp_err_t save_to_file(void)
     cJSON_AddNumberToObject(dim, "dim_brightness", s_settings.display.dim_schedule.dim_brightness);
     cJSON_AddNumberToObject(dim, "bright_hour",    s_settings.display.dim_schedule.bright_hour);
     cJSON_AddNumberToObject(dim, "bright_minute",  s_settings.display.dim_schedule.bright_minute);
+    cJSON_AddBoolToObject  (dim, "radio_off",      s_settings.display.dim_schedule.radio_off);
+    cJSON_AddBoolToObject  (dim, "radio_on",       s_settings.display.dim_schedule.radio_on);
+    cJSON_AddNumberToObject(dim, "radio_station",  s_settings.display.dim_schedule.radio_station);
+    cJSON_AddNumberToObject(dim, "radio_volume",   s_settings.display.dim_schedule.radio_volume);
     cJSON_AddItemToObject(display, "dim_schedule", dim);
     cJSON_AddItemToObject(json, "display", display);
 
@@ -523,16 +539,18 @@ void settings_set_brightness(int brightness)
 
 static int clampi(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
-void settings_set_dim_schedule(bool enabled,
-                               int dim_hour, int dim_minute, int dim_brightness,
-                               int bright_hour, int bright_minute)
+void settings_set_night_schedule(const dim_schedule_t *ns)
 {
-    s_settings.display.dim_schedule.enabled        = enabled;
-    s_settings.display.dim_schedule.dim_hour       = clampi(dim_hour,       0, 23);
-    s_settings.display.dim_schedule.dim_minute     = clampi(dim_minute,     0, 59);
-    s_settings.display.dim_schedule.dim_brightness = clampi(dim_brightness, 0, 100);
-    s_settings.display.dim_schedule.bright_hour    = clampi(bright_hour,    0, 23);
-    s_settings.display.dim_schedule.bright_minute  = clampi(bright_minute,  0, 59);
+    s_settings.display.dim_schedule.enabled        = ns->enabled;
+    s_settings.display.dim_schedule.dim_hour       = clampi(ns->dim_hour,       0, 23);
+    s_settings.display.dim_schedule.dim_minute     = clampi(ns->dim_minute,     0, 59);
+    s_settings.display.dim_schedule.dim_brightness = clampi(ns->dim_brightness, 0, 100);
+    s_settings.display.dim_schedule.bright_hour    = clampi(ns->bright_hour,    0, 23);
+    s_settings.display.dim_schedule.bright_minute  = clampi(ns->bright_minute,  0, 59);
+    s_settings.display.dim_schedule.radio_off      = ns->radio_off;
+    s_settings.display.dim_schedule.radio_on       = ns->radio_on;
+    s_settings.display.dim_schedule.radio_station  = (ns->radio_station < 0) ? 0 : ns->radio_station;
+    s_settings.display.dim_schedule.radio_volume   = clampi(ns->radio_volume,   0, 100);
     save_to_file();
     // Caller (HTTP handler) invokes dim_schedule_apply_now() — kept out of this
     // module to avoid a settings_ex ↔ services circular dependency.

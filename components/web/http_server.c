@@ -64,6 +64,10 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(dim, "dim_brightness", s->display.dim_schedule.dim_brightness);
     cJSON_AddNumberToObject(dim, "bright_hour",    s->display.dim_schedule.bright_hour);
     cJSON_AddNumberToObject(dim, "bright_minute",  s->display.dim_schedule.bright_minute);
+    cJSON_AddBoolToObject  (dim, "radio_off",      s->display.dim_schedule.radio_off);
+    cJSON_AddBoolToObject  (dim, "radio_on",       s->display.dim_schedule.radio_on);
+    cJSON_AddNumberToObject(dim, "radio_station",  s->display.dim_schedule.radio_station);
+    cJSON_AddNumberToObject(dim, "radio_volume",   s->display.dim_schedule.radio_volume);
     cJSON_AddItemToObject(display, "dim_schedule", dim);
     cJSON_AddItemToObject(json, "display", display);
 
@@ -223,22 +227,22 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         if (cJSON_IsObject(dim)) {
             // start from current values so partial updates are allowed
             app_settings_t *cur = settings_get();
-            bool en = cur->display.dim_schedule.enabled;
-            int  dh = cur->display.dim_schedule.dim_hour;
-            int  dm = cur->display.dim_schedule.dim_minute;
-            int  db = cur->display.dim_schedule.dim_brightness;
-            int  bh = cur->display.dim_schedule.bright_hour;
-            int  bm = cur->display.dim_schedule.bright_minute;
+            dim_schedule_t ns = cur->display.dim_schedule;
             cJSON *j;
-            j = cJSON_GetObjectItem(dim, "enabled");        if (cJSON_IsBool(j))   en = cJSON_IsTrue(j);
-            j = cJSON_GetObjectItem(dim, "dim_hour");       if (cJSON_IsNumber(j)) dh = j->valueint;
-            j = cJSON_GetObjectItem(dim, "dim_minute");     if (cJSON_IsNumber(j)) dm = j->valueint;
-            j = cJSON_GetObjectItem(dim, "dim_brightness"); if (cJSON_IsNumber(j)) db = j->valueint;
-            j = cJSON_GetObjectItem(dim, "bright_hour");    if (cJSON_IsNumber(j)) bh = j->valueint;
-            j = cJSON_GetObjectItem(dim, "bright_minute");  if (cJSON_IsNumber(j)) bm = j->valueint;
-            ESP_LOGI("HTTP", "POST dim_schedule: en=%d %02d:%02d→%d%% %02d:%02d",
-                     en, dh, dm, db, bh, bm);
-            settings_set_dim_schedule(en, dh, dm, db, bh, bm);
+            j = cJSON_GetObjectItem(dim, "enabled");        if (cJSON_IsBool(j))   ns.enabled        = cJSON_IsTrue(j);
+            j = cJSON_GetObjectItem(dim, "dim_hour");       if (cJSON_IsNumber(j)) ns.dim_hour       = j->valueint;
+            j = cJSON_GetObjectItem(dim, "dim_minute");     if (cJSON_IsNumber(j)) ns.dim_minute     = j->valueint;
+            j = cJSON_GetObjectItem(dim, "dim_brightness"); if (cJSON_IsNumber(j)) ns.dim_brightness = j->valueint;
+            j = cJSON_GetObjectItem(dim, "bright_hour");    if (cJSON_IsNumber(j)) ns.bright_hour    = j->valueint;
+            j = cJSON_GetObjectItem(dim, "bright_minute");  if (cJSON_IsNumber(j)) ns.bright_minute  = j->valueint;
+            j = cJSON_GetObjectItem(dim, "radio_off");      if (cJSON_IsBool(j))   ns.radio_off      = cJSON_IsTrue(j);
+            j = cJSON_GetObjectItem(dim, "radio_on");       if (cJSON_IsBool(j))   ns.radio_on       = cJSON_IsTrue(j);
+            j = cJSON_GetObjectItem(dim, "radio_station");  if (cJSON_IsNumber(j)) ns.radio_station  = j->valueint;
+            j = cJSON_GetObjectItem(dim, "radio_volume");   if (cJSON_IsNumber(j)) ns.radio_volume   = j->valueint;
+            ESP_LOGI("HTTP", "POST dim_schedule: en=%d %02d:%02d→%d%% %02d:%02d roff=%d ron=%d st=%d vol=%d",
+                     ns.enabled, ns.dim_hour, ns.dim_minute, ns.dim_brightness, ns.bright_hour, ns.bright_minute,
+                     ns.radio_off, ns.radio_on, ns.radio_station, ns.radio_volume);
+            settings_set_night_schedule(&ns);
             dim_schedule_apply_now();
         }
     }

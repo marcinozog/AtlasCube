@@ -78,6 +78,30 @@
                     <label class="field-label">Brighten at</label>
                     <input type="time" id="bright_time" class="field-input" style="width:140px" />
                 </div>
+
+                <div class="field-group">
+                    <label class="field-label">
+                        <input type="checkbox" id="night_radio_off" /> Stop radio at dim time
+                    </label>
+                </div>
+                <div class="field-group">
+                    <label class="field-label">
+                        <input type="checkbox" id="night_radio_on" /> Start radio at brighten time (fades in)
+                    </label>
+                </div>
+                <div class="field-group">
+                    <label class="field-label">Wake station</label>
+                    <select id="night_station" class="field-input" style="width:200px"></select>
+                </div>
+                <div class="field-group">
+                    <label class="field-label">Wake volume</label>
+                    <div class="slider-row">
+                        <input type="range" min="0" max="100" id="night_volume_slider"
+                               oninput="document.getElementById('night_volume_value').textContent = this.value" />
+                        <span id="night_volume_value" class="slider-value">50</span>
+                    </div>
+                </div>
+
                 <button type="button" id="dim_sched_save_btn" onclick="saveDimSchedule()">💾 Save schedule</button>
                 <div id="dim_sched_status" class="save-status"></div>
             </div>

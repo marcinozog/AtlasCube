@@ -3,6 +3,7 @@
 #include "display.h"
 #include "settings.h"
 #include "ntp_service.h"
+#include "radio_service.h"
 
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -12,6 +13,9 @@
 static const char *TAG = "DIM_SCHED";
 
 #define TICK_US (30 * 1000 * 1000ULL)
+
+// Duration of the wake-up volume fade-in at the morning edge.
+#define WAKE_RAMP_MS 5000
 
 typedef enum {
     STATE_UNKNOWN = -1,
@@ -68,6 +72,9 @@ static void evaluate(void)
     dim_state_t cur = in_dim_window(now_min, dim_min, bright_min) ? STATE_DIM : STATE_BRIGHT;
 
     bool fresh = !s_last_enabled || s_last_state == STATE_UNKNOWN;
+    // A real window crossing (not the first evaluation after boot/enable).
+    bool transition = !fresh && cur != s_last_state;
+
     if (fresh || cur != s_last_state) {
         int target = (cur == STATE_DIM) ? ds->dim_brightness : s->display.brightness;
         ESP_LOGI(TAG, "%s → brightness=%d (now=%02d:%02d, dim=%02d:%02d, bright=%02d:%02d)",
@@ -78,6 +85,26 @@ static void evaluate(void)
         display_set_backlight((uint8_t)target);
         s_last_state = cur;
     }
+
+    // Audio actions fire only on a genuine edge crossing — never on the first
+    // evaluation. Otherwise a reboot inside the night window would stop the
+    // radio, or a reboot in the morning would start playing unprompted.
+    if (transition) {
+        if (cur == STATE_DIM) {                // evening edge → entered night
+            if (ds->radio_off) {
+                ESP_LOGI(TAG, "Night: stopping radio");
+                radio_stop();
+            }
+        } else {                               // morning edge → left night
+            if (ds->radio_on) {
+                ESP_LOGI(TAG, "Morning: waking radio idx=%d vol=%d (fade %dms)",
+                         ds->radio_station, ds->radio_volume, WAKE_RAMP_MS);
+                radio_play_index(ds->radio_station);
+                radio_volume_ramp_to(ds->radio_volume, WAKE_RAMP_MS);
+            }
+        }
+    }
+
     s_last_enabled = true;
 }
 
