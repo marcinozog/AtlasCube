@@ -9,6 +9,14 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-06-01
+
+### Added
+- **night:** wake/sleep radio actions on the dimming schedule
+
+### Changed
+- **ui:** move night mode into its own Sleep & Wake tab
+
 ## [0.10.0] - 2026-06-01
 
 ### Added
@@ -163,7 +171,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/marcinozog/AtlasCube/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/marcinozog/AtlasCube/compare/v0.9.3...v0.10.0
 [0.9.3]: https://github.com/marcinozog/AtlasCube/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/marcinozog/AtlasCube/compare/v0.9.1...v0.9.2
