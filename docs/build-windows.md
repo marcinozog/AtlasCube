@@ -20,13 +20,19 @@ ESP-IDF, the toolchain and Python, and creates a ready-to-use terminal shortcut.
 
 1. Download `eim-gui-windows-x64.exe` from the
    [EIM releases page](https://github.com/espressif/idf-im-ui/releases/latest).
-2. Run it and, when it asks which ESP-IDF version to install, **select `v5.5.4`**.
-   This is important: AtlasCube is pinned to v5.5.4, and `build.py` will warn you
-   if a different version is active.
-3. Let it finish (this is the heavy, one-time download).
+2. Run it and choose **Custom installation**. EIM will offer to download any
+   missing **Git** and **Python** for you — let it. (On a clean machine or in a
+   sandbox you'll usually be missing both, so this is where they get installed.)
+3. Select the target chip(s) — you can keep the default **all**, or narrow it to
+   just **ESP32-S3**, which is the MCU AtlasCube runs on.
+4. When it asks which ESP-IDF version to install, **select `v5.5.4`**. This is
+   important: AtlasCube is pinned to v5.5.4, and `build.py` will warn you if a
+   different version is active.
+5. Click **Continue** through the remaining screens, then **Start installation**
+   and let it finish (this is the heavy, one-time download).
 
-EIM creates a shortcut/terminal entry that opens a shell with ESP-IDF already
-activated — that's what you use in the next step.
+EIM creates a desktop shortcut named **`IDF_v5.5.4_Powershell`** that opens a
+shell with ESP-IDF already activated — that's what you use in the next step.
 
 ## 2. Get the source and build
 
