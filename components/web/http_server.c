@@ -1576,11 +1576,16 @@ static esp_err_t file_handler(httpd_req_t *req)
 
     // Cache:
     //  - HTML: no-cache (entry point — must refresh after firmware update)
+    //  - mutable data (/data/* and *.json configs): no-cache — these change at
+    //    runtime (playlist, settings, events). Long-caching them desynchronizes
+    //    the UI from the device, e.g. a stale playlist.csv plays the wrong index.
     //  - rest (CSS/JS/ICO/fonts): long cache so the browser doesn't keep hitting
     //    the ESP on every tab open. Critical while radio is playing —
     //    parallel asset fetching + TLS audio caused stream drops.
-    bool is_html = (strstr(filepath, ".html") != NULL);
-    if (is_html) {
+    bool is_html    = (strstr(filepath, ".html") != NULL);
+    bool is_mutable = (strstr(filepath, "/data/") != NULL) ||
+                      (strstr(filepath, ".json")  != NULL);
+    if (is_html || is_mutable) {
         httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
     } else {
         httpd_resp_set_hdr(req, "Cache-Control", "public, max-age=86400");
