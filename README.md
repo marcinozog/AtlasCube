@@ -12,7 +12,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 
 ⚡ **[Flash firmware from browser](https://atlascube.net/flash)** — install prebuilt firmware directly over USB from Chromium-based browsers (Chrome / Edge / Opera / Brave) via WebSerial. No ESP-IDF, no esptool, no CLI.
 
-🔧 **[Build for your own hardware](docs/build-windows.md)** — different display or your own pin layout? Build a custom image from source. Step-by-step Windows walkthrough (one installer + `python build.py`).
+🔧 **[Build for your own hardware](docs/build-windows.md)** — different display or your own pin layout? Build a custom image from source. Step-by-step Windows walkthrough (one installer + `python scripts/build.py`).
 
 ---
 
@@ -210,8 +210,8 @@ That's it — no ESP-IDF, no ESP-ADF, no patches. The rest of this README descri
 Install [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf) (the official installer is the only manual step on Windows), open the ESP-IDF environment, then from the repo root run:
 
 ```bash
-python build.py co5300       # or ili9341 / st7796 / ssd1322
-python build.py              # interactive variant menu
+python scripts/build.py co5300       # or ili9341 / st7796 / ssd1322
+python scripts/build.py              # interactive variant menu
 ```
 
 `build.py` is the single cross-platform entry point (Windows, Linux, CI). It clones ESP-ADF v2.8 if absent, selects the variant in `defines.h`, applies all ESP-ADF/ESP-IDF patches, compresses the web UI, builds, and produces a flashable `build/AtlasCube-<variant>.bin`. It is idempotent — safe to re-run. Useful flags: `--skip-build` (set up only), `--no-spiffs`, `--adf-path <path>`.
@@ -271,13 +271,13 @@ If you'd rather do it by hand (or are debugging the setup):
 
 **Pick the hardware variant**
 
-The active variant lives in [`main/include/defines.h`](main/include/defines.h) — three independent `#define` groups: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. `build.py <variant>` toggles them for you; to switch by hand, uncomment exactly one in each group.
+The active variant lives in [`main/include/defines.h`](main/include/defines.h) — three independent `#define` groups: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. `scripts/build.py <variant>` toggles them for you; to switch by hand, uncomment exactly one in each group.
 
 After switching the variant by hand, run `idf.py fullclean` so `sdkconfig` is regenerated from the new combination (`build.py` does this automatically).
 
 **Build and flash manually**
 
-Once the variant and patches are in place (`build.py --skip-build` does just the setup), the usual ESP-IDF flow works:
+Once the variant and patches are in place (`scripts/build.py --skip-build` does just the setup), the usual ESP-IDF flow works:
 
 ```bash
 idf.py build
@@ -298,11 +298,11 @@ ATLAS_SPIFFS=1 idf.py reconfigure           # register the SPIFFS image
 ATLAS_SPIFFS=1 idf.py flash
 ```
 
-On Windows a helper wraps the whole sequence (and resets back to the fast,
-no-SPIFFS config afterwards so the IDE flash buttons stay quick):
+A helper wraps the whole sequence (and resets back to the fast, no-SPIFFS
+config afterwards so the IDE flash buttons stay quick):
 
-```powershell
-./scripts/flash-web.ps1 -p COM5 flash
+```bash
+python scripts/flash-web.py -p COM5 flash
 ```
 
 > `ATLAS_SPIFFS` is read at CMake **configure** time, so flipping it requires

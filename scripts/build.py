@@ -15,9 +15,9 @@ What it does, end to end:
   6. idf.py merge-bin -> build/AtlasCube-<variant>.bin, ready to flash.
 
 Run inside an ESP-IDF environment (the "ESP-IDF PowerShell", or after export.ps1):
-    python build.py co5300
-    python build.py            # interactive variant menu
-    python build.py ssd1322 --skip-build   # only set up, don't compile
+    python scripts/build.py co5300
+    python scripts/build.py            # interactive variant menu
+    python scripts/build.py ssd1322 --skip-build   # only set up, don't compile
 
 Pinned toolchain: ESP-IDF v5.5.4, ESP-ADF v2.8.
 """
@@ -30,7 +30,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-REPO_ROOT = Path(__file__).resolve().parent
+REPO_ROOT = Path(__file__).resolve().parent.parent
 BOARD_NAME = "esp32_s3_atlascube"
 
 IDF_VERSION = "v5.5.4"

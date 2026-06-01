@@ -37,8 +37,8 @@ activated — that's what you use in the next step.
    ```powershell
    git clone https://github.com/marcinozog/AtlasCube.git
    cd AtlasCube
-   python build.py co5300        # or ili9341 / st7796 / ssd1322
-   python build.py               # omit the variant for an interactive menu
+   python scripts/build.py co5300        # or ili9341 / st7796 / ssd1322
+   python scripts/build.py               # omit the variant for an interactive menu
    ```
 
 `build.py` does everything else: it clones ESP-ADF v2.8 (into `./esp-adf`),

@@ -12,7 +12,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 
 ⚡ **[Wgranie firmware z przeglądarki](https://atlascube.net/flash)** — gotowy firmware leci przez USB prosto z przeglądarek Chromium (Chrome / Edge / Opera / Brave) po WebSerial. Bez ESP-IDF, bez esptool, bez konsoli.
 
-🔧 **[Zbuduj pod własny sprzęt](docs/build-windows.md)** — inny wyświetlacz albo własny układ pinów? Zbuduj obraz ze źródeł. Przepis krok po kroku na Windows (jeden instalator + `python build.py`).
+🔧 **[Zbuduj pod własny sprzęt](docs/build-windows.md)** — inny wyświetlacz albo własny układ pinów? Zbuduj obraz ze źródeł. Przepis krok po kroku na Windows (jeden instalator + `python scripts/build.py`).
 
 ---
 
@@ -210,8 +210,8 @@ Tyle — bez ESP-IDF, bez ESP-ADF, bez patchy. Reszta README to build dewelopers
 Zainstaluj [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf) (na Windows oficjalny instalator to jedyny ręczny krok), otwórz środowisko ESP-IDF i z katalogu repo odpal:
 
 ```bash
-python build.py co5300       # albo ili9341 / st7796 / ssd1322
-python build.py              # interaktywne menu wariantu
+python scripts/build.py co5300       # albo ili9341 / st7796 / ssd1322
+python scripts/build.py              # interaktywne menu wariantu
 ```
 
 `build.py` to jeden, wieloplatformowy punkt wejścia (Windows, Linux, CI). Klonuje ESP-ADF v2.8 jeśli go nie ma, ustawia wariant w `defines.h`, aplikuje wszystkie patche ESP-ADF/ESP-IDF, kompresuje web UI, buduje i produkuje gotowy do wgrania `build/AtlasCube-<wariant>.bin`. Jest idempotentny — można puszczać wielokrotnie. Przydatne flagi: `--skip-build` (tylko setup), `--no-spiffs`, `--adf-path <ścieżka>`.
@@ -271,13 +271,13 @@ Jakbyś chciał zrobić to z palca (albo debugujesz setup):
 
 **Wybór wariantu sprzętowego**
 
-Aktywny wariant siedzi w [`main/include/defines.h`](main/include/defines.h) — trzy niezależne grupy `#define`: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. `build.py <wariant>` przełącza je za Ciebie; ręcznie — odkomentuj dokładnie jeden wpis w każdej grupie.
+Aktywny wariant siedzi w [`main/include/defines.h`](main/include/defines.h) — trzy niezależne grupy `#define`: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. `scripts/build.py <wariant>` przełącza je za Ciebie; ręcznie — odkomentuj dokładnie jeden wpis w każdej grupie.
 
 Po ręcznej zmianie wariantu puść `idf.py fullclean`, żeby `sdkconfig` wygenerował się od nowa dla nowej kombinacji (`build.py` robi to automatycznie).
 
 **Build i flash ręcznie**
 
-Gdy wariant i patche są na miejscu (`build.py --skip-build` robi sam setup), działa standardowy flow ESP-IDF:
+Gdy wariant i patche są na miejscu (`scripts/build.py --skip-build` robi sam setup), działa standardowy flow ESP-IDF:
 
 ```bash
 idf.py build
@@ -297,11 +297,11 @@ ATLAS_SPIFFS=1 idf.py reconfigure           # rejestruje obraz SPIFFS
 ATLAS_SPIFFS=1 idf.py flash
 ```
 
-Na Windows jest helper, który opakowuje całą sekwencję (i na końcu wraca do
-szybkiej konfiguracji bez SPIFFS, żeby przyciski flash w IDE dalej były szybkie):
+Jest helper, który opakowuje całą sekwencję (i na końcu wraca do szybkiej
+konfiguracji bez SPIFFS, żeby przyciski flash w IDE dalej były szybkie):
 
-```powershell
-./scripts/flash-web.ps1 -p COM5 flash
+```bash
+python scripts/flash-web.py -p COM5 flash
 ```
 
 > `ATLAS_SPIFFS` jest czytane na etapie **configure** CMake, więc przełączenie
