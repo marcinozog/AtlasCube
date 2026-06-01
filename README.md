@@ -12,7 +12,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 
 ⚡ **[Flash firmware from browser](https://atlascube.net/flash)** — install prebuilt firmware directly over USB from Chromium-based browsers (Chrome / Edge / Opera / Brave) via WebSerial. No ESP-IDF, no esptool, no CLI.
 
-🔧 **[Build for your own hardware](docs/build-windows.md)** — different display or your own pin layout? Build a custom image from source. Step-by-step Windows walkthrough (one installer + `python scripts/build.py`).
+🔧 **Build for your own hardware** — different display or your own pin layout? Build a custom image from source with one command (`python scripts/build.py`). Step-by-step guides for [Windows](docs/build-windows.md) and [Linux](docs/build-linux.md).
 
 ---
 
@@ -205,7 +205,7 @@ That's it — no ESP-IDF, no ESP-ADF, no patches. The rest of this README descri
 
 **One-command build (recommended)**
 
-> On Windows? Follow [docs/build-windows.md](docs/build-windows.md) for the full step-by-step (ESP-IDF Installation Manager + `build.py`).
+> Full step-by-step guides: [docs/build-windows.md](docs/build-windows.md) (ESP-IDF Installation Manager) and [docs/build-linux.md](docs/build-linux.md) (`install.sh` + `export.sh`). Both end at the same `scripts/build.py`.
 
 Install [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf) (the official installer is the only manual step on Windows), open the ESP-IDF environment, then from the repo root run:
 
