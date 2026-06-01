@@ -3,6 +3,7 @@
 #include "ui_events.h"
 #include "ui_screen.h"
 #include "ui_manager.h"
+#include "ui_nav.h"
 #include "clock_widget.h"
 #include "now_playing_widget.h"
 #include "mode_indicator_widget.h"
@@ -148,23 +149,15 @@ static void radio_on_input(ui_input_t input)
             break;
         }
 
-        case UI_INPUT_ENCODER_PRESS: {
-            app_state_t *s = app_state_get();
-            if (s->bt_show_screen)
-                settings_set_screen(SCREEN_BT); // set & save
+        case UI_INPUT_ENCODER_PRESS:
+        case UI_INPUT_SWIPE_RIGHT:
+            ui_nav_ring_next(SCREEN_RADIO);
             break;
-        }
         case UI_INPUT_ENCODER_LONG_PRESS:
             ui_navigate(SCREEN_PLAYLIST);
             break;
-        case UI_INPUT_SWIPE_LEFT: {
-            app_state_t *s = app_state_get();
-            if (s->bt_show_screen)
-                settings_set_screen(SCREEN_BT);
-            break;
-        }
-        case UI_INPUT_SWIPE_RIGHT:
-            settings_set_screen(SCREEN_CLOCK);
+        case UI_INPUT_SWIPE_LEFT:
+            ui_nav_ring_prev(SCREEN_RADIO);
             break;
         case UI_INPUT_SWIPE_UP:
             ui_navigate(SCREEN_PLAYLIST);

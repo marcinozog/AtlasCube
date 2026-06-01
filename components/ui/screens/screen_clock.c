@@ -11,6 +11,7 @@
 #include "ui_screen.h"
 #include "ui_events.h"
 #include "ui_manager.h"
+#include "ui_nav.h"
 #include "ntp_service.h"
 #include "lvgl.h"
 #include "esp_log.h"
@@ -229,16 +230,14 @@ static void clock_on_input(ui_input_t input)
             break;
         }
         case UI_INPUT_ENCODER_PRESS:
-            settings_set_screen(SCREEN_RADIO);
+        case UI_INPUT_SWIPE_RIGHT:
+            ui_nav_ring_next(SCREEN_CLOCK);
             break;
         case UI_INPUT_ENCODER_LONG_PRESS:
             ui_navigate(SCREEN_SETTINGS);
             break;
         case UI_INPUT_SWIPE_LEFT:
-            settings_set_screen(SCREEN_RADIO);
-            break;
-        case UI_INPUT_SWIPE_RIGHT:
-            settings_set_screen(SCREEN_MQTT);
+            ui_nav_ring_prev(SCREEN_CLOCK);
             break;
         case UI_INPUT_SWIPE_UP:
             ui_navigate(SCREEN_SETTINGS);

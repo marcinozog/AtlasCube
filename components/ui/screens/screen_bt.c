@@ -7,6 +7,7 @@
 #include "vol_overlay_widget.h"
 #include "ui_events.h"
 #include "ui_manager.h"
+#include "ui_nav.h"
 #include "app_state.h"
 #include "settings.h"
 #include "theme.h"
@@ -221,18 +222,18 @@ static void bt_on_input(ui_input_t input)
             vol_overlay_show(s_root, vol, true);
             break;
         }
-        case UI_INPUT_ENCODER_PRESS: {
-            settings_set_screen(SCREEN_CLOCK); // set & save
+        case UI_INPUT_ENCODER_PRESS:
+        case UI_INPUT_SWIPE_RIGHT:
+            ui_nav_ring_next(SCREEN_BT);
             break;
-        }
 
         case UI_INPUT_ENCODER_LONG_PRESS: {
             app_state_t *s = app_state_get();
             s->bt_enable ? settings_set_bt_enable(false) : settings_set_bt_enable(true);
             break;
         }
-        case UI_INPUT_SWIPE_RIGHT:
-            settings_set_screen(SCREEN_RADIO);
+        case UI_INPUT_SWIPE_LEFT:
+            ui_nav_ring_prev(SCREEN_BT);
             break;
 
         default:

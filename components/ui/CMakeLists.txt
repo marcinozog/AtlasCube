@@ -1,6 +1,7 @@
 idf_component_register(
     SRCS
         "ui_manager.c"
+        "ui_nav.c"
         "ui_profile.c"
         "screens/screen_splash.c"
         "screens/img_atlas_logo.c"

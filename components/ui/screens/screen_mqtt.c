@@ -1,9 +1,9 @@
 #include "screen_mqtt.h"
 #include "ui_screen.h"
 #include "ui_manager.h"
+#include "ui_nav.h"
 #include "ui_events.h"
 #include "theme.h"
-#include "settings.h"
 #include "mqtt_svc.h"
 #include "mqtt_config.h"
 #include "lvgl.h"
@@ -266,8 +266,12 @@ static void mqtt_on_event(const ui_event_t *ev)
 static void mqtt_on_input(ui_input_t input)
 {
     switch (input) {
+        case UI_INPUT_ENCODER_PRESS:
+        case UI_INPUT_SWIPE_RIGHT:
+            ui_nav_ring_next(SCREEN_MQTT);
+            break;
         case UI_INPUT_SWIPE_LEFT:
-            settings_set_screen(SCREEN_CLOCK);
+            ui_nav_ring_prev(SCREEN_MQTT);
             break;
         default:
             break;
