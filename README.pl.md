@@ -448,6 +448,7 @@ Notatki architektury i decyzji projektowych w [`docs/`](docs/):
 - [`audio_pipeline.md`](docs/audio_pipeline.md) — pipeline streamingu, DSP, tuning TCP, przypisanie tasków do rdzeni
 - [`events.md`](docs/events.md) — system przypomnień i wydarzeń
 - [`layout_editor.md`](docs/layout_editor.md) — personalizacja layoutu UI
+- [`navigation.md`](docs/navigation.md) — mapa ekranów: pierścień domowy, sterowanie (enkoder/dotyk), jak edytować
 - [`display_drivers.md`](docs/display_drivers.md) — kruczki driverów wyświetlaczy (parzyste granice w QSPI AMOLED, mutex SPI, budżet bufora LVGL vs wewnętrzny DRAM)
 
 ---
