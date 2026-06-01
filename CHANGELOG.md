@@ -9,6 +9,17 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-06-01
+
+### Added
+- **ui:** centralize screen navigation into an editable ring table
+
+### Changed
+- **scripts:** unify build tooling as Python under scripts/
+
+### Fixed
+- **web:** no-cache for mutable data files (playlist/configs)
+
 ## [0.9.3] - 2026-05-31
 
 ### Fixed
@@ -152,7 +163,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.9.3...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/marcinozog/AtlasCube/compare/v0.9.3...v0.10.0
 [0.9.3]: https://github.com/marcinozog/AtlasCube/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/marcinozog/AtlasCube/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/marcinozog/AtlasCube/compare/v0.9.0...v0.9.1
