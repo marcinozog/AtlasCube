@@ -47,11 +47,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
   </tr>
   <tr>
     <td align="center"><a href="https://atlascube.net/images/diagram_ili9341.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/diagram_ili9341.jpg" width="200"></a><br><sub>Schemat z ILI9341</sub></td>
-  </tr>
-  <tr>
     <td align="center"><a href="https://atlascube.net/images/diagram_co5300.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/diagram_co5300.jpg" width="200"></a><br><sub>Schemat z CO5300</sub></td>
-  </tr>
-  <tr>
     <td align="center"><a href="https://atlascube.net/images/diagram_ssd1322.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/diagram_ssd1322.jpg" width="200"></a><br><sub>Schemat z SSD1322</sub></td>
   </tr>
 </table>

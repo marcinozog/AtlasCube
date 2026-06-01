@@ -47,11 +47,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
   </tr>
   <tr>
     <td align="center"><a href="https://atlascube.net/images/diagram_ili9341.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/diagram_ili9341.jpg" width="200"></a><br><sub>Diagram with ILI9341</sub></td>
-  </tr>
-  <tr>
     <td align="center"><a href="https://atlascube.net/images/diagram_co5300.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/diagram_co5300.jpg" width="200"></a><br><sub>Diagram with CO5300</sub></td>
-  </tr>
-  <tr>
     <td align="center"><a href="https://atlascube.net/images/diagram_ssd1322.jpg" target="_blank" rel="noopener"><img src="https://atlascube.net/images/diagram_ssd1322.jpg" width="200"></a><br><sub>Diagram with SSD1322</sub></td>
   </tr>
 </table>
