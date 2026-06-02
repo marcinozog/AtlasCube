@@ -103,6 +103,24 @@ void radio_play_index(int index)
 }
 
 
+void radio_resync_curr_index(void)
+{
+    const char *url = app_state_get()->url;
+    if (!url || !url[0]) return;          // nothing selected yet
+
+    int n = playlist_get_count();
+    for (int i = 0; i < n; i++) {
+        const playlist_entry_t *e = playlist_get(i);
+        if (e && strcmp(e->url, url) == 0) {
+            if (i != app_state_get()->curr_index)
+                settings_set_curr_index(i);   // persist + broadcast new position
+            return;
+        }
+    }
+    ESP_LOGW(TAG, "resync: current station no longer in playlist (curr_index left as-is)");
+}
+
+
 /*
 void radio_stop(void)
 */

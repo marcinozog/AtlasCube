@@ -647,6 +647,7 @@ static esp_err_t api_playlist_post_handler(httpd_req_t *req)
     }
 
     playlist_load();
+    radio_resync_curr_index();   // re-anchor curr_index after reorder/edit
 
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, "{\"ok\":true}");

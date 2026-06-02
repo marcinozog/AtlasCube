@@ -18,6 +18,16 @@ void radio_play_index(int index);
 void radio_stop(void);
 
 /**
+ * Re-anchors the persisted curr_index after a playlist edit/reorder.
+ * curr_index is a positional pointer; once the list is reordered (favorites,
+ * drag&drop, deletions) it may address a different station. This matches the
+ * currently selected/playing station by URL and moves curr_index to its new
+ * position, keeping the UI highlight and prev/next in sync. No-op if nothing
+ * is loaded or the station was removed.
+ */
+void radio_resync_curr_index(void);
+
+/**
  * Fades the volume from 0 up to target_pct (0–100) over duration_ms.
  * Intended for the night-mode wake-up. Cancels any in-flight ramp and is
  * cancelled by radio_stop(). duration_ms <= 0 sets the volume instantly.
