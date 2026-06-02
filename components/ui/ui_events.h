@@ -37,6 +37,7 @@ typedef enum {
     UI_EVT_WEATHER_UPDATE,   // after fetching weather data
     UI_EVT_NAVIGATE,         // switch screen
     UI_EVT_THEME_CHANGED,
+    UI_EVT_BG_CHANGED,       // background gradient toggled on/off
     UI_EVT_PROFILE_CHANGED,  // ui_profile (layout) changed → rebuild active screen
     UI_EVT_INPUT,            // event from encoder / buttons
     UI_EVT_EVENT_FIRED,      // events_service fired an event (fullscreen toast)

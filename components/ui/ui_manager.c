@@ -1,6 +1,7 @@
 #include "ui_manager.h"
 #include "ui_screen.h"
 #include "ui_events.h"
+#include "ui_background.h"
 #include "theme.h"
 #include "app_state.h"
 #include "wifi_manager.h"
@@ -64,6 +65,7 @@ static const ui_screen_t   *s_active      = NULL;
 
 static bool s_prev_bt_enable = false;
 static ui_theme_t     s_prev_theme    = THEME_DARK;
+static bool           s_prev_bg_gradient = true;
 
 // Screensaver overlay — runs on top of an existing screen.
 // While active, the underlying s_active widgets are torn down but s_active /
@@ -93,6 +95,13 @@ static void on_state_change(void)
         s_prev_theme = s->theme;
         // theme_set() was already called by settings_set_theme() — only the event here
         ui_event_t ev = { .type = UI_EVT_THEME_CHANGED };
+        ui_event_send(&ev);
+        return;
+    }
+
+    if (s->bg_gradient != s_prev_bg_gradient) {
+        s_prev_bg_gradient = s->bg_gradient;
+        ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
         ui_event_send(&ev);
         return;
     }
@@ -332,6 +341,10 @@ void ui_manager_run(void)
     lv_obj_clear_flag(lv_scr_act(), LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(lv_scr_act(), gesture_dispatch_cb, LV_EVENT_GESTURE, NULL);
 
+    // Dithered gradient background, applied once to the singleton screen object.
+    // lv_obj_clean() only removes children, so it persists under every screen.
+    ui_background_apply(lv_scr_act());
+
     for (lv_indev_t *id = lv_indev_get_next(NULL); id; id = lv_indev_get_next(id)) {
         if (lv_indev_get_type(id) == LV_INDEV_TYPE_POINTER) {
             lv_indev_add_event_cb(id, pointer_press_note_cb, LV_EVENT_PRESSED, NULL);
@@ -353,8 +366,14 @@ void ui_manager_run(void)
                 continue;
             }
             if (ev.type == UI_EVT_THEME_CHANGED) {
+                ui_background_apply(lv_scr_act());   // swap gradient to match theme
                 if (s_active && s_active->apply_theme)
                     s_active->apply_theme();
+                continue;
+            }
+            if (ev.type == UI_EVT_BG_CHANGED) {
+                ui_background_apply(lv_scr_act());   // gradient toggled on/off
+                lv_obj_invalidate(lv_scr_act());
                 continue;
             }
             if (ev.type == UI_EVT_PROFILE_CHANGED) {

@@ -46,6 +46,7 @@ typedef struct {
     ui_screen_id_t screen;      // Current screen
     int brightness;             // Display brightness
     ui_theme_t theme;
+    bool bg_gradient;           // Dithered gradient background on/off (false = solid)
     int  scrsaver_delay;        // Idle seconds before activation (0 = off)
     int  scrsaver_id;           // screensaver_id_t (see screensavers.h)
 } app_state_t;
@@ -111,6 +112,9 @@ typedef struct {
 
     bool has_theme;
     ui_theme_t theme;
+
+    bool has_bg_gradient;
+    bool bg_gradient;
 
     bool has_scrsaver_delay;
     int  scrsaver_delay;

@@ -16,6 +16,8 @@ static const ui_theme_colors_t k_dark_defaults = {
     .accent         = 0xE94560,
     .bt_brand       = 0x0082FC,
     .status_ok      = 0x00C853,
+    .bg_grad_top    = 0x1E3A8A,
+    .bg_grad_bottom = 0x000000,
 };
 
 static const ui_theme_colors_t k_light_defaults = {
@@ -27,6 +29,8 @@ static const ui_theme_colors_t k_light_defaults = {
     .accent         = 0xC4243E,
     .bt_brand       = 0x0066CC,
     .status_ok      = 0x1B8E3A,
+    .bg_grad_top    = 0x6FA0E0,
+    .bg_grad_bottom = 0xF4F4F8,
 };
 
 // Mutable palettes - defaults at startup, overwritten from theme.json
@@ -39,6 +43,8 @@ static ui_theme_colors_t s_dark = {
     .accent         = 0xE94560,
     .bt_brand       = 0x0082FC,
     .status_ok      = 0x00C853,
+    .bg_grad_top    = 0x1E3A8A,
+    .bg_grad_bottom = 0x000000,
 };
 static ui_theme_colors_t s_light = {
     .bg_primary     = 0xF4F4F8,
@@ -49,6 +55,8 @@ static ui_theme_colors_t s_light = {
     .accent         = 0xC4243E,
     .bt_brand       = 0x0066CC,
     .status_ok      = 0x1B8E3A,
+    .bg_grad_top    = 0x6FA0E0,
+    .bg_grad_bottom = 0xF4F4F8,
 };
 
 static const ui_theme_colors_t *s_current = &s_dark;
@@ -112,6 +120,8 @@ static void load_palette(cJSON *obj, ui_theme_colors_t *dst, const ui_theme_colo
     LOAD(accent);
     LOAD(bt_brand);
     LOAD(status_ok);
+    LOAD(bg_grad_top);
+    LOAD(bg_grad_bottom);
     #undef LOAD
 }
 
@@ -134,6 +144,8 @@ static void add_palette(cJSON *parent, const char *name, const ui_theme_colors_t
     ADD(accent);
     ADD(bt_brand);
     ADD(status_ok);
+    ADD(bg_grad_top);
+    ADD(bg_grad_bottom);
     #undef ADD
 
     cJSON_AddItemToObject(parent, name, o);

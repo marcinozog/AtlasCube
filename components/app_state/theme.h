@@ -16,6 +16,8 @@ typedef struct {
     uint32_t accent;         // station name in radio, slider fill
     uint32_t bt_brand;       // BT circle, "Bluetooth Audio" label, BT slider fill
     uint32_t status_ok;      // Connected/Playing status etc. (semantic green)
+    uint32_t bg_grad_top;    // gradient background — top colour
+    uint32_t bg_grad_bottom; // gradient background — bottom colour
 } ui_theme_colors_t;
 
 const ui_theme_colors_t *theme_get(void);

@@ -34,6 +34,7 @@ typedef struct {
     ui_screen_id_t  screen;
     int             brightness;
     ui_theme_t      theme;
+    bool            bg_gradient;     // dithered gradient background on/off
     dim_schedule_t  dim_schedule;
 } display_settings_t;
 
@@ -118,6 +119,7 @@ void settings_set_bt_show_screen(bool show);
 void settings_set_bt_volume(int volume);
 void settings_set_ntp(const char *server1, const char *server2, const char *tz);
 void settings_set_theme(ui_theme_t theme);
+void settings_set_bg_gradient(bool enabled);
 void settings_set_wifi(const char *ssid, const char *password);
 void settings_set_scrsaver_delay(int delay);
 void settings_set_scrsaver_id(int id);

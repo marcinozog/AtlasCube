@@ -22,7 +22,6 @@
 static const char *TAG = "SCR_CLOCK";
 
 static lv_obj_t  *s_root          = NULL;
-static lv_obj_t  *s_panel         = NULL;
 static lv_obj_t  *s_strip         = NULL;
 static lv_obj_t  *s_strip_station = NULL;
 static lv_obj_t  *s_strip_title   = NULL;
@@ -103,13 +102,6 @@ static void clock_create(lv_obj_t *parent)
     const ui_theme_colors_t *th = theme_get();
     const ui_profile_t      *p  = ui_profile_get();
 
-    lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
-
-    // Panel — colored background; all positions are absolute relative to the screen
-    s_panel = make_panel(parent, p->clock_panel_x, p->clock_panel_y,
-                         p->clock_panel_w, p->clock_panel_h, th->bg_primary);
-
     // Time label — placed directly on the screen (parent), not inside the panel,
     // so the profile coordinates stay absolute.
     if (p->clock_show_time) {
@@ -178,7 +170,7 @@ static void clock_destroy(void)
 
     event_indicator_destroy();
     mode_indicator_destroy();
-    s_root = s_panel = s_strip = NULL;
+    s_root = s_strip = NULL;
     s_strip_station = s_strip_title = NULL;
     s_time_label    = s_date_label  = NULL;
 
@@ -251,10 +243,6 @@ static void clock_apply_theme(void)
 {
     if (!s_root) return;
     const ui_theme_colors_t *th = theme_get();
-
-    lv_obj_set_style_bg_color(s_root,  lv_color_hex(th->bg_primary),   LV_PART_MAIN);
-    if (s_panel)
-        lv_obj_set_style_bg_color(s_panel, lv_color_hex(th->bg_primary), LV_PART_MAIN);
 
     if (s_time_label)
         lv_obj_set_style_text_color(s_time_label,

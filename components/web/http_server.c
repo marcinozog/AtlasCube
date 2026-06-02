@@ -57,6 +57,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(display, "brightness", s->display.brightness);
     cJSON_AddStringToObject(display, "theme",
         s->display.theme == THEME_LIGHT ? "light" : "dark");
+    cJSON_AddBoolToObject(display, "bg_gradient", s->display.bg_gradient);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s->display.dim_schedule.enabled);
     cJSON_AddNumberToObject(dim, "dim_hour",       s->display.dim_schedule.dim_hour);
@@ -222,6 +223,11 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
                            ? THEME_LIGHT : THEME_DARK;
             ESP_LOGI("HTTP", "POST theme: string='%s' → enum=%d", th->valuestring, (int)t);
             settings_set_theme(t);
+        }
+        cJSON *bg = cJSON_GetObjectItem(display, "bg_gradient");
+        if (cJSON_IsBool(bg)) {
+            ESP_LOGI("HTTP", "POST bg_gradient: %d", cJSON_IsTrue(bg));
+            settings_set_bg_gradient(cJSON_IsTrue(bg));
         }
         cJSON *dim = cJSON_GetObjectItem(display, "dim_schedule");
         if (cJSON_IsObject(dim)) {
@@ -400,6 +406,8 @@ static void add_palette_json(cJSON *parent, const char *name,
     F(accent);
     F(bt_brand);
     F(status_ok);
+    F(bg_grad_top);
+    F(bg_grad_bottom);
     #undef F
     cJSON_AddItemToObject(parent, name, o);
 }
@@ -452,6 +460,8 @@ static void patch_palette_from_json(cJSON *obj, ui_theme_t t)
     PATCH(accent);
     PATCH(bt_brand);
     PATCH(status_ok);
+    PATCH(bg_grad_top);
+    PATCH(bg_grad_bottom);
     #undef PATCH
 
     theme_palette_set(t, &c);

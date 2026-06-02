@@ -75,6 +75,19 @@ function setDeviceTheme(t) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Background gradient on/off (display)
+// ─────────────────────────────────────────────────────────────────────────────
+function setBgGradient(on) {
+    document.getElementById('settingsBtnBgGrad') ?.classList.toggle('active', on);
+    document.getElementById('settingsBtnBgSolid')?.classList.toggle('active', !on);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { bg_gradient: on } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Brightness (display)
 // ─────────────────────────────────────────────────────────────────────────────
 function setDisplayBrightness(t) {
@@ -426,6 +439,10 @@ function populateForm(s) {
         document.getElementById('settingsBtnDark') ?.classList.toggle('active', t === 'dark');
         document.getElementById('settingsBtnLight')?.classList.toggle('active', t === 'light');
 
+        const bgGrad = s.display.bg_gradient !== false;   // default on
+        document.getElementById('settingsBtnBgGrad') ?.classList.toggle('active', bgGrad);
+        document.getElementById('settingsBtnBgSolid')?.classList.toggle('active', !bgGrad);
+
         if (s.display.brightness !== undefined) {
             const b = s.display.brightness;
             document.getElementById('disp_bright_slider').value = b;
@@ -663,6 +680,8 @@ const COLOR_FIELDS = [
     ['accent',         'Accent / highlight',  'Radio station name, slider fill'],
     ['bt_brand',       'Bluetooth',           'BT icon, "Bluetooth Audio", BT slider'],
     ['status_ok',      'Status OK',           'Connected / Playing (semantic green)'],
+    ['bg_grad_top',    'Gradient top',        'Top colour of the background gradient'],
+    ['bg_grad_bottom', 'Gradient bottom',     'Bottom colour of the background gradient'],
 ];
 
 let colorData     = { dark: {}, light: {} };

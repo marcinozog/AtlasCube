@@ -33,6 +33,7 @@ esp_err_t settings_init(void)
         s_settings.display.brightness       = 80;
         s_settings.display.screen           = SCREEN_CLOCK;
         s_settings.display.theme            = THEME_DARK;
+        s_settings.display.bg_gradient      = true;
         s_settings.display.dim_schedule.enabled        = false;
         s_settings.display.dim_schedule.dim_hour       = 22;
         s_settings.display.dim_schedule.dim_minute     = 0;
@@ -168,6 +169,8 @@ static esp_err_t load_from_file(void)
             s_settings.display.theme =
                 (strcmp(th->valuestring, "light") == 0) ? THEME_LIGHT : THEME_DARK;
         }
+        cJSON *bg = cJSON_GetObjectItem(display, "bg_gradient");
+        s_settings.display.bg_gradient = cJSON_IsBool(bg) ? cJSON_IsTrue(bg) : true;
 
         // dim schedule defaults (used if section is missing or partial)
         s_settings.display.dim_schedule.enabled        = false;
@@ -366,6 +369,7 @@ static esp_err_t save_to_file(void)
     cJSON_AddNumberToObject(display, "brightness", s_settings.display.brightness);
     cJSON_AddStringToObject(display, "theme",
         s_settings.display.theme == THEME_LIGHT ? "light" : "dark");
+    cJSON_AddBoolToObject(display, "bg_gradient", s_settings.display.bg_gradient);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s_settings.display.dim_schedule.enabled);
     cJSON_AddNumberToObject(dim, "dim_hour",       s_settings.display.dim_schedule.dim_hour);
@@ -474,6 +478,7 @@ void settings_apply(void)
         .has_bt_volume          = true, .bt_volume = s_settings.bluetooth.volume,
         .has_display_brightness = true, .display_brightness = s_settings.display.brightness,
         .has_theme              = true, .theme     = s_settings.display.theme,
+        .has_bg_gradient        = true, .bg_gradient = s_settings.display.bg_gradient,
         .has_scrsaver_delay     = true, .scrsaver_delay  = s_settings.scrsaver.delay,
         .has_scrsaver_id        = true, .scrsaver_id     = s_settings.scrsaver.screensaver_id,
     };
@@ -605,6 +610,14 @@ void settings_set_theme(ui_theme_t t)
     s_settings.display.theme = t;
     theme_set(t);   // natychmiastowa zmiana palety
     app_state_update(&(app_state_patch_t){ .has_theme = true, .theme = t });
+    save_to_file();
+}
+
+void settings_set_bg_gradient(bool enabled)
+{
+    if (s_settings.display.bg_gradient == enabled) return;
+    s_settings.display.bg_gradient = enabled;
+    app_state_update(&(app_state_patch_t){ .has_bg_gradient = true, .bg_gradient = enabled });
     save_to_file();
 }
 
