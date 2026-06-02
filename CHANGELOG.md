@@ -9,6 +9,15 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-06-02
+
+### Added
+- **ui:** dithered gradient screen background
+
+### Fixed
+- **radio:** re-anchor curr_index after playlist edit
+- **scripts:** guard flash-web.py against stale sdkconfig on variant switch
+
 ## [0.11.0] - 2026-06-01
 
 ### Added
@@ -171,7 +180,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/marcinozog/AtlasCube/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/marcinozog/AtlasCube/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/marcinozog/AtlasCube/compare/v0.9.3...v0.10.0
 [0.9.3]: https://github.com/marcinozog/AtlasCube/compare/v0.9.2...v0.9.3
