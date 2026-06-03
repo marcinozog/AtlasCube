@@ -120,6 +120,15 @@ body {
     background: var(--border);
 }
 
+/* Audio source switch (Radio / Bluetooth) — reuses .theme-toggle / .theme-btn,
+   but needs auto width to fit text labels instead of single icons */
+.src-btn {
+    width: auto;
+    padding: 0 16px;
+    gap: 6px;
+    font-size: 13px;
+}
+
 /* ════════════════════════════════════════════════
    CARD
    ════════════════════════════════════════════════ */

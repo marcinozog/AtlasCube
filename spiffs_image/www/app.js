@@ -65,6 +65,7 @@ function connect() {
                 }
             }
             if (data.eq !== undefined) setEqUI(data.eq);
+            if (data.bt_enable !== undefined) updateAudioSource(data.bt_enable);
         }
     };
 }
@@ -241,10 +242,16 @@ function openEq()  { document.getElementById('eq_modal').classList.remove('hidde
 function closeEq() { document.getElementById('eq_modal').classList.add('hidden'); }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Screens
+// Audio source (Radio / Bluetooth) — drives bluetooth.enable
 // ─────────────────────────────────────────────────────────────────────────────
-function setScreen(name) {
-    send({ cmd: 'set_screen', value: name });
+function setAudioSource(bt) {
+    updateAudioSource(bt);
+    send({ cmd: 'bt_enable', value: bt });
+}
+
+function updateAudioSource(bt) {
+    document.getElementById('srcRadioBtn')?.classList.toggle('active', !bt);
+    document.getElementById('srcBtBtn')   ?.classList.toggle('active',  bt);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -30,7 +30,7 @@ function connect() {
         if (data.type === 'state') {
             if (data.bt_enable !== undefined) {
                 btEnabled = data.bt_enable;
-                updateBtButton();
+                updateAudioSource(btEnabled);
             }
             if (data.bt_volume !== undefined) {
                 const sl = document.getElementById('bt_volume_slider');
@@ -78,10 +78,11 @@ function formatBtTime(posS, durMs) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Bluetooth
 // ─────────────────────────────────────────────────────────────────────────────
-function toggleBtMode() {
-    btEnabled = !btEnabled;
+// Audio source (Radio / Bluetooth) — drives bluetooth.enable
+function setAudioSource(bt) {
+    btEnabled = bt;
+    updateAudioSource(btEnabled);
     send({ cmd: 'bt_enable', value: btEnabled });
-    updateBtButton();
 }
 
 function updateBtStatus() {
@@ -99,13 +100,9 @@ function updateBtStatus() {
     }
 }
 
-function updateBtButton() {
-    const label = btEnabled ? '🔵 BT ON' : '⚪ BT OFF';
-    const toggleBtn = document.getElementById('bt_toggle_btn');
-    if (toggleBtn) {
-        toggleBtn.innerText = label;
-        toggleBtn.classList.toggle('bt-on', btEnabled);
-    }
+function updateAudioSource(bt) {
+    document.getElementById('srcRadioBtn')?.classList.toggle('active', !bt);
+    document.getElementById('srcBtBtn')   ?.classList.toggle('active',  bt);
 }
 
 function onBtVolumeChange(v) {

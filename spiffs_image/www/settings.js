@@ -62,6 +62,17 @@ function initTabs() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Device screen (display) — switch + persist the active/startup screen
+// ─────────────────────────────────────────────────────────────────────────────
+function setScreen(name) {
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { screen: name } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Device theme (display)
 // ─────────────────────────────────────────────────────────────────────────────
 function setDeviceTheme(t) {

@@ -22,14 +22,20 @@
 
     <div class="section-title">🔵 Bluetooth</div>
 
-    <!-- ── Status + on/off ── -->
+    <!-- ── Audio Source ── -->
+    <section class="panel">
+        <div class="panel-label">AUDIO SOURCE</div>
+        <div class="theme-toggle" id="audioSourceToggle" style="width:fit-content">
+            <button class="theme-btn src-btn" id="srcRadioBtn" onclick="setAudioSource(false)">📻 Radio</button>
+            <button class="theme-btn src-btn" id="srcBtBtn"    onclick="setAudioSource(true)">🔵 Bluetooth</button>
+        </div>
+    </section>
+
+    <!-- ── Status ── -->
     <section class="panel">
         <div class="panel-label panel-label--row">
             BLUETOOTH
             <span id="bt_status" class="bt-status">⬤ disconnected</span>
-        </div>
-        <div class="screen-switcher">
-            <button class="bt-toggle-btn" id="bt_toggle_btn" onclick="toggleBtMode()">⚪ BT OFF</button>
         </div>
 
         <!-- BT Now Playing -->

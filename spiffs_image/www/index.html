@@ -22,13 +22,12 @@
 <!-- ═══════════════════════ CARD ═══════════════════════ -->
 <main class="card">
 
-    <!-- ── Device Screen ── -->
+    <!-- ── Audio Source ── -->
     <section class="panel">
-        <div class="panel-label">DEVICE SCREEN</div>
-        <div class="screen-switcher">
-            <button onclick="setScreen('clock')">🕐 Clock</button>
-            <button onclick="setScreen('radio')">📻 Radio</button>
-            <button onclick="setScreen('bt')">🔵 BT</button>
+        <div class="panel-label">AUDIO SOURCE</div>
+        <div class="theme-toggle" id="audioSourceToggle" style="width:fit-content">
+            <button class="theme-btn src-btn" id="srcRadioBtn" onclick="setAudioSource(false)">📻 Radio</button>
+            <button class="theme-btn src-btn" id="srcBtBtn"    onclick="setAudioSource(true)">🔵 Bluetooth</button>
         </div>
     </section>
 

@@ -38,6 +38,15 @@
     ══════════════════════════════════════════ -->
     <section class="tab-pane" id="tab-display" data-tab="display">
         <div class="panel">
+            <div class="panel-label">DEVICE SCREEN</div>
+            <div class="screen-switcher">
+                <button onclick="setScreen('clock')">🕐 Clock</button>
+                <button onclick="setScreen('radio')">📻 Radio</button>
+                <button onclick="setScreen('bt')">🔵 BT</button>
+            </div>
+        </div>
+
+        <div class="panel">
             <div class="slider-row">
                 <span class="slider-label">☀️ Brightness</span>
                 <span id="disp_bright_value" class="slider-value">80</span>
