@@ -1,22 +1,26 @@
 {
-  "dark":
-  {
-    "bg_primary":"#0D0D1A",
-    "bg_secondary":"#1A1A2E",
-    "text_primary":"#FFFFFF",
-    "text_secondary":"#A8A8B3",
-    "text_muted":"#505060",
-    "accent":"#E94560",
-    "bt_brand":"#0082FC",
-    "status_ok":"#00C853"},
-  "light":
-  {
-    "bg_primary":"#F4F4F8",
-    "bg_secondary":"#E4E4EC",
-    "text_primary":"#0D0D1A",
-    "text_secondary":"#484860",
-    "text_muted":"#8888A0",
-    "accent":"#C4243E",
-    "bt_brand":"#0066CC",
-    "status_ok":"#1B8E3A"}
+  "dark": {
+    "bg_primary": "#0D0D1A",
+    "bg_secondary": "#1A1A2E",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#A8A8B3",
+    "text_muted": "#505060",
+    "accent": "#E94560",
+    "bt_brand": "#0082FC",
+    "status_ok": "#00C853",
+    "bg_grad_top": "#1E3A8A",
+    "bg_grad_bottom": "#000000"
+  },
+  "light": {
+    "bg_primary": "#F4F4F8",
+    "bg_secondary": "#E4E4EC",
+    "text_primary": "#0D0D1A",
+    "text_secondary": "#484860",
+    "text_muted": "#8888A0",
+    "accent": "#C4243E",
+    "bt_brand": "#0066CC",
+    "status_ok": "#1B8E3A",
+    "bg_grad_top": "#F4F4F8",
+    "bg_grad_bottom": "#6FA0E0"
+  }
 }

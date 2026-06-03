@@ -29,8 +29,8 @@ static const ui_theme_colors_t k_light_defaults = {
     .accent         = 0xC4243E,
     .bt_brand       = 0x0066CC,
     .status_ok      = 0x1B8E3A,
-    .bg_grad_top    = 0x6FA0E0,
-    .bg_grad_bottom = 0xF4F4F8,
+    .bg_grad_top    = 0xF4F4F8,
+    .bg_grad_bottom = 0x6FA0E0,
 };
 
 // Mutable palettes - defaults at startup, overwritten from theme.json
@@ -55,8 +55,8 @@ static ui_theme_colors_t s_light = {
     .accent         = 0xC4243E,
     .bt_brand       = 0x0066CC,
     .status_ok      = 0x1B8E3A,
-    .bg_grad_top    = 0x6FA0E0,
-    .bg_grad_bottom = 0xF4F4F8,
+    .bg_grad_top    = 0xF4F4F8,
+    .bg_grad_bottom = 0x6FA0E0,
 };
 
 static const ui_theme_colors_t *s_current = &s_dark;
