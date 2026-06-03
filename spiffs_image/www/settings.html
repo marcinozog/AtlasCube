@@ -285,10 +285,10 @@
 
         <div class="field-group">
             <label class="field-label">Editing palette</label>
-            <div class="theme-toggle" style="width:fit-content">
-                <button class="theme-btn active" id="palTabDark"  onclick="selectPaletteTab('dark')">🌙 Dark</button>
-                <button class="theme-btn"        id="palTabLight" onclick="selectPaletteTab('light')">☀️ Light</button>
-            </div>
+            <nav class="tab-nav" role="tablist" style="margin:6px 0 0">
+                <button type="button" class="tab-btn active" id="palTabDark"  onclick="selectPaletteTab('dark')">🌙 Dark</button>
+                <button type="button" class="tab-btn"        id="palTabLight" onclick="selectPaletteTab('light')">☀️ Light</button>
+            </nav>
             <div class="field-hint">Changes apply instantly on the device display.</div>
         </div>
 
