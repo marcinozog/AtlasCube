@@ -89,6 +89,8 @@ typedef struct {
     int16_t          radio_np_x;               // now-playing widget (station + title labels)
     int16_t          radio_np_y;
     bool             radio_show_np;
+    const lv_font_t *radio_np_station_font;    // now-playing station-name line
+    const lv_font_t *radio_np_title_font;      // now-playing ICY-title line
 
     int16_t          radio_state_x;            // "PLAYING / STOPPED / ..." label
     int16_t          radio_state_y;
@@ -105,6 +107,7 @@ typedef struct {
     int16_t          radio_mode_indic_y;
     int16_t          radio_clock_widget_x;
     int16_t          radio_clock_widget_y;
+    const lv_font_t *radio_clock_font;         // "HH:MM" clock widget on radio screen
     int16_t          radio_event_indic_x;
     int16_t          radio_event_indic_y;
 
@@ -146,6 +149,7 @@ typedef struct {
     int16_t          bt_mode_indic_y;
     int16_t          bt_clock_widget_x;
     int16_t          bt_clock_widget_y;
+    const lv_font_t *bt_clock_font;            // "HH:MM" clock widget on BT screen
 
     // Track metadata (sent over UART by BT module)
     int16_t          bt_title_x;

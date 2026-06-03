@@ -88,12 +88,15 @@ const BT_FIELDS = [
     { key: 'bt_show_clock',          label: 'Show clock',       type: 'bool' },
     { key: 'bt_clock_widget_x',      label: 'Clock X',          type: 'number' },
     { key: 'bt_clock_widget_y',      label: 'Clock Y',          type: 'number' },
+    { key: 'bt_clock_font',          label: 'Clock font',       type: 'font'   },
 ];
 
 const RADIO_FIELDS = [
     { key: 'radio_show_np',           label: 'Show now-playing', type: 'bool' },
     { key: 'radio_np_x',              label: 'NP X',             type: 'number' },
     { key: 'radio_np_y',              label: 'NP Y',             type: 'number' },
+    { key: 'radio_np_station_font',   label: 'NP station font',  type: 'font'   },
+    { key: 'radio_np_title_font',     label: 'NP title font',    type: 'font'   },
 
     { key: 'radio_state_x',           label: 'State X',          type: 'number' },
     { key: 'radio_state_y',           label: 'State Y',          type: 'number' },
@@ -109,6 +112,7 @@ const RADIO_FIELDS = [
     { key: 'radio_show_clock',           label: 'Show clock',        type: 'bool' },
     { key: 'radio_clock_widget_x',       label: 'Clock X',           type: 'number' },
     { key: 'radio_clock_widget_y',       label: 'Clock Y',           type: 'number' },
+    { key: 'radio_clock_font',           label: 'Clock font',        type: 'font'   },
     { key: 'radio_show_event_indicator', label: 'Show event indic.', type: 'bool' },
     { key: 'radio_event_indic_x',        label: 'Event indic. X',    type: 'number' },
     { key: 'radio_event_indic_y',        label: 'Event indic. Y',    type: 'number' },
@@ -395,13 +399,10 @@ function renderBt(svg) {
         });
     }
     if (b.bt_show_clock) {
-        // clock_widget — "00:00" label, font 18 (~50 px wide)
-        drawFreeElement(svg, {
-            x: b.bt_clock_widget_x, y: b.bt_clock_widget_y, w: 50, h: 18,
-            label: 'clock', cls: 'label-rect',
-            fields: { x: 'bt_clock_widget_x', y: 'bt_clock_widget_y' },
-            text: '00:00', textSize: 18,
-        });
+        // clock_widget — "00:00" label, sized by the configured clock font
+        drawLabel(svg, b.bt_clock_widget_x, b.bt_clock_widget_y, b.bt_clock_font,
+                  '00:00', 'clock',
+                  { x: 'bt_clock_widget_x', y: 'bt_clock_widget_y' });
     }
 }
 
@@ -412,10 +413,11 @@ function renderRadio(svg) {
     const W = state.meta.screen_w;
 
     if (r.radio_show_np) {
-        // Now-playing widget = two stacked labels (station + title, +26px gap).
-        // Width is fixed in firmware to screen_w - 20 (full-screen scrolling line).
-        const stationFh = 18;  // hardcoded font_18 in now_playing_widget.c
-        const titleFh   = 14;  // hardcoded font_14
+        // Now-playing widget = two stacked labels (station + title). Width is fixed
+        // in firmware to screen_w - 20 (full-screen scrolling line); the title sits
+        // a station-font-height + 4px below the station (mirrors the firmware).
+        const stationFh = fontHeight(r.radio_np_station_font);
+        const titleFh   = fontHeight(r.radio_np_title_font);
         const npW       = Math.max(W - 20, 8);
         drawFreeElement(svg, {
             x: r.radio_np_x, y: r.radio_np_y, w: npW, h: stationFh,
@@ -424,7 +426,7 @@ function renderRadio(svg) {
             text: 'Atlas Radio', textSize: stationFh,
         });
         drawFreeElement(svg, {
-            x: r.radio_np_x, y: r.radio_np_y + 26, w: npW, h: titleFh,
+            x: r.radio_np_x, y: r.radio_np_y + stationFh + 4, w: npW, h: titleFh,
             label: 'np_title', cls: 'label-rect',
             fields: { x: 'radio_np_x', y: 'radio_np_y' },
             text: 'Title — Artist', textSize: titleFh,
@@ -445,12 +447,9 @@ function renderRadio(svg) {
         });
     }
     if (r.radio_show_clock) {
-        drawFreeElement(svg, {
-            x: r.radio_clock_widget_x, y: r.radio_clock_widget_y, w: 50, h: 18,
-            label: 'clock', cls: 'label-rect',
-            fields: { x: 'radio_clock_widget_x', y: 'radio_clock_widget_y' },
-            text: '00:00', textSize: 18,
-        });
+        drawLabel(svg, r.radio_clock_widget_x, r.radio_clock_widget_y, r.radio_clock_font,
+                  '00:00', 'clock',
+                  { x: 'radio_clock_widget_x', y: 'radio_clock_widget_y' });
     }
     if (r.radio_show_event_indicator) {
         drawFreeElement(svg, {

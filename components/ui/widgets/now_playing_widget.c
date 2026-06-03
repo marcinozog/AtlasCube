@@ -12,27 +12,36 @@ static const char *TAG = "NPW";
 static lv_obj_t *s_label_station = NULL;
 static lv_obj_t *s_label_title   = NULL;
 
-void now_playing_widget_create(lv_obj_t *parent, int x, int y, lv_text_align_t align)
+void now_playing_widget_create(lv_obj_t *parent, int x, int y, lv_text_align_t align,
+                               const lv_font_t *station_font,
+                               const lv_font_t *title_font)
 {
     const ui_theme_colors_t *th = theme_get();
+
+    if (!station_font) station_font = &lv_font_montserrat_18_pl;
+    if (!title_font)   title_font   = &lv_font_montserrat_14_pl;
 
     s_label_station = lv_label_create(parent);
     lv_label_set_long_mode(s_label_station, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_width(s_label_station, DISPLAY_WIDTH - 20);
-    lv_obj_set_style_text_font(s_label_station, &lv_font_montserrat_18_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(s_label_station, station_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_station,
         lv_color_hex(th->accent), LV_PART_MAIN);
     lv_obj_set_style_text_align(s_label_station, align, LV_PART_MAIN);
     lv_obj_set_pos(s_label_station, x, y);
 
+    // Place the title just below the station line, scaled to the station font
+    // so a bigger station name doesn't overlap the title.
+    int title_y = y + lv_font_get_line_height(station_font) + 4;
+
     s_label_title = lv_label_create(parent);
     lv_label_set_long_mode(s_label_title, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_width(s_label_title, DISPLAY_WIDTH - 20);
-    lv_obj_set_style_text_font(s_label_title, &lv_font_montserrat_14_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(s_label_title, title_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_title,
         lv_color_hex(th->text_secondary), LV_PART_MAIN);
     lv_obj_set_style_text_align(s_label_title, align, LV_PART_MAIN);
-    lv_obj_set_pos(s_label_title, x, y + 26);
+    lv_obj_set_pos(s_label_title, x, title_y);
 
     now_playing_widget_update();
     ESP_LOGI(TAG, "Created");

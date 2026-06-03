@@ -93,7 +93,7 @@ static void bt_create(lv_obj_t *parent)
         mode_indicator_create(parent, p->bt_mode_indic_x, p->bt_mode_indic_y);
     }
     if (p->bt_show_clock) {
-        clock_widget_create(parent, p->bt_clock_widget_x, p->bt_clock_widget_y, false);
+        clock_widget_create(parent, p->bt_clock_widget_x, p->bt_clock_widget_y, p->bt_clock_font);
     }
 
     if (p->bt_show_circle) {

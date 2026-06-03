@@ -66,13 +66,14 @@ static void radio_create(lv_obj_t *parent)
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
 
     if (p->radio_show_np) {
-        now_playing_widget_create(parent, p->radio_np_x, p->radio_np_y, LV_TEXT_ALIGN_CENTER);
+        now_playing_widget_create(parent, p->radio_np_x, p->radio_np_y, LV_TEXT_ALIGN_CENTER,
+                                  p->radio_np_station_font, p->radio_np_title_font);
     }
     if (p->radio_show_mode_indicator) {
         mode_indicator_create(parent, p->radio_mode_indic_x, p->radio_mode_indic_y);
     }
     if (p->radio_show_clock) {
-        clock_widget_create(parent, p->radio_clock_widget_x, p->radio_clock_widget_y, false);
+        clock_widget_create(parent, p->radio_clock_widget_x, p->radio_clock_widget_y, p->radio_clock_font);
     }
     if (p->radio_show_event_indicator) {
         event_indicator_create(parent, p->radio_event_indic_x, p->radio_event_indic_y);

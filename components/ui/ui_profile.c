@@ -51,6 +51,8 @@ static const ui_profile_t k_defaults = {
     .radio_np_x                = 10,
     .radio_np_y                = 35,
     .radio_show_np             = true,
+    .radio_np_station_font     = &lv_font_montserrat_18_pl,
+    .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_state_x             = 39,
     .radio_state_y             = 16,
     .radio_state_font          = &lv_font_montserrat_12_pl,
@@ -64,6 +66,7 @@ static const ui_profile_t k_defaults = {
     .radio_mode_indic_y        = 8,
     .radio_clock_widget_x      = 39,
     .radio_clock_widget_y      = 0,
+    .radio_clock_font          = &lv_font_montserrat_18_pl,
     .radio_event_indic_x       = 90,
     .radio_event_indic_y       = 8,
 
@@ -96,6 +99,7 @@ static const ui_profile_t k_defaults = {
     .bt_mode_indic_y           = 8,
     .bt_clock_widget_x         = 39,
     .bt_clock_widget_y         = 0,
+    .bt_clock_font             = &lv_font_montserrat_18_pl,
     .bt_title_x                = 4,
     .bt_title_y                = 30,
     .bt_title_w                = 124,
@@ -202,6 +206,8 @@ static const ui_profile_t k_defaults = {
     .radio_np_x                = 10,
     .radio_np_y                = 1,
     .radio_show_np             = true,
+    .radio_np_station_font     = &lv_font_montserrat_18_pl,
+    .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_state_x             = 100,
     .radio_state_y             = 44,
     .radio_state_font          = &lv_font_montserrat_12_pl,
@@ -215,6 +221,7 @@ static const ui_profile_t k_defaults = {
     .radio_mode_indic_y        = 4,
     .radio_clock_widget_x      = 100,
     .radio_clock_widget_y      = 0,
+    .radio_clock_font          = &lv_font_montserrat_18_pl,
     .radio_event_indic_x       = 216,
     .radio_event_indic_y       = 4,
 
@@ -247,6 +254,7 @@ static const ui_profile_t k_defaults = {
     .bt_mode_indic_y           = 4,
     .bt_clock_widget_x         = 100,
     .bt_clock_widget_y         = 0,
+    .bt_clock_font             = &lv_font_montserrat_18_pl,
     .bt_title_x                = 8,
     .bt_title_y                = 34,
     .bt_title_w                = 240,
@@ -352,6 +360,8 @@ static const ui_profile_t k_defaults = {
     .radio_np_x                = 10,
     .radio_np_y                = 60,
     .radio_show_np             = true,
+    .radio_np_station_font     = &lv_font_montserrat_18_pl,
+    .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_state_x             = 92,
     .radio_state_y             = 184,
     .radio_state_font          = &lv_font_montserrat_14_pl,
@@ -365,6 +375,7 @@ static const ui_profile_t k_defaults = {
     .radio_mode_indic_y        = 1,
     .radio_clock_widget_x      = 95,
     .radio_clock_widget_y      = 0,
+    .radio_clock_font          = &lv_font_montserrat_18_pl,
     .radio_event_indic_x       = 138,
     .radio_event_indic_y       = 1,
 
@@ -402,6 +413,7 @@ static const ui_profile_t k_defaults = {
     .bt_mode_indic_y           = 1,
     .bt_clock_widget_x         = 95,
     .bt_clock_widget_y         = 0,
+    .bt_clock_font             = &lv_font_montserrat_18_pl,
     .bt_title_x                = 10,
     .bt_title_y                = 150,
     .bt_title_w                = 220,
@@ -508,6 +520,8 @@ static const ui_profile_t k_defaults = {
     .radio_np_x                = 10,
     .radio_np_y                = 64,
     .radio_show_np             = true,
+    .radio_np_station_font     = &lv_font_montserrat_18_pl,
+    .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_state_x             = 132,
     .radio_state_y             = 209,
     .radio_state_font          = &lv_font_montserrat_14_pl,
@@ -521,6 +535,7 @@ static const ui_profile_t k_defaults = {
     .radio_mode_indic_y        = 2,
     .radio_clock_widget_x      = 135,
     .radio_clock_widget_y      = 0,
+    .radio_clock_font          = &lv_font_montserrat_18_pl,
     .radio_event_indic_x       = 282,
     .radio_event_indic_y       = 2,
 
@@ -553,6 +568,7 @@ static const ui_profile_t k_defaults = {
     .bt_mode_indic_y           = 8,
     .bt_clock_widget_x         = 135,
     .bt_clock_widget_y         = 0,
+    .bt_clock_font             = &lv_font_montserrat_18_pl,
     .bt_title_x                = 10,
     .bt_title_y                = 140,
     .bt_title_w                = 300,
@@ -657,6 +673,8 @@ static const ui_profile_t k_defaults = {
     .radio_np_x                = 5,
     .radio_np_y                = 85,
     .radio_show_np             = true,
+    .radio_np_station_font     = &lv_font_montserrat_18_pl,
+    .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_state_x             = 190,
     .radio_state_y             = 278,
     .radio_state_font          = &lv_font_montserrat_18_pl,
@@ -670,6 +688,7 @@ static const ui_profile_t k_defaults = {
     .radio_mode_indic_y        = 4,
     .radio_clock_widget_x      = 220,
     .radio_clock_widget_y      = 0,
+    .radio_clock_font          = &lv_font_montserrat_18_pl,
     .radio_event_indic_x       = 424,
     .radio_event_indic_y       = 4,
 
@@ -702,6 +721,7 @@ static const ui_profile_t k_defaults = {
     .bt_mode_indic_y           = 4,
     .bt_clock_widget_x         = 220,
     .bt_clock_widget_y         = 0,
+    .bt_clock_font             = &lv_font_montserrat_18_pl,
     .bt_title_x                = 16,
     .bt_title_y                = 187,
     .bt_title_w                = 448,
@@ -903,6 +923,7 @@ static void load_bt(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "bt_mode_indic_y",        &p->bt_mode_indic_y);
     load_i16 (obj, "bt_clock_widget_x",      &p->bt_clock_widget_x);
     load_i16 (obj, "bt_clock_widget_y",      &p->bt_clock_widget_y);
+    load_font(obj, "bt_clock_font",          &p->bt_clock_font);
     load_i16 (obj, "bt_title_x",             &p->bt_title_x);
     load_i16 (obj, "bt_title_y",             &p->bt_title_y);
     load_i16 (obj, "bt_title_w",             &p->bt_title_w);
@@ -922,6 +943,8 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_np_x",                &p->radio_np_x);
     load_i16 (obj, "radio_np_y",                &p->radio_np_y);
     load_bool(obj, "radio_show_np",             &p->radio_show_np);
+    load_font(obj, "radio_np_station_font",     &p->radio_np_station_font);
+    load_font(obj, "radio_np_title_font",       &p->radio_np_title_font);
     load_i16 (obj, "radio_state_x",             &p->radio_state_x);
     load_i16 (obj, "radio_state_y",             &p->radio_state_y);
     load_font(obj, "radio_state_font",          &p->radio_state_font);
@@ -935,6 +958,7 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_mode_indic_y",         &p->radio_mode_indic_y);
     load_i16 (obj, "radio_clock_widget_x",       &p->radio_clock_widget_x);
     load_i16 (obj, "radio_clock_widget_y",       &p->radio_clock_widget_y);
+    load_font(obj, "radio_clock_font",           &p->radio_clock_font);
     load_i16 (obj, "radio_event_indic_x",        &p->radio_event_indic_x);
     load_i16 (obj, "radio_event_indic_y",        &p->radio_event_indic_y);
 }
@@ -945,6 +969,8 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_np_x",                p->radio_np_x);
     add_i16 (o, "radio_np_y",                p->radio_np_y);
     add_bool(o, "radio_show_np",             p->radio_show_np);
+    add_font(o, "radio_np_station_font",     p->radio_np_station_font);
+    add_font(o, "radio_np_title_font",       p->radio_np_title_font);
     add_i16 (o, "radio_state_x",             p->radio_state_x);
     add_i16 (o, "radio_state_y",             p->radio_state_y);
     add_font(o, "radio_state_font",          p->radio_state_font);
@@ -958,6 +984,7 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_mode_indic_y",         p->radio_mode_indic_y);
     add_i16 (o, "radio_clock_widget_x",       p->radio_clock_widget_x);
     add_i16 (o, "radio_clock_widget_y",       p->radio_clock_widget_y);
+    add_font(o, "radio_clock_font",           p->radio_clock_font);
     add_i16 (o, "radio_event_indic_x",        p->radio_event_indic_x);
     add_i16 (o, "radio_event_indic_y",        p->radio_event_indic_y);
     return o;
@@ -985,6 +1012,7 @@ static cJSON *dump_bt(const ui_profile_t *p)
     add_i16 (o, "bt_mode_indic_y",        p->bt_mode_indic_y);
     add_i16 (o, "bt_clock_widget_x",      p->bt_clock_widget_x);
     add_i16 (o, "bt_clock_widget_y",      p->bt_clock_widget_y);
+    add_font(o, "bt_clock_font",          p->bt_clock_font);
     add_i16 (o, "bt_title_x",             p->bt_title_x);
     add_i16 (o, "bt_title_y",             p->bt_title_y);
     add_i16 (o, "bt_title_w",             p->bt_title_w);

@@ -15,10 +15,9 @@ extern "C" {
  * @param parent    LVGL container (e.g. lv_scr_act() or any lv_obj)
  * @param x         coordinates
  * @param y         coordinates
- * @param large     true = large font 48 (screen_clock),
- *                  false = small 14/18 (status bar on another screen)
+ * @param font      font for the "HH:MM" label (per-screen, from ui_profile)
  */
-void clock_widget_create(lv_obj_t *parent, int x, int y, bool large);
+void clock_widget_create(lv_obj_t *parent, int x, int y, const lv_font_t *font);
 
 /**
  * Destroys the widget and stops the LVGL timer.
