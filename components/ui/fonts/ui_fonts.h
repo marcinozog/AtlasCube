@@ -16,6 +16,7 @@ LV_FONT_DECLARE(lv_font_montserrat_18_pl);
 LV_FONT_DECLARE(lv_font_montserrat_72);
 LV_FONT_DECLARE(lv_font_montserrat_80);
 LV_FONT_DECLARE(lv_font_montserrat_96);
+LV_FONT_DECLARE(lv_font_montserrat_120);
 
 // ── Font registry ───────────────────────────────────────────────────────────
 // Maps id (string) ↔ font pointer, used for (de)serializing ui_profile

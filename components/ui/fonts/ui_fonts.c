@@ -18,6 +18,7 @@ static const font_entry_t k_fonts[] = {
     { "montserrat_72",    &lv_font_montserrat_72    },
     { "montserrat_80",    &lv_font_montserrat_80    },
     { "montserrat_96",    &lv_font_montserrat_96    },
+    { "montserrat_120",   &lv_font_montserrat_120   },
 };
 
 #define K_FONTS_COUNT (sizeof(k_fonts) / sizeof(k_fonts[0]))

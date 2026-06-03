@@ -40,6 +40,7 @@ idf_component_register(
         "fonts/lv_font_montserrat_72.c"
         "fonts/lv_font_montserrat_80.c"
         "fonts/lv_font_montserrat_96.c"
+        "fonts/lv_font_montserrat_120.c"
         "fonts/ui_fonts.c"
     INCLUDE_DIRS
         "."
