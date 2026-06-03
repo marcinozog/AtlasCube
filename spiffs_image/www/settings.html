@@ -26,7 +26,7 @@
         <button type="button" class="tab-btn" data-tab="night"       onclick="selectTab('night')">🌙 Sleep &amp; Wake</button>
         <button type="button" class="tab-btn" data-tab="screensaver" onclick="selectTab('screensaver')">🌀 Screensaver</button>
         <button type="button" class="tab-btn" data-tab="audio"       onclick="selectTab('audio')">🎚️ Audio</button>
-        <button type="button" class="tab-btn" data-tab="colors"      onclick="selectTab('colors')">🎨 Colors</button>
+        <button type="button" class="tab-btn" data-tab="colors"      onclick="selectTab('colors')">🎨 Theme</button>
         <button type="button" class="tab-btn" data-tab="wifi"        onclick="selectTab('wifi')">📡 WiFi</button>
         <button type="button" class="tab-btn" data-tab="ntp"         onclick="selectTab('ntp')">🕐 NTP</button>
         <button type="button" class="tab-btn" data-tab="mqtt"        onclick="selectTab('mqtt')">📨 MQTT</button>
@@ -37,22 +37,6 @@
          Display
     ══════════════════════════════════════════ -->
     <section class="tab-pane" id="tab-display" data-tab="display">
-        <div class="panel">
-            <label class="field-label">Theme</label>
-            <div class="theme-toggle" id="themeToggle" style="width:fit-content">
-                <button class="theme-btn" id="settingsBtnDark"  onclick="setDeviceTheme('dark')">🌙 Dark</button>
-                <button class="theme-btn" id="settingsBtnLight" onclick="setDeviceTheme('light')">☀️ Light</button>
-            </div>
-        </div>
-
-        <div class="panel">
-            <label class="field-label">Background</label>
-            <div class="theme-toggle" id="bgGradientToggle" style="width:fit-content">
-                <button class="theme-btn" id="settingsBtnBgGrad"  onclick="setBgGradient(true)">🌈 Gradient</button>
-                <button class="theme-btn" id="settingsBtnBgSolid" onclick="setBgGradient(false)">⬛ Solid</button>
-            </div>
-        </div>
-
         <div class="panel">
             <div class="slider-row">
                 <span class="slider-label">☀️ Brightness</span>
@@ -280,9 +264,25 @@
     </section>
 
     <!-- ══════════════════════════════════════════
-         Colors (custom palettes)
+         Theme (display theme, background & custom palettes)
     ══════════════════════════════════════════ -->
     <section class="tab-pane" id="tab-colors" data-tab="colors">
+        <div class="panel">
+            <label class="field-label">Theme</label>
+            <div class="theme-toggle" id="themeToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnDark"  onclick="setDeviceTheme('dark')">🌙 Dark</button>
+                <button class="theme-btn" id="settingsBtnLight" onclick="setDeviceTheme('light')">☀️ Light</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <label class="field-label">Background</label>
+            <div class="theme-toggle" id="bgGradientToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnBgGrad"  onclick="setBgGradient(true)">🌈 Gradient</button>
+                <button class="theme-btn" id="settingsBtnBgSolid" onclick="setBgGradient(false)">⬛ Solid</button>
+            </div>
+        </div>
+
         <div class="field-group">
             <label class="field-label">Editing palette</label>
             <div class="theme-toggle" style="width:fit-content">
