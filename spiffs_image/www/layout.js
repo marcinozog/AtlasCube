@@ -98,11 +98,9 @@ const RADIO_FIELDS = [
     { key: 'radio_np_station_font',   label: 'NP station font',  type: 'font'   },
     { key: 'radio_np_title_font',     label: 'NP title font',    type: 'font'   },
 
-    { key: 'radio_state_x',           label: 'State X',          type: 'number' },
     { key: 'radio_state_y',           label: 'State Y',          type: 'number' },
     { key: 'radio_state_font',        label: 'State font',       type: 'font'   },
 
-    { key: 'radio_audio_info_x',      label: 'Audio info X',     type: 'number' },
     { key: 'radio_audio_info_y',      label: 'Audio info Y',     type: 'number' },
     { key: 'radio_audio_info_font',   label: 'Audio info font',  type: 'font'   },
 
@@ -433,11 +431,11 @@ function renderRadio(svg) {
         });
     }
 
-    drawLabel(svg, r.radio_state_x, r.radio_state_y, r.radio_state_font, 'PLAYING',
-              'state', { x: 'radio_state_x', y: 'radio_state_y' });
-    drawLabel(svg, r.radio_audio_info_x, r.radio_audio_info_y, r.radio_audio_info_font,
+    drawLabel(svg, 0, r.radio_state_y, r.radio_state_font, 'PLAYING',
+              'state', { y: 'radio_state_y' });
+    drawLabel(svg, 0, r.radio_audio_info_y, r.radio_audio_info_font,
               '44100 Hz  2ch  128kbps   VOL: 42%',
-              'info', { x: 'radio_audio_info_x', y: 'radio_audio_info_y' });
+              'info', { y: 'radio_audio_info_y' });
 
     if (r.radio_show_mode_indicator) {
         drawFreeElement(svg, {
@@ -463,6 +461,10 @@ function renderRadio(svg) {
 function drawLabel(svg, x, y, fontId, text_str, name, fields) {
     const fh = fontHeight(fontId);
     const tw = Math.round(fh * 0.55) * Math.max(text_str.length, 5);
+    if (fields.x === undefined) {
+        // Centered label: firmware draws it full-width with centered text.
+        x = Math.round((state.meta.screen_w - tw) / 2);
+    }
     drawFreeElement(svg, {
         x, y, w: tw, h: fh,
         label: name, cls: 'label-rect',
@@ -529,9 +531,11 @@ function setupMove(el, svg, fields) {
         const onMove = (ev) => {
             const dx = Math.round((ev.clientX - start.mx) / pxPerU.x);
             const dy = Math.round((ev.clientY - start.my) / pxPerU.y);
-            data[fields.x] = start.x + dx;
+            if (fields.x !== undefined) {
+                data[fields.x] = start.x + dx;
+                setFormValue(fields.x, data[fields.x]);
+            }
             data[fields.y] = start.y + dy;
-            setFormValue(fields.x, data[fields.x]);
             setFormValue(fields.y, data[fields.y]);
             renderSvg();
         };

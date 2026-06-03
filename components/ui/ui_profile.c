@@ -53,10 +53,8 @@ static const ui_profile_t k_defaults = {
     .radio_show_np             = true,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
-    .radio_state_x             = 39,
     .radio_state_y             = 16,
     .radio_state_font          = &lv_font_montserrat_12_pl,
-    .radio_audio_info_x        = 4,
     .radio_audio_info_y        = 30,
     .radio_audio_info_font     = &lv_font_montserrat_12_pl,
     .radio_show_mode_indicator = false,
@@ -208,10 +206,8 @@ static const ui_profile_t k_defaults = {
     .radio_show_np             = true,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
-    .radio_state_x             = 100,
     .radio_state_y             = 44,
     .radio_state_font          = &lv_font_montserrat_12_pl,
-    .radio_audio_info_x        = 10,
     .radio_audio_info_y        = 52,
     .radio_audio_info_font     = &lv_font_montserrat_12_pl,
     .radio_show_mode_indicator = false,
@@ -362,10 +358,8 @@ static const ui_profile_t k_defaults = {
     .radio_show_np             = true,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
-    .radio_state_x             = 92,
     .radio_state_y             = 184,
     .radio_state_font          = &lv_font_montserrat_14_pl,
-    .radio_audio_info_x        = 20,
     .radio_audio_info_y        = 233,
     .radio_audio_info_font     = &lv_font_montserrat_12_pl,
     .radio_show_mode_indicator = true,
@@ -522,10 +516,8 @@ static const ui_profile_t k_defaults = {
     .radio_show_np             = true,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
-    .radio_state_x             = 132,
     .radio_state_y             = 209,
     .radio_state_font          = &lv_font_montserrat_14_pl,
-    .radio_audio_info_x        = 55,
     .radio_audio_info_y        = 130,
     .radio_audio_info_font     = &lv_font_montserrat_12_pl,
     .radio_show_mode_indicator = true,
@@ -675,10 +667,8 @@ static const ui_profile_t k_defaults = {
     .radio_show_np             = true,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
-    .radio_state_x             = 190,
     .radio_state_y             = 278,
-    .radio_state_font          = &lv_font_montserrat_18_pl,
-    .radio_audio_info_x        = 110,
+    .radio_state_font          = &lv_font_montserrat_14_pl,
     .radio_audio_info_y        = 174,
     .radio_audio_info_font     = &lv_font_montserrat_14_pl,
     .radio_show_mode_indicator = true,
@@ -686,9 +676,9 @@ static const ui_profile_t k_defaults = {
     .radio_show_event_indicator = true,
     .radio_mode_indic_x        = 452,
     .radio_mode_indic_y        = 4,
-    .radio_clock_widget_x      = 220,
+    .radio_clock_widget_x      = 180,
     .radio_clock_widget_y      = 0,
-    .radio_clock_font          = &lv_font_montserrat_18_pl,
+    .radio_clock_font          = &lv_font_montserrat_48,
     .radio_event_indic_x       = 424,
     .radio_event_indic_y       = 4,
 
@@ -945,10 +935,8 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_bool(obj, "radio_show_np",             &p->radio_show_np);
     load_font(obj, "radio_np_station_font",     &p->radio_np_station_font);
     load_font(obj, "radio_np_title_font",       &p->radio_np_title_font);
-    load_i16 (obj, "radio_state_x",             &p->radio_state_x);
     load_i16 (obj, "radio_state_y",             &p->radio_state_y);
     load_font(obj, "radio_state_font",          &p->radio_state_font);
-    load_i16 (obj, "radio_audio_info_x",        &p->radio_audio_info_x);
     load_i16 (obj, "radio_audio_info_y",        &p->radio_audio_info_y);
     load_font(obj, "radio_audio_info_font",     &p->radio_audio_info_font);
     load_bool(obj, "radio_show_mode_indicator",  &p->radio_show_mode_indicator);
@@ -971,10 +959,8 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_bool(o, "radio_show_np",             p->radio_show_np);
     add_font(o, "radio_np_station_font",     p->radio_np_station_font);
     add_font(o, "radio_np_title_font",       p->radio_np_title_font);
-    add_i16 (o, "radio_state_x",             p->radio_state_x);
     add_i16 (o, "radio_state_y",             p->radio_state_y);
     add_font(o, "radio_state_font",          p->radio_state_font);
-    add_i16 (o, "radio_audio_info_x",        p->radio_audio_info_x);
     add_i16 (o, "radio_audio_info_y",        p->radio_audio_info_y);
     add_font(o, "radio_audio_info_font",     p->radio_audio_info_font);
     add_bool(o, "radio_show_mode_indicator",  p->radio_show_mode_indicator);

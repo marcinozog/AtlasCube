@@ -83,13 +83,17 @@ static void radio_create(lv_obj_t *parent)
     lv_label_set_text(s_label_state, "");
     lv_obj_set_style_text_font(s_label_state, p->radio_state_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_state, lv_color_hex(th->status_ok), LV_PART_MAIN);
-    lv_obj_set_pos(s_label_state, p->radio_state_x, p->radio_state_y);
+    lv_obj_set_width(s_label_state, lv_pct(100));
+    lv_obj_set_style_text_align(s_label_state, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_set_pos(s_label_state, 0, p->radio_state_y);
 
     s_label_audio_info = lv_label_create(parent);
     lv_label_set_text(s_label_audio_info, "");
     lv_obj_set_style_text_font(s_label_audio_info, p->radio_audio_info_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_audio_info, lv_color_hex(th->text_muted), LV_PART_MAIN);
-    lv_obj_set_pos(s_label_audio_info, p->radio_audio_info_x, p->radio_audio_info_y);
+    lv_obj_set_width(s_label_audio_info, lv_pct(100));
+    lv_obj_set_style_text_align(s_label_audio_info, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    lv_obj_set_pos(s_label_audio_info, 0, p->radio_audio_info_y);
 
     refresh_from_state();
 

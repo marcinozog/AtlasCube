@@ -92,12 +92,10 @@ typedef struct {
     const lv_font_t *radio_np_station_font;    // now-playing station-name line
     const lv_font_t *radio_np_title_font;      // now-playing ICY-title line
 
-    int16_t          radio_state_x;            // "PLAYING / STOPPED / ..." label
-    int16_t          radio_state_y;
+    int16_t          radio_state_y;            // "PLAYING / STOPPED / ..." label (centered)
     const lv_font_t *radio_state_font;
 
-    int16_t          radio_audio_info_x;       // "44100 Hz  2ch  128kbps   VOL: 42%"
-    int16_t          radio_audio_info_y;
+    int16_t          radio_audio_info_y;       // "44100 Hz  2ch  128kbps   VOL: 42%" (centered)
     const lv_font_t *radio_audio_info_font;
 
     bool             radio_show_mode_indicator;
