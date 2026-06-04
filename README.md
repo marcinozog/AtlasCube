@@ -327,6 +327,25 @@ esptool.py write_flash 0x0 AtlasCube.bin
 
 CI builds always set `ATLAS_SPIFFS=1`, so the per-variant release binaries already bundle the web UI.
 
+### Custom fonts
+
+Fonts live in [`components/ui/fonts/`](components/ui/fonts/) as LVGL C arrays. The sizes are not a standard — they are chosen per panel. The `_NN` in a name is the `--size` (line height in px); the large `_72/_80/_96` files are **digit-only** (`--range 0x30-0x3A` plus one icon), while the `_NN_pl` files carry the full Polish character set.
+
+To add a new font (e.g. a larger `montserrat_120`):
+
+1. **Generate** the `.c` with [lv_font_conv](https://lvgl.io/tools/fontconverter) (the exact `Opts:` used are in each file's header). For a digit-only clock font:
+   ```bash
+   lv_font_conv --font Montserrat-Medium.ttf --range 0x30-0x3A \
+     --font FontAwesome5-Solid+Brands+Regular.woff --range 0xF0F3 \
+     --size 120 --bpp 4 --format lvgl --no-compress -o lv_font_montserrat_120.c
+   ```
+   Drop the file into [`components/ui/fonts/`](components/ui/fonts/).
+2. **Compile** it — add the filename to the source list in [`components/ui/CMakeLists.txt`](components/ui/CMakeLists.txt).
+3. **Declare** it — add `LV_FONT_DECLARE(lv_font_montserrat_120);` in [`ui_fonts.h`](components/ui/fonts/ui_fonts.h).
+4. **Register** it — append `{ "montserrat_120", &lv_font_montserrat_120 },` to the table in [`ui_fonts.c`](components/ui/fonts/ui_fonts.c). The id then shows up automatically in the web UI font dropdowns and is serialized into the UI profile.
+
+Note: a glyph is shorter than the nominal size (≈72 % of `--size` for digits), so to get a digit `X` px tall pick `--size ≈ X / 0.72`. See [`docs/layout_editor.md`](docs/layout_editor.md#font-registry) for how fonts map to screen fields.
+
 ---
 
 ## Web UI

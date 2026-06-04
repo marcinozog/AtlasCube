@@ -326,6 +326,25 @@ esptool.py write_flash 0x0 AtlasCube.bin
 
 Buildy CI zawsze ustawiają `ATLAS_SPIFFS=1`, więc opublikowane binarki release per wariant mają już web UI w środku.
 
+### Własne czcionki
+
+Czcionki leżą w [`components/ui/fonts/`](components/ui/fonts/) jako tablice C dla LVGL. Rozmiary nie są żadnym standardem — dobierane są pod panel. `_NN` w nazwie to `--size` (wysokość linii w px); duże pliki `_72/_80/_96` zawierają **tylko cyfry** (`--range 0x30-0x3A` plus jedna ikona), a pliki `_NN_pl` mają pełen polski zestaw znaków.
+
+Aby dodać nową czcionkę (np. większą `montserrat_120`):
+
+1. **Wygeneruj** plik `.c` w [lv_font_conv](https://lvgl.io/tools/fontconverter) (dokładne `Opts:` znajdziesz w nagłówku każdego pliku). Dla czcionki zegara tylko z cyframi:
+   ```bash
+   lv_font_conv --font Montserrat-Medium.ttf --range 0x30-0x3A \
+     --font FontAwesome5-Solid+Brands+Regular.woff --range 0xF0F3 \
+     --size 120 --bpp 4 --format lvgl --no-compress -o lv_font_montserrat_120.c
+   ```
+   Wrzuć plik do [`components/ui/fonts/`](components/ui/fonts/).
+2. **Skompiluj** — dopisz nazwę pliku do listy źródeł w [`components/ui/CMakeLists.txt`](components/ui/CMakeLists.txt).
+3. **Zadeklaruj** — dodaj `LV_FONT_DECLARE(lv_font_montserrat_120);` w [`ui_fonts.h`](components/ui/fonts/ui_fonts.h).
+4. **Zarejestruj** — dopisz `{ "montserrat_120", &lv_font_montserrat_120 },` do tabeli w [`ui_fonts.c`](components/ui/fonts/ui_fonts.c). Id pojawi się wtedy automatycznie w listach czcionek w web UI i jest zapisywane w profilu UI.
+
+Uwaga: glif jest niższy niż nominalny rozmiar (≈72 % wartości `--size` dla cyfr), więc żeby uzyskać cyfrę o wysokości `X` px wybierz `--size ≈ X / 0.72`. Mapowanie czcionek na pola ekranów opisuje [`docs/layout_editor.md`](docs/layout_editor.md#font-registry).
+
 ---
 
 ## Web UI
