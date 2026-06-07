@@ -31,6 +31,7 @@ extern const ui_screen_t screen_equalizer;
 extern const ui_screen_t screen_events;
 extern const ui_screen_t screen_event_notification;
 extern const ui_screen_t screen_mqtt;
+extern const ui_screen_t screen_ota;
 
 // --------------------------------------------------------------------------
 // Screen registry — order must match ui_screen_id_t
@@ -49,6 +50,7 @@ static const ui_screen_t *s_screens[SCREEN_COUNT] = {
     [SCREEN_EVENTS]             = &screen_events,
     [SCREEN_EVENT_NOTIFICATION] = &screen_event_notification,
     [SCREEN_MQTT]               = &screen_mqtt,
+    [SCREEN_OTA]                = &screen_ota,
 };
 
 // --------------------------------------------------------------------------
@@ -79,6 +81,7 @@ static bool can_auto_screensaver_from(ui_screen_id_t id)
     if (id == SCREEN_SPLASH)             return false;
     if (id == SCREEN_EVENT_NOTIFICATION) return false;
     if (id == SCREEN_WIFI)               return false;
+    if (id == SCREEN_OTA)                return false;  // never screensave mid-update
     return true;
 }
 

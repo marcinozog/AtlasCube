@@ -129,6 +129,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - NTP z konfigurowalną strefą czasową
 - Web UI z SPIFFS (po wgraniu internet nie jest potrzebny)
 - Klient MQTT — zdalne sterowanie radiem (play/stop/głośność/stacja) plus do 6 konfigurowalnych widgetów (toggle / slider / label) na osobnym ekranie, do sterowania zewnętrznym sprzętem MQTT (Tasmota, zigbee2mqtt, Home Assistant…); szczegóły w [MQTT](#mqtt) niżej
+- Aktualizacja OTA — nowy obraz firmware wgrywasz prosto z Web UI (Ustawienia → Tools); trafia do nieaktywnego slotu, jest walidowany i urządzenie restartuje się do niego, z rollbackiem bootloadera gdy nowy obraz nie wstanie. Przycisk eksportu pobiera najpierw bieżący firmware. Dostępne w buildach z flashem 16 MB (podwójne partycje OTA); buildy 8 MB mają pojedynczy slot i wgrywa się je przez USB. Szczegóły w [Aktualizacje OTA](#aktualizacje-ota) niżej
 
 **Aplikacja Android** *(w trakcie)*
 - Pilot do odtwarzania, zmiany stacji i głośności
@@ -458,6 +459,25 @@ mqtt:
 **Edytor plików**
 
 `/editor.html` to edytor w przeglądarce do plików ze SPIFFS — JSON-ów z konfiguracją (layouty, playlista, wydarzenia), HTML/CSS/JS samego web UI i czegokolwiek innego tekstowego na urządzeniu. Listuje pliki z partycji storage, edytuje z podświetlaniem składni i zapisuje z powrotem przez HTTP — bez reflashowania. Przydatne do dłubania w layoucie albo web UI na urządzeniu, które już działa u kogoś.
+
+---
+
+## Aktualizacje OTA
+
+Aktualizacja firmware przez Wi-Fi z **Ustawienia → Tools** — bez kabla USB, bez esptool. Strona pokazuje bieżącą wersję, przyjmuje obraz firmware, streamuje go do urządzenia i restartuje do nowego. Postęp jest pokazywany też na ekranie urządzenia.
+
+**Wymaga buildu z flashem 16 MB.** OTA potrzebuje dwóch partycji aplikacji (`ota_0` / `ota_1`, zob. [`partitions16MB.csv`](partitions16MB.csv)), żeby zapisać nowy obraz do nieaktywnego slotu i przełączyć bootloader z rollbackiem. Layout 8 MB ma pojedynczą partycję `factory`, więc endpoint zwraca tam `501`, a takie buildy aktualizuje się przez USB.
+
+**Który plik:** wgrywasz **samą aplikację** `build/atlascube.bin` (~2,3 MB) — *nie* scalony `AtlasCube-<wariant>.bin`, który zawiera też bootloader, tablicę partycji i SPIFFS i służy do pełnego wgrania przez USB od `0x0`. Upewnij się, że obraz pasuje do Twojego wariantu wyświetlacza — wgranie binarki innego wariantu zepsuje UI.
+
+**Przejście na layout OTA:** przestawienie istniejącego urządzenia 16 MB na układ partycji OTA to jednorazowy pełny reflash przez USB (zmiana tablicy partycji nie przejdzie przez samo OTA). Potem każda kolejna aktualizacja idzie już przez web.
+
+**Bezpieczeństwo:**
+- Pierwszy bajt jest sprawdzany pod kątem magic obrazu ESP (`0xE9`) zanim cokolwiek zostanie zapisane, a `esp_ota_end` waliduje cały obraz (suma kontrolna) przed przełączeniem partycji bootowania.
+- Urządzenie zatrzymuje odtwarzanie na czas zapisu, żeby zwolnić RAM i uniknąć kontencji na flash/SPI.
+- **Najpierw backup:** przycisk *Export running firmware* (`GET /api/ota/backup`) pobiera aktywny slot jako `atlascube-<wersja>.bin` — re-flashowalny snapshot, który można wgrać z powrotem, żeby ręcznie cofnąć aktualizację.
+
+> SPIFFS (zasoby web UI) nie jest aktualizowany przez OTA — jest tylko jedna partycja storage (bez A/B), więc `.bin` niesie wyłącznie firmware. Zasoby web aktualizuj edytorem plików w przeglądarce (`/editor.html`) albo reflashem SPIFFS.
 
 ---
 

@@ -2,6 +2,11 @@
 #include "esp_http_server.h"
 #include "esp_system.h"
 #include "esp_app_desc.h"
+#include "esp_app_format.h"
+#include "esp_ota_ops.h"
+#include "esp_partition.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "radio_service.h"
 #include "ws_server.h"
 #include "settings.h"
@@ -1656,6 +1661,191 @@ static esp_err_t options_handler(httpd_req_t *req)
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/restart
 // ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/ota  — firmware (app) over-the-air update
+// Streams the uploaded .bin straight into the inactive OTA slot, switches the
+// boot partition and reboots. Works only on the dual-slot layout (16 MB build);
+// on the single factory partition (8 MB) esp_ota_get_next_update_partition()
+// returns NULL and we report 501.
+// ─────────────────────────────────────────────────────────────────────────────
+#define OTA_RECV_BUF_SIZE 4096
+
+// Push a progress update to the on-device OTA screen. pct 0..100, or -1 = failed.
+static void ota_ui_progress(int pct)
+{
+    ui_event_t ev = { .type = UI_EVT_OTA_PROGRESS, .ota_progress = pct };
+    ui_event_send(&ev);
+}
+
+static esp_err_t api_ota_post_handler(httpd_req_t *req)
+{
+    const esp_partition_t *update = esp_ota_get_next_update_partition(NULL);
+    if (update == NULL) {
+        httpd_resp_send_err(req, HTTPD_501_METHOD_NOT_IMPLEMENTED,
+                            "OTA not supported on this partition layout");
+        return ESP_FAIL;
+    }
+
+    int total = req->content_len;
+    if (total <= 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Empty body");
+        return ESP_FAIL;
+    }
+    if ((size_t)total > update->size) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Image larger than OTA slot");
+        return ESP_FAIL;
+    }
+
+    // Stop playback first: frees internal RAM and avoids SPI/flash contention
+    // between the audio pipeline and the OTA write.
+    radio_stop();
+
+    // Take over the device screen with the full-screen progress view.
+    ui_navigate(SCREEN_OTA);
+    ota_ui_progress(0);
+
+    char *buf = malloc(OTA_RECV_BUF_SIZE);
+    if (!buf) {
+        ota_ui_progress(-1);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OOM");
+        return ESP_FAIL;
+    }
+
+    esp_ota_handle_t ota = 0;
+    esp_err_t err = esp_ota_begin(update, total, &ota);
+    if (err != ESP_OK) {
+        free(buf);
+        ota_ui_progress(-1);
+        ESP_LOGE("OTA", "esp_ota_begin failed: %s", esp_err_to_name(err));
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "ota_begin failed");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI("OTA", "Receiving %d bytes → partition '%s'", total, update->label);
+
+    int received = 0;
+    int last_pct = 0;
+    bool magic_checked = false;
+    while (received < total) {
+        int r = httpd_req_recv(req, buf, OTA_RECV_BUF_SIZE);
+        if (r == HTTPD_SOCK_ERR_TIMEOUT) {
+            continue;
+        }
+        if (r <= 0) {
+            esp_ota_abort(ota);
+            free(buf);
+            ota_ui_progress(-1);
+            ESP_LOGE("OTA", "recv error after %d/%d bytes", received, total);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Recv error");
+            return ESP_FAIL;
+        }
+        // The first byte of an ESP app image must be the magic 0xE9. Reject any
+        // other file early so a wrong upload can't be written into the slot.
+        if (!magic_checked) {
+            if ((uint8_t)buf[0] != ESP_IMAGE_HEADER_MAGIC) {
+                esp_ota_abort(ota);
+                free(buf);
+                ota_ui_progress(-1);
+                httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Not an ESP firmware image");
+                return ESP_FAIL;
+            }
+            magic_checked = true;
+        }
+        err = esp_ota_write(ota, buf, r);
+        if (err != ESP_OK) {
+            esp_ota_abort(ota);
+            free(buf);
+            ota_ui_progress(-1);
+            ESP_LOGE("OTA", "esp_ota_write failed: %s", esp_err_to_name(err));
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Write error");
+            return ESP_FAIL;
+        }
+        received += r;
+
+        // Throttle UI updates: the event queue is small and drops on overflow,
+        // so only push when the whole-percent figure moves by >= 2.
+        int pct = (int)((int64_t)received * 100 / total);
+        if (pct >= last_pct + 2) {
+            last_pct = pct;
+            ota_ui_progress(pct);
+        }
+    }
+    free(buf);
+
+    err = esp_ota_end(ota);   // validates the full image (signature/checksum)
+    if (err != ESP_OK) {
+        ota_ui_progress(-1);
+        ESP_LOGE("OTA", "esp_ota_end failed: %s", esp_err_to_name(err));
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Image validation failed");
+        return ESP_FAIL;
+    }
+
+    err = esp_ota_set_boot_partition(update);
+    if (err != ESP_OK) {
+        ota_ui_progress(-1);
+        ESP_LOGE("OTA", "set_boot_partition failed: %s", esp_err_to_name(err));
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "set_boot failed");
+        return ESP_FAIL;
+    }
+
+    ota_ui_progress(100);
+    ESP_LOGI("OTA", "Update OK (%d bytes), rebooting into '%s'", received, update->label);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true,\"restarting\":true}");
+    vTaskDelay(pdMS_TO_TICKS(800));
+    esp_restart();
+    return ESP_OK;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/ota/backup  — download the currently running app partition as a .bin
+// Streams the whole active slot (including trailing 0xFF padding); the result is
+// a valid, re-flashable image. Lets you snapshot working firmware before an
+// update so you can roll back by re-uploading it.
+// ─────────────────────────────────────────────────────────────────────────────
+static esp_err_t api_ota_backup_handler(httpd_req_t *req)
+{
+    const esp_partition_t *run = esp_ota_get_running_partition();
+    if (run == NULL) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "No running partition");
+        return ESP_FAIL;
+    }
+
+    char *buf = malloc(OTA_RECV_BUF_SIZE);
+    if (!buf) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OOM");
+        return ESP_FAIL;
+    }
+
+    char disp[96];
+    snprintf(disp, sizeof(disp), "attachment; filename=\"atlascube-%s.bin\"",
+             esp_app_get_description()->version);
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_set_hdr(req, "Content-Disposition", disp);
+
+    for (size_t off = 0; off < run->size; off += OTA_RECV_BUF_SIZE) {
+        size_t chunk = run->size - off;
+        if (chunk > OTA_RECV_BUF_SIZE) chunk = OTA_RECV_BUF_SIZE;
+        esp_err_t err = esp_partition_read(run, off, buf, chunk);
+        if (err != ESP_OK) {
+            ESP_LOGE("OTA", "backup read failed at %u: %s",
+                     (unsigned)off, esp_err_to_name(err));
+            free(buf);
+            httpd_resp_send_chunk(req, NULL, 0);   // terminate the (already-open) stream
+            return ESP_FAIL;
+        }
+        if (httpd_resp_send_chunk(req, buf, chunk) != ESP_OK) {
+            free(buf);                              // client disconnected
+            return ESP_FAIL;
+        }
+    }
+    free(buf);
+    httpd_resp_send_chunk(req, NULL, 0);            // end of stream
+    ESP_LOGI("OTA", "Backup of '%s' (%u bytes) sent", run->label, (unsigned)run->size);
+    return ESP_OK;
+}
+
 static esp_err_t api_restart_handler(httpd_req_t *req)
 {
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
@@ -1719,6 +1909,20 @@ void http_server_start(void)
         .handler = api_restart_handler,
     };
     httpd_register_uri_handler(server, &api_restart);
+
+    httpd_uri_t api_ota = {
+        .uri     = "/api/ota",
+        .method  = HTTP_POST,
+        .handler = api_ota_post_handler,
+    };
+    httpd_register_uri_handler(server, &api_ota);
+
+    httpd_uri_t api_ota_backup = {
+        .uri     = "/api/ota/backup",
+        .method  = HTTP_GET,
+        .handler = api_ota_backup_handler,
+    };
+    httpd_register_uri_handler(server, &api_ota_backup);
 
     httpd_uri_t api_theme_get = {
         .uri     = "/api/theme",

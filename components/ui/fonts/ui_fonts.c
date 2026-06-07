@@ -14,6 +14,7 @@ static const font_entry_t k_fonts[] = {
     { "montserrat_12_pl", &lv_font_montserrat_12_pl },
     { "montserrat_14_pl", &lv_font_montserrat_14_pl },
     { "montserrat_18_pl", &lv_font_montserrat_18_pl },
+    { "montserrat_18_pl", &lv_font_montserrat_24_pl },
     { "montserrat_48",    &lv_font_montserrat_48    },
     { "montserrat_72",    &lv_font_montserrat_72    },
     { "montserrat_80",    &lv_font_montserrat_80    },

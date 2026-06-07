@@ -1,3 +1,21 @@
+# 16 MB flash layout — dual-slot OTA.
+#
+# Name      Offset     Size       Human
+# ----------------------------------------------
+# nvs       0x009000   0x006000   24 KB
+# otadata   0x00F000   0x002000   8 KB
+# phy_init  0x011000   0x001000   4 KB
+# ota_0     0x020000   0x400000   4 MB
+# ota_1     0x420000   0x400000   4 MB
+# storage   0x820000   0x7E0000   ~7.875 MB  (fills to end of 16 MB flash)
+# ----------------------------------------------
+# storage absorbs all remaining flash up to 0x1000000 (the old, unused "media"
+# SPIFFS partition is gone). Nothing is left unallocated.
+#
+# Two app slots are required for OTA: the new image is written to the inactive
+# slot, then the bootloader is switched over (with automatic rollback on boot
+# failure). App is ~2.3 MB, so each 4 MB slot has headroom for growth.
+
 # Name,     Type, SubType, Offset,   Size,     Flags
 
 # Boot / system
@@ -5,11 +23,9 @@ nvs,        data, nvs,      0x9000,   0x6000
 otadata,    data, ota,      0xf000,   0x2000
 phy_init,   data, phy,      0x11000,  0x1000
 
-# App
-factory,    app,  factory,  0x20000,  4M
+# App — dual OTA slots (4 MB each)
+ota_0,      app,  ota_0,    0x20000,  0x400000
+ota_1,      app,  ota_1,            ,  0x400000
 
-# SPIFFS - main
-storage,    data, spiffs,           ,  4M
-
-# SPIFFS - media, backup, etc.
-media,      data, spiffs,           ,  6M
+# SPIFFS - main (www + storage), mounted at /spiffs. Fills the rest of the flash.
+storage,    data, spiffs,           ,  0x7E0000

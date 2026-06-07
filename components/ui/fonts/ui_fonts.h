@@ -13,6 +13,7 @@ LV_FONT_DECLARE(lv_font_montserrat_10_pl);
 LV_FONT_DECLARE(lv_font_montserrat_12_pl);
 LV_FONT_DECLARE(lv_font_montserrat_14_pl);
 LV_FONT_DECLARE(lv_font_montserrat_18_pl);
+LV_FONT_DECLARE(lv_font_montserrat_24_pl);
 LV_FONT_DECLARE(lv_font_montserrat_72);
 LV_FONT_DECLARE(lv_font_montserrat_80);
 LV_FONT_DECLARE(lv_font_montserrat_96);

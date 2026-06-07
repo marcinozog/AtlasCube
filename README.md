@@ -129,6 +129,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - NTP time sync with configurable timezone
 - Web UI served from SPIFFS (no internet required after flash)
 - MQTT client — remote control of the radio (play/stop/volume/station) plus up to 6 configurable widgets (toggle / slider / label) on a dedicated on-device screen, driving any external MQTT device (Tasmota, zigbee2mqtt, Home Assistant, …); see [MQTT](#mqtt) below
+- OTA firmware update — upload a new app image straight from the web UI (Settings → Tools); it streams into the inactive slot, validates, and reboots, with bootloader rollback if the new image won't start. A backup/export button downloads the currently running firmware first. Available on 16 MB-flash builds (dual OTA partitions); 8 MB builds keep a single app slot and are flashed over USB. See [OTA updates](#ota-updates) below
 
 **Android app** *(in development)*
 - Remote control for playback, station switching, and volume
@@ -459,6 +460,25 @@ mqtt:
 **File editor**
 
 `/editor.html` is an in-browser editor for files stored in SPIFFS — JSON configs (layouts, playlist, events), HTML/CSS/JS of the web UI itself, and any other text assets on the device. Lists files from the storage partition, lets you edit them with syntax highlighting, and saves back over HTTP without reflashing. Useful for tweaking layouts or web UI on a deployed device.
+
+---
+
+## OTA updates
+
+Update the firmware over Wi-Fi from **Settings → Tools** — no USB cable, no esptool. The page shows the running version, takes a firmware image, streams it to the device, and reboots into it. Progress is mirrored on the device screen.
+
+**Requires a 16 MB-flash build.** OTA needs two app partitions (`ota_0` / `ota_1`, see [`partitions16MB.csv`](partitions16MB.csv)) so the new image can be written to the inactive slot and the bootloader switched over with rollback. The 8 MB layout has a single `factory` partition, so the endpoint returns `501` there and those builds are updated over USB instead.
+
+**Which file:** upload the **app-only** `build/atlascube.bin` (~2.3 MB) — *not* the merged `AtlasCube-<variant>.bin`, which also contains the bootloader, partition table and SPIFFS and is meant for a full `0x0` USB flash. Make sure the image matches your display variant; flashing a different variant's binary will break the UI.
+
+**Adopting the layout:** switching an existing 16 MB device to the OTA partition layout is a one-time full USB reflash (a partition-table change can't go through OTA itself). After that, every further update is web-only.
+
+**Safety:**
+- The first byte is checked for the ESP image magic (`0xE9`) before anything is written, and `esp_ota_end` validates the full image (checksum) before the boot partition is switched.
+- The device stops playback during the write to free RAM and avoid flash/SPI contention.
+- **Backup first:** the *Export running firmware* button (`GET /api/ota/backup`) downloads the active slot as `atlascube-<version>.bin` — a re-flashable snapshot you can upload again to roll back manually.
+
+> SPIFFS (web UI assets) is not updated over OTA — there is only one storage partition (no A/B), so the `.bin` carries firmware only. Update web assets with the in-browser File editor (`/editor.html`) or a SPIFFS reflash.
 
 ---
 

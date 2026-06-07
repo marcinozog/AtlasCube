@@ -455,6 +455,34 @@
             <label class="field-label">Screen layout editor</label>
             <a href="/layout.html" class="tool-btn tool-link" style="width:fit-content;padding:8px 14px">🖼️ Open Layout Editor</a>
         </div>
+
+        <div class="panel ota-panel">
+            <label class="field-label">⬆️ Firmware update (OTA)</label>
+            <div class="ota-version-row">
+                <span>Current version</span>
+                <code id="ota_version">…</code>
+            </div>
+            <div class="field-hint ota-warn">
+                Upload an application image (<code>atlascube.bin</code>). The device writes it
+                to the inactive slot and reboots into the new firmware.
+                <strong>Do not power off during the upload.</strong>
+            </div>
+            <input type="file" id="ota_file" accept=".bin" class="ota-file" />
+            <button id="ota_btn" onclick="uploadFirmware()">⬆️ Upload &amp; install</button>
+            <div id="ota_progress_wrap" class="ota-progress-wrap hidden">
+                <progress id="ota_progress" class="ota-progress" value="0" max="100"></progress>
+                <span id="ota_progress_pct" class="slider-value">0%</span>
+            </div>
+            <div id="ota_status" class="save-status"></div>
+
+            <div class="ota-divider"></div>
+            <label class="field-label">⬇️ Firmware backup</label>
+            <div class="field-hint">
+                Download the currently running firmware as a <code>.bin</code> (the full app
+                slot) — a re-flashable snapshot to keep before updating.
+            </div>
+            <a href="/api/ota/backup" class="tool-btn tool-link ota-backup-btn" download>⬇️ Export running firmware</a>
+        </div>
     </section>
 
 </main>

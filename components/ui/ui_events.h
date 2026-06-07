@@ -21,6 +21,7 @@ typedef enum {
     SCREEN_EVENTS,
     SCREEN_EVENT_NOTIFICATION,
     SCREEN_MQTT,
+    SCREEN_OTA,
     SCREEN_COUNT
 } ui_screen_id_t;
 
@@ -41,6 +42,7 @@ typedef enum {
     UI_EVT_PROFILE_CHANGED,  // ui_profile (layout) changed → rebuild active screen
     UI_EVT_INPUT,            // event from encoder / buttons
     UI_EVT_EVENT_FIRED,      // events_service fired an event (fullscreen toast)
+    UI_EVT_OTA_PROGRESS,     // firmware update progress (0..100, or -1 = failed)
 } ui_event_type_t;
 
 // --------------------------------------------------------------------------
@@ -87,6 +89,7 @@ typedef struct {
         // UI_EVT_WEATHER_UPDATE: extend once a weather data model exists
         ui_input_t input;          // UI_EVT_INPUT
         ui_event_info_t event_info;// UI_EVT_EVENT_FIRED
+        int ota_progress;          // UI_EVT_OTA_PROGRESS: 0..100, or -1 = failed
     };
 } ui_event_t;
 

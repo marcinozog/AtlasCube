@@ -399,6 +399,8 @@ async function loadSettings() {
             const state = await stateRes.json();
             isApMode = state.wifi_mode === 'ap';
             showApBanner(isApMode);
+            const verEl = document.getElementById('ota_version');
+            if (verEl) verEl.textContent = state.version || 'unknown';
         }
 
         // Load settings
@@ -807,6 +809,74 @@ function showColorsStatus(msg, type) {
     clearTimeout(_colorsStatusTimer);
     if (type === 'ok') _colorsStatusTimer = setTimeout(
         () => { el.innerText = ''; el.className = 'save-status'; }, 4000);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Firmware update (OTA) — streams the .bin to POST /api/ota with a progress bar
+// ─────────────────────────────────────────────────────────────────────────────
+function showOtaStatus(msg, type) {
+    const el = document.getElementById('ota_status');
+    if (!el) return;
+    el.innerText = msg;
+    el.className = 'save-status' + (type ? ' ' + type : '');
+}
+
+function uploadFirmware() {
+    const fileEl = document.getElementById('ota_file');
+    const btn    = document.getElementById('ota_btn');
+    const wrap   = document.getElementById('ota_progress_wrap');
+    const bar    = document.getElementById('ota_progress');
+    const pct    = document.getElementById('ota_progress_pct');
+
+    const file = fileEl.files[0];
+    if (!file) { showOtaStatus('❌ Pick a .bin file first', 'error'); return; }
+    if (!file.name.endsWith('.bin')) {
+        showOtaStatus('❌ Expected a .bin firmware image', 'error');
+        return;
+    }
+    if (!confirm('Flash "' + file.name + '" (' +
+                 (file.size / 1048576).toFixed(2) + ' MB)? ' +
+                 'The device will reboot when done.')) {
+        return;
+    }
+
+    btn.disabled = true;
+    wrap.classList.remove('hidden');
+    showOtaStatus('Uploading…', '');
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/ota', true);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+
+    xhr.upload.onprogress = (e) => {
+        if (!e.lengthComputable) return;
+        const p = Math.round((e.loaded / e.total) * 100);
+        bar.value = p;
+        pct.textContent = p + '%';
+    };
+
+    xhr.onload = () => {
+        if (xhr.status === 200) {
+            bar.value = 100; pct.textContent = '100%';
+            showOtaStatus('✅ Installed. Device is rebooting into the new firmware…', 'ok');
+        } else {
+            // The device returns a plain-text error body for 4xx/5xx
+            showOtaStatus('❌ ' + (xhr.responseText || ('HTTP ' + xhr.status)), 'error');
+            btn.disabled = false;
+        }
+    };
+    xhr.onerror = () => {
+        // A connection drop right after the response is expected (device reboots);
+        // only treat it as an error if no progress reached completion.
+        if (bar.value >= 100) {
+            showOtaStatus('✅ Uploaded. Device is rebooting…', 'ok');
+        } else {
+            showOtaStatus('❌ Upload failed (connection lost)', 'error');
+            btn.disabled = false;
+        }
+    };
+
+    xhr.send(file);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
