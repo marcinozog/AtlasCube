@@ -280,6 +280,9 @@ def build(idf_py, variant, do_clean, do_build, with_spiffs):
 
     built = REPO_ROOT / "build" / out_name
     print(f"\nDone. Flashable image: {built}")
+    if not with_spiffs:
+        print("App-only image (no web UI bundled) — flashing from 0x0 leaves the "
+              "existing storage/SPIFFS partition untouched.")
     print("Flash it from offset 0x0 with the web flasher (atlascube.net/flash) "
           "or:\n    esptool.py --chip esp32s3 -p <PORT> write_flash 0x0 "
           f"build/{out_name}")
@@ -303,6 +306,22 @@ def pick_variant_interactively():
         print("Invalid choice.")
 
 
+def pick_spiffs_interactively():
+    """Ask whether to bundle the web UI into the storage (SPIFFS) partition.
+
+    Yes  -> full image (bootloader + partition table + app + storage).
+    No   -> app-only image; flashing it from 0x0 leaves the existing storage
+            partition untouched (its region sits past the end of the app).
+    """
+    while True:
+        choice = input("Bundle web UI into storage partition? [Y/n]: ").strip().lower()
+        if choice in ("", "y", "yes"):
+            return True
+        if choice in ("n", "no"):
+            return False
+        print("Please answer y or n.")
+
+
 def main():
     ap = argparse.ArgumentParser(description="Turnkey AtlasCube firmware build.")
     ap.add_argument("variant", nargs="?", choices=list(VARIANTS),
@@ -324,10 +343,19 @@ def main():
 
     patch_adf(adf, idf)
 
+    # --no-spiffs forces app-only (scripts/CI). Otherwise ask interactively;
+    # non-interactive runs (e.g. CI) keep the default of bundling the web UI.
+    if args.no_spiffs:
+        with_spiffs = False
+    elif sys.stdin.isatty():
+        with_spiffs = pick_spiffs_interactively()
+    else:
+        with_spiffs = True
+
     build(idf_py, variant,
           do_clean=not args.no_clean,
           do_build=not args.skip_build,
-          with_spiffs=not args.no_spiffs)
+          with_spiffs=with_spiffs)
 
 
 if __name__ == "__main__":
