@@ -4,6 +4,12 @@ CONFIG_PARTITION_TABLE_CUSTOM=y
 CONFIG_PARTITION_TABLE_OFFSET=0x8000
 CONFIG_PARTITION_TABLE_MD5=y
 
+# OTA anti-brick: a freshly OTA-flashed app boots in PENDING_VERIFY and must
+# confirm itself (esp_ota_mark_app_valid_cancel_rollback) or the bootloader
+# rolls back to the previous slot on the next boot. wifi_manager confirms on the
+# first STA GOT_IP. No-op on the 8 MB factory layout (no OTA partitions).
+CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE=y
+
 CONFIG_ESP32_S3_ATLASCUBE_BOARD=y
 
 # Display + touch driver + flash size selection lives in main/include/defines.h.

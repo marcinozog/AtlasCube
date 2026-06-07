@@ -5,6 +5,7 @@
 #include "esp_netif.h"
 #include "esp_mac.h"
 #include "esp_log.h"
+#include "esp_ota_ops.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include <string.h>
@@ -23,6 +24,27 @@ static EventGroupHandle_t s_event_group;
 static bool               s_connected = false;
 static int                s_retry_cnt = 0;
 static wifi_run_mode_t    s_run_mode  = WIFI_RUN_MODE_AP;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// OTA anti-brick: with CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE a freshly
+// OTA-flashed app boots in PENDING_VERIFY and must confirm itself, or the
+// bootloader rolls back to the previous slot on the next boot. We treat the
+// first successful STA connection (got IP) as proof the new firmware works and
+// mark it valid. One-shot and self-guarding: a no-op on normal boots (already
+// VALID) and on the 8 MB factory layout (esp_ota_get_state_partition fails).
+static void confirm_ota_image(void)
+{
+    const esp_partition_t *running = esp_ota_get_running_partition();
+    esp_ota_img_states_t   state;
+    if (esp_ota_get_state_partition(running, &state) != ESP_OK) return;
+    if (state != ESP_OTA_IMG_PENDING_VERIFY) return;
+
+    if (esp_ota_mark_app_valid_cancel_rollback() == ESP_OK) {
+        ESP_LOGI(TAG, "OTA image confirmed valid — rollback cancelled");
+    } else {
+        ESP_LOGW(TAG, "OTA mark-valid failed");
+    }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 static void event_handler(void *arg, esp_event_base_t base,
@@ -58,6 +80,7 @@ static void event_handler(void *arg, esp_event_base_t base,
         s_connected = true;
         s_retry_cnt = 0;
         xEventGroupSetBits(s_event_group, WIFI_CONNECTED_BIT);
+        confirm_ota_image();   // network works → confirm a pending OTA image
     }
 }
 
