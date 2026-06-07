@@ -281,6 +281,20 @@ idf.py build
 idf.py flash
 ```
 
+> **Edycja plików boardu przy iteracji zwykłym `idf.py`** (np. przycisk build
+> wtyczki ESP-IDF w VS Code): `idf.py` buduje kopię wewnątrz Twojego klona
+> ESP-ADF, więc zmiany w repo w `components/audio_board/esp32_s3_atlascube/` nie
+> zadziałają, dopóki nie puścisz ponownie `scripts/build.py --skip-build`. Żeby
+> edycje były na bieżąco, zastąp kopię w ADF junctionem (bez uprawnień admina):
+>
+> ```powershell
+> $dest = "$env:ADF_PATH\components\audio_board\esp32_s3_atlascube"
+> Remove-Item -Recurse -Force $dest
+> New-Item -ItemType Junction -Path $dest -Target "<repo>\components\audio_board\esp32_s3_atlascube"
+> ```
+>
+> `build.py` wykrywa istniejący symlink/junction i go nie nadpisuje.
+
 **Flash web UI (SPIFFS)**
 
 Pliki web UI trafiają do partycji SPIFFS `storage`. Dołączanie jest **domyślnie

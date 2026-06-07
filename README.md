@@ -281,6 +281,20 @@ idf.py build
 idf.py flash
 ```
 
+> **Editing the board files while iterating with plain `idf.py`** (e.g. the
+> VS Code ESP-IDF extension's build button): `idf.py` builds the copy inside your
+> ESP-ADF clone, so repo edits to `components/audio_board/esp32_s3_atlascube/`
+> won't take effect until you re-run `scripts/build.py --skip-build`. To keep
+> edits live, replace the ADF copy with a junction (no admin needed):
+>
+> ```powershell
+> $dest = "$env:ADF_PATH\components\audio_board\esp32_s3_atlascube"
+> Remove-Item -Recurse -Force $dest
+> New-Item -ItemType Junction -Path $dest -Target "<repo>\components\audio_board\esp32_s3_atlascube"
+> ```
+>
+> `build.py` detects an existing symlink/junction and leaves it in place.
+
 **Flash web UI (SPIFFS)**
 
 The web UI assets live in the `storage` SPIFFS partition. Bundling is **off by
