@@ -103,12 +103,12 @@
 
 
 // ===== I2S PCM5102A =====
+// Single source of truth. ESP-ADF reads these via board_def.h, which includes
+// this header (components\audio_board\esp32_s3_atlascube\board_def.h).
 
-// Defined in components\audio_board\esp32_s3_atlascube\board_def.h (ESP-ADF requirement)
-
-// #define I2S_DATA        16 // GPIO_NUM_8
-// #define I2S_BCK         15 // GPIO_NUM_7
-// #define I2S_LCK         17 // GPIO_NUM_9
+#define I2S_DATA        16 // GPIO_NUM_8
+#define I2S_BCK         15 // GPIO_NUM_7
+#define I2S_LCK         17 // GPIO_NUM_9
 
 
 // ===== RADIO =====

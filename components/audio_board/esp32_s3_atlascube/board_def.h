@@ -1,6 +1,7 @@
 #pragma once
 
 #include "driver/gpio.h"
+#include "defines.h"   // I2S_DATA/BCK/LCK — single source of truth (main/include)
 
 
 // ===================================== ONLY FOR ADF =====================================
@@ -14,10 +15,7 @@
 #define I2C_SCL -1
 
 
-// ===== I2S PCM5102A ESP-ADF init I2S itself=====
-#define I2S_DATA        16 // GPIO_NUM_8
-#define I2S_BCK         15 // GPIO_NUM_7
-#define I2S_LCK         17 // GPIO_NUM_9
+// I2S pins (I2S_DATA/BCK/LCK) come from defines.h, included above.
 
 
 #define ESP_SD_PIN_CLK  -1
