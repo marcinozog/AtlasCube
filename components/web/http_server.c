@@ -1696,13 +1696,18 @@ static esp_err_t api_ota_post_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    // Stop playback first: frees internal RAM and avoids SPI/flash contention
-    // between the audio pipeline and the OTA write.
-    radio_stop();
-
-    // Take over the device screen with the full-screen progress view.
+    // Bring up the progress screen FIRST and give the LVGL task a head start to
+    // build + flush it. The next step, esp_ota_begin(), erases the slot, which
+    // disables the flash cache and stalls everything executing from flash —
+    // LVGL and the fonts included. Without this head start the screen paints in
+    // slow motion during the erase. radio_stop() (stops playback, frees RAM,
+    // avoids audio/flash contention) overlaps the screen render, and the short
+    // delay lets the "0%" frame land before the erase storm. Tunable if a slow
+    // panel needs longer to flush a full frame.
     ui_navigate(SCREEN_OTA);
     ota_ui_progress(0);
+    radio_stop();
+    vTaskDelay(pdMS_TO_TICKS(300));
 
     char *buf = malloc(OTA_RECV_BUF_SIZE);
     if (!buf) {
