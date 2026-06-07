@@ -5,16 +5,20 @@
 # nvs       0x009000   0x006000   24 KB
 # otadata   0x00F000   0x002000   8 KB
 # phy_init  0x011000   0x001000   4 KB
-# ota_0     0x020000   0x400000   4 MB
-# ota_1     0x420000   0x400000   4 MB
-# storage   0x820000   0x7E0000   ~7.875 MB  (fills to end of 16 MB flash)
+# ota_0     0x020000   0x600000   6 MB
+# ota_1     0x620000   0x600000   6 MB
+# storage   0xC20000   0x3E0000   ~3.875 MB  (fills to end of 16 MB flash)
 # ----------------------------------------------
-# storage absorbs all remaining flash up to 0x1000000 (the old, unused "media"
-# SPIFFS partition is gone). Nothing is left unallocated.
+# App is ~2.3 MB, so each 6 MB OTA slot has generous headroom for growth. An
+# oversized app slot costs nothing at runtime — the bootloader just boots from
+# the offset and ignores the unused tail (unlike SPIFFS, where a large partition
+# slows the boot-time mount scan). storage gets the remaining ~3.9 MB: plenty
+# for the compressed web UI (~132 KB) plus room to drop in graphics or extra
+# assets via the file editor.
 #
 # Two app slots are required for OTA: the new image is written to the inactive
 # slot, then the bootloader is switched over (with automatic rollback on boot
-# failure). App is ~2.3 MB, so each 4 MB slot has headroom for growth.
+# failure).
 
 # Name,     Type, SubType, Offset,   Size,     Flags
 
@@ -23,9 +27,9 @@ nvs,        data, nvs,      0x9000,   0x6000
 otadata,    data, ota,      0xf000,   0x2000
 phy_init,   data, phy,      0x11000,  0x1000
 
-# App — dual OTA slots (4 MB each)
-ota_0,      app,  ota_0,    0x20000,  0x400000
-ota_1,      app,  ota_1,            ,  0x400000
+# App — dual OTA slots (6 MB each)
+ota_0,      app,  ota_0,    0x20000,  0x600000
+ota_1,      app,  ota_1,            ,  0x600000
 
 # SPIFFS - main (www + storage), mounted at /spiffs. Fills the rest of the flash.
-storage,    data, spiffs,           ,  0x7E0000
+storage,    data, spiffs,           ,  0x3E0000
