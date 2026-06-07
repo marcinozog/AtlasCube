@@ -2,6 +2,7 @@
 #include <string.h>
 
 extern const ui_screen_t screensaver_clockhands;
+extern const ui_screen_t screensaver_clockdigital;
 extern const ui_screen_t screensaver_starfield;
 extern const ui_screen_t screensaver_fireworks;
 extern const ui_screen_t screensaver_plasma;
@@ -15,8 +16,9 @@ static const struct {
     const ui_screen_t      *screen;
     const char             *name;
 } k_map[] = {
-    { SCREENSAVER_CLOCKHANDS, &screensaver_clockhands, "clockhands" },
-    { SCREENSAVER_STARFIELD,  &screensaver_starfield,  "starfield"  },
+    { SCREENSAVER_CLOCKHANDS,   &screensaver_clockhands,   "clockhands"   },
+    { SCREENSAVER_CLOCKDIGITAL, &screensaver_clockdigital, "clockdigital" },
+    { SCREENSAVER_STARFIELD,    &screensaver_starfield,    "starfield"    },
     { SCREENSAVER_FIREWORKS,  &screensaver_fireworks,  "fireworks"  },
     { SCREENSAVER_PLASMA,     &screensaver_plasma,     "plasma"     },
     { SCREENSAVER_LIFE,       &screensaver_life,       "life"       },
