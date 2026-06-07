@@ -9,6 +9,18 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-06-07
+
+### Added
+- **ota:** auto-rollback on a failed update
+- **ota:** web-push firmware update with on-device progress
+- **web:** audio source switch, move device screen to settings
+- **ui:** move theme & background toggles to Colors tab, rename it to Theme
+- **ui:** configurable clock & now-playing fonts in layout editor
+
+### Fixed
+- **ota:** render progress screen before the flash erase storm
+
 ## [0.12.0] - 2026-06-02
 
 ### Added
@@ -180,7 +192,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/marcinozog/AtlasCube/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/marcinozog/AtlasCube/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/marcinozog/AtlasCube/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/marcinozog/AtlasCube/compare/v0.9.3...v0.10.0
