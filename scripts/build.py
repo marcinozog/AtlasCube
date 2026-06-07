@@ -182,11 +182,17 @@ def patch_adf(adf, idf):
     run(["git", "-C", str(adf), "submodule", "update", "--init",
          "components/esp-adf-libs", "components/esp-sr"])
 
-    step(f"Installing board sources into {audio_board / BOARD_NAME}")
     dest = audio_board / BOARD_NAME
-    if dest.exists():
-        shutil.rmtree(dest)
-    shutil.copytree(board_src, dest)
+    # A symlink/junction into the repo (preferred dev setup) stays live for both
+    # build.py and the VSCode ESP-IDF extension (idf.py build) — don't clobber it.
+    # Otherwise install a fresh copy (fresh ADF clone / CI).
+    if dest.is_symlink() or getattr(os.path, "isjunction", lambda _: False)(str(dest)):
+        step(f"Board sources linked at {dest} — leaving live link in place")
+    else:
+        step(f"Installing board sources into {dest}")
+        if dest.exists():
+            shutil.rmtree(dest)
+        shutil.copytree(board_src, dest)
 
     step("Patching Kconfig.projbuild")
     kconfig = audio_board / "Kconfig.projbuild"
