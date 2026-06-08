@@ -12,7 +12,9 @@ typedef struct {
 } audio_settings_t;
 
 typedef struct {
-    int curr_index;
+    int  curr_index;
+    bool resume_on_boot;   // restore playback state across reboots (opt-in)
+    bool was_playing;      // last known playing state, auto-persisted on play/stop
 } playlist_settings_t;
 
 typedef struct {
@@ -111,6 +113,8 @@ void settings_set_volume(int volume);
 void settings_set_eq_10(int *bands);
 void settings_set_eq_enabled(bool enabled);
 void settings_set_curr_index(int index);
+void settings_set_resume_on_boot(bool enabled);
+void settings_set_was_playing(bool playing);
 void settings_set_screen(ui_screen_id_t screen);
 void settings_set_brightness(int brightness);
 void settings_set_night_schedule(const dim_schedule_t *ns);

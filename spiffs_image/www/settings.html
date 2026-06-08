@@ -271,6 +271,15 @@
             </div>
             <div class="field-hint">When off, the 10-band EQ is bypassed entirely. Volume is unaffected.</div>
         </div>
+
+        <div class="panel">
+            <label class="field-label">Resume playback on boot</label>
+            <div class="theme-toggle" id="resumeToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnResumeOn"  onclick="setResumeOnBoot(true)">✅ On</button>
+                <button class="theme-btn" id="settingsBtnResumeOff" onclick="setResumeOnBoot(false)">❌ Off</button>
+            </div>
+            <div class="field-hint">When on, if the radio was playing before a restart, it resumes the last station automatically after boot.</div>
+        </div>
     </section>
 
     <!-- ══════════════════════════════════════════

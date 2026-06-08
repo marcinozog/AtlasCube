@@ -98,6 +98,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Bluetooth audio — A2DP sink and HFP hands-free (external QCC5125 module, Bluetooth 5.1); supported codecs: LDAC, aptX HD, aptX LL, aptX, SBC, AAC
 - Hardware I2S source switching — a 74HC157D multiplexer routes either the ESP32-S3 or the QCC5125 I2S output to the DAC, selected by a single GPIO
 - Automatic retry on stream loss
+- Resume on boot — optionally replays the last station after a restart if the radio was playing when it powered off (opt-in, toggled in the Settings web UI)
 
 **UI**
 - LVGL-based GUI — supports ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), CO5300 240×296 round AMOLED (QSPI), and SSD1322 256×64 mono OLED (SPI), switched via a single compile-time define

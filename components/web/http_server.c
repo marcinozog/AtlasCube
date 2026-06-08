@@ -55,6 +55,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     // playlist
     cJSON *playlist = cJSON_CreateObject();
     cJSON_AddNumberToObject(playlist, "curr_index", s->playlist.curr_index);
+    cJSON_AddBoolToObject  (playlist, "resume_on_boot", s->playlist.resume_on_boot);
     cJSON_AddItemToObject(json, "playlist", playlist);
 
     // display
@@ -211,6 +212,16 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         cJSON *eq_en = cJSON_GetObjectItem(audio, "eq_enabled");
         if (cJSON_IsBool(eq_en)) {
             settings_set_eq_enabled(cJSON_IsTrue(eq_en));
+        }
+    }
+
+    // ── PLAYLIST ────────────────────────────────────────────────────────────
+    cJSON *playlist = cJSON_GetObjectItem(json, "playlist");
+    if (cJSON_IsObject(playlist)) {
+        cJSON *rob = cJSON_GetObjectItem(playlist, "resume_on_boot");
+        if (cJSON_IsBool(rob)) {
+            ESP_LOGI("HTTP", "POST resume_on_boot: %d", cJSON_IsTrue(rob));
+            settings_set_resume_on_boot(cJSON_IsTrue(rob));
         }
     }
 

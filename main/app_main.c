@@ -18,6 +18,7 @@
 #include "buzzer.h"
 #include "events_service.h"
 #include "dim_schedule.h"
+#include "radio_service.h"
 #include "ui_profile.h"
 #include "mqtt_svc.h"
 #include "mqtt_config.h"
@@ -90,6 +91,12 @@ void app_main(void)
     // app_state_update() inside settings_apply() will notify all
     // subscribers (#1 UI, #2 WS) — they must already be registered.
     settings_apply();
+
+    // ── Resume radio if it was playing before the last reboot ────────────────
+    // Opt-in via playlist.resume_on_boot. STA only — radio needs internet.
+    if (wifi_get_run_mode() == WIFI_RUN_MODE_STA) {
+        radio_resume_on_boot();
+    }
 
     // ── Splash screen: wait at least 1500 ms from boot, then proceed ─────────
     #define SPLASH_MIN_MS 3000

@@ -81,6 +81,8 @@ void radio_play_url(const char *url)
         .has_radio = true,
         .radio_state = RADIO_STATE_PLAYING
     });
+
+    settings_set_was_playing(true);   // persist for resume-on-boot (no-op if unchanged)
 }
 
 void radio_play_index(int index)
@@ -138,6 +140,21 @@ void radio_stop(void)
         .has_title = true,
         .title = ""
     });
+
+    settings_set_was_playing(false);   // persist for resume-on-boot (no-op if unchanged)
+}
+
+
+/*
+void radio_resume_on_boot(void)
+*/
+void radio_resume_on_boot(void)
+{
+    app_settings_t *s = settings_get();
+    if (!s->playlist.resume_on_boot || !s->playlist.was_playing) return;
+
+    ESP_LOGI(TAG, "Resume on boot: replaying station idx=%d", s->playlist.curr_index);
+    radio_play_index(s->playlist.curr_index);
 }
 
 

@@ -227,6 +227,19 @@ function setDeviceEqEnabled(t) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Resume playback on boot (playlist)
+// ─────────────────────────────────────────────────────────────────────────────
+function setResumeOnBoot(on) {
+    document.getElementById('settingsBtnResumeOn') ?.classList.toggle('active', on);
+    document.getElementById('settingsBtnResumeOff')?.classList.toggle('active', !on);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playlist: { resume_on_boot: on } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Screensaver tab — UI-only handlers (commit via saveScreensaverTab())
 // ─────────────────────────────────────────────────────────────────────────────
 function setDashboardNotifyEnabled(t) {
@@ -495,6 +508,11 @@ function populateForm(s) {
         const eq_en = (s.audio.eq_enabled !== false);
         document.getElementById('settingsBtnDspOn') ?.classList.toggle('active', eq_en);
         document.getElementById('settingsBtnDspOff')?.classList.toggle('active', !eq_en);
+    }
+    if (s.playlist) {
+        const rob = !!s.playlist.resume_on_boot;   // default off
+        document.getElementById('settingsBtnResumeOn') ?.classList.toggle('active', rob);
+        document.getElementById('settingsBtnResumeOff')?.classList.toggle('active', !rob);
     }
     if (s.scrsaver) {
         setVal('scrs_delay', s.scrsaver.delay ?? 60);

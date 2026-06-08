@@ -30,6 +30,8 @@ esp_err_t settings_init(void)
         for (int i = 0; i < 10; i++) s_settings.audio.eq[i] = 0;
         s_settings.audio.eq_enabled         = true;
         s_settings.playlist.curr_index      = 0;
+        s_settings.playlist.resume_on_boot  = false;
+        s_settings.playlist.was_playing     = false;
         s_settings.display.brightness       = 80;
         s_settings.display.screen           = SCREEN_CLOCK;
         s_settings.display.theme            = THEME_DARK;
@@ -143,12 +145,19 @@ static esp_err_t load_from_file(void)
     }
 
     // ===== PLAYLIST =====
+    // defaults (used if section is missing or partial)
+    s_settings.playlist.resume_on_boot = false;
+    s_settings.playlist.was_playing    = false;
     cJSON *playlist = cJSON_GetObjectItem(json, "playlist");
     if (cJSON_IsObject(playlist)) {
         cJSON *curr_index = cJSON_GetObjectItem(playlist, "curr_index");
         if (cJSON_IsNumber(curr_index)) {
             s_settings.playlist.curr_index = curr_index->valueint;
         }
+        cJSON *rob = cJSON_GetObjectItem(playlist, "resume_on_boot");
+        if (cJSON_IsBool(rob)) s_settings.playlist.resume_on_boot = cJSON_IsTrue(rob);
+        cJSON *wp = cJSON_GetObjectItem(playlist, "was_playing");
+        if (cJSON_IsBool(wp))  s_settings.playlist.was_playing = cJSON_IsTrue(wp);
     }
 
     // ===== DISPLAY =====
@@ -361,6 +370,8 @@ static esp_err_t save_to_file(void)
     // playlist
     cJSON *playlist = cJSON_CreateObject();
     cJSON_AddNumberToObject(playlist, "curr_index", s_settings.playlist.curr_index);
+    cJSON_AddBoolToObject  (playlist, "resume_on_boot", s_settings.playlist.resume_on_boot);
+    cJSON_AddBoolToObject  (playlist, "was_playing",    s_settings.playlist.was_playing);
     cJSON_AddItemToObject(json, "playlist", playlist);
 
     // display
@@ -523,6 +534,20 @@ void settings_set_curr_index(int index)
 {
     s_settings.playlist.curr_index = index;
     app_state_update(&(app_state_patch_t){ .has_curr_index = true, .curr_index = index });
+    save_to_file();
+}
+
+void settings_set_resume_on_boot(bool enabled)
+{
+    if (s_settings.playlist.resume_on_boot == enabled) return;
+    s_settings.playlist.resume_on_boot = enabled;
+    save_to_file();
+}
+
+void settings_set_was_playing(bool playing)
+{
+    if (s_settings.playlist.was_playing == playing) return;
+    s_settings.playlist.was_playing = playing;
     save_to_file();
 }
 

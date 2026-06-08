@@ -98,6 +98,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Bluetooth audio — A2DP sink i HFP hands-free (zewnętrzny moduł QCC5125, Bluetooth 5.1); kodeki: LDAC, aptX HD, aptX LL, aptX, SBC, AAC
 - Sprzętowe przełączanie źródła I2S — multiplekser 74HC157D wpina do DAC-a albo ESP32-S3, albo QCC5125, jednym GPIO
 - Automatyczne wznawianie po utracie strumienia
+- Wznawianie po restarcie — opcjonalnie odtwarza ostatnią stację po ponownym uruchomieniu, jeśli radio grało w chwili wyłączenia (opcja włączana w ustawieniach przez Web UI)
 
 **UI**
 - GUI na LVGL — obsługuje ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), CO5300 240×296 (okrągły AMOLED, QSPI) i SSD1322 256×64 (mono OLED, SPI); wybór jednym `#define`

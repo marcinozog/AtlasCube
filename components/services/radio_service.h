@@ -18,6 +18,14 @@ void radio_play_index(int index);
 void radio_stop(void);
 
 /**
+ * Resumes the last station at boot if playback was active before the last
+ * reboot. Opt-in via playlist.resume_on_boot; no-op when disabled or when the
+ * radio was stopped. Requires STA mode (radio needs internet) — the caller
+ * guards on the WiFi run mode.
+ */
+void radio_resume_on_boot(void);
+
+/**
  * Re-anchors the persisted curr_index after a playlist edit/reorder.
  * curr_index is a positional pointer; once the list is reordered (favorites,
  * drag&drop, deletions) it may address a different station. This matches the
