@@ -2,7 +2,7 @@
 #include "esp_err.h"
 #include <stdbool.h>
 
-#define PLAYLIST_MAX_ENTRIES 64
+#define PLAYLIST_MAX_ENTRIES 512
 #define PLAYLIST_NAME_LEN    64
 #define PLAYLIST_URL_LEN     256
 
