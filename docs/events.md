@@ -33,6 +33,7 @@ selected screens showing how many events are still pending today.
 | `recurrence` | enum | `none` / `daily` / `weekly` / `monthly` / `yearly` |
 | `enabled` | bool | `false` excludes the event from firing and from the 🔔 counter |
 | `station` | int | Used only for `EV_ALARM`: 0-based playlist index to start at trigger time |
+| `volume` | int | Used only for `EV_ALARM`: 0..100, applied via `settings_set_volume()` at fire time so the alarm rings at a predictable level |
 
 Maximum `EVENTS_MAX = 50` events. Static array in RAM, guarded by a mutex
 against concurrent access from scheduler and CRUD.
@@ -132,11 +133,14 @@ Two actions:
 **1. Buzzer or radio.** Depends on type:
 - `birthday` / `anniversary` → `MELODY_BIRTHDAY` ("Happy Birthday" snippet)
 - `reminder` / `nameday` → `MELODY_REMINDER` (3× short 880 Hz tone)
-- `alarm` → no buzzer; instead `radio_play_index(e->station)` starts the
-  configured playlist station. The stream itself is the "ringtone" and
-  keeps playing after the user dismisses the notification screen — stop
-  it the same way as any regular radio playback. Out-of-range `station`
-  → logged warning, silent (still fires the UI notification).
+- `alarm` → no buzzer; instead `settings_set_volume(e->volume)` forces the
+  configured volume, then `radio_play_index(e->station)` starts the
+  configured playlist station. Forcing the volume means the alarm rings at a
+  predictable level regardless of the user's last setting. The stream itself
+  is the "ringtone" and keeps playing after the user dismisses the
+  notification screen — stop it the same way as any regular radio playback.
+  Out-of-range `station` → logged warning, silent (still fires the UI
+  notification), and the volume is **not** changed in that case.
 
 Buzzer patterns live in the shared melody registry
 [components/buzzer/melodies.c](../components/buzzer/melodies.c) (also used by
