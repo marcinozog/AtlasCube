@@ -11,7 +11,6 @@
 #include "filter_resample.h"
 #include "esp_log.h"
 #include "esp_crt_bundle.h"
-#include "esp_http_client.h"
 #include "settings.h"
 #include "app_state.h"
 #include "freertos/FreeRTOS.h"
@@ -59,10 +58,10 @@ static TaskHandle_t s_retry_task_handle = NULL;
 static int s_retry_count = 0;
 #define MAX_RETRIES 5
 
-// All heavy work (HTTP probe + TLS handshake + pipeline build) goes to a
-// dedicated audio_play_task with an 8 KB stack. Previously audio_player_play
-// was called directly from the httpd/WS task (~4 KB stack) and the TLS
-// handshake caused stack overflow.
+// Playback start (codec detection + pipeline build) runs on a dedicated
+// audio_play_task with an 8 KB stack, off the httpd/WS task (~4 KB) that
+// triggers it. (The actual TLS handshake / network I/O happens later in the
+// http element's own task.)
 static SemaphoreHandle_t s_play_sem  = NULL;  // binary: trigger
 static SemaphoreHandle_t s_play_lock = NULL;  // mutex: protects s_pending_url
 static char              s_pending_url[PLAY_URL_MAX];
@@ -75,7 +74,7 @@ static int last_rsp_channels    = 0;
 static codec_type_t detect_codec_from_url(const char *url)
 Quick URL-based detection — no HTTP request. Returns CODEC_UNKNOWN when the
 URL has no readable hint (typical SHOUTcast/Icecast endpoints without an
-extension, e.g. /1, /stream). In that case we call detect_codec_from_http.
+extension, e.g. /1, /stream); the caller then defaults to MP3.
 */
 static codec_type_t detect_codec_from_url(const char *url)
 {
@@ -101,93 +100,6 @@ static codec_type_t detect_codec_from_url(const char *url)
     }
 
     return CODEC_UNKNOWN;
-}
-
-
-/*
-static esp_err_t probe_event_handler(esp_http_client_event_t *evt)
-Captures Content-Type from HTTP_EVENT_ON_HEADER. esp_http_client_get_header
-does not always return this value (depends on backend/configuration), so
-the event handler is more reliable.
-*/
-typedef struct {
-    char content_type[64];
-} probe_ctx_t;
-
-static esp_err_t probe_event_handler(esp_http_client_event_t *evt)
-{
-    if (evt->event_id == HTTP_EVENT_ON_HEADER && evt->user_data
-        && evt->header_key && evt->header_value
-        && strcasecmp(evt->header_key, "Content-Type") == 0) {
-
-        probe_ctx_t *ctx = (probe_ctx_t *)evt->user_data;
-        strncpy(ctx->content_type, evt->header_value,
-                sizeof(ctx->content_type) - 1);
-        ctx->content_type[sizeof(ctx->content_type) - 1] = '\0';
-    }
-    return ESP_OK;
-}
-
-
-/*
-static codec_type_t detect_codec_from_http(const char *url)
-Pre-flight HTTP request — fetches the stream headers (Range: bytes=0-1 to
-avoid downloading the whole thing) and maps Content-Type to a codec. Used
-when the URL has no readable extension. ~100-300ms latency. Falls back to
-CODEC_UNKNOWN.
-*/
-static codec_type_t detect_codec_from_http(const char *url)
-{
-    if (!url) return CODEC_UNKNOWN;
-
-    probe_ctx_t ctx = {0};
-
-    esp_http_client_config_t cfg = {
-        .url               = url,
-        .timeout_ms        = 3000,
-        .crt_bundle_attach = esp_crt_bundle_attach,
-        .user_agent        = "Mozilla/5.0",
-        .event_handler     = probe_event_handler,
-        .user_data         = &ctx,
-    };
-    esp_http_client_handle_t client = esp_http_client_init(&cfg);
-    if (!client) return CODEC_UNKNOWN;
-
-    esp_http_client_set_header(client, "Icy-MetaData", "1");
-    esp_http_client_set_header(client, "Range", "bytes=0-1");
-
-    codec_type_t codec = CODEC_UNKNOWN;
-
-    esp_err_t err = esp_http_client_open(client, 0);
-    if (err == ESP_OK) {
-        int len    = esp_http_client_fetch_headers(client);
-        int status = esp_http_client_get_status_code(client);
-
-        ESP_LOGI(TAG, "HTTP probe: status=%d len=%d ct=%s",
-                 status, len, ctx.content_type[0] ? ctx.content_type : "(null)");
-
-        if (ctx.content_type[0]) {
-            if (strcasestr(ctx.content_type, "ogg")) {
-                // OGG/Vorbis, OGG/FLAC, OGG/Opus — esp-adf prebuilt has no
-                // full support (ogg_decoder = Vorbis only, no OGG/FLAC).
-                // Stays CODEC_UNKNOWN → MP3 fallback → decoder error.
-                ESP_LOGW(TAG, "OGG container not supported (need RAW stream)");
-            } else if (strcasestr(ctx.content_type, "aac")) {
-                codec = CODEC_AAC;
-            } else if (strcasestr(ctx.content_type, "flac")) {
-                codec = CODEC_FLAC;
-            } else if (strcasestr(ctx.content_type, "mpeg") ||
-                       strcasestr(ctx.content_type, "mp3")) {
-                codec = CODEC_MP3;
-            }
-        }
-        esp_http_client_close(client);
-    } else {
-        ESP_LOGW(TAG, "HTTP probe open failed: %s", esp_err_to_name(err));
-    }
-
-    esp_http_client_cleanup(client);
-    return codec;
 }
 
 
@@ -239,6 +151,9 @@ void audio_player_init(void)
     icy_http_stream_cfg_t http_cfg = ICY_HTTP_STREAM_CFG_DEFAULT();
     http_cfg.crt_bundle_attach = esp_crt_bundle_attach;
     http_cfg.event_handle      = http_event_handler;
+    // Player-style (non-browser) UA — broadly compatible with picky
+    // SHOUTcast/Icecast servers that treat "Mozilla" clients differently.
+    http_cfg.user_agent        = "VLC/3.0.18 LibVLC/3.0.18";
     // 256 KB ≈ 8 seconds at 256 kbps; absorbs network jitter on weaker
     // WiFi / longer pings. Internal RAM can't fit a buffer this big —
     // esp-adf via audio_calloc falls back to PSRAM (sequential access,
@@ -365,7 +280,6 @@ void audio_player_init(void)
 
     xTaskCreate(retry_task,       "audio_retry", 4096, NULL, 4, &s_retry_task_handle);
     xTaskCreate(audio_event_task, "audio_evt",   4096, NULL, 5, NULL);
-    // Stack 8 KB — TLS handshake in detect_codec_from_http needs 4-6 KB.
     xTaskCreate(audio_play_task,  "audio_play",  8192, NULL, 5, NULL);
 }
 
@@ -468,14 +382,12 @@ static void audio_play_internal(const char *url)
         audio_player_stop();
     }
 
-    // Hybrid detection: URL hint → HTTP probe → MP3 fallback.
+    // Codec from URL hint; extension-less URLs (e.g. SHOUTcast host:port/;)
+    // default to MP3 — the vast majority of such streams are MP3, and a
+    // pre-flight HTTP probe is unreliable against ancient SHOUTcast servers.
     codec_type_t codec = detect_codec_from_url(url);
     if (codec == CODEC_UNKNOWN) {
-        ESP_LOGI(TAG, "URL has no codec hint, probing Content-Type...");
-        codec = detect_codec_from_http(url);
-    }
-    if (codec == CODEC_UNKNOWN) {
-        ESP_LOGW(TAG, "Codec detection failed, falling back to MP3");
+        ESP_LOGI(TAG, "No codec hint in URL, defaulting to MP3");
         codec = CODEC_MP3;
     }
 
@@ -495,7 +407,7 @@ static void audio_play_internal(const char *url)
 /*
 static void audio_play_task(void *param)
 Waits on the semaphore, copies the URL under the mutex, calls
-audio_play_internal. Stack 8 KB — enough for esp_http_client + TLS handshake.
+audio_play_internal (codec detection + pipeline build).
 */
 static void audio_play_task(void *param)
 {

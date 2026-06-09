@@ -31,18 +31,43 @@ header (`auto_ogg_dec.h`) is misleading. Many "FLAC Hi-Fi" Icecast streams
 serve `audio/ogg` with FLAC payload and **will not work**. Look for streams
 with `Content-Type: audio/flac` (raw FLAC).
 
-## Codec detection (hybrid)
+## Codec detection (URL hint + MP3 fallback)
 
 1. **URL hint** (zero-cost): `.flac` / `.aac` / `.aacp` / `.mp3` / `/aac` etc.
    Only matches with explicit dot prefix for FLAC — bare "flac" in path can
    be OGG/FLAC (e.g. `juventus_FLAC`).
-2. **HTTP probe** (~100-300 ms): if URL has no hint, opens a separate
-   `esp_http_client` with `Range: bytes=0-1`, reads `Content-Type` via
-   `HTTP_EVENT_ON_HEADER` callback, maps to codec.
-3. **Fallback**: MP3 (most common in shoutcast streams without metadata).
+2. **Fallback**: MP3 — extension-less endpoints (typical SHOUTcast `host:port/;`)
+   are MP3 in the vast majority of cases.
 
-`esp_http_client_get_header(client, "Content-Type", ...)` returns NULL on
-some configs — the event handler is the reliable path.
+The decoder is chosen **before** the connection opens (the pipeline is linked
+with a fixed decoder), so detection has to be upfront. An earlier pre-flight
+HTTP probe (`esp_http_client` + `Range`, reading `Content-Type`) was dropped:
+it was unreliable and hung on ancient SHOUTcast servers (see *HTTP transport*).
+The trade-off is no auto-detect for **extension-less AAC/FLAC** — add the
+codec to the URL or hard-code it per station if needed.
+
+## HTTP transport
+
+`icy_http_stream` uses **two transports**:
+
+- **`http://` → raw socket.** `esp_http_client`'s read path does not
+  interoperate with some ancient SHOUTcast DNAS servers (e.g. SHOUTcast
+  `win32 v1.9.8`, status line `ICY 200 OK`): the TCP connection opens but
+  `esp_http_client_fetch_headers()` spins forever and the stream never starts.
+  Verified empirically — a raw `GET` to the same server returns `ICY 200 OK`
+  and the stream immediately, while `esp_http_client` stays silent. So we speak
+  HTTP ourselves: parse `ICY 200 OK` / `HTTP/1.x 200|206`, `content-type`,
+  `icy-metaint`, follow simple `http→http` redirects, with a bounded connect
+  timeout (non-blocking `connect` + `select`).
+- **`https://` → `esp_http_client`** (for TLS via the cert bundle).
+
+Both share the same inline ICY metadata parser.
+
+**Gotcha — never return 0 from the read callback.** esp-adf treats a
+0-length read as EOF (`AEL_IO_DONE`) and tears the pipeline down. When a read
+is consumed entirely by ICY metadata (raw `recv()` returns small chunks, so a
+chunk can land exactly on a metadata boundary with the metadata spilling into
+the next read), the read callback loops and reads more instead of returning 0.
 
 ## Sample rate
 
@@ -67,11 +92,10 @@ Three dedicated tasks instead of inline work:
 - **`audio_retry`** (4 KB stack) — restarts pipeline after stream loss
   (separate task because `audio_pipeline_stop` from inside the event
   listener overflows the event queue → FreeRTOS assert).
-- **`audio_play`** (8 KB stack) — runs `audio_player_play` payload
-  (HTTP probe + TLS handshake + pipeline rebuild). Without this, calling
-  `audio_player_play` from a WebSocket handler caused stack overflow in
-  the `httpd` task (~4 KB stack), because `esp_http_client` + TLS uses
-  4-6 KB just for the handshake.
+- **`audio_play`** (8 KB stack) — runs the `audio_player_play` payload
+  (codec detection + pipeline rebuild). Kept off the WebSocket/`httpd` task
+  (~4 KB stack), which it is triggered from. The actual TLS handshake / network
+  I/O happens later in the http element's own task, not here.
 
 Front-end is a binary semaphore + mutex on the URL buffer. Spam-clicking
 stations is safe — only the latest URL is honored.
@@ -177,7 +201,8 @@ solves the warm-up phase.
 
 - **OGG container streams** (FLAC, Opus). No esp-adf-libs prebuilt support
   for OGG/FLAC, and OGG/Opus requires `opus_decoder` which we do not link.
-  Detected via Content-Type and logged as `OGG container not supported`.
+  With the HTTP probe gone they fall through to the MP3 decoder, which fails
+  on the OGG payload (no upfront Content-Type detection anymore).
 - **HLS** (`.m3u8`). `icy_http_stream` does not parse playlists. Most
   Radio Paradise FLAC endpoints are HLS.
 - **Sample rate above ~48 kHz** untested. FLAC streams are usually 44100.
