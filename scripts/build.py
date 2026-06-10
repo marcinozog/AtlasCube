@@ -336,6 +336,7 @@ def main():
     ap.add_argument("--skip-build", action="store_true", help="set up variant + patches + assets, but don't compile")
     ap.add_argument("--no-clean", action="store_true", help="skip the set-target/clean reconfigure before build (faster, dev only; assumes target already esp32s3)")
     ap.add_argument("--no-spiffs", action="store_true", help="don't bundle the web UI (smaller, no atlascube web pages)")
+    ap.add_argument("--spiffs", action="store_true", help="force-bundle the web UI without prompting (CI/non-interactive)")
     args = ap.parse_args()
 
     variant = args.variant or pick_variant_interactively()
@@ -349,10 +350,13 @@ def main():
 
     patch_adf(adf, idf)
 
-    # --no-spiffs forces app-only (scripts/CI). Otherwise ask interactively;
-    # non-interactive runs (e.g. CI) keep the default of bundling the web UI.
+    # --no-spiffs forces app-only, --spiffs force-bundles (both for scripts/CI).
+    # Otherwise ask interactively; never prompt in CI, where isatty() can wrongly
+    # report a tty (esp-idf-ci-action) and input() would hang the build forever.
     if args.no_spiffs:
         with_spiffs = False
+    elif args.spiffs:
+        with_spiffs = True
     elif sys.stdin.isatty():
         with_spiffs = pick_spiffs_interactively()
     else:
