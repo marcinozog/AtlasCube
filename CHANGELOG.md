@@ -9,6 +9,21 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-06-10
+
+### Added
+- **playlist:** increase max entries
+- **radio:** resume playback on boot if it was playing
+- **screensaver:** add digital clock screensaver
+- **build:** prompt whether to bundle the web UI into storage
+
+### Changed
+- **audio_board:** centralize I2S pins in defines.h
+
+### Fixed
+- **radio:** play http SHOUTcast streams via raw socket
+- **build:** don't clobber a symlinked/junctioned board in ESP-ADF
+
 ## [0.13.0] - 2026-06-07
 
 ### Added
@@ -192,7 +207,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/marcinozog/AtlasCube/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/marcinozog/AtlasCube/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/marcinozog/AtlasCube/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/marcinozog/AtlasCube/compare/v0.10.0...v0.11.0
