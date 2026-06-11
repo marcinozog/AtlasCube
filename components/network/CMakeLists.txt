@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS "wifi_manager.c"
+    SRCS "mdns_service.c" "wifi_manager.c"
     INCLUDE_DIRS "."
     REQUIRES
         esp_wifi
@@ -7,4 +7,6 @@ idf_component_register(
         esp_netif
         nvs_flash
         app_update
+        mdns
+        settings_ex
 )

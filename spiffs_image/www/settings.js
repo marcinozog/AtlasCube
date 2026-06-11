@@ -391,6 +391,56 @@ async function saveWifi() {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Device name (mDNS) — saved live, no restart
+// ─────────────────────────────────────────────────────────────────────────────
+async function saveHostname() {
+    const btn = document.getElementById('host_save_btn');
+    btn.disabled = true;
+    showHostStatus('💾 Saving…', '');
+
+    // The field shows the full address; strip the ".local" suffix — the
+    // backend stores the bare hostname.
+    const hostname = document.getElementById('device_hostname').value
+                         .trim().replace(/\.local\.?$/i, '').trim();
+
+    try {
+        const res = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ device: { hostname } }),
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error('Device error');
+
+        // Re-read to show the effective (possibly auto/sanitized) name + ".local".
+        const r2 = await fetch('/api/settings', { cache: 'no-store' });
+        if (r2.ok) {
+            const s = await r2.json();
+            if (s.device) {
+                const name = s.device.effective || s.device.hostname || 'atlascube';
+                setVal('device_hostname', name + '.local');
+            }
+        }
+        showHostStatus('✅ Saved.', 'ok');
+    } catch (e) {
+        showHostStatus('❌ Error: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+let _hostStatusTimer = null;
+function showHostStatus(msg, type) {
+    const el = document.getElementById('host_status');
+    if (!el) return;
+    el.innerText = msg;
+    el.className = 'save-status' + (type ? ' ' + type : '');
+    clearTimeout(_hostStatusTimer);
+    if (type === 'ok') _hostStatusTimer = setTimeout(
+        () => { el.innerText = ''; el.className = 'save-status'; }, 4000);
+}
+
 let _wifiStatusTimer = null;
 function showWifiStatus(msg, type) {
     const el = document.getElementById('wifi_status');
@@ -453,6 +503,11 @@ function populateForm(s) {
     if (s.wifi) {
         setVal('wifi_ssid', s.wifi.ssid || '');
         // password is never sent back — field stays empty
+    }
+    if (s.device) {
+        // Show the full "<name>.local" web address so it can be copied directly.
+        const name = s.device.effective || s.device.hostname || 'atlascube';
+        setVal('device_hostname', name + '.local');
     }
     if (s.ntp) {
         setVal('ntp_server1', s.ntp.server1 || '');

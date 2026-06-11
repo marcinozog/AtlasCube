@@ -57,6 +57,10 @@ typedef struct {
     char password[64];
 } wifi_settings_t;
 
+typedef struct {
+    char hostname[32];   // mDNS hostname; empty = auto "atlascube-xxxx" from MAC
+} device_settings_t;
+
 typedef struct
 {
     int  delay;            // seconds of idle before activating (0 = off)
@@ -102,6 +106,7 @@ typedef struct {
     wifi_settings_t      wifi;
     scrsaver_settings_t  scrsaver;
     dashboard_settings_t dashboard;
+    device_settings_t    device;
 } app_settings_t;
 
 esp_err_t settings_init(void);
@@ -125,6 +130,7 @@ void settings_set_ntp(const char *server1, const char *server2, const char *tz);
 void settings_set_theme(ui_theme_t theme);
 void settings_set_bg_gradient(bool enabled);
 void settings_set_wifi(const char *ssid, const char *password);
+void settings_set_hostname(const char *hostname);
 void settings_set_scrsaver_delay(int delay);
 void settings_set_scrsaver_id(int id);
 void settings_set_dashboard(const char *title,

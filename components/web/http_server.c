@@ -14,6 +14,7 @@
 #include "dim_schedule.h"
 #include "app_state.h"
 #include "wifi_manager.h"
+#include "mdns_service.h"
 #include "theme.h"
 #include "ui_manager.h"
 #include "ui_events.h"
@@ -97,6 +98,13 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(wifi_obj, "ssid",     s->wifi.ssid);
     cJSON_AddStringToObject(wifi_obj, "password", "");   // never send the password back
     cJSON_AddItemToObject(json, "wifi", wifi_obj);
+
+    // device — configured hostname (may be empty) + resolved effective name
+    cJSON *device_obj = cJSON_CreateObject();
+    char eff_host[32];
+    cJSON_AddStringToObject(device_obj, "hostname",  s->device.hostname);
+    cJSON_AddStringToObject(device_obj, "effective", mdns_effective_hostname(eff_host, sizeof(eff_host)));
+    cJSON_AddItemToObject(json, "device", device_obj);
 
     // screensaver
     cJSON *scrs = cJSON_CreateObject();
@@ -364,6 +372,17 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             const char *new_pass = (cJSON_IsString(pass) && pass->valuestring[0] != '\0')
                                    ? pass->valuestring : NULL;
             settings_set_wifi(ssid->valuestring, new_pass);
+        }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // ── DEVICE ────────────────────────────────────────────────────────────────
+    cJSON *device_obj = cJSON_GetObjectItem(json, "device");
+    if (cJSON_IsObject(device_obj)) {
+        cJSON *hn = cJSON_GetObjectItem(device_obj, "hostname");
+        if (cJSON_IsString(hn)) {
+            settings_set_hostname(hn->valuestring);
+            mdns_service_apply_hostname();   // live, no reboot
         }
     }
     // ─────────────────────────────────────────────────────────────────────────

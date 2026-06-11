@@ -127,6 +127,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 **Connectivity**
 - WiFi STA with AP fallback (first-boot setup via 192.168.4.1)
 - HTTP server + WebSocket for real-time state sync
+- mDNS — reachable at `<hostname>.local` in STA mode (default `atlascube-xxxx` derived from the MAC, editable in Settings → WiFi); advertises an `_http._tcp` service with a TXT record carrying the `.local` name for discovery clients (e.g. the Android app's NsdManager)
 - NTP time sync with configurable timezone
 - Web UI served from SPIFFS (no internet required after flash)
 - MQTT client — remote control of the radio (play/stop/volume/station) plus up to 6 configurable widgets (toggle / slider / label) on a dedicated on-device screen, driving any external MQTT device (Tasmota, zigbee2mqtt, Home Assistant, …); see [MQTT](#mqtt) below
@@ -366,7 +367,7 @@ Note: a glyph is shorter than the nominal size (≈72 % of `--size` for digits),
 
 ## Web UI
 
-Available at the device IP (STA mode) or `192.168.4.1` (AP mode).
+Available at the device IP or `<hostname>.local` (STA mode), or `192.168.4.1` (AP mode).
 
 | Page | Path |
 |---|---|

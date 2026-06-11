@@ -127,6 +127,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 **Łączność**
 - WiFi STA z fallbackiem do AP (pierwsze uruchomienie pod 192.168.4.1)
 - Serwer HTTP + WebSocket do synchronizacji stanu na żywo
+- mDNS — w trybie STA dostępne pod `<nazwa>.local` (domyślnie `atlascube-xxxx` z adresu MAC, edytowalne w Ustawienia → WiFi); ogłasza usługę `_http._tcp` z rekordem TXT niosącym nazwę `.local` dla klientów discovery (np. NsdManager w aplikacji Android)
 - NTP z konfigurowalną strefą czasową
 - Web UI z SPIFFS (po wgraniu internet nie jest potrzebny)
 - Klient MQTT — zdalne sterowanie radiem (play/stop/głośność/stacja) plus do 6 konfigurowalnych widgetów (toggle / slider / label) na osobnym ekranie, do sterowania zewnętrznym sprzętem MQTT (Tasmota, zigbee2mqtt, Home Assistant…); szczegóły w [MQTT](#mqtt) niżej
@@ -365,7 +366,7 @@ Uwaga: glif jest niższy niż nominalny rozmiar (≈72 % wartości `--size` dla 
 
 ## Web UI
 
-Dostępne pod IP urządzenia (tryb STA) albo pod `192.168.4.1` (tryb AP).
+Dostępne pod IP urządzenia lub `<nazwa>.local` (tryb STA), albo pod `192.168.4.1` (tryb AP).
 
 | Strona | Ścieżka |
 |---|---|

@@ -346,6 +346,23 @@
             📡 Save WiFi and restart
         </button>
         <div id="wifi_status" class="save-status"></div>
+
+        <hr style="border:none;border-top:1px solid rgba(127,127,127,0.25);margin:22px 0;" />
+
+        <div class="field-group">
+            <label class="field-label">Device name (mDNS)</label>
+            <input type="text" id="device_hostname" class="field-input"
+                   placeholder="atlascube.local" autocomplete="off" maxlength="37" />
+            <div class="field-hint">
+                Web address of the device — copy &amp; paste into a browser.
+                Clear the field for an automatic name derived from the MAC.
+            </div>
+        </div>
+
+        <button id="host_save_btn" class="wifi-save-btn" onclick="saveHostname()">
+            🏷️ Save device name
+        </button>
+        <div id="host_status" class="save-status"></div>
     </section>
 
     <!-- ══════════════════════════════════════════

@@ -6,6 +6,7 @@
 #include "audio_player.h"
 #include "http_server.h"
 #include "wifi_manager.h"
+#include "mdns_service.h"
 #include "ws_server.h"
 #include "esp_spiffs.h"
 #include "display.h"
@@ -64,6 +65,7 @@ void app_main(void)
     // ── Services requiring internet ──────────────────────────────────────────
     if (wifi_get_run_mode() == WIFI_RUN_MODE_STA) {
         ntp_service_init();
+        mdns_service_start();   // <hostname>.local — STA only (AP IP is fixed)
         // Other online services can be started here, e.g. weather
     } else {
         ESP_LOGW(TAG, "AP mode — NTP and radio unavailable until WiFi is configured");

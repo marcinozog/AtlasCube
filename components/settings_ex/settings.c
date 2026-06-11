@@ -55,6 +55,8 @@ esp_err_t settings_init(void)
         // WiFi — empty = AP mode on first boot
         s_settings.wifi.ssid[0]             = '\0';
         s_settings.wifi.password[0]         = '\0';
+        // Device — empty hostname = auto "atlascube-xxxx" derived at mDNS start
+        s_settings.device.hostname[0]       = '\0';
         // Screensaver
         s_settings.scrsaver.delay           = 60;
         s_settings.scrsaver.screensaver_id  = SCREENSAVER_CLOCKHANDS;
@@ -334,6 +336,14 @@ static esp_err_t load_from_file(void)
         s_settings.wifi.password[0] = '\0';
     }
 
+    // ── DEVICE ────────────────────────────────────────────────────────────────
+    s_settings.device.hostname[0] = '\0';   // default: auto from MAC at mDNS start
+    cJSON *device_obj = cJSON_GetObjectItem(json, "device");
+    if (cJSON_IsObject(device_obj)) {
+        cJSON *hn = cJSON_GetObjectItem(device_obj, "hostname");
+        if (cJSON_IsString(hn)) strncpy(s_settings.device.hostname, hn->valuestring, sizeof(s_settings.device.hostname) - 1);
+    }
+
     // DEBUG
     ESP_LOGI("SETTINGS", "WiFi SSID: \"%s\"", s_settings.wifi.ssid);
     ESP_LOGI("SETTINGS", "Volume: %d  BT: %d  curr_index: %d",
@@ -414,6 +424,11 @@ static esp_err_t save_to_file(void)
     cJSON_AddStringToObject(wifi_obj, "ssid",     s_settings.wifi.ssid);
     cJSON_AddStringToObject(wifi_obj, "password", s_settings.wifi.password);
     cJSON_AddItemToObject(json, "wifi", wifi_obj);
+
+    // device
+    cJSON *device_obj = cJSON_CreateObject();
+    cJSON_AddStringToObject(device_obj, "hostname", s_settings.device.hostname);
+    cJSON_AddItemToObject(json, "device", device_obj);
 
     // screensaver
     cJSON *scrs = cJSON_CreateObject();
@@ -651,6 +666,14 @@ void settings_set_wifi(const char *ssid, const char *password)
     if (ssid)     strncpy(s_settings.wifi.ssid,     ssid,     sizeof(s_settings.wifi.ssid)     - 1);
     if (password) strncpy(s_settings.wifi.password, password, sizeof(s_settings.wifi.password) - 1);
     ESP_LOGI("SETTINGS", "WiFi saved: ssid=\"%s\"", s_settings.wifi.ssid);
+    save_to_file();
+}
+
+void settings_set_hostname(const char *hostname)
+{
+    s_settings.device.hostname[0] = '\0';
+    if (hostname) strncpy(s_settings.device.hostname, hostname, sizeof(s_settings.device.hostname) - 1);
+    ESP_LOGI("SETTINGS", "Hostname saved: \"%s\"", s_settings.device.hostname);
     save_to_file();
 }
 
