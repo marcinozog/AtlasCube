@@ -4,7 +4,7 @@
 // AtlasCube — Playlist editor
 // ─────────────────────────────────────────────────────────────────────────────
 
-const PL_MAX      = 64;
+const PL_MAX      = 512;
 const PL_NAME_MAX = 63;
 const PL_URL_MAX  = 255;
 
