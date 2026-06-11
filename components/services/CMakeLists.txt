@@ -14,4 +14,5 @@ idf_component_register(
         playlist
         display
         settings_ex
+        bt_module
 )

@@ -2,6 +2,7 @@
 #include "audio_player.h"
 #include "app_state.h"
 #include "settings.h"
+#include "bt.h"
 #include "playlist.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -36,10 +37,31 @@ static void ramp_tick(void *arg)
 
 
 /*
+static void on_bt_play_event(void)
+Called from the BT UART task when the phone starts playing. With exclusive
+auto-switch on, makes BT the active source and stops the radio so the two
+never play at once.
+*/
+static void on_bt_play_event(void)
+{
+    if (!app_state_get()->bt_auto_switch) return;
+
+    if (!app_state_get()->bt_enable)
+        settings_set_bt_enable(true);          // switch audio source to BT
+
+    if (app_state_get()->radio_state == RADIO_STATE_PLAYING ||
+        app_state_get()->radio_state == RADIO_STATE_BUFFERING)
+        radio_stop();
+}
+
+
+/*
 void radio_service_init(void)
 */
 void radio_service_init(void)
 {
+    bt_set_play_event_cb(on_bt_play_event);
+
     app_state_update(&(app_state_patch_t){
         .has_radio = true,
         .radio_state = RADIO_STATE_STOPPED
@@ -71,6 +93,11 @@ void radio_play_url(const char *url)
         .has_title = true,
         .title = ""
     });
+
+    // Exclusive source: tell the phone to actually pause, not just mute it via
+    // the source mux, before we take over the output.
+    if (app_state_get()->bt_auto_switch)
+        bt_pause();
 
     if(app_state_get()->bt_enable)
         settings_set_bt_enable(false);

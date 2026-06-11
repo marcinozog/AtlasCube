@@ -84,6 +84,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddBoolToObject(bt,   "enable", s->bluetooth.enable);
     cJSON_AddBoolToObject(bt,   "show_screen", s->bluetooth.show_screen);
     cJSON_AddNumberToObject(bt, "volume", s->bluetooth.volume);
+    cJSON_AddBoolToObject(bt,   "auto_switch", s->bluetooth.auto_switch);
     cJSON_AddItemToObject(json, "bluetooth", bt);
 
     // ntp
@@ -291,9 +292,11 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         cJSON *en       = cJSON_GetObjectItem(bt, "enable");
         cJSON *sh_scr   = cJSON_GetObjectItem(bt, "show_screen");
         cJSON *bvol     = cJSON_GetObjectItem(bt, "volume");
+        cJSON *bauto    = cJSON_GetObjectItem(bt, "auto_switch");
         if (cJSON_IsBool(en))     settings_set_bt_enable(cJSON_IsTrue(en));
         if (cJSON_IsBool(sh_scr)) settings_set_bt_show_screen(cJSON_IsTrue(sh_scr));
         if (cJSON_IsNumber(bvol)) settings_set_bt_volume(bvol->valueint);
+        if (cJSON_IsBool(bauto))  settings_set_bt_auto_switch(cJSON_IsTrue(bauto));
     }
 
     // ── SCREENSAVER ───────────────────────────────────────────────────────────
@@ -410,6 +413,7 @@ static esp_err_t api_state_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(json, "station",        s->station_name);
     cJSON_AddStringToObject(json, "title",          s->title);
     cJSON_AddBoolToObject  (json, "bt_enable",      s->bt_enable);
+    cJSON_AddBoolToObject  (json, "bt_auto_switch", s->bt_auto_switch);
     cJSON_AddBoolToObject  (json, "bt_show_screen", s->bt_show_screen);
     cJSON_AddBoolToObject  (json, "time_synced",    s->time_synced);
     // WiFi mode — useful for the settings page UI

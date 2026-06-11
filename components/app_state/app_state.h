@@ -36,6 +36,7 @@ typedef struct {
     int codec_fmt;              // Audio codec
     bool bt_enable;             // Bluetooth enable
     bool bt_show_screen;        // Bluetooth show/hide screen
+    bool bt_auto_switch;        // Exclusive source: BT play stops radio & vice versa
     bt_state_t bt_state;        // Bluetooth connected
     int bt_volume;              // Bluetooth volume
     char bt_title[128];         // BT track title
@@ -87,6 +88,8 @@ typedef struct {
     bool bt_enable;
     bool has_bt_show_screen;
     bool bt_show_screen;
+    bool has_bt_auto_switch;
+    bool bt_auto_switch;
     bool has_bt_state;
     bt_state_t bt_state;
     bool has_bt_volume;

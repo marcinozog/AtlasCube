@@ -24,6 +24,7 @@ typedef enum {
     FOCUS_THEME,
     FOCUS_MODE,
     FOCUS_BT_SCREEN,
+    FOCUS_BT_AUTO,
     FOCUS_DSP,
     FOCUS_EQ,
     FOCUS_SS,
@@ -38,6 +39,7 @@ static lv_obj_t *s_row_bright        = NULL;
 static lv_obj_t *s_row_theme         = NULL;
 static lv_obj_t *s_row_mode          = NULL;
 static lv_obj_t *s_row_bt_screen     = NULL;
+static lv_obj_t *s_row_bt_auto       = NULL;
 static lv_obj_t *s_row_dsp           = NULL;
 static lv_obj_t *s_row_eq            = NULL;
 static lv_obj_t *s_row_ss            = NULL;
@@ -48,6 +50,7 @@ static lv_obj_t *s_label_bright_val  = NULL;
 static lv_obj_t *s_label_theme_val   = NULL;
 static lv_obj_t *s_label_mode_val    = NULL;
 static lv_obj_t *s_label_bt_screen_val = NULL;
+static lv_obj_t *s_label_bt_auto_val = NULL;
 static lv_obj_t *s_label_dsp_val     = NULL;
 static lv_obj_t *s_label_eq_val      = NULL;
 static lv_obj_t *s_label_ss_val      = NULL;
@@ -69,8 +72,8 @@ static bool focus_opens_screen(settings_focus_t f)
 static void update_focus_visuals(void)
 {
     const ui_theme_colors_t *th = theme_get();
-    lv_obj_t *rows[FOCUS_COUNT] = { 
-        s_row_bright, s_row_theme, s_row_mode, s_row_bt_screen, s_row_dsp, s_row_eq, s_row_ss, s_row_events 
+    lv_obj_t *rows[FOCUS_COUNT] = {
+        s_row_bright, s_row_theme, s_row_mode, s_row_bt_screen, s_row_bt_auto, s_row_dsp, s_row_eq, s_row_ss, s_row_events
     };
     for (int i = 0; i < FOCUS_COUNT; i++) {
         if (!rows[i]) continue;
@@ -133,6 +136,13 @@ static void update_bt_screen_label(void)
     if (!s_label_bt_screen_val) return;
     lv_label_set_text(s_label_bt_screen_val,
         app_state_get()->bt_show_screen == true ? "<    Show    >" : "<    Hide    >");
+}
+
+static void update_bt_auto_label(void)
+{
+    if (!s_label_bt_auto_val) return;
+    lv_label_set_text(s_label_bt_auto_val,
+        app_state_get()->bt_auto_switch == true ? "<    On    >" : "<    Off    >");
 }
 
 static void update_dsp_label(void)
@@ -297,6 +307,9 @@ static void row_click_cb(lv_event_t *e)
     } else if (idx == FOCUS_BT_SCREEN) {
         settings_set_bt_show_screen(!app_state_get()->bt_show_screen);
         update_bt_screen_label();
+    } else if (idx == FOCUS_BT_AUTO) {
+        settings_set_bt_auto_switch(!app_state_get()->bt_auto_switch);
+        update_bt_auto_label();
     } else if (idx == FOCUS_DSP) {
         settings_set_eq_enabled(!app_state_get()->eq_enabled);
         update_dsp_label();
@@ -447,10 +460,21 @@ static void settings_create(lv_obj_t *parent)
     lv_obj_set_style_text_color(s_label_bt_screen_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
     lv_obj_align(s_label_bt_screen_val, LV_ALIGN_BOTTOM_MID, 0, 0);
 
-    /* ── row: DSP (EQ on/off) ── */
+    /* ── row: Auto-switch (exclusive Radio ⇄ BT) ── */
     int row5_y_ofs = (p->settings_row3_y - p->settings_row1_y)
                    + 2 * (p->settings_row2_y - p->settings_row1_y);
-    s_row_dsp = make_row(s_rows_cont, row_base + row5_y_ofs, "DSP");
+    s_row_bt_auto = make_row(s_rows_cont, row_base + row5_y_ofs, "Auto-switch");
+    lv_obj_add_event_cb(s_row_bt_auto, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_BT_AUTO);
+
+    s_label_bt_auto_val = lv_label_create(s_row_bt_auto);
+    lv_obj_set_style_text_font(s_label_bt_auto_val, p->settings_value_font, LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_label_bt_auto_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
+    lv_obj_align(s_label_bt_auto_val, LV_ALIGN_BOTTOM_MID, 0, 0);
+
+    /* ── row: DSP (EQ on/off) ── */
+    int row6_y_ofs = (p->settings_row3_y - p->settings_row1_y)
+                   + 3 * (p->settings_row2_y - p->settings_row1_y);
+    s_row_dsp = make_row(s_rows_cont, row_base + row6_y_ofs, "DSP");
     lv_obj_add_event_cb(s_row_dsp, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_DSP);
 
     s_label_dsp_val = lv_label_create(s_row_dsp);
@@ -459,9 +483,9 @@ static void settings_create(lv_obj_t *parent)
     lv_obj_align(s_label_dsp_val, LV_ALIGN_BOTTOM_MID, 0, 0);
 
     /* ── row: Equalizer ── */
-    int row6_y_ofs = (p->settings_row3_y - p->settings_row1_y)
-                   + 3 * (p->settings_row2_y - p->settings_row1_y);
-    s_row_eq = make_row(s_rows_cont, row_base + row6_y_ofs, "Equalizer");
+    int row7_y_ofs = (p->settings_row3_y - p->settings_row1_y)
+                   + 4 * (p->settings_row2_y - p->settings_row1_y);
+    s_row_eq = make_row(s_rows_cont, row_base + row7_y_ofs, "Equalizer");
     lv_obj_add_event_cb(s_row_eq, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_EQ);
 
     s_label_eq_val = lv_label_create(s_row_eq);
@@ -471,9 +495,9 @@ static void settings_create(lv_obj_t *parent)
     lv_obj_align(s_label_eq_val, LV_ALIGN_BOTTOM_MID, 0, 0);
 
     /* ── row: Screensaver ── */
-    int row7_y_ofs = (p->settings_row3_y - p->settings_row1_y)
-                   + 4 * (p->settings_row2_y - p->settings_row1_y);
-    s_row_ss = make_row(s_rows_cont, row_base + row7_y_ofs, "Screensaver");
+    int row8_y_ofs = (p->settings_row3_y - p->settings_row1_y)
+                   + 5 * (p->settings_row2_y - p->settings_row1_y);
+    s_row_ss = make_row(s_rows_cont, row_base + row8_y_ofs, "Screensaver");
     lv_obj_add_event_cb(s_row_ss, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_SS);
 
     if (p->settings_show_slider) {
@@ -494,9 +518,9 @@ static void settings_create(lv_obj_t *parent)
     lv_obj_align(s_label_ss_val, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
 
     /* ── row: Events ── */
-    int row8_y_ofs = (p->settings_row3_y - p->settings_row1_y)
-                   + 5 * (p->settings_row2_y - p->settings_row1_y);
-    s_row_events = make_row(s_rows_cont, row_base + row8_y_ofs, "Events");
+    int row9_y_ofs = (p->settings_row3_y - p->settings_row1_y)
+                   + 6 * (p->settings_row2_y - p->settings_row1_y);
+    s_row_events = make_row(s_rows_cont, row_base + row9_y_ofs, "Events");
     lv_obj_add_event_cb(s_row_events, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_EVENTS);
 
     s_label_events_val = lv_label_create(s_row_events);
@@ -520,6 +544,7 @@ static void settings_create(lv_obj_t *parent)
     update_theme_label();
     update_mode_label();
     update_bt_screen_label();
+    update_bt_auto_label();
     update_dsp_label();
     update_ss_label();
     update_focus_visuals();
@@ -534,9 +559,9 @@ static void settings_destroy(void)
 {
     if (s_mem_timer) { lv_timer_delete(s_mem_timer); s_mem_timer = NULL; }
     s_root = s_title = s_rows_cont = NULL;
-    s_row_bright = s_row_theme = s_row_mode = s_row_bt_screen = s_row_dsp = s_row_eq = s_row_ss = s_row_events = NULL;
+    s_row_bright = s_row_theme = s_row_mode = s_row_bt_screen = s_row_bt_auto = s_row_dsp = s_row_eq = s_row_ss = s_row_events = NULL;
     s_slider_bright = s_slider_ss = s_label_bright_val = NULL;
-    s_label_theme_val = s_label_mode_val = s_label_bt_screen_val = s_label_dsp_val = s_label_eq_val = s_label_events_val = NULL;
+    s_label_theme_val = s_label_mode_val = s_label_bt_screen_val = s_label_bt_auto_val = s_label_dsp_val = s_label_eq_val = s_label_events_val = NULL;
     s_mem_bar = s_hint = NULL;
     ESP_LOGI(TAG, "Destroyed");
 }
@@ -582,6 +607,10 @@ static void settings_on_input(ui_input_t input)
                     bool show = !app_state_get()->bt_show_screen;
                     settings_set_bt_show_screen(show);
                     update_bt_screen_label();
+                } else if (s_focus == FOCUS_BT_AUTO) {
+                    bool on = !app_state_get()->bt_auto_switch;
+                    settings_set_bt_auto_switch(on);
+                    update_bt_auto_label();
                 } else if (s_focus == FOCUS_DSP) {
                     bool eq_en = !app_state_get()->eq_enabled;
                     settings_set_eq_enabled(eq_en);
@@ -641,7 +670,7 @@ static void settings_apply_theme(void)
     lv_obj_set_style_bg_color(s_root, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_text_color(s_title, lv_color_hex(th->accent), LV_PART_MAIN);
 
-    lv_obj_t *rows[FOCUS_COUNT] = { s_row_bright, s_row_theme, s_row_mode, s_row_bt_screen, s_row_dsp, s_row_eq, s_row_ss, s_row_events };
+    lv_obj_t *rows[FOCUS_COUNT] = { s_row_bright, s_row_theme, s_row_mode, s_row_bt_screen, s_row_bt_auto, s_row_dsp, s_row_eq, s_row_ss, s_row_events };
     for (int i = 0; i < FOCUS_COUNT; i++) {
         if (!rows[i]) continue;
         lv_obj_set_style_bg_color(rows[i], lv_color_hex(th->bg_secondary), LV_PART_MAIN);
@@ -662,6 +691,7 @@ static void settings_apply_theme(void)
     lv_obj_set_style_text_color(s_label_theme_val,  lv_color_hex(th->text_primary), LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_mode_val,   lv_color_hex(th->text_primary), LV_PART_MAIN);
     if (s_label_bt_screen_val) lv_obj_set_style_text_color(s_label_bt_screen_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
+    if (s_label_bt_auto_val) lv_obj_set_style_text_color(s_label_bt_auto_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
     if (s_label_dsp_val)    lv_obj_set_style_text_color(s_label_dsp_val,    lv_color_hex(th->text_primary), LV_PART_MAIN);
     if (s_label_eq_val)     lv_obj_set_style_text_color(s_label_eq_val,     lv_color_hex(th->text_primary), LV_PART_MAIN);
     if (s_label_ss_val)     lv_obj_set_style_text_color(s_label_ss_val,     lv_color_hex(th->text_primary), LV_PART_MAIN);
@@ -674,6 +704,7 @@ static void settings_apply_theme(void)
     update_theme_label();     /* refreshes text after theme change */
     update_mode_label();
     update_bt_screen_label();
+    update_bt_auto_label();
     update_dsp_label();
     update_ss_label();
     lv_obj_invalidate(s_root);

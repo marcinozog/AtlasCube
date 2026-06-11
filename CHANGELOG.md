@@ -9,6 +9,9 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+### Added
+- **bluetooth:** exclusive audio source — starting BT play stops the radio and starting the radio pauses the phone, with automatic source switching (toggleable, default on; in web BT panel and on-device Settings)
+
 ## [0.14.0] - 2026-06-10
 
 ### Added

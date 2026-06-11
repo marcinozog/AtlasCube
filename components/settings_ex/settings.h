@@ -42,8 +42,9 @@ typedef struct {
 
 typedef struct {
     bool enable;                    // enable BT module
-    bool show_screen;               // show/hide BT screen         
+    bool show_screen;               // show/hide BT screen
     int volume;
+    bool auto_switch;               // exclusive source: BT play stops radio & vice versa
 } bluetooth_settings_t;
 
 typedef struct {
@@ -126,6 +127,7 @@ void settings_set_night_schedule(const dim_schedule_t *ns);
 void settings_set_bt_enable(bool enable);
 void settings_set_bt_show_screen(bool show);
 void settings_set_bt_volume(int volume);
+void settings_set_bt_auto_switch(bool enable);
 void settings_set_ntp(const char *server1, const char *server2, const char *tz);
 void settings_set_theme(ui_theme_t theme);
 void settings_set_bg_gradient(bool enabled);

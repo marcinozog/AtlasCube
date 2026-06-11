@@ -19,6 +19,7 @@ void bt_send_raw(const char *cmd);
 
 static bool s_bt_enabled = false;
 static int s_bt_volume = 15;
+static bt_play_event_cb_t s_play_event_cb = NULL;
 
 void bt_init(void)
 {
@@ -51,7 +52,10 @@ void bt_init(void)
     uart_param_config(BT_UART_NUM, &uart_config);
     uart_set_pin(BT_UART_NUM, BT_MODULE_TX_PIN, BT_MODULE_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 
-    xTaskCreate(bt_uart_rx_task, "bt_uart_rx_task", 4096, NULL, 5, NULL);
+    // 8192B stack: the RX task may invoke the play-event callback, which can
+    // synchronously stop the radio pipeline (audio_pipeline teardown) and write
+    // settings to SPIFFS — both deeper than the metadata parsing needs alone.
+    xTaskCreate(bt_uart_rx_task, "bt_uart_rx_task", 8192, NULL, 5, NULL);
 
     ESP_LOGI(TAG, "UART initialized (TX=%d RX=%d)", BT_MODULE_TX_PIN, BT_MODULE_RX_PIN);
 
@@ -98,6 +102,16 @@ void bt_set_volume(int volume)
 int bt_get_volume()
 {
     return s_bt_volume;
+}
+
+void bt_pause(void)
+{
+    bt_send_raw("AT+PU");
+}
+
+void bt_set_play_event_cb(bt_play_event_cb_t cb)
+{
+    s_play_event_cb = cb;
 }
 
 void bt_check_connection() {
@@ -169,6 +183,10 @@ void bt_parse_cmd(const char *cmd) {
         bt_send_raw("AT+GMETA");
         vTaskDelay(pdMS_TO_TICKS(100));
         bt_send_raw("AT+SMTIMEON");
+
+        // Phone started playing — let the source coordinator react (stop radio,
+        // switch source to BT) when exclusive auto-switch is enabled.
+        if (s_play_event_cb) s_play_event_cb();
     }
 
     char buf[128];

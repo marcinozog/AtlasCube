@@ -227,6 +227,19 @@ function setDeviceEqEnabled(t) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Audio — exclusive source auto-switch (Radio ⇄ Bluetooth)
+// ─────────────────────────────────────────────────────────────────────────────
+function setBtAutoSwitch(on) {
+    document.getElementById('settingsBtnAutoSwitchOn') ?.classList.toggle('active', on);
+    document.getElementById('settingsBtnAutoSwitchOff')?.classList.toggle('active', !on);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bluetooth: { auto_switch: on } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Resume playback on boot (playlist)
 // ─────────────────────────────────────────────────────────────────────────────
 function setResumeOnBoot(on) {
@@ -557,6 +570,10 @@ function populateForm(s) {
         const t = s.bluetooth.show_screen || false;
         document.getElementById('settingsBtnBTshow') ?.classList.toggle('active', t);
         document.getElementById('settingsBtnBThide')?.classList.toggle('active', !t);
+
+        const as = (s.bluetooth.auto_switch !== false);   // default on
+        document.getElementById('settingsBtnAutoSwitchOn') ?.classList.toggle('active', as);
+        document.getElementById('settingsBtnAutoSwitchOff')?.classList.toggle('active', !as);
     }
     if (s.audio) {
         // default true — when older backend does not return eq_enabled

@@ -51,6 +51,10 @@ void app_state_update(const app_state_patch_t *patch)
         s_state.bt_show_screen = patch->bt_show_screen;
     }
 
+    if (patch->has_bt_auto_switch) {
+        s_state.bt_auto_switch = patch->bt_auto_switch;
+    }
+
     if (patch->has_bt_state) {
         s_state.bt_state = patch->bt_state;
     }
@@ -140,6 +144,7 @@ void app_state_update(const app_state_patch_t *patch)
     if (patch->has_screen)            n += snprintf(buf + n, sizeof(buf) - n, " screen=%d", s_state.screen);
     if (patch->has_display_brightness) n += snprintf(buf + n, sizeof(buf) - n, " brightness=%d", s_state.brightness);
     if (patch->has_bt_enable)         n += snprintf(buf + n, sizeof(buf) - n, " bt_enable=%d", s_state.bt_enable);
+    if (patch->has_bt_auto_switch)    n += snprintf(buf + n, sizeof(buf) - n, " bt_auto_switch=%d", s_state.bt_auto_switch);
     if (patch->has_bt_state)          n += snprintf(buf + n, sizeof(buf) - n, " bt_connected=%d", s_state.bt_state);
     if (patch->has_bt_volume)         n += snprintf(buf + n, sizeof(buf) - n, " bt_volume=%d", s_state.bt_volume);
     if (patch->has_bt_title)          n += snprintf(buf + n, sizeof(buf) - n, " bt_title=%s", s_state.bt_title);
