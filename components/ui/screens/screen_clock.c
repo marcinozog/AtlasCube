@@ -13,6 +13,8 @@
 #include "ui_manager.h"
 #include "ui_nav.h"
 #include "ntp_service.h"
+#include "wifi_manager.h"
+#include "mdns_service.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include <string.h>
@@ -27,7 +29,10 @@ static lv_obj_t  *s_strip_station = NULL;
 static lv_obj_t  *s_strip_title   = NULL;
 static lv_obj_t  *s_time_label    = NULL;
 static lv_obj_t  *s_date_label    = NULL;
+static lv_obj_t  *s_netinfo_label = NULL;
 static lv_timer_t *s_clock_timer  = NULL;
+
+static void netinfo_update(void);
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -80,7 +85,7 @@ static void update_clock_display(void)
     }
 }
 
-static void clock_timer_cb(lv_timer_t *t) { (void)t; update_clock_display(); }
+static void clock_timer_cb(lv_timer_t *t) { (void)t; update_clock_display(); netinfo_update(); }
 
 // ── strip ───────────────────────────────────────────────────────────────────
 
@@ -92,6 +97,41 @@ static void strip_update(void)
         s->station_name[0] ? s->station_name : "Atlas Radio");
     lv_label_set_text(s_strip_title,
         s->title[0] ? s->title : "");
+}
+
+// ── network info (IP + "<hostname>.local") ──────────────────────────────────
+
+// Creates, refreshes, or removes the network-info label to match the profile:
+// shown when clock_show_netinfo is on. Safe to call repeatedly.
+static void netinfo_update(void)
+{
+    const ui_profile_t *p = ui_profile_get();
+    if (!s_root) return;
+
+    if (!p->clock_show_netinfo) {
+        if (s_netinfo_label) { lv_obj_del(s_netinfo_label); s_netinfo_label = NULL; }
+        return;
+    }
+
+    if (!s_netinfo_label) {
+        const ui_theme_colors_t *th = theme_get();
+        s_netinfo_label = lv_label_create(s_root);
+        lv_obj_set_style_text_font(s_netinfo_label,
+            p->clock_netinfo_font ? p->clock_netinfo_font : &lv_font_montserrat_12_pl,
+            LV_PART_MAIN);
+        lv_obj_set_style_text_color(s_netinfo_label,
+            lv_color_hex(th->text_muted), LV_PART_MAIN);
+        lv_obj_set_pos(s_netinfo_label, p->clock_netinfo_x, p->clock_netinfo_y);
+    }
+
+    char ip[16];
+    char host[40];
+    wifi_get_ip(ip, sizeof(ip));
+    mdns_effective_hostname(host, sizeof(host));
+
+    char buf[64];
+    snprintf(buf, sizeof(buf), "%s   %s.local", ip, host);
+    lv_label_set_text(s_netinfo_label, buf);
 }
 
 // ── create / destroy ────────────────────────────────────────────────────────
@@ -160,6 +200,8 @@ static void clock_create(lv_obj_t *parent)
         strip_update();
     }
 
+    netinfo_update();
+
     ESP_LOGI(TAG, "Created (theme=%d)", theme_current());
 }
 
@@ -173,6 +215,7 @@ static void clock_destroy(void)
     s_root = s_strip = NULL;
     s_strip_station = s_strip_title = NULL;
     s_time_label    = s_date_label  = NULL;
+    s_netinfo_label = NULL;
 
     ESP_LOGI(TAG, "Destroyed");
 }
@@ -183,6 +226,7 @@ static void clock_on_event(const ui_event_t *ev)
         case UI_EVT_STATE_CHANGED:
             strip_update();
             update_clock_display();
+            netinfo_update();
             mode_indicator_update();
             event_indicator_update();
             break;
@@ -250,6 +294,9 @@ static void clock_apply_theme(void)
     if (s_date_label)
         lv_obj_set_style_text_color(s_date_label,
             lv_color_hex(th->text_secondary), LV_PART_MAIN);
+    if (s_netinfo_label)
+        lv_obj_set_style_text_color(s_netinfo_label,
+            lv_color_hex(th->text_muted), LV_PART_MAIN);
 
     if (s_strip) {
         lv_obj_set_style_bg_color(s_strip, lv_color_hex(th->bg_secondary), LV_PART_MAIN);

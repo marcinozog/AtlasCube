@@ -9,6 +9,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include <string.h>
+#include <stdio.h>
 
 static const char *TAG = "WIFI";
 
@@ -176,3 +177,17 @@ wifi_run_mode_t wifi_get_run_mode(void)  { return s_run_mode; }
 
 const char *wifi_get_ap_ssid(void) { return WIFI_AP_SSID; }
 const char *wifi_get_ap_pass(void) { return WIFI_AP_PASS; }
+
+const char *wifi_get_ip(char *buf, size_t len)
+{
+    const char *ifkey = (s_run_mode == WIFI_RUN_MODE_STA) ? "WIFI_STA_DEF"
+                                                          : "WIFI_AP_DEF";
+    esp_netif_t        *netif = esp_netif_get_handle_from_ifkey(ifkey);
+    esp_netif_ip_info_t ip;
+    if (netif && esp_netif_get_ip_info(netif, &ip) == ESP_OK && ip.ip.addr != 0) {
+        snprintf(buf, len, IPSTR, IP2STR(&ip.ip));
+    } else {
+        snprintf(buf, len, "0.0.0.0");
+    }
+    return buf;
+}

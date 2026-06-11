@@ -1,5 +1,6 @@
 #pragma once
 #include <stdbool.h>
+#include <stddef.h>
 
 typedef enum {
     WIFI_RUN_MODE_STA,  // connected to an external AP
@@ -18,3 +19,10 @@ wifi_run_mode_t wifi_get_run_mode(void);
 
 const char *wifi_get_ap_ssid(void);
 const char *wifi_get_ap_pass(void);
+
+/**
+ * Writes the current IPv4 address into buf ("192.168.x.y"). In STA mode returns
+ * the address leased by the router; in AP mode the fixed 192.168.4.1. Falls back
+ * to "0.0.0.0" when no interface has an address yet. Returns buf.
+ */
+const char *wifi_get_ip(char *buf, size_t len);

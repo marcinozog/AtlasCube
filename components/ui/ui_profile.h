@@ -77,6 +77,13 @@ typedef struct {
     const lv_font_t *clock_date_font;
     bool             clock_show_date;
 
+    // Network info (IP + "<hostname>.local") — a clock screen element, toggled
+    // and positioned in the layout editor like the date/strip.
+    bool             clock_show_netinfo;
+    int16_t          clock_netinfo_x;
+    int16_t          clock_netinfo_y;
+    const lv_font_t *clock_netinfo_font;
+
     bool             clock_show_strip;
     bool             clock_show_mode_indicator;
     bool             clock_show_event_indicator;

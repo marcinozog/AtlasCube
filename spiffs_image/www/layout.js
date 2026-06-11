@@ -31,6 +31,11 @@ const CLOCK_FIELDS = [
     { key: 'clock_date_y',    label: 'Date Y',        type: 'number' },
     { key: 'clock_date_font', label: 'Date font',     type: 'font'   },
 
+    { key: 'clock_show_netinfo', label: 'Show IP/host', type: 'bool'   },
+    { key: 'clock_netinfo_x',    label: 'IP/host X',    type: 'number' },
+    { key: 'clock_netinfo_y',    label: 'IP/host Y',    type: 'number' },
+    { key: 'clock_netinfo_font', label: 'IP/host font', type: 'font'   },
+
     { key: 'clock_show_strip', label: 'Show strip',   type: 'bool' },
     { key: 'clock_strip_x',    label: 'Strip X',      type: 'number' },
     { key: 'clock_strip_y',    label: 'Strip Y',      type: 'number' },
@@ -276,6 +281,16 @@ function renderClock(svg) {
             label: 'date', cls: 'label-rect',
             fields: { x: 'clock_date_x', y: 'clock_date_y' },
             text: 'Mon  2026-05-01', textSize: fh,
+        });
+    }
+    if (c.clock_show_netinfo) {
+        const fh = fontHeight(c.clock_netinfo_font);
+        const tw = Math.round(fh * 0.55) * 28;    // "192.168.1.50   host.local"
+        drawFreeElement(svg, {
+            x: c.clock_netinfo_x, y: c.clock_netinfo_y, w: tw, h: fh,
+            label: 'ip', cls: 'label-rect',
+            fields: { x: 'clock_netinfo_x', y: 'clock_netinfo_y' },
+            text: '192.168.1.50  host.local', textSize: fh,
         });
     }
 

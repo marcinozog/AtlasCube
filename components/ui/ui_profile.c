@@ -344,6 +344,10 @@ static const ui_profile_t k_defaults = {
     .clock_date_y              = 128,
     .clock_date_font           = &lv_font_montserrat_18_pl,
     .clock_show_date           = true,
+    .clock_show_netinfo        = true,
+    .clock_netinfo_x           = 4,    // single line, full width; first-cut, tune in editor
+    .clock_netinfo_y           = 158,
+    .clock_netinfo_font        = &lv_font_montserrat_12_pl,
     .clock_show_strip          = true,
     .clock_show_mode_indicator = true,
     .clock_show_event_indicator = true,
@@ -502,6 +506,10 @@ static const ui_profile_t k_defaults = {
     .clock_date_y              = 130,
     .clock_date_font           = &lv_font_montserrat_18_pl,
     .clock_show_date           = true,
+    .clock_show_netinfo        = true,
+    .clock_netinfo_x           = 20,   // single line; first-cut, tune in editor
+    .clock_netinfo_y           = 150,
+    .clock_netinfo_font        = &lv_font_montserrat_12_pl,
     .clock_show_strip          = true,
     .clock_show_mode_indicator = true,
     .clock_show_event_indicator = true,
@@ -653,6 +661,10 @@ static const ui_profile_t k_defaults = {
     .clock_date_y              = 175,
     .clock_date_font           = &lv_font_montserrat_18_pl,
     .clock_show_date           = true,
+    .clock_show_netinfo        = true,
+    .clock_netinfo_x           = 105,  // first-cut, tune in editor
+    .clock_netinfo_y           = 202,
+    .clock_netinfo_font        = &lv_font_montserrat_14_pl,
     .clock_show_strip          = true,
     .clock_show_mode_indicator = true,
     .clock_show_event_indicator = true,
@@ -882,6 +894,10 @@ static void load_clock(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "clock_date_y",               &p->clock_date_y);
     load_font(obj, "clock_date_font",            &p->clock_date_font);
     load_bool(obj, "clock_show_date",            &p->clock_show_date);
+    load_bool(obj, "clock_show_netinfo",         &p->clock_show_netinfo);
+    load_i16 (obj, "clock_netinfo_x",            &p->clock_netinfo_x);
+    load_i16 (obj, "clock_netinfo_y",            &p->clock_netinfo_y);
+    load_font(obj, "clock_netinfo_font",         &p->clock_netinfo_font);
     load_bool(obj, "clock_show_strip",           &p->clock_show_strip);
     load_bool(obj, "clock_show_mode_indicator",  &p->clock_show_mode_indicator);
     load_bool(obj, "clock_show_event_indicator", &p->clock_show_event_indicator);
@@ -1037,6 +1053,10 @@ static cJSON *dump_clock(const ui_profile_t *p)
     add_i16 (o, "clock_date_y",               p->clock_date_y);
     add_font(o, "clock_date_font",            p->clock_date_font);
     add_bool(o, "clock_show_date",            p->clock_show_date);
+    add_bool(o, "clock_show_netinfo",         p->clock_show_netinfo);
+    add_i16 (o, "clock_netinfo_x",            p->clock_netinfo_x);
+    add_i16 (o, "clock_netinfo_y",            p->clock_netinfo_y);
+    add_font(o, "clock_netinfo_font",         p->clock_netinfo_font);
     add_bool(o, "clock_show_strip",           p->clock_show_strip);
     add_bool(o, "clock_show_mode_indicator",  p->clock_show_mode_indicator);
     add_bool(o, "clock_show_event_indicator", p->clock_show_event_indicator);
