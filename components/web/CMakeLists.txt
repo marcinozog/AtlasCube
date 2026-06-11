@@ -16,4 +16,5 @@ idf_component_register(
         events
         espressif__zlib
         mqtt_svc
+        sdcard
 )

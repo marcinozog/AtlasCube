@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AtlasCube – SD Files</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .files-wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 14px;
+        }
+        .files-toolbar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding: 10px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .files-toolbar button,
+        .files-toolbar label.upload {
+            padding: 8px 14px;
+            background: var(--bg-panel);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+        }
+        .files-toolbar label.upload.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #000;
+            font-weight: 600;
+        }
+        .files-toolbar button:hover,
+        .files-toolbar label.upload:hover { filter: brightness(1.15); }
+        .files-toolbar .meta {
+            color: var(--text-dim);
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            margin-left: auto;
+        }
+        .crumbs {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text-dim);
+            word-break: break-all;
+        }
+        .crumbs a { color: var(--accent); cursor: pointer; text-decoration: none; }
+        .crumbs a:hover { text-decoration: underline; }
+        .crumbs .sep { color: var(--text-label); margin: 0 4px; }
+        table.files {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        table.files th, table.files td {
+            text-align: left;
+            padding: 9px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        table.files th { color: var(--text-label); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+        table.files tr:last-child td { border-bottom: none; }
+        table.files td.size { text-align: right; color: var(--text-dim); white-space: nowrap; }
+        table.files td.actions { text-align: right; white-space: nowrap; }
+        table.files .name { color: var(--text); cursor: default; }
+        table.files .name.dir { color: var(--accent); cursor: pointer; }
+        table.files .name.dir:hover { text-decoration: underline; }
+        table.files .icon { margin-right: 6px; }
+        table.files a.act, table.files button.act {
+            color: var(--text-dim);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            padding: 2px 6px;
+            text-decoration: none;
+        }
+        table.files button.act.del:hover { color: var(--red); }
+        table.files a.act:hover { color: var(--accent); }
+        .files-status {
+            padding: 24px 12px;
+            text-align: center;
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+        }
+        .files-status.err { color: var(--red); }
+        #upload_bar {
+            height: 4px;
+            background: var(--accent);
+            width: 0;
+            border-radius: 2px;
+            transition: width .15s linear;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<header class="app-header">
+    <div class="logo">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text">ATLAS <span class="logo-accent">CUBE</span> · SD FILES</span>
+    </div>
+</header>
+
+<main class="files-wrap">
+    <a href="/settings.html" class="back-link">← Back to Settings</a>
+
+    <div class="section-title" style="margin: 16px 0 12px">💾 SD Card Files</div>
+
+    <div class="files-toolbar">
+        <button onclick="refresh()" title="Reload current folder">↺ Refresh</button>
+        <label class="upload primary" title="Upload file(s) to the current folder">
+            ⬆ Upload<input type="file" id="upload_input" multiple hidden>
+        </label>
+        <span class="meta" id="files_meta">—</span>
+    </div>
+
+    <div id="upload_bar"></div>
+
+    <div class="crumbs" id="crumbs">/</div>
+
+    <div id="listing"></div>
+
+</main>
+
+<script src="files.js"></script>
+</body>
+</html>

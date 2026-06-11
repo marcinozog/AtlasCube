@@ -26,6 +26,7 @@
 #include "screensaver_dashboard.h"
 #include "mqtt_svc.h"
 #include "mqtt_config.h"
+#include "sdcard.h"
 #include "cJSON.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -1576,6 +1577,255 @@ static esp_err_t api_files_put_handler(httpd_req_t *req)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SD card file manager — /api/sd/*
+// Browse, upload, download and delete files on the FAT-mounted SD card. Every
+// handler refuses with 503 when no card is mounted. The target path arrives in
+// the `path` query param, is URL-decoded, rejected on ".." traversal and
+// resolved under SD_MOUNT_POINT.
+// ─────────────────────────────────────────────────────────────────────────────
+#define SD_RECV_BUF_SIZE 4096
+
+// esp_http_server has no HTTPD_503 enum — send the status text directly.
+static esp_err_t sd_send_no_card(httpd_req_t *req)
+{
+    httpd_resp_set_status(req, "503 Service Unavailable");
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"error\":\"no_sd_card\"}");
+    return ESP_FAIL;
+}
+
+// Percent-decode src into dst (NUL-terminated, capped at dstlen).
+static void sd_url_decode(const char *src, char *dst, size_t dstlen)
+{
+    size_t di = 0;
+    while (*src && di < dstlen - 1) {
+        if (*src == '%' && src[1] && src[2]) {
+            char hex[3] = { src[1], src[2], 0 };
+            dst[di++] = (char)strtol(hex, NULL, 16);
+            src += 3;
+        } else if (*src == '+') {
+            dst[di++] = ' ';
+            src++;
+        } else {
+            dst[di++] = *src++;
+        }
+    }
+    dst[di] = '\0';
+}
+
+// Read the `path` query param, validate it and build the absolute SD path into
+// `out`. Returns false (and sends an HTTP error) on a missing card, missing/bad
+// path or a traversal attempt. `def` is used when no path param is present.
+static bool sd_resolve_path(httpd_req_t *req, const char *def, char *out, size_t outlen)
+{
+    if (!sdcard_is_mounted()) {
+        sd_send_no_card(req);
+        return false;
+    }
+
+    char rel[192];
+    rel[0] = '\0';
+    size_t qlen = httpd_req_get_url_query_len(req) + 1;
+    if (qlen > 1 && qlen < 512) {
+        char *q = malloc(qlen);
+        if (q && httpd_req_get_url_query_str(req, q, qlen) == ESP_OK) {
+            char enc[192];
+            if (httpd_query_key_value(q, "path", enc, sizeof(enc)) == ESP_OK) {
+                sd_url_decode(enc, rel, sizeof(rel));
+            }
+        }
+        free(q);
+    }
+    if (rel[0] == '\0' && def) {
+        strncpy(rel, def, sizeof(rel) - 1);
+        rel[sizeof(rel) - 1] = '\0';
+    }
+    if (rel[0] == '\0') {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing path");
+        return false;
+    }
+    if (strstr(rel, "..")) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad path");
+        return false;
+    }
+
+    const char *r = rel;
+    while (*r == '/') r++;   // collapse leading slashes
+    int n = snprintf(out, outlen, "%s/%s", SD_MOUNT_POINT, r);
+    if (n <= 0 || (size_t)n >= outlen) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Path too long");
+        return false;
+    }
+    // strip trailing slash (keep the mount root intact)
+    size_t L = strlen(out);
+    while (L > strlen(SD_MOUNT_POINT) + 1 && out[L - 1] == '/') out[--L] = '\0';
+    return true;
+}
+
+// GET /api/sd/list?path=/dir  → { path, entries:[{name,dir,size}] }
+static esp_err_t api_sd_list_handler(httpd_req_t *req)
+{
+    char dirpath[256];
+    if (!sd_resolve_path(req, "/", dirpath, sizeof(dirpath))) return ESP_FAIL;
+
+    DIR *d = opendir(dirpath);
+    if (!d) {
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not a directory");
+        return ESP_FAIL;
+    }
+
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "path", dirpath + strlen(SD_MOUNT_POINT));
+    cJSON *arr = cJSON_AddArrayToObject(root, "entries");
+
+    struct dirent *e;
+    while ((e = readdir(d)) != NULL) {
+        if (e->d_name[0] == '.') continue;
+        char full[320];
+        snprintf(full, sizeof(full), "%s/%s", dirpath, e->d_name);
+        struct stat st = {0};
+        bool is_dir = false;
+        long sz = 0;
+        if (stat(full, &st) == 0) {
+            is_dir = S_ISDIR(st.st_mode);
+            sz = (long)st.st_size;
+        }
+        cJSON *o = cJSON_CreateObject();
+        cJSON_AddStringToObject(o, "name", e->d_name);
+        cJSON_AddBoolToObject  (o, "dir",  is_dir);
+        cJSON_AddNumberToObject(o, "size", is_dir ? 0 : sz);
+        cJSON_AddItemToArray(arr, o);
+    }
+    closedir(d);
+
+    char *str = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    httpd_resp_sendstr(req, str);
+    free(str);
+    return ESP_OK;
+}
+
+// GET /api/sd/file?path=/dir/name  → streams the file as an attachment
+static esp_err_t api_sd_get_handler(httpd_req_t *req)
+{
+    char path[256];
+    if (!sd_resolve_path(req, NULL, path, sizeof(path))) return ESP_FAIL;
+
+    struct stat st = {0};
+    if (stat(path, &st) != 0 || S_ISDIR(st.st_mode)) {
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not a file");
+        return ESP_FAIL;
+    }
+    FILE *f = fopen(path, "rb");
+    if (!f) {
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Open failed");
+        return ESP_FAIL;
+    }
+
+    const char *base = strrchr(path, '/');
+    base = base ? base + 1 : path;
+    char disp[160];
+    snprintf(disp, sizeof(disp), "attachment; filename=\"%s\"", base);
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_set_hdr(req, "Content-Disposition", disp);
+
+    char *buf = malloc(SD_RECV_BUF_SIZE);
+    if (!buf) {
+        fclose(f);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OOM");
+        return ESP_FAIL;
+    }
+    size_t n;
+    esp_err_t ret = ESP_OK;
+    while ((n = fread(buf, 1, SD_RECV_BUF_SIZE, f)) > 0) {
+        if (httpd_resp_send_chunk(req, buf, n) != ESP_OK) { ret = ESP_FAIL; break; }
+    }
+    free(buf);
+    fclose(f);
+    if (ret == ESP_OK) httpd_resp_send_chunk(req, NULL, 0);
+    return ret;
+}
+
+// POST /api/sd/file?path=/dir/name  → streams the body into the file (overwrite)
+static esp_err_t api_sd_post_handler(httpd_req_t *req)
+{
+    char path[256];
+    if (!sd_resolve_path(req, NULL, path, sizeof(path))) return ESP_FAIL;
+
+    // Auto-create the immediate parent directory (e.g. /slides) so uploads to a
+    // fresh folder just work without a separate mkdir step.
+    char *slash = strrchr(path, '/');
+    if (slash && (size_t)(slash - path) > strlen(SD_MOUNT_POINT)) {
+        *slash = '\0';
+        mkdir(path, 0777);   // ignore EEXIST
+        *slash = '/';
+    }
+
+    FILE *f = fopen(path, "wb");
+    if (!f) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Cannot create file");
+        return ESP_FAIL;
+    }
+
+    char *buf = malloc(SD_RECV_BUF_SIZE);
+    if (!buf) {
+        fclose(f);
+        remove(path);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OOM");
+        return ESP_FAIL;
+    }
+
+    int total = req->content_len;
+    int received = 0;
+    esp_err_t ret = ESP_OK;
+    while (received < total) {
+        int r = httpd_req_recv(req, buf, SD_RECV_BUF_SIZE);
+        if (r == HTTPD_SOCK_ERR_TIMEOUT) continue;
+        if (r <= 0) { ret = ESP_FAIL; break; }
+        if (fwrite(buf, 1, r, f) != (size_t)r) { ret = ESP_FAIL; break; }
+        received += r;
+    }
+    free(buf);
+    fclose(f);
+
+    if (ret != ESP_OK) {
+        remove(path);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Write failed");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGI("HTTP", "SD upload %s (%d bytes)", path, received);
+    char body[48];
+    snprintf(body, sizeof(body), "{\"ok\":true,\"size\":%d}", received);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, body);
+    return ESP_OK;
+}
+
+// DELETE /api/sd/file?path=/dir/name  → removes a file or empty directory
+static esp_err_t api_sd_delete_handler(httpd_req_t *req)
+{
+    char path[256];
+    if (!sd_resolve_path(req, NULL, path, sizeof(path))) return ESP_FAIL;
+
+    struct stat st = {0};
+    if (stat(path, &st) != 0) {
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found");
+        return ESP_FAIL;
+    }
+    int rc = S_ISDIR(st.st_mode) ? rmdir(path) : remove(path);
+    if (rc != 0) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Delete failed");
+        return ESP_FAIL;
+    }
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true}");
+    return ESP_OK;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Wildcard — serve files from SPIFFS
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t file_handler(httpd_req_t *req)
@@ -1899,7 +2149,7 @@ void http_server_start(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn      = httpd_uri_match_wildcard;
-    config.max_uri_handlers  = 32;
+    config.max_uri_handlers  = 40;
     // max_open_sockets: each lwIP socket uses ~2KB internal RAM for buffers
     // TCP + control. On ESP32 with tight internal heap (radio TLS, WiFi, LVGL)
     // 13 sockets caused the TLS audio stream to drop on page open.
@@ -2113,6 +2363,35 @@ void http_server_start(void)
         .handler = api_files_put_handler,
     };
     httpd_register_uri_handler(server, &api_files_put);
+
+    // ── SD CARD file manager ──────────────────────────────────────────────────
+    httpd_uri_t api_sd_list = {
+        .uri     = "/api/sd/list",
+        .method  = HTTP_GET,
+        .handler = api_sd_list_handler,
+    };
+    httpd_register_uri_handler(server, &api_sd_list);
+
+    httpd_uri_t api_sd_get = {
+        .uri     = "/api/sd/file",
+        .method  = HTTP_GET,
+        .handler = api_sd_get_handler,
+    };
+    httpd_register_uri_handler(server, &api_sd_get);
+
+    httpd_uri_t api_sd_post = {
+        .uri     = "/api/sd/file",
+        .method  = HTTP_POST,
+        .handler = api_sd_post_handler,
+    };
+    httpd_register_uri_handler(server, &api_sd_post);
+
+    httpd_uri_t api_sd_delete = {
+        .uri     = "/api/sd/file",
+        .method  = HTTP_DELETE,
+        .handler = api_sd_delete_handler,
+    };
+    httpd_register_uri_handler(server, &api_sd_delete);
 
     // OPTIONS dla /api/restart — preflight CORS
     httpd_uri_t api_restart_options = {
