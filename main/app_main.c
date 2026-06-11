@@ -9,6 +9,7 @@
 #include "mdns_service.h"
 #include "ws_server.h"
 #include "esp_spiffs.h"
+#include "sdcard.h"
 #include "display.h"
 #include "settings.h"
 #include "bt.h"
@@ -37,6 +38,9 @@ void app_main(void)
 
     nvs_flash_init();
     init_fs();
+#ifdef HAS_SD_CARD
+    sdcard_init();   // non-fatal — a missing/failed card only logs a warning
+#endif
 
     // mqtt config must load after fs is mounted; before http_server starts
     // so /api/mqtt GET sees real data. mqtt_svc_init() also calls load again

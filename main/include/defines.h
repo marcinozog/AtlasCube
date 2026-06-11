@@ -102,6 +102,16 @@
 
 
 
+// ===== SD CARD (SDMMC 1-bit) =====
+// 3 lines: CLK + CMD + D0. CMD and D0 need ~10k external pull-ups on the PCB.
+// On CO5300 builds pins 38/39/40 are taken by the QSPI display — pick others.
+#define HAS_SD_CARD
+#define SD_PIN_CLK   38
+#define SD_PIN_CMD   39
+#define SD_PIN_D0    40
+#define SD_PIN_CD    -1   // card-detect, optional (-1 = none)
+
+
 // ===== I2S PCM5102A =====
 // Single source of truth. ESP-ADF reads these via board_def.h, which includes
 // this header (components\audio_board\esp32_s3_atlascube\board_def.h).
