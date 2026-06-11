@@ -6,13 +6,26 @@
 
 A hobby project — internet radio and smart clock running on a generic dev board (for now) with ESP32-S3 (AtlasCube). Streams internet radio, shows a clock, manages reminders, and exposes a web UI for configuration. Everything runs on the device with no cloud dependency.
 
-🌐 **[atlascube.net](https://atlascube.net)**
+🌐 **[atlascube.net](https://atlascube.net)** — project home
 
-➡️ **[Web interface demo](https://atlascube.net/demo)** — a live, in-browser preview of the device web UI. The demo mirrors what runs on the ESP32-S3: playlist, settings, events, equalizer, layout editor, and file editor are all interactive, backed by a mock state so you can click around without owning the hardware.
-
-⚡ **[Flash firmware from browser](https://atlascube.net/flash)** — install prebuilt firmware directly over USB from Chromium-based browsers (Chrome / Edge / Opera / Brave) via WebSerial. No ESP-IDF, no esptool, no CLI.
-
-🔧 **Build for your own hardware** — different display or your own pin layout? Build a custom image from source with one command (`python scripts/build.py`). Step-by-step guides for [Windows](docs/build-windows.md) and [Linux](docs/build-linux.md).
+<table>
+  <tr>
+    <td>➡️ <b><a href="https://atlascube.net/demo">Web UI demo</a></b></td>
+    <td>Live, in-browser preview of the device web UI — click around without the hardware</td>
+  </tr>
+  <tr>
+    <td>⚡ <b><a href="https://atlascube.net/flash">Flash from browser</a></b></td>
+    <td>Install prebuilt firmware over USB from a Chromium browser — no ESP-IDF, no esptool, no CLI</td>
+  </tr>
+  <tr>
+    <td>🔧 <b><a href="#build">Build from source</a></b></td>
+    <td>Different display or your own pin layout? Build for your own hardware with one command</td>
+  </tr>
+  <tr>
+    <td>📱 <b><a href="https://github.com/marcinozog/AtlasCube-Remote/">Android remote app</a></b></td>
+    <td>Phone remote — playback, EQ, events, layout editor (beta)</td>
+  </tr>
+</table>
 
 ---
 

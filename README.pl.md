@@ -6,13 +6,26 @@
 
 Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tymczasowo) z ESP32-S3 (AtlasCube). Gra radio z sieci, pokazuje godzinę, pilnuje przypomnień i ma web UI do konfiguracji. Wszystko działa lokalnie — żadnej chmury.
 
-🌐 **[atlascube.net](https://atlascube.net)**
+🌐 **[atlascube.net](https://atlascube.net)** — strona projektu
 
-➡️ **[Demo web UI](https://atlascube.net/demo)** — interaktywny podgląd interfejsu w przeglądarce. Wygląda i działa dokładnie tak jak na ESP32-S3: playlista, ustawienia, wydarzenia, korektor, edytor layoutu i edytor plików — wszystko klikalne, podpięte pod zamockowany stan. Można się porozglądać bez sprzętu.
-
-⚡ **[Wgranie firmware z przeglądarki](https://atlascube.net/flash)** — gotowy firmware leci przez USB prosto z przeglądarek Chromium (Chrome / Edge / Opera / Brave) po WebSerial. Bez ESP-IDF, bez esptool, bez konsoli.
-
-🔧 **Zbuduj pod własny sprzęt** — inny wyświetlacz albo własny układ pinów? Zbuduj obraz ze źródeł jedną komendą (`python scripts/build.py`). Przepis krok po kroku na [Windows](docs/build-windows.md) i [Linux](docs/build-linux.md).
+<table>
+  <tr>
+    <td>➡️ <b><a href="https://atlascube.net/demo">Demo web UI</a></b></td>
+    <td>Interaktywny podgląd interfejsu w przeglądarce — poklikasz bez sprzętu</td>
+  </tr>
+  <tr>
+    <td>⚡ <b><a href="https://atlascube.net/flash">Flash z przeglądarki</a></b></td>
+    <td>Gotowy firmware przez USB z przeglądarki Chromium — bez ESP-IDF, bez esptool, bez konsoli</td>
+  </tr>
+  <tr>
+    <td>🔧 <b><a href="#build">Zbuduj ze źródeł</a></b></td>
+    <td>Inny wyświetlacz albo własny układ pinów? Zbuduj pod własny sprzęt jedną komendą</td>
+  </tr>
+  <tr>
+    <td>📱 <b><a href="https://github.com/marcinozog/AtlasCube-Remote/">Aplikacja Android</a></b></td>
+    <td>Pilot na telefon — odtwarzanie, EQ, wydarzenia, edytor layoutu (beta)</td>
+  </tr>
+</table>
 
 ---
 
