@@ -608,17 +608,32 @@ void settings_set_night_schedule(const dim_schedule_t *ns)
     // module to avoid a settings_ex ↔ services circular dependency.
 }
 
-void settings_set_bt_enable(bool enable)
+// persist=false skips the SPIFFS write — used by the BT auto-switch, which must
+// stay off the flash (it runs on the BT UART task and can fire on every
+// reconnect). It still keeps s_settings/app_state/GPIO consistent so the guard
+// in the persisting variant can later switch the source back.
+static void apply_bt_enable(bool enable, bool persist)
 {
     if(s_settings.bluetooth.enable != enable) {
         s_settings.bluetooth.enable = enable;
         app_state_update(&(app_state_patch_t){ .has_bt_enable = true, .bt_enable = enable });
         bt_set_enabled(enable);
-        save_to_file();
+        if (persist)
+            save_to_file();
         // Update www/screen BT Volume only if turn on
         if(enable)
             bt_set_volume(s_settings.bluetooth.volume);
     }
+}
+
+void settings_set_bt_enable(bool enable)
+{
+    apply_bt_enable(enable, true);
+}
+
+void settings_set_bt_enable_volatile(bool enable)
+{
+    apply_bt_enable(enable, false);
 }
 
 void settings_set_bt_show_screen(bool show)

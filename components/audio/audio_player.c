@@ -63,8 +63,9 @@ static int s_retry_count = 0;
 // triggers it. (The actual TLS handshake / network I/O happens later in the
 // http element's own task.)
 static SemaphoreHandle_t s_play_sem  = NULL;  // binary: trigger
-static SemaphoreHandle_t s_play_lock = NULL;  // mutex: protects s_pending_url
+static SemaphoreHandle_t s_play_lock = NULL;  // mutex: protects s_pending_url / s_pending_stop
 static char              s_pending_url[PLAY_URL_MAX];
+static bool              s_pending_stop = false; // set by audio_player_request_stop()
 
 static int last_rsp_sample_rate = 0;
 static int last_rsp_channels    = 0;
@@ -360,10 +361,29 @@ void audio_player_play(const char *url)
     xSemaphoreTake(s_play_lock, portMAX_DELAY);
     strncpy(s_pending_url, url, PLAY_URL_MAX - 1);
     s_pending_url[PLAY_URL_MAX - 1] = '\0';
+    s_pending_stop = false;                 // a new play supersedes a pending stop
     xSemaphoreGive(s_play_lock);
 
     // Binary semaphore: if the task hasn't handled the previous give yet,
     // this one just gets "marked" and the task will handle the newest URL.
+    xSemaphoreGive(s_play_sem);
+}
+
+
+/*
+void audio_player_request_stop(void)
+Async counterpart to audio_player_play: marks a stop and wakes audio_play_task,
+which runs the (blocking) teardown on its own 8 KB stack. Lets callers on small
+stacks stop playback without blocking or risking an overflow.
+*/
+void audio_player_request_stop(void)
+{
+    if (!s_play_sem || !s_play_lock) return;
+
+    xSemaphoreTake(s_play_lock, portMAX_DELAY);
+    s_pending_stop = true;
+    xSemaphoreGive(s_play_lock);
+
     xSemaphoreGive(s_play_sem);
 }
 
@@ -417,11 +437,16 @@ static void audio_play_task(void *param)
         xSemaphoreTake(s_play_sem, portMAX_DELAY);
 
         xSemaphoreTake(s_play_lock, portMAX_DELAY);
+        bool stop = s_pending_stop;
+        s_pending_stop = false;
         strncpy(url, s_pending_url, PLAY_URL_MAX - 1);
         url[PLAY_URL_MAX - 1] = '\0';
         xSemaphoreGive(s_play_lock);
 
-        audio_play_internal(url);
+        if (stop)
+            audio_player_stop();
+        else
+            audio_play_internal(url);
     }
 }
 

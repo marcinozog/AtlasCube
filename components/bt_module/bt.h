@@ -2,9 +2,10 @@
 
 #include <stdbool.h>
 
-// Invoked from the BT UART task when the phone starts playing (BT_PA).
+// Invoked from the BT UART task when the phone's play state changes:
+// playing=true on BT_PA, playing=false on pause/stop (+SRC=NONE) or disconnect.
 // Registered by a higher layer (radio_service) to enforce exclusive source.
-typedef void (*bt_play_event_cb_t)(void);
+typedef void (*bt_play_event_cb_t)(bool playing);
 
 void bt_init(void);
 void bt_set_enabled(bool enabled);

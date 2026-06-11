@@ -37,21 +37,42 @@ static void ramp_tick(void *arg)
 
 
 /*
-static void on_bt_play_event(void)
-Called from the BT UART task when the phone starts playing. With exclusive
-auto-switch on, makes BT the active source and stops the radio so the two
-never play at once.
+static void on_bt_play_event(bool playing)
+Runs on the BT UART RX task on a phone play-state change. We only switch the
+source on the *rising edge* (not playing → playing): the module re-emits BT_PA
+repeatedly while playing, and reacting to every one would constantly override a
+manual "switch back to radio". The edge is reset on pause/stop/disconnect, so a
+genuine new playback start switches again.
+
+Must stay lightweight: no flash I/O, no blocking — the UART task has a small
+stack and stalling it drops incoming metadata. The source switch is runtime
+only (no SPIFFS persist — a transient phone-play shouldn't rewrite the saved
+source), and the teardown is deferred to audio_play_task.
 */
-static void on_bt_play_event(void)
+static void on_bt_play_event(bool playing)
 {
-    if (!app_state_get()->bt_auto_switch) return;
+    static bool s_bt_playing = false;
 
-    if (!app_state_get()->bt_enable)
-        settings_set_bt_enable(true);          // switch audio source to BT
+    bool was = s_bt_playing;
+    s_bt_playing = playing;
 
-    if (app_state_get()->radio_state == RADIO_STATE_PLAYING ||
-        app_state_get()->radio_state == RADIO_STATE_BUFFERING)
-        radio_stop();
+    if (!playing || was) return;        // only the not-playing → playing edge acts
+
+    app_state_t *s = app_state_get();
+    if (!s->bt_auto_switch) return;
+
+    // Switch source to BT. The volatile variant keeps s_settings/app_state/GPIO
+    // in sync (so radio_play_url can later switch back) without a flash write.
+    settings_set_bt_enable_volatile(true);
+
+    if (s->radio_state == RADIO_STATE_PLAYING ||
+        s->radio_state == RADIO_STATE_BUFFERING) {
+        audio_player_request_stop();                // async teardown on audio task
+        app_state_update(&(app_state_patch_t){
+            .has_radio = true, .radio_state = RADIO_STATE_STOPPED,
+            .has_title = true, .title = ""
+        });
+    }
 }
 
 
@@ -94,13 +115,16 @@ void radio_play_url(const char *url)
         .title = ""
     });
 
-    // Exclusive source: tell the phone to actually pause, not just mute it via
-    // the source mux, before we take over the output.
-    if (app_state_get()->bt_auto_switch)
-        bt_pause();
-
-    if(app_state_get()->bt_enable)
+    // Only act on BT when it is actually the active source — otherwise an
+    // always-on radio would blast spurious AT+PU at the module on every
+    // (re)connect, disrupting an idle phone session. When we do take over from
+    // BT and exclusive auto-switch is on, pause the phone so it actually stops
+    // rather than just being muted by the source mux.
+    if (app_state_get()->bt_enable) {
+        if (app_state_get()->bt_auto_switch)
+            bt_pause();
         settings_set_bt_enable(false);
+    }
 
     audio_player_play(url);
 

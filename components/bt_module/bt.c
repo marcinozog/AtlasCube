@@ -52,10 +52,7 @@ void bt_init(void)
     uart_param_config(BT_UART_NUM, &uart_config);
     uart_set_pin(BT_UART_NUM, BT_MODULE_TX_PIN, BT_MODULE_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 
-    // 8192B stack: the RX task may invoke the play-event callback, which can
-    // synchronously stop the radio pipeline (audio_pipeline teardown) and write
-    // settings to SPIFFS — both deeper than the metadata parsing needs alone.
-    xTaskCreate(bt_uart_rx_task, "bt_uart_rx_task", 8192, NULL, 5, NULL);
+    xTaskCreate(bt_uart_rx_task, "bt_uart_rx_task", 4096, NULL, 5, NULL);
 
     ESP_LOGI(TAG, "UART initialized (TX=%d RX=%d)", BT_MODULE_TX_PIN, BT_MODULE_RX_PIN);
 
@@ -161,6 +158,7 @@ void bt_parse_cmd(const char *cmd) {
             .has_bt_state   = true,
             .bt_state       = BT_DISCONNECTED
         });
+        if (s_play_event_cb) s_play_event_cb(false);   // link gone → not playing
     }
     else if (strstr(cmd, "ConnDiscoverable")) {
         app_state_update(&(app_state_patch_t){
@@ -176,6 +174,7 @@ void bt_parse_cmd(const char *cmd) {
             .has_bt_duration_ms = true, .bt_duration_ms = 0,
             .has_bt_position_s  = true, .bt_position_s  = 0,
         });
+        if (s_play_event_cb) s_play_event_cb(false);   // playback stopped
     }
 
     // Get metadata
@@ -186,7 +185,7 @@ void bt_parse_cmd(const char *cmd) {
 
         // Phone started playing — let the source coordinator react (stop radio,
         // switch source to BT) when exclusive auto-switch is enabled.
-        if (s_play_event_cb) s_play_event_cb();
+        if (s_play_event_cb) s_play_event_cb(true);
     }
 
     char buf[128];
