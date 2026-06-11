@@ -1,6 +1,7 @@
 #include "ws_server.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
+#include "esp_wifi.h"
 #include "radio_service.h"
 #include "cJSON.h"
 #include <string.h>
@@ -361,6 +362,11 @@ static void send_full_state(void)
     cJSON_AddNumberToObject(json, "ch", s->channels);
     cJSON_AddNumberToObject(json, "br", s->bitrate);
     cJSON_AddNumberToObject(json, "fmt", s->codec_fmt);
+
+    // WiFi RSSI (dBm) — 0 when STA not connected / AP mode
+    wifi_ap_record_t ap;
+    cJSON_AddNumberToObject(json, "rssi",
+        esp_wifi_sta_get_ap_info(&ap) == ESP_OK ? ap.rssi : 0);
 
     cJSON *eq = cJSON_CreateIntArray(s->eq, 10);
     cJSON_AddItemToObject(json, "eq", eq);

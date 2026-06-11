@@ -8,4 +8,5 @@ idf_component_register(
         app_state
         settings_ex
         playlist
+        esp_wifi
 )
