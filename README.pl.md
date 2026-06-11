@@ -133,9 +133,10 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Klient MQTT — zdalne sterowanie radiem (play/stop/głośność/stacja) plus do 6 konfigurowalnych widgetów (toggle / slider / label) na osobnym ekranie, do sterowania zewnętrznym sprzętem MQTT (Tasmota, zigbee2mqtt, Home Assistant…); szczegóły w [MQTT](#mqtt) niżej
 - Aktualizacja OTA — nowy obraz firmware wgrywasz prosto z Web UI (Ustawienia → Tools); trafia do nieaktywnego slotu, jest walidowany i urządzenie restartuje się do niego, z rollbackiem bootloadera gdy nowy obraz nie wstanie. Przycisk eksportu pobiera najpierw bieżący firmware. Dostępne w buildach z flashem 16 MB (podwójne partycje OTA); buildy 8 MB mają pojedynczy slot i wgrywa się je przez USB. Szczegóły w [Aktualizacje OTA](#aktualizacje-ota) niżej
 
-**Aplikacja Android** *(w trakcie)*
+**Aplikacja Android** *(beta)*
 - Pilot do odtwarzania, zmiany stacji i głośności
 - Wzorowana na YoRadio Remote, plus rzeczy specyficzne dla AtlasCube: wydarzenia, korektor, edytor layoutu
+- Osobne repozytorium z własnym README: [AtlasCube-Remote](https://github.com/marcinozog/AtlasCube-Remote/)
 
 ---
 

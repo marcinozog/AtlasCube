@@ -133,9 +133,10 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - MQTT client — remote control of the radio (play/stop/volume/station) plus up to 6 configurable widgets (toggle / slider / label) on a dedicated on-device screen, driving any external MQTT device (Tasmota, zigbee2mqtt, Home Assistant, …); see [MQTT](#mqtt) below
 - OTA firmware update — upload a new app image straight from the web UI (Settings → Tools); it streams into the inactive slot, validates, and reboots, with bootloader rollback if the new image won't start. A backup/export button downloads the currently running firmware first. Available on 16 MB-flash builds (dual OTA partitions); 8 MB builds keep a single app slot and are flashed over USB. See [OTA updates](#ota-updates) below
 
-**Android app** *(in development)*
+**Android app** *(beta)*
 - Remote control for playback, station switching, and volume
 - Modelled after the YoRadio Remote interface, extended with AtlasCube-specific features: event management, equalizer, layout editor
+- Separate repo with its own README: [AtlasCube-Remote](https://github.com/marcinozog/AtlasCube-Remote/)
 
 ---
 
