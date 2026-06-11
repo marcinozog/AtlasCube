@@ -9,6 +9,19 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-06-11
+
+### Added
+- **audio:** exclusive audio source auto-switch (Radio ⇄ Bluetooth)
+- **clock:** optional IP + <hostname>.local on the clock screen
+- **ws:** expose WiFi RSSI in state broadcast
+- **settings:** rename WiFi tab to Network
+- **mdns:** advertise device as <hostname>.local
+
+### Fixed
+- **playlist:** change max entry to 512 on the web
+- **bt:** make exclusive auto-switch reliable
+
 ### Added
 - **bluetooth:** exclusive audio source — starting BT play stops the radio and starting the radio pauses the phone, with automatic source switching (toggleable, default on; in web BT panel and on-device Settings)
 
@@ -210,7 +223,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/marcinozog/AtlasCube/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/marcinozog/AtlasCube/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/marcinozog/AtlasCube/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/marcinozog/AtlasCube/compare/v0.11.0...v0.12.0
