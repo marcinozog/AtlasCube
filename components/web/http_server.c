@@ -33,6 +33,7 @@
 #include <string.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #include "zlib.h"
 #include "defines.h"
 
@@ -1681,7 +1682,9 @@ static esp_err_t api_sd_list_handler(httpd_req_t *req)
     struct dirent *e;
     while ((e = readdir(d)) != NULL) {
         if (e->d_name[0] == '.') continue;
-        char full[320];
+        // Sized for the worst case (dirpath + '/' + a max-length LFN name) so
+        // -Werror=format-truncation can prove no truncation.
+        char full[sizeof(dirpath) + 258];
         snprintf(full, sizeof(full), "%s/%s", dirpath, e->d_name);
         struct stat st = {0};
         bool is_dir = false;
@@ -1726,7 +1729,7 @@ static esp_err_t api_sd_get_handler(httpd_req_t *req)
 
     const char *base = strrchr(path, '/');
     base = base ? base + 1 : path;
-    char disp[160];
+    char disp[sizeof(path) + 40];   // header text + a full-length filename
     snprintf(disp, sizeof(disp), "attachment; filename=\"%s\"", base);
     httpd_resp_set_type(req, "application/octet-stream");
     httpd_resp_set_hdr(req, "Content-Disposition", disp);
