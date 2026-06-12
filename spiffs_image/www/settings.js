@@ -262,8 +262,10 @@ function setDashboardNotifyEnabled(t) {
 }
 
 function onScreensaverStyleChange() {
-    const isDash = document.getElementById('scrs_id').value === 'dashboard';
-    document.getElementById('dashboard_panel').style.display = isDash ? '' : 'none';
+    const style = document.getElementById('scrs_id').value;
+    document.getElementById('dashboard_panel').style.display = style === 'dashboard' ? '' : 'none';
+    const pp = document.getElementById('photo_panel');
+    if (pp) pp.style.display = style === 'photo' ? '' : 'none';
 }
 
 function onDashboardValueTypeChange() {
@@ -294,6 +296,13 @@ async function saveScreensaverTab() {
         scrsaver: {
             delay,
             id: get('scrs_id').value,
+            photo: {
+                dir:    (get('photo_dir')?.value ?? '').trim(),
+                order:  parseInt(get('photo_order')?.value, 10)  || 0,
+                hold_s: Math.max(1, parseInt(get('photo_hold')?.value, 10) || 8),
+                effect: parseInt(get('photo_effect')?.value, 10) || 0,
+                speed:  parseInt(get('photo_speed')?.value, 10)  || 3,
+            },
         },
         dashboard: {
             title:            (get('dash_title')?.value     ?? '').trim(),
@@ -590,6 +599,14 @@ function populateForm(s) {
         setVal('scrs_delay', s.scrsaver.delay ?? 60);
         const sel = document.getElementById('scrs_id');
         if (sel) sel.value = s.scrsaver.id || 'clockhands';
+        const ph = s.scrsaver.photo || {};
+        setVal('photo_dir',    ph.dir ?? '/sdcard/slides');
+        setVal('photo_order',  String(ph.order  ?? 1));
+        setVal('photo_effect', String(ph.effect ?? 4));
+        setVal('photo_hold',   ph.hold_s ?? 8);
+        setVal('photo_speed',  ph.speed  ?? 3);
+        const psv = document.getElementById('photo_speed_value');
+        if (psv) psv.textContent = String(ph.speed ?? 3);
         onScreensaverStyleChange();
     }
     if (s.dashboard) {

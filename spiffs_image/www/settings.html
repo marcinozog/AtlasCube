@@ -145,8 +145,45 @@
                 <option value="life">🧬 Game of Life</option>
                 <option value="dashboard">📊 Dashboard</option>
                 <option value="mqtt">📡 MQTT</option>
+                <option value="photo">🖼️ Photo frame (SD)</option>
                 <option value="blank">⬛ Blank (off)</option>
             </select>
+        </div>
+
+        <!-- Photo-frame screensaver -->
+        <div id="photo_panel" class="panel">
+            <label class="field-label">🖼️ Photo frame</label>
+            <div class="field-hint" style="margin-bottom:8px">
+                Plays LVGL <code>.bin</code> slides from the SD card. Convert images with
+                <code>scripts/img2lvgl.py</code> and upload them via the SD file manager.
+            </div>
+            <label class="field-label">Folder on SD</label>
+            <input id="photo_dir" class="field-input" style="width:240px" type="text" placeholder="/sdcard/slides">
+
+            <label class="field-label" style="margin-top:10px">Order</label>
+            <select id="photo_order" class="field-input" style="width:240px">
+                <option value="0">▶️ Sequential</option>
+                <option value="1">🔀 Random</option>
+            </select>
+
+            <label class="field-label" style="margin-top:10px">Effect</label>
+            <select id="photo_effect" class="field-input" style="width:240px">
+                <option value="0">⬇️ Top-down</option>
+                <option value="1">➡️ Wipe (side)</option>
+                <option value="2">✨ Dissolve</option>
+                <option value="3">🧩 Interlaced</option>
+                <option value="4">🎲 Random per slide</option>
+            </select>
+
+            <label class="field-label" style="margin-top:10px">Seconds per slide</label>
+            <input id="photo_hold" class="field-input" style="width:240px" type="number" min="1" value="8">
+
+            <label class="field-label" style="margin-top:10px">Reveal speed</label>
+            <div style="display:flex;align-items:center;gap:10px">
+                <input type="range" min="1" max="5" id="photo_speed"
+                       oninput="document.getElementById('photo_speed_value').textContent = this.value" />
+                <span id="photo_speed_value" class="slider-value">3</span>
+            </div>
         </div>
 
         <!-- Dashboard screensaver — webhook-driven widget config -->

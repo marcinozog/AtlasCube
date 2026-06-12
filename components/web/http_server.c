@@ -115,6 +115,13 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(scrs, "delay",  s->scrsaver.delay);
     cJSON_AddStringToObject(scrs, "id",
         screensaver_name(s->scrsaver.screensaver_id));
+    cJSON *scrs_photo = cJSON_CreateObject();
+    cJSON_AddStringToObject(scrs_photo, "dir",    s->scrsaver.photo_dir);
+    cJSON_AddNumberToObject(scrs_photo, "order",  s->scrsaver.photo_order);
+    cJSON_AddNumberToObject(scrs_photo, "hold_s", s->scrsaver.photo_hold_s);
+    cJSON_AddNumberToObject(scrs_photo, "effect", s->scrsaver.photo_effect);
+    cJSON_AddNumberToObject(scrs_photo, "speed",  s->scrsaver.photo_speed);
+    cJSON_AddItemToObject(scrs, "photo", scrs_photo);
     cJSON_AddItemToObject(json, "scrsaver", scrs);
 
     // dashboard
@@ -312,6 +319,21 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             settings_set_scrsaver_id(screensaver_from_name(id->valuestring));
         } else if (cJSON_IsNumber(id)) {
             settings_set_scrsaver_id(id->valueint);
+        }
+        cJSON *ph = cJSON_GetObjectItem(scrs, "photo");
+        if (cJSON_IsObject(ph)) {
+            app_settings_t *cur = settings_get();
+            cJSON *pd  = cJSON_GetObjectItem(ph, "dir");
+            cJSON *po  = cJSON_GetObjectItem(ph, "order");
+            cJSON *phs = cJSON_GetObjectItem(ph, "hold_s");
+            cJSON *pe  = cJSON_GetObjectItem(ph, "effect");
+            cJSON *psp = cJSON_GetObjectItem(ph, "speed");
+            settings_set_photo(
+                cJSON_IsString(pd) ? pd->valuestring     : cur->scrsaver.photo_dir,
+                cJSON_IsNumber(po) ? po->valueint        : cur->scrsaver.photo_order,
+                cJSON_IsNumber(phs)? phs->valueint       : cur->scrsaver.photo_hold_s,
+                cJSON_IsNumber(pe) ? pe->valueint        : cur->scrsaver.photo_effect,
+                cJSON_IsNumber(psp)? psp->valueint       : cur->scrsaver.photo_speed);
         }
     }
 

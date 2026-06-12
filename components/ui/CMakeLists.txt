@@ -26,6 +26,7 @@ idf_component_register(
         "screensavers/screensaver_life.c"
         "screensavers/screensaver_dashboard.c"
         "screensavers/screensaver_mqtt.c"
+        "screensavers/screensaver_photo.c"
         "screensavers/screensaver_blank.c"
         "screensavers/screensavers.c"
         "widgets/clock_widget.c"
@@ -65,4 +66,5 @@ idf_component_register(
         esp-tls                 # esp_crt_bundle for HTTPS
         buzzer                  # screensaver_dashboard notifications via melodies.h
         mqtt_svc                # screen_mqtt toggle widget
+        sdcard                  # screensaver_photo reads slides from SD
 )

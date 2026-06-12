@@ -61,6 +61,13 @@ esp_err_t settings_init(void)
         // Screensaver
         s_settings.scrsaver.delay           = 60;
         s_settings.scrsaver.screensaver_id  = SCREENSAVER_CLOCKHANDS;
+        // Photo-frame screensaver
+        s_settings.scrsaver.photo_dir[0]    = '\0';
+        strncpy(s_settings.scrsaver.photo_dir, "/sdcard/slides", sizeof(s_settings.scrsaver.photo_dir) - 1);
+        s_settings.scrsaver.photo_order     = 1;   // random
+        s_settings.scrsaver.photo_hold_s    = 8;
+        s_settings.scrsaver.photo_effect    = 4;   // random-per-slide
+        s_settings.scrsaver.photo_speed     = 3;
         // Dashboard screensaver — defaults to NBP USD/PLN exchange rate
         strncpy(s_settings.dashboard.title,     "USD/PLN",                                                       sizeof(s_settings.dashboard.title)     - 1);
         strncpy(s_settings.dashboard.url,       "https://api.nbp.pl/api/exchangerates/rates/A/USD?format=json", sizeof(s_settings.dashboard.url)       - 1);
@@ -252,6 +259,14 @@ static esp_err_t load_from_file(void)
     }
 
     // ── SCREENSAVER ───────────────────────────────────────────────────────────
+    // Photo-frame defaults — overridden below if a "photo" object is present.
+    s_settings.scrsaver.photo_dir[0] = '\0';
+    strncpy(s_settings.scrsaver.photo_dir, "/sdcard/slides", sizeof(s_settings.scrsaver.photo_dir) - 1);
+    s_settings.scrsaver.photo_order  = 1;
+    s_settings.scrsaver.photo_hold_s = 8;
+    s_settings.scrsaver.photo_effect = 4;
+    s_settings.scrsaver.photo_speed  = 3;
+
     cJSON *scrs = cJSON_GetObjectItem(json, "scrsaver");
     if (cJSON_IsObject(scrs)) {
         cJSON *dl = cJSON_GetObjectItem(scrs, "delay");
@@ -263,6 +278,22 @@ static esp_err_t load_from_file(void)
             s_settings.scrsaver.screensaver_id = id->valueint;
         } else {
             s_settings.scrsaver.screensaver_id = SCREENSAVER_CLOCKHANDS;
+        }
+        cJSON *ph = cJSON_GetObjectItem(scrs, "photo");
+        if (cJSON_IsObject(ph)) {
+            cJSON *pd  = cJSON_GetObjectItem(ph, "dir");
+            cJSON *po  = cJSON_GetObjectItem(ph, "order");
+            cJSON *phs = cJSON_GetObjectItem(ph, "hold_s");
+            cJSON *pe  = cJSON_GetObjectItem(ph, "effect");
+            cJSON *psp = cJSON_GetObjectItem(ph, "speed");
+            if (cJSON_IsString(pd) && pd->valuestring[0]) {
+                s_settings.scrsaver.photo_dir[0] = '\0';
+                strncpy(s_settings.scrsaver.photo_dir, pd->valuestring, sizeof(s_settings.scrsaver.photo_dir) - 1);
+            }
+            if (cJSON_IsNumber(po))  s_settings.scrsaver.photo_order  = po->valueint ? 1 : 0;
+            if (cJSON_IsNumber(phs)) s_settings.scrsaver.photo_hold_s = phs->valueint < 1 ? 1 : phs->valueint;
+            if (cJSON_IsNumber(pe))  s_settings.scrsaver.photo_effect = (pe->valueint < 0 || pe->valueint > 4) ? 4 : pe->valueint;
+            if (cJSON_IsNumber(psp)) s_settings.scrsaver.photo_speed  = (psp->valueint < 1) ? 1 : (psp->valueint > 5 ? 5 : psp->valueint);
         }
     } else {
         s_settings.scrsaver.delay          = 60;
@@ -441,6 +472,13 @@ static esp_err_t save_to_file(void)
     cJSON_AddNumberToObject(scrs, "delay",  s_settings.scrsaver.delay);
     cJSON_AddStringToObject(scrs, "id",
         screensaver_name(s_settings.scrsaver.screensaver_id));
+    cJSON *photo = cJSON_CreateObject();
+    cJSON_AddStringToObject(photo, "dir",    s_settings.scrsaver.photo_dir);
+    cJSON_AddNumberToObject(photo, "order",  s_settings.scrsaver.photo_order);
+    cJSON_AddNumberToObject(photo, "hold_s", s_settings.scrsaver.photo_hold_s);
+    cJSON_AddNumberToObject(photo, "effect", s_settings.scrsaver.photo_effect);
+    cJSON_AddNumberToObject(photo, "speed",  s_settings.scrsaver.photo_speed);
+    cJSON_AddItemToObject(scrs, "photo", photo);
     cJSON_AddItemToObject(json, "scrsaver", scrs);
 
     // dashboard
@@ -728,6 +766,27 @@ void settings_set_scrsaver_id(int id)
         .has_scrsaver_id = true, .scrsaver_id = id
     });
     save_to_file();
+}
+
+static unsigned s_photo_gen = 0;
+
+void settings_set_photo(const char *dir, int order, int hold_s, int effect, int speed)
+{
+    if (dir && dir[0]) {
+        s_settings.scrsaver.photo_dir[0] = '\0';
+        strncpy(s_settings.scrsaver.photo_dir, dir, sizeof(s_settings.scrsaver.photo_dir) - 1);
+    }
+    s_settings.scrsaver.photo_order  = order ? 1 : 0;
+    s_settings.scrsaver.photo_hold_s = hold_s < 1 ? 1 : hold_s;
+    s_settings.scrsaver.photo_effect = (effect < 0 || effect > 4) ? 4 : effect;
+    s_settings.scrsaver.photo_speed  = speed < 1 ? 1 : (speed > 5 ? 5 : speed);
+    s_photo_gen++;
+    save_to_file();
+}
+
+unsigned settings_photo_generation(void)
+{
+    return s_photo_gen;
 }
 
 void settings_set_dashboard(const char *title,

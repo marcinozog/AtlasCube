@@ -9,6 +9,7 @@ extern const ui_screen_t screensaver_plasma;
 extern const ui_screen_t screensaver_life;
 extern const ui_screen_t screensaver_dashboard;
 extern const ui_screen_t screensaver_mqtt;
+extern const ui_screen_t screensaver_photo;
 extern const ui_screen_t screensaver_blank;
 
 static const struct {
@@ -24,6 +25,7 @@ static const struct {
     { SCREENSAVER_LIFE,       &screensaver_life,       "life"       },
     { SCREENSAVER_DASHBOARD,  &screensaver_dashboard,  "dashboard"  },
     { SCREENSAVER_MQTT,       &screensaver_mqtt,       "mqtt"       },
+    { SCREENSAVER_PHOTO,      &screensaver_photo,      "photo"      },
     { SCREENSAVER_BLANK,      &screensaver_blank,      "blank"      },
 };
 
