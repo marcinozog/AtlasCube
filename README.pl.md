@@ -141,10 +141,11 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Wymaga karty microSD podpiętej do pinów SDMMC danego wariantu (tryb 1-bit)
 
 **Wydarzenia i przypomnienia**
-- Urodziny, imieniny, rocznice, zwykłe przypomnienia, alarmy (z radiem)
+- Urodziny, imieniny, rocznice, zwykłe przypomnienia, alarmy (z radiem), powiadomienia głosowe
 - Cykliczne: dziennie / co tydzień / miesiąc / rok
 - W momencie wyzwolenia: pełnoekranowe powiadomienie i melodia z buzzera; melodie zaszyte w firmware (webowy edytor w planach)
 - Tryb alarm — zamiast buzzera włącza wybraną stację z playlisty; strumień gra dalej po zamknięciu powiadomienia, aż ręcznie nie zatrzymasz radia
+- Tryb powiadomienia głosowego — w momencie wyzwolenia odtwarza nagranie z karty microSD, na chwilę przerywając i potem przywracając źródło (radio/Bluetooth). Aplikacja na Androida syntezuje mowę na telefonie (TTS) i wgrywa ją; każde nagranie ma własny katalog na karcie wraz z plikiem tekstowym wypowiadanych słów, dzięki czemu karta jest samoopisująca się. Edytor webowy i aplikacja pokazują ten tekst oraz pozwalają odsłuchać nagranie
 - CRUD przez web UI
 
 **Łączność**
@@ -159,7 +160,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 **Pamięć**
 - Opcjonalna karta microSD po SDMMC (tryb 1-bit), podpięta do pinów SDMMC danego wariantu
 - Webowy **menedżer plików SD** (Ustawienia → Narzędzia) — przeglądanie folderów, tworzenie katalogów, upload, zmiana nazwy i usuwanie plików prosto z przeglądarki; pliki może wysyłać też aplikacja Android
-- Na razie obsługuje slajdy ramki na zdjęcia; więcej zawartości z karty (logo stacji, lokalna muzyka, klipy głosowe) jest na liście planów
+- Obsługuje slajdy fotoramki oraz nagrania powiadomień głosowych; więcej zawartości z karty (logo stacji, lokalna muzyka) jest na liście planów
 
 **Aplikacja Android** *(beta)*
 - Pilot do odtwarzania, zmiany stacji i głośności
@@ -541,7 +542,7 @@ Notatki architektury i decyzji projektowych w [`docs/`](docs/):
 ## Roadmap
 
 - **Obudowa** — drukowana 3D, w trakcie projektowania; firmware aktualnie chodzi na gołej płytce deweloperskiej
-- **Więcej zawartości z karty SD** — karta microSD jest już zamontowana (napędza ramkę na zdjęcia); rozszerzenie na logo stacji, lokalne odtwarzanie muzyki i nagrania powiadomień głosowych
+- **Więcej zawartości z karty SD** — karta microSD jest już zamontowana (napędza fotoramkę i nagrania powiadomień głosowych); rozszerzenie na logo stacji i lokalne odtwarzanie muzyki
 - **Webowy edytor melodii** — narzędzie w przeglądarce do komponowania własnych melodii na buzzer
 
 ---

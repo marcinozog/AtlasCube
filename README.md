@@ -141,10 +141,11 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Requires a microSD card wired to the build's SDMMC pins (1-bit mode)
 
 **Events & reminders**
-- Birthdays, namedays, anniversaries, plain reminders, alarms (radio)
+- Birthdays, namedays, anniversaries, plain reminders, alarms (radio), voice notifications
 - Recurring: daily / weekly / monthly / yearly
 - On-screen fullscreen notification + buzzer melody at trigger time; melodies are programmable in firmware (web-based editor planned)
 - Alarm type — at trigger time starts a configured playlist station (the stream itself is the "ringtone", keeps playing after dismiss until the radio is stopped) instead of the buzzer
+- Voice notification type — plays a spoken clip from the microSD card at trigger time, briefly interrupting and then restoring the radio/Bluetooth source. The Android app synthesizes the speech on the phone (TTS) and uploads it; each clip lives in its own card folder together with a text sidecar of the spoken words, so the card stays self-describing. Both the web and app editors show that text and can preview the clip
 - CRUD via web UI
 
 **Connectivity**
@@ -159,7 +160,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 **Storage**
 - Optional microSD card over SDMMC (1-bit mode), wired to the build's SDMMC pins
 - Web **SD file manager** (Settings → Tools) — browse folders, create directories, upload, rename, and delete files straight from the browser; the Android app can push files too
-- Currently backs the photo-frame slides; more on-card content (station logos, local music, voice clips) is on the roadmap
+- Backs the photo-frame slides and voice-notification clips; more on-card content (station logos, local music) is on the roadmap
 
 **Android app** *(beta)*
 - Remote control for playback, station switching, and volume
@@ -542,7 +543,7 @@ Architecture and design notes in [`docs/`](docs/):
 ## Roadmap
 
 - **Enclosure** — 3D-printed case currently in design; firmware is developed and tested on the bare development board
-- **More SD-backed content** — the microSD card is already mounted (powers the photo frame); extending it to station logos, local music playback, and voice notification clips
+- **More SD-backed content** — the microSD card is already mounted (powers the photo frame and voice-notification clips); extending it to station logos and local music playback
 - **Web melody editor** — in-browser tool for composing custom buzzer notification tunes
 
 ---
