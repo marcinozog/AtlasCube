@@ -90,7 +90,8 @@ function renderList(entries) {
                 `<span class="icon">📁</span>${esc(e.name)}</td>` +
                 `<td class="size">—</td>` +
                 `<td class="actions">` +
-                `<button class="act del" onclick="event.stopPropagation();delEntry('${esc(full)}','${esc(e.name)}',true)">🗑</button>` +
+                `<button class="act" onclick="event.stopPropagation();renameEntry('${esc(full)}','${esc(e.name)}')" title="Rename">✏️</button>` +
+                `<button class="act del" onclick="event.stopPropagation();delEntry('${esc(full)}','${esc(e.name)}',true)" title="Delete">🗑</button>` +
                 `</td></tr>`
             );
         } else {
@@ -101,6 +102,7 @@ function renderList(entries) {
                 `<td class="size">${fmtSize(e.size || 0)}</td>` +
                 `<td class="actions">` +
                 `<a class="act" href="${dl}" title="Download">⬇</a>` +
+                `<button class="act" onclick="renameEntry('${esc(full)}','${esc(e.name)}')" title="Rename">✏️</button>` +
                 `<button class="act del" onclick="delEntry('${esc(full)}','${esc(e.name)}',false)" title="Delete">🗑</button>` +
                 `</td></tr>`
             );
@@ -114,6 +116,21 @@ function renderList(entries) {
             `<tbody>${rows.join("")}</tbody></table>`;
     }
     metaEl.textContent = `${nFiles} file${nFiles === 1 ? "" : "s"} · ${fmtSize(totBytes)}`;
+}
+
+async function renameEntry(path, name) {
+    const next = prompt("Rename to:", name);
+    if (next === null) return;
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === name) return;
+    if (trimmed.includes("/") || trimmed.includes("..")) { alert("Invalid name."); return; }
+    try {
+        const r = await fetch("/api/sd/rename?path=" + encodeURIComponent(path) +
+                              "&to=" + encodeURIComponent(trimmed), { method: "POST" });
+        if (r.status === 503) { alert("No SD card."); return; }
+        if (!r.ok) { alert("Rename failed (" + r.status + ")."); return; }
+        refresh();
+    } catch (e) { alert("Connection error."); }
 }
 
 async function newFolder() {

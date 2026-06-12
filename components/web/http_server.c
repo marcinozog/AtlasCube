@@ -1844,6 +1844,46 @@ static esp_err_t api_sd_mkdir_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+// POST /api/sd/rename?path=/dir/old&to=new  → renames within the same directory
+static esp_err_t api_sd_rename_handler(httpd_req_t *req)
+{
+    char src[256];
+    if (!sd_resolve_path(req, NULL, src, sizeof(src))) return ESP_FAIL;
+
+    // `to` is a bare new name (no path) — the file stays in the same directory.
+    char to[160];
+    to[0] = '\0';
+    size_t qlen = httpd_req_get_url_query_len(req) + 1;
+    if (qlen > 1 && qlen < 512) {
+        char *q = malloc(qlen);
+        if (q && httpd_req_get_url_query_str(req, q, qlen) == ESP_OK) {
+            char enc[160];
+            if (httpd_query_key_value(q, "to", enc, sizeof(enc)) == ESP_OK) {
+                sd_url_decode(enc, to, sizeof(to));
+            }
+        }
+        free(q);
+    }
+    if (to[0] == '\0' || strchr(to, '/') || strstr(to, "..")) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad target name");
+        return ESP_FAIL;
+    }
+
+    // dest = parent directory of src + '/' + to
+    char *slash = strrchr(src, '/');
+    int dirlen = slash ? (int)(slash - src) : (int)strlen(src);
+    char dest[sizeof(src) + sizeof(to)];
+    snprintf(dest, sizeof(dest), "%.*s/%s", dirlen, src, to);
+
+    if (rename(src, dest) != 0) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Rename failed");
+        return ESP_FAIL;
+    }
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true}");
+    return ESP_OK;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Wildcard — serve files from SPIFFS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2418,6 +2458,13 @@ void http_server_start(void)
         .handler = api_sd_mkdir_handler,
     };
     httpd_register_uri_handler(server, &api_sd_mkdir);
+
+    httpd_uri_t api_sd_rename = {
+        .uri     = "/api/sd/rename",
+        .method  = HTTP_POST,
+        .handler = api_sd_rename_handler,
+    };
+    httpd_register_uri_handler(server, &api_sd_rename);
 
     // OPTIONS dla /api/restart — preflight CORS
     httpd_uri_t api_restart_options = {
