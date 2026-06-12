@@ -9,6 +9,25 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-06-12
+
+### Added
+- **events:** voice notifications - playing WAV from SD at a given time
+- **screensaver:** apply photo-frame config live
+- **web:** add mkdir + rename to SD file manager
+- **web:** add New folder (mkdir) to SD file manager
+- **sd:** enable LVGL POSIX fs (S:→/sdcard); finalize SD/display pins
+- **web:** SD card file manager
+- **sd:** add SDMMC 1-bit SD card mount
+
+### Changed
+- **screensaver:** partial invalidation + lower LVGL priority
+
+### Fixed
+- **mem:** persist WiFi RAM tuning in defaults; revert LVGL to prio 5
+- **sd:** move SD to GPIO 12/13/11, display to 39/40
+- **web:** correct SD file manager build errors
+
 ## [0.15.0] - 2026-06-11
 
 ### Added
@@ -223,7 +242,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/marcinozog/AtlasCube/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/marcinozog/AtlasCube/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/marcinozog/AtlasCube/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/marcinozog/AtlasCube/compare/v0.12.0...v0.13.0
