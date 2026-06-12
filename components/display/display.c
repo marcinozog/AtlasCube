@@ -54,7 +54,8 @@ void display_start(void)
         "lvgl",
         16384,
         NULL,
-        5,
+        4,    // below the audio decode/DSP tasks (prio 5) so playback is never
+              // starved by the UI / a heavy screensaver sharing CPU1
         NULL,
         1   // CPU1
     );

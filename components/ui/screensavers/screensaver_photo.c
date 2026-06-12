@@ -200,6 +200,20 @@ static inline void copy_rows(int y0, int rows)
            (size_t)rows * s_w * 2);
 }
 
+// Mark only the changed rectangle dirty (canvas sits at 0,0 so its pixel coords
+// equal screen coords). Per-tick partial invalidation instead of full-screen —
+// over a reveal LVGL repaints ~one screenful total, not one per tick.
+static inline void inval(int x1, int y1, int x2, int y2)
+{
+    if (x1 < 0) x1 = 0;
+    if (y1 < 0) y1 = 0;
+    if (x2 >= s_w) x2 = s_w - 1;
+    if (y2 >= s_h) y2 = s_h - 1;
+    if (x2 < x1 || y2 < y1) return;
+    lv_area_t a = { .x1 = x1, .y1 = y1, .x2 = x2, .y2 = y2 };
+    lv_obj_invalidate_area(s_canvas, &a);
+}
+
 static void reveal_begin(void)
 {
     s_rev = 0;
@@ -221,19 +235,23 @@ static bool reveal_step(void)
     switch (s_effect) {
     case FX_TOPDOWN: {
         int rows = spd(TOPDOWN_ROWS);
+        int y0 = s_rev;
         copy_rows(s_rev, rows);
         s_rev += rows;
+        inval(0, y0, s_w - 1, y0 + rows - 1);
         return s_rev >= s_h;
     }
     case FX_WIPE: {
         int cols = spd(WIPE_COLS);
         if (s_rev + cols > s_w) cols = s_w - s_rev;
+        int x0 = s_rev;
         for (int y = 0; y < s_h; y++) {
             memcpy(s_canvas_buf + (size_t)y * s_w + s_rev,
                    s_stage_buf  + (size_t)y * s_w + s_rev,
                    (size_t)cols * 2);
         }
         s_rev += cols;
+        inval(x0, 0, x0 + cols - 1, s_h - 1);
         return s_rev >= s_w;
     }
     case FX_DISSOLVE: {
@@ -250,6 +268,7 @@ static bool reveal_step(void)
                        s_stage_buf  + (size_t)y * s_w + gx,
                        (size_t)bw * 2);
             }
+            inval(gx, gy, gx + bw - 1, gy + bh - 1);
         }
         return s_perm_i >= s_perm_n;
     }
@@ -260,16 +279,20 @@ static bool reveal_step(void)
         static const int strides[] = { 8, 4, 2, 1 };
         int stride = strides[s_pass];
         int budget = spd(INTERLACE_ROWS);
+        int y0 = s_rev;
+        int yend = s_rev;
         int done_rows = 0;
         while (done_rows < budget && s_rev < s_h) {
             for (int dy = 0; dy < stride && s_rev + dy < s_h; dy++) {
                 memcpy(s_canvas_buf + (size_t)(s_rev + dy) * s_w,
                        s_stage_buf  + (size_t)s_rev * s_w,
                        (size_t)s_w * 2);
+                yend = s_rev + dy + 1;
             }
             s_rev += stride;
             done_rows += stride;
         }
+        inval(0, y0, s_w - 1, yend - 1);
         if (s_rev >= s_h) {
             s_pass++;
             s_rev = 0;
@@ -327,11 +350,11 @@ static void tick(lv_timer_t *t)
     }
 
     case PH_REVEAL:
+        // reveal_step() invalidates only the region it changed this tick.
         if (reveal_step()) {
             s_hold_until = esp_timer_get_time() + s_hold_ms * 1000;
             s_phase = PH_HOLD;
         }
-        lv_obj_invalidate(s_canvas);
         break;
 
     case PH_HOLD:
