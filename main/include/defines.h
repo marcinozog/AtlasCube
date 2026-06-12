@@ -51,8 +51,8 @@
 
 #if CONFIG_DISPLAY_ILI9341
 
-#define LCD_PIN_MOSI  11
-#define LCD_PIN_CLK   12
+#define LCD_PIN_MOSI  39
+#define LCD_PIN_CLK   40
 #define LCD_PIN_CS    41
 #define LCD_PIN_DC    2 //39
 #define LCD_PIN_RST   42 //38
@@ -61,8 +61,8 @@
 #elif CONFIG_DISPLAY_ST7796
 
 // ST7796U 480x320 — same wiring as ILI9341
-#define LCD_PIN_MOSI  11
-#define LCD_PIN_CLK   12
+#define LCD_PIN_MOSI  39
+#define LCD_PIN_CLK   40
 #define LCD_PIN_CS    41
 #define LCD_PIN_DC    2
 #define LCD_PIN_RST   42
@@ -81,8 +81,8 @@
 #elif CONFIG_DISPLAY_SSD1322
 
 // SSD1322 256x64 4-wire SPI mono OLED — no backlight pin (contrast-controlled).
-#define LCD_PIN_MOSI  11
-#define LCD_PIN_CLK   12
+#define LCD_PIN_MOSI  39
+#define LCD_PIN_CLK   40
 #define LCD_PIN_CS    41
 #define LCD_PIN_DC    2
 #define LCD_PIN_RST   42
@@ -106,9 +106,9 @@
 // 3 lines: CLK + CMD + D0. CMD and D0 need ~10k external pull-ups on the PCB.
 // On CO5300 builds pins 38/39/40 are taken by the QSPI display — pick others.
 #define HAS_SD_CARD
-#define SD_PIN_CLK   38
-#define SD_PIN_CMD   39
-#define SD_PIN_D0    40
+#define SD_PIN_CLK   12
+#define SD_PIN_CMD   13
+#define SD_PIN_D0    11
 #define SD_PIN_CD    -1   // card-detect, optional (-1 = none)
 
 
