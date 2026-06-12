@@ -54,8 +54,8 @@ void display_start(void)
         "lvgl",
         16384,
         NULL,
-        4,    // below the audio decode/DSP tasks (prio 5) so playback is never
-              // starved by the UI / a heavy screensaver sharing CPU1
+        5,    // same prio as the audio decode tasks on CPU1 → fair time-slicing.
+              // The photo screensaver's partial invalidation keeps its slice cheap.
         NULL,
         1   // CPU1
     );

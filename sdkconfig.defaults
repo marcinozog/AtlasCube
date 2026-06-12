@@ -68,6 +68,18 @@ CONFIG_LWIP_TCP_WND_DEFAULT=32768
 CONFIG_LWIP_TCP_RCV_BUF_DEFAULT=32768
 CONFIG_LWIP_TCP_RECVMBOX_SIZE=32
 
+# WiFi internal-RAM tuning. These trim WiFi's internal DMA-RAM footprint and
+# were previously only in the (gitignored) sdkconfig — a clean rebuild reset them
+# to the larger IDF defaults and the device ran out of internal RAM at boot
+# (fopen → lock_init_generic → abort). Kept here so they survive clean builds.
+#  - fewer static RX buffers, dynamic (on-demand) TX buffers instead of 16 static
+#  - smaller block-ack RX window, no out-of-sequence pbuf queue
+CONFIG_ESP_WIFI_STATIC_RX_BUFFER_NUM=10
+CONFIG_ESP_WIFI_DYNAMIC_TX_BUFFER=y
+CONFIG_ESP_WIFI_DYNAMIC_TX_BUFFER_NUM=32
+CONFIG_ESP_WIFI_RX_BA_WIN=6
+CONFIG_LWIP_TCP_OOSEQ_MAX_PBUFS=4
+
 CONFIG_LV_USE_FONT_PLACEHOLDER=n
 
 # CONFIG_LOG_DEFAULT_LEVEL_DEBUG=y
