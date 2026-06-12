@@ -156,6 +156,11 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Klient MQTT — zdalne sterowanie radiem (play/stop/głośność/stacja) plus do 6 konfigurowalnych widgetów (toggle / slider / label) na osobnym ekranie, do sterowania zewnętrznym sprzętem MQTT (Tasmota, zigbee2mqtt, Home Assistant…); szczegóły w [MQTT](#mqtt) niżej
 - Aktualizacja OTA — nowy obraz firmware wgrywasz prosto z Web UI (Ustawienia → Tools); trafia do nieaktywnego slotu, jest walidowany i urządzenie restartuje się do niego, z rollbackiem bootloadera gdy nowy obraz nie wstanie. Przycisk eksportu pobiera najpierw bieżący firmware. Dostępne w buildach z flashem 16 MB (podwójne partycje OTA); buildy 8 MB mają pojedynczy slot i wgrywa się je przez USB. Szczegóły w [Aktualizacje OTA](#aktualizacje-ota) niżej
 
+**Pamięć**
+- Opcjonalna karta microSD po SDMMC (tryb 1-bit), podpięta do pinów SDMMC danego wariantu
+- Webowy **menedżer plików SD** (Ustawienia → Narzędzia) — przeglądanie folderów, tworzenie katalogów, upload, zmiana nazwy i usuwanie plików prosto z przeglądarki; pliki może wysyłać też aplikacja Android
+- Na razie obsługuje slajdy ramki na zdjęcia; więcej zawartości z karty (logo stacji, lokalna muzyka, klipy głosowe) jest na liście planów
+
 **Aplikacja Android** *(beta)*
 - Pilot do odtwarzania, zmiany stacji i głośności
 - Wzorowana na YoRadio Remote, plus rzeczy specyficzne dla AtlasCube: wydarzenia, korektor, edytor layoutu
@@ -536,7 +541,7 @@ Notatki architektury i decyzji projektowych w [`docs/`](docs/):
 ## Roadmap
 
 - **Obudowa** — drukowana 3D, w trakcie projektowania; firmware aktualnie chodzi na gołej płytce deweloperskiej
-- **Karta SD** — lokalny storage na logo stacji, pliki muzyczne i nagrania powiadomień głosowych
+- **Więcej zawartości z karty SD** — karta microSD jest już zamontowana (napędza ramkę na zdjęcia); rozszerzenie na logo stacji, lokalne odtwarzanie muzyki i nagrania powiadomień głosowych
 - **Webowy edytor melodii** — narzędzie w przeglądarce do komponowania własnych melodii na buzzer
 
 ---

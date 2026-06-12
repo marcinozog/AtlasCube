@@ -156,6 +156,11 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - MQTT client — remote control of the radio (play/stop/volume/station) plus up to 6 configurable widgets (toggle / slider / label) on a dedicated on-device screen, driving any external MQTT device (Tasmota, zigbee2mqtt, Home Assistant, …); see [MQTT](#mqtt) below
 - OTA firmware update — upload a new app image straight from the web UI (Settings → Tools); it streams into the inactive slot, validates, and reboots, with bootloader rollback if the new image won't start. A backup/export button downloads the currently running firmware first. Available on 16 MB-flash builds (dual OTA partitions); 8 MB builds keep a single app slot and are flashed over USB. See [OTA updates](#ota-updates) below
 
+**Storage**
+- Optional microSD card over SDMMC (1-bit mode), wired to the build's SDMMC pins
+- Web **SD file manager** (Settings → Tools) — browse folders, create directories, upload, rename, and delete files straight from the browser; the Android app can push files too
+- Currently backs the photo-frame slides; more on-card content (station logos, local music, voice clips) is on the roadmap
+
 **Android app** *(beta)*
 - Remote control for playback, station switching, and volume
 - Modelled after the YoRadio Remote interface, extended with AtlasCube-specific features: event management, equalizer, layout editor
@@ -537,7 +542,7 @@ Architecture and design notes in [`docs/`](docs/):
 ## Roadmap
 
 - **Enclosure** — 3D-printed case currently in design; firmware is developed and tested on the bare development board
-- **SD card** — local storage for station logos, music files, and voice notification clips
+- **More SD-backed content** — the microSD card is already mounted (powers the photo frame); extending it to station logos, local music playback, and voice notification clips
 - **Web melody editor** — in-browser tool for composing custom buzzer notification tunes
 
 ---
