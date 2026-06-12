@@ -116,6 +116,19 @@ function renderList(entries) {
     metaEl.textContent = `${nFiles} file${nFiles === 1 ? "" : "s"} · ${fmtSize(totBytes)}`;
 }
 
+async function newFolder() {
+    const name = prompt("New folder name:");
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed || trimmed.includes("/") || trimmed.includes("..")) { alert("Invalid folder name."); return; }
+    try {
+        const r = await fetch("/api/sd/mkdir?path=" + encodeURIComponent(joinPath(currentPath, trimmed)), { method: "POST" });
+        if (r.status === 503) { alert("No SD card."); return; }
+        if (!r.ok) { alert("Create failed (" + r.status + ")."); return; }
+        refresh();
+    } catch (e) { alert("Connection error."); }
+}
+
 async function delEntry(path, name, isDir) {
     const what = isDir ? "folder" : "file";
     if (!confirm(`Delete ${what} "${name}"?` + (isDir ? "\n(must be empty)" : ""))) return;

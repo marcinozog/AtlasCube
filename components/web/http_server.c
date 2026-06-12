@@ -34,6 +34,7 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <errno.h>
 #include "zlib.h"
 #include "defines.h"
 
@@ -1828,6 +1829,21 @@ static esp_err_t api_sd_delete_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+// POST /api/sd/mkdir?path=/dir  → creates a directory (no-op if it exists)
+static esp_err_t api_sd_mkdir_handler(httpd_req_t *req)
+{
+    char path[256];
+    if (!sd_resolve_path(req, NULL, path, sizeof(path))) return ESP_FAIL;
+
+    if (mkdir(path, 0777) != 0 && errno != EEXIST) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "mkdir failed");
+        return ESP_FAIL;
+    }
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true}");
+    return ESP_OK;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Wildcard — serve files from SPIFFS
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2395,6 +2411,13 @@ void http_server_start(void)
         .handler = api_sd_delete_handler,
     };
     httpd_register_uri_handler(server, &api_sd_delete);
+
+    httpd_uri_t api_sd_mkdir = {
+        .uri     = "/api/sd/mkdir",
+        .method  = HTTP_POST,
+        .handler = api_sd_mkdir_handler,
+    };
+    httpd_register_uri_handler(server, &api_sd_mkdir);
 
     // OPTIONS dla /api/restart — preflight CORS
     httpd_uri_t api_restart_options = {
