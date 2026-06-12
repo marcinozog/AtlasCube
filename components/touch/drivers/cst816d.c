@@ -25,6 +25,11 @@ static void cst816d_reset(int rst_gpio)
 
 void cst816d_init(i2c_master_bus_handle_t bus, int rst_gpio)
 {
+    if (!bus) {
+        ESP_LOGE(TAG, "no I2C bus handle");
+        return;
+    }
+
     cst816d_reset(rst_gpio);
 
     const i2c_device_config_t dev_cfg = {

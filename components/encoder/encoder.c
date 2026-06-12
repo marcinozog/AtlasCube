@@ -168,6 +168,16 @@ static void encoder_task(void *arg)
 
 void encoder_init(void)
 {
+    // No rotary encoder on this board (e.g. ES3C28P sets all encoder pins
+    // to -1). Doing gpio_config(1ULL << -1) is undefined behavior and the
+    // subsequent gpio_isr_handler_add(-1, ...) would spam the log with
+    // "GPIO output gpio_num error", so just skip the whole init.
+    if (ENC_CLK_PIN < 0 || ENC_DT_PIN < 0 || ENC_BTN_PIN < 0) {
+        ESP_LOGI(TAG, "Encoder pins not wired (CLK=%d DT=%d BTN=%d) — skipped",
+                 ENC_CLK_PIN, ENC_DT_PIN, ENC_BTN_PIN);
+        return;
+    }
+
     s_queue = xQueueCreate(ENC_QUEUE_SIZE, sizeof(enc_raw_evt_t));
     configASSERT(s_queue);
 

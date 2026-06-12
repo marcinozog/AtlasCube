@@ -273,8 +273,14 @@ void audio_player_init(void)
     audio_pipeline_link(pipeline, &link_tag[0], 5);
 
     // I2S on fixed 44100/16/2 — rsp_filter handles resample from any source.
-    i2s_stream_set_clk(i2s_stream_writer,
-                       PLAYBACK_SAMPLE_RATE, PLAYBACK_BITS, PLAYBACK_CHANNELS);
+    esp_err_t ck = i2s_stream_set_clk(i2s_stream_writer,
+                                       PLAYBACK_SAMPLE_RATE, PLAYBACK_BITS, PLAYBACK_CHANNELS);
+    if (ck != ESP_OK) {
+        ESP_LOGE(TAG, "i2s_stream_set_clk failed: %s", esp_err_to_name(ck));
+    } else {
+        ESP_LOGI(TAG, "I2S clk reconfigured: %d Hz / %d bit / %d ch",
+                 PLAYBACK_SAMPLE_RATE, PLAYBACK_BITS, PLAYBACK_CHANNELS);
+    }
 
     s_play_sem  = xSemaphoreCreateBinary();
     s_play_lock = xSemaphoreCreateMutex();
@@ -635,14 +641,18 @@ void audio_player_set_volume(int volume)
 {
     if (!dsp_el) return;
 
+    if (volume <   0) volume =   0;
+    if (volume > 100) volume = 100;
+
+    // Linear taper — UI 0..100 → DSP scalar 0..1.0.
+    //   100 → 1.00 ( 0 dB)    50 → 0.50 ( -6 dB)
+    //    80 → 0.80 (-2 dB)    20 → 0.20 (-14 dB)
+    //    65 → 0.65 (-4 dB)    10 → 0.10 (-20 dB)
+    // audio_dsp.c accepts up to 4.0× if a quieter board ever needs a
+    // digital boost; ES3C28P doesn't (DAC pinned at 0 dB in board.c
+    // gives full headroom).
     float vol = volume / 100.0f;
-
-    // Exponent: higher = ramps up more slowly at the start
-    // 1.0 = linear, 2.0 = square, 4-5 = typical audio taper
-    const float exponent = 4.0f;
-    float vol_curved = powf(vol, exponent);
-
-    audio_dsp_set_volume(dsp_el, vol_curved);
+    audio_dsp_set_volume(dsp_el, vol);
 }
 
 

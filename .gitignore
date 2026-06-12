@@ -61,6 +61,8 @@ Thumbs.db
 *.zip
 *.tar
 *.gz
+*.7z
+*.rar
 
 # ===== Toolchain / downloads =====
 # tools/

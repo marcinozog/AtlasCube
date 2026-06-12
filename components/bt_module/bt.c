@@ -17,14 +17,25 @@ static const char *TAG = "BT_MODULE";
 static void bt_uart_rx_task(void *arg);
 void bt_send_raw(const char *cmd);
 
-static bool s_bt_enabled = false;
-static int s_bt_volume = 15;
+static bool s_bt_enabled   = false;
+static bool s_bt_available = false;   // true only when BT pins are wired (BOARD_ATLASCUBE)
+static int  s_bt_volume    = 15;
 static bt_play_event_cb_t s_play_event_cb = NULL;
 
 void bt_init(void)
 {
     // esp_log_level_set(TAG, ESP_LOG_NONE);
-    
+
+    // No external BT module on this board (e.g. ES3C28P sets all BT pins to -1)
+    // — skip everything. Guarded public functions below treat s_bt_available=false
+    // as a no-op so the rest of the firmware can call them safely.
+    if (BT_MOULE_PIN < 0 || BT_MODULE_TX_PIN < 0 || BT_MODULE_RX_PIN < 0) {
+        ESP_LOGI(TAG, "BT module not present on this board — skipping init");
+        s_bt_available = false;
+        s_bt_enabled   = false;
+        return;
+    }
+
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << BT_MOULE_PIN),
         .mode = GPIO_MODE_OUTPUT,
@@ -54,6 +65,7 @@ void bt_init(void)
 
     xTaskCreate(bt_uart_rx_task, "bt_uart_rx_task", 4096, NULL, 5, NULL);
 
+    s_bt_available = true;
     ESP_LOGI(TAG, "UART initialized (TX=%d RX=%d)", BT_MODULE_TX_PIN, BT_MODULE_RX_PIN);
 
     ESP_LOGI(TAG, "BT MODULE initialized (GPIO %d) = LOW", BT_MOULE_PIN);
@@ -64,6 +76,8 @@ void bt_init(void)
 
 void bt_set_enabled(bool enabled)
 {
+    if (!s_bt_available) return;   // no BT module on this board
+
     s_bt_enabled = enabled;
 
     gpio_set_level(BT_MOULE_PIN, enabled ? 1 : 0);
@@ -87,6 +101,8 @@ void bt_set_volume(int volume)
         volume = 100;
 
     s_bt_volume = volume;
+
+    if (!s_bt_available) return;   // skip UART write — module not present
 
     int at_vol = (volume * BT_AT_SVOL_MAX + 50) / 100;
 
@@ -112,13 +128,14 @@ void bt_set_play_event_cb(bt_play_event_cb_t cb)
 }
 
 void bt_check_connection() {
+    if (!s_bt_available) return;
     ESP_LOGI(TAG, "bt_check_connection AT+STATE");
     bt_send_raw("AT+STATE");
 }
 
 void bt_send_raw(const char *cmd)
 {
-    if (!cmd) return;
+    if (!cmd || !s_bt_available) return;
 
     uart_write_bytes(BT_UART_NUM, cmd, strlen(cmd));
     uart_write_bytes(BT_UART_NUM, "\r\n", 2);

@@ -5,9 +5,12 @@
 #include "driver/i2c_master.h"
 
 /**
- * Attach the FT6336U to an already-created I2C master bus and perform
- * a hardware reset using the rst_gpio pin (must be configured as output
- * by the caller; pass -1 to skip the reset pulse).
+ * Attach the FT6336U to an already-created NEW I2C master bus and pulse RST.
+ *
+ * Pass -1 for rst_gpio to skip the hardware reset. The caller (touch.c)
+ * owns the bus handle and is responsible for creating / sharing it with
+ * other devices on the same physical lines (e.g. the ES8311 codec on
+ * ES3C28P, which is created by ADF in audio_board_codec_init).
  */
 void ft6336u_init(i2c_master_bus_handle_t bus, int rst_gpio);
 

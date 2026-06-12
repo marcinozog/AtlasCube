@@ -47,7 +47,9 @@ static void spi_init(void)
     ESP_ERROR_CHECK(spi_bus_add_device(DISPLAY_HOST, &devcfg, &spi));
 
     gpio_set_direction(LCD_PIN_DC, GPIO_MODE_OUTPUT);
+#if LCD_PIN_RST >= 0
     gpio_set_direction(LCD_PIN_RST, GPIO_MODE_OUTPUT);
+#endif
 }
 
 /* =========================
@@ -84,10 +86,12 @@ static void lcd_data(const uint8_t *data, int len)
 
 static void st7796_reset(void)
 {
+#if LCD_PIN_RST >= 0
     gpio_set_level(LCD_PIN_RST, 0);
     vTaskDelay(pdMS_TO_TICKS(100));
     gpio_set_level(LCD_PIN_RST, 1);
     vTaskDelay(pdMS_TO_TICKS(100));
+#endif
 }
 
 static void st7796_init_cmds(void)

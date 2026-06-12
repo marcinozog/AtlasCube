@@ -5,9 +5,10 @@
 #include "driver/i2c_master.h"
 
 /**
- * Attach the CST816D to an already-created I2C master bus and perform
- * a hardware reset using the rst_gpio pin (must be configured as output
- * by the caller; pass -1 to skip the reset pulse).
+ * Attach the CST816D to an already-created NEW I2C master bus and pulse RST.
+ *
+ * Pass -1 for rst_gpio to skip the hardware reset. The caller (touch.c)
+ * owns the bus handle.
  */
 void cst816d_init(i2c_master_bus_handle_t bus, int rst_gpio);
 

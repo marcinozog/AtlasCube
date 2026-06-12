@@ -1,0 +1,27 @@
+menu "Board selection"
+
+choice BOARD_TYPE
+    prompt "Select hardware board"
+    default BOARD_ATLASCUBE
+    help
+        Choose the target hardware board. The active selection must match
+        the #define BOARD_* in main/include/defines.h.
+        CMakeLists.txt reads defines.h and writes CONFIG_BOARD_* into
+        build/sdkconfig.variant automatically — do not edit sdkconfig directly.
+
+config BOARD_ATLASCUBE
+    bool "AtlasCube (ESP32-S3)"
+    help
+        Original AtlasCube board with ST7796 / ILI9341 display,
+        FT6336U touch, PCM5102A passive DAC and optional BT module.
+
+config BOARD_ES3C28P
+    bool "ES3C28P (2.8-inch ESP32-S3 Display Module)"
+    help
+        Waveshare-style 2.8-inch ESP32-S3 display module (QD2833 SPI LCD,
+        FT6336U touch on I2C, ES8311 audio codec, WS2812B RGB LED,
+        MicroSD slot and integrated LiPo charger).
+
+endchoice
+
+endmenu

@@ -41,6 +41,9 @@ EIM_URL = "https://github.com/espressif/idf-im-ui/releases/latest"
 
 # variant -> (DISPLAY, UI_PROFILE, TOUCH, FLASH); mirrors the old select-variant.sh table
 VARIANTS = {
+    # ES3C28P: 2.8" QD2833 SPI panel (ILI9341-compatible, 320x240 landscape),
+    #          FT6336U touch on shared I2C, ES8311 audio codec.
+    "es3c28p": ("ILI9341", "320x240",     "FT6336U", "16MB"),
     "ili9341": ("ILI9341", "320x240",     "FT6336U", "16MB"),
     "st7796":  ("ST7796",  "480x320",     "FT6336U", "16MB"),
     "co5300":  ("CO5300",  "240X296",     "CST816D", "16MB"),
@@ -49,6 +52,7 @@ VARIANTS = {
 
 # Full member lists per #define group, so exactly one stays uncommented.
 GROUPS = {
+    "BOARD":      ["BOARD_ATLASCUBE", "BOARD_ES3C28P"],
     "DISPLAY":    ["DISPLAY_ILI9341", "DISPLAY_ST7796", "DISPLAY_CO5300", "DISPLAY_SSD1322"],
     "TOUCH":      ["TOUCH_FT6336U", "TOUCH_CST816D", "TOUCH_NONE"],
     "UI_PROFILE": ["UI_PROFILE_240X296", "UI_PROFILE_320x240", "UI_PROFILE_480x320",
@@ -145,14 +149,16 @@ def set_group(text, active, members):
 
 def select_variant(variant):
     display, profile, touch, flash = VARIANTS[variant]
+    board = "BOARD_ES3C28P" if variant == "es3c28p" else "BOARD_ATLASCUBE"
     defines = REPO_ROOT / "main" / "include" / "defines.h"
     text = defines.read_text(encoding="utf-8")
+    text = set_group(text, board,                   GROUPS["BOARD"])
     text = set_group(text, f"DISPLAY_{display}",    GROUPS["DISPLAY"])
     text = set_group(text, f"TOUCH_{touch}",        GROUPS["TOUCH"])
     text = set_group(text, f"UI_PROFILE_{profile}", GROUPS["UI_PROFILE"])
     text = set_group(text, f"FLASH_{flash}",        GROUPS["FLASH"])
     defines.write_text(text, encoding="utf-8")
-    print(f"    DISPLAY_{display} + UI_PROFILE_{profile} + TOUCH_{touch} + FLASH_{flash}")
+    print(f"    {board} + DISPLAY_{display} + UI_PROFILE_{profile} + TOUCH_{touch} + FLASH_{flash}")
 
 
 # ── 3. patch ESP-ADF + ESP-IDF (replaces patch-esp-adf.sh) ──────────────────────

@@ -1,0 +1,8 @@
+## IDF Component Manager Manifest File
+## RMT-backed driver for WS2812-family addressable LEDs (single LED on
+## ES3C28P, GPIO42). Official Espressif component — pulled at configure time
+## by idf.py reconfigure.
+dependencies:
+  idf:
+    version: ">=5.0"
+  espressif/led_strip: "^3.0"

@@ -155,20 +155,40 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 
 ## Hardware
 
+The firmware targets two boards out of the box, picked at compile time via `BOARD_*` in [`main/include/defines.h`](main/include/defines.h):
+
+**`BOARD_ATLASCUBE` — Atlas Hub (custom)**
+
 | Component | Details |
 |---|---|
 | MCU | ESP32-S3, 240 MHz, dual-core |
-| Board | Atlas Hub (custom) |
 | Flash | 8 MB |
 | PSRAM | OctoSPI, 80 MHz |
 | Display | ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), CO5300 240×296 AMOLED (QSPI), or SSD1322 256×64 mono OLED (SPI) — selected at compile time |
 | Touch | CST816D or FT6336U capacitive controller (I2C) — gestures detected by LVGL on the standard pointer indev |
 | Input | Rotary encoder with push button + capacitive touch (swipes + tap-to-control overlay) |
 | I2S mux | 74HC157D — hardware switch between ESP32-S3 and QCC5125 I2S outputs; controlled via GPIO |
-| Audio out | I2S DAC / amplifier (fed from 74HC157D output) |
+| Audio out | PCM5102A passive I2S DAC + external amplifier (fed from 74HC157D output) |
 | Bluetooth | QCC5125 external module, Bluetooth 5.1, A2DP + HFP |
 | Microphone | Built-in, used for HFP hands-free |
 | Buzzer | LEDC PWM tone generator |
+
+**`BOARD_ES3C28P` — 2.8″ ESP32-S3 Display (off-the-shelf)**
+
+An inexpensive ready-made dev board (Waveshare-style ES3C28P / ES3N28P) that runs the same firmware with `python scripts/build.py es3c28p`. No custom PCB needed.
+
+| Component | Details |
+|---|---|
+| MCU | ESP32-S3 with 8 MB OPI PSRAM on-package |
+| Flash | 16 MB |
+| Display | 2.8″ ILI9341V 240×320 IPS (SPI), backlight on GPIO45, RST tied to CHIP_PU |
+| Touch | FT6336G/U capacitive (I2C, shared bus with audio codec) |
+| Audio | ES8311 codec (I2C 0x18 + I2S) + SC8002B amplifier (PA enable active-LOW on GPIO1) + on-board MEMS mic |
+| RGB LED | WS2812B (XL-5050RGBC) on GPIO42 — driven via RMT (`components/rgb_led`) |
+| Battery | Li-Po with TP4054 charger; voltage divider on GPIO9 (ADC1) — exposed via `components/battery` |
+| Storage | MicroSD slot wired for SDIO 4-bit (CLK=38, CMD=40, D0..D3=39/41/48/47) |
+
+Full pin map and integration notes are in [docs/ES32C28P.md](docs/ES32C28P.md) — including an errata for the I2S section, where the manufacturer's spec assigns DO/DI to the wrong GPIOs vs. the actual PCB wiring.
 
 ---
 
@@ -223,9 +243,11 @@ That's it — no ESP-IDF, no ESP-ADF, no patches. The rest of this README descri
 Install [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf) (the official installer is the only manual step on Windows), open the ESP-IDF environment, then from the repo root run:
 
 ```bash
-python scripts/build.py co5300       # or ili9341 / st7796 / ssd1322
+python scripts/build.py co5300       # or ili9341 / st7796 / ssd1322 / es3c28p
 python scripts/build.py              # interactive variant menu
 ```
+
+> The `es3c28p` variant targets the off-the-shelf **2.8″ ESP32-S3 Display** board (a.k.a. ES3C28P / ES3N28P) — different pin map and audio chain (ES8311 codec + SC8002B amp + integrated MEMS mic, RGB LED on GPIO42, battery ADC on GPIO9). See [docs/ES32C28P.md](docs/ES32C28P.md).
 
 `build.py` is the single cross-platform entry point (Windows, Linux, CI). It clones ESP-ADF v2.8 if absent, selects the variant in `defines.h`, applies all ESP-ADF/ESP-IDF patches, compresses the web UI, builds, and produces a flashable `build/AtlasCube-<variant>.bin`. It is idempotent — safe to re-run. Useful flags: `--skip-build` (set up only), `--no-spiffs`, `--adf-path <path>`.
 
@@ -284,7 +306,7 @@ If you'd rather do it by hand (or are debugging the setup):
 
 **Pick the hardware variant**
 
-The active variant lives in [`main/include/defines.h`](main/include/defines.h) — three independent `#define` groups: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. `scripts/build.py <variant>` toggles them for you; to switch by hand, uncomment exactly one in each group.
+The active variant lives in [`main/include/defines.h`](main/include/defines.h) — four independent `#define` groups: `BOARD_*` (selects pin map: `BOARD_ATLASCUBE` or `BOARD_ES3C28P`), `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. `scripts/build.py <variant>` toggles them for you; to switch by hand, uncomment exactly one in each group.
 
 After switching the variant by hand, run `idf.py fullclean` so `sdkconfig` is regenerated from the new combination (`build.py` does this automatically).
 
@@ -521,6 +543,7 @@ Architecture and design notes in [`docs/`](docs/):
 - [`layout_editor.md`](docs/layout_editor.md) — UI layout customization
 - [`navigation.md`](docs/navigation.md) — screen map: the home ring, inputs (encoder/touch), how to edit it
 - [`display_drivers.md`](docs/display_drivers.md) — display driver gotchas (QSPI AMOLED even-boundary, shared SPI mutex, LVGL buffer vs internal DRAM budget)
+- [`ES32C28P.md`](docs/ES32C28P.md) — ES3C28P / ES3N28P alternative board: hardware spec, pin map (with the I2S DO/DI errata), integration notes
 
 ---
 

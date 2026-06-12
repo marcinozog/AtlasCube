@@ -139,15 +139,26 @@ static int dsp_process(audio_element_handle_t self, char *in_buffer, int in_len)
     }
 
     /* ---------------------------------------------------------------
-       Pass 2: Volume — fixed-point int16, one multiplier per sample.
-       Skipped entirely when volume == 1.0.
+       Pass 2: Volume — fixed-point Q15 multiplier per sample. Accepts
+       any volume in [0.0, 4.0]; values above 1.0 give a digital
+       pre-amp boost (with hard clipping at int16 limits). The boost
+       region is currently unused by audio_player_set_volume() but is
+       left available for boards with quieter analog chains where the
+       codec / amp can't deliver enough gain on their own.
+
+       Skipped entirely at unity (vol == 1.0) so the common case stays
+       fast.
+
+       gain range: 0..131072 (= 4.0 * 32768), so the s = sample * gain
+       product can exceed int32 range (32767 * 131072 = 4.29e9 > 2^31).
+       We promote to int64 for the multiply, then clip to int16.
        --------------------------------------------------------------- */
     float vol = ctx->volume;
-    if (vol < 1.0f) {
+    if (vol != 1.0f) {
         int32_t gain = (int32_t)(vol * 32768.0f);
 
         for (int i = 0; i < n_samples; i++) {
-            int32_t s = (int32_t)samples[i] * gain >> 15;
+            int32_t s = (int32_t)(((int64_t)samples[i] * gain) >> 15);
             if (s >  32767) s =  32767;
             if (s < -32768) s = -32768;
             samples[i] = (int16_t)s;
@@ -225,8 +236,14 @@ void audio_dsp_set_volume(audio_element_handle_t el, float volume)
     dsp_ctx_t *ctx = (dsp_ctx_t *)audio_element_getdata(el);
     if (!ctx) return;
 
+    // Allow up to 4.0x (+12 dB) digital pre-amp boost — the in-loop
+    // multiplier clips at int16 limits so for music (typical crest
+    // factor ~14 dB) most of the boost shows up as perceived loudness
+    // with negligible audible distortion. Only the [0..1] range is used
+    // by audio_player_set_volume() today; the headroom above 1.0 is
+    // there for boards with quieter analog chains.
     if (volume < 0.0f) volume = 0.0f;
-    if (volume > 1.0f) volume = 1.0f;
+    if (volume > 4.0f) volume = 4.0f;
     ctx->volume = volume;
 }
 

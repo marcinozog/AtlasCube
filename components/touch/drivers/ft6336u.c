@@ -25,6 +25,11 @@ static void ft6336u_reset(int rst_gpio)
 
 void ft6336u_init(i2c_master_bus_handle_t bus, int rst_gpio)
 {
+    if (!bus) {
+        ESP_LOGE(TAG, "no I2C bus handle");
+        return;
+    }
+
     ft6336u_reset(rst_gpio);
 
     esp_err_t err = i2c_master_probe(bus, FT6336U_I2C_ADDR, 100);

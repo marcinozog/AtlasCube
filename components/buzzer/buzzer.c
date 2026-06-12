@@ -59,6 +59,16 @@ esp_err_t buzzer_init(gpio_num_t pin)
 {
     if (s_initialized) return ESP_OK;
 
+    // ES3C28P (and any future variant without a piezo) sets BUZZER_PIN = -1;
+    // ledc_channel_config() would log
+    //   "ledc_channel_config(844): gpio_num argument is invalid"
+    // and return ESP_ERR_INVALID_ARG. Treat -1 as "no buzzer" so subsequent
+    // buzzer_tone() calls become silent no-ops (s_initialized stays false).
+    if ((int)pin < 0) {
+        ESP_LOGI(TAG, "Buzzer not wired (pin=%d) — skipped", (int)pin);
+        return ESP_OK;
+    }
+
     ledc_timer_config_t t = {
         .speed_mode      = BUZZER_LEDC_MODE,
         .timer_num       = BUZZER_LEDC_TIMER,

@@ -13,6 +13,10 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${DEFINES_H}")
 file(READ "${DEFINES_H}" _atlas_defines)
 set(_atlas_defines "${_atlas_defines}\n")
 
+string(REGEX MATCH "\n[ \t]*#define[ \t]+BOARD_(ATLASCUBE|ES3C28P)[^A-Za-z0-9_]"
+       _ "${_atlas_defines}")
+set(ATLAS_BOARD "${CMAKE_MATCH_1}")
+
 string(REGEX MATCH "\n[ \t]*#define[ \t]+DISPLAY_(ILI9341|ST7796|CO5300|SSD1322)[^A-Za-z0-9_]"
        _ "${_atlas_defines}")
 set(ATLAS_DISPLAY "${CMAKE_MATCH_1}")
@@ -25,6 +29,9 @@ string(REGEX MATCH "\n[ \t]*#define[ \t]+FLASH_(8MB|16MB)[^A-Za-z0-9_]"
        _ "${_atlas_defines}")
 set(ATLAS_FLASH "${CMAKE_MATCH_1}")
 
+if(NOT ATLAS_BOARD)
+    message(FATAL_ERROR "No active BOARD_* define in ${DEFINES_H}")
+endif()
 if(NOT ATLAS_DISPLAY)
     message(FATAL_ERROR "No active DISPLAY_* define in ${DEFINES_H}")
 endif()
@@ -35,11 +42,12 @@ if(NOT ATLAS_FLASH)
     message(FATAL_ERROR "No active FLASH_* define in ${DEFINES_H}")
 endif()
 
-message(STATUS "AtlasCube variant: DISPLAY=${ATLAS_DISPLAY}, TOUCH=${ATLAS_TOUCH}, FLASH=${ATLAS_FLASH}")
+message(STATUS "AtlasCube variant: BOARD=${ATLAS_BOARD}, DISPLAY=${ATLAS_DISPLAY}, TOUCH=${ATLAS_TOUCH}, FLASH=${ATLAS_FLASH}")
 
 set(VARIANT_SDKCONFIG "${CMAKE_BINARY_DIR}/sdkconfig.variant")
 file(WRITE "${VARIANT_SDKCONFIG}"
     "# Auto-generated from main/include/defines.h — do not edit\n"
+    "CONFIG_BOARD_${ATLAS_BOARD}=y\n"
     "CONFIG_DISPLAY_${ATLAS_DISPLAY}=y\n"
     "CONFIG_TOUCH_${ATLAS_TOUCH}=y\n"
     "CONFIG_ESPTOOLPY_FLASHSIZE_${ATLAS_FLASH}=y\n"

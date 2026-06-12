@@ -16,6 +16,15 @@
 
 static const char *TAG = "TOUCH";
 
+// Touch shares the I2C bus with the ES8311 codec on ES3C28P. ADF's
+// audio_hal_init() (called from audio_board_init()) creates that bus via
+// the NEW I2C master API on I2C_NUM_0 — see app_main.c which calls
+// audio_board_init() BEFORE touch_init() exactly so the bus is up.
+//
+// On AtlasCube there's no codec, so no one creates the bus first — we
+// fall back to creating it here.
+#define TOUCH_I2C_PORT       I2C_NUM_0
+
 static i2c_master_bus_handle_t s_bus = NULL;
 static lv_indev_t *s_indev = NULL;
 static volatile bool s_int_flag = false;
@@ -93,19 +102,37 @@ void touch_init(void)
         gpio_set_level(CTP_RST, 1);
     }
 
-    // ── I2C master bus ───────────────────────────────────────────────────
-    const i2c_master_bus_config_t bus_cfg = {
-        .clk_source                   = I2C_CLK_SRC_DEFAULT,
-        .i2c_port                     = I2C_NUM_0,
-        .scl_io_num                   = CTP_SCL,
-        .sda_io_num                   = CTP_SDA,
-        .glitch_ignore_cnt            = 7,
-        .flags.enable_internal_pullup = true,
-    };
-    esp_err_t err = i2c_new_master_bus(&bus_cfg, &s_bus);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "i2c_new_master_bus failed: %s", esp_err_to_name(err));
+    // ── I2C bus: try to reuse one created by ADF for the codec ──────────
+    // On ES3C28P, audio_board_init() ran first → ADF's audio_hal_init →
+    // es8311 → i2c_new_master_bus(I2C_NUM_0, ...) → bus exists. We just
+    // grab the handle and add the touch controller as a device on top.
+    //
+    // On AtlasCube (or any board without an I2C codec) audio_board_init
+    // is a no-op for I2C, so get_bus_handle returns ESP_ERR_INVALID_STATE
+    // and we create the bus ourselves on CTP_SCL/CTP_SDA.
+    esp_err_t err = i2c_master_get_bus_handle(TOUCH_I2C_PORT, &s_bus);
+    if (err == ESP_ERR_INVALID_STATE || s_bus == NULL) {
+        const i2c_master_bus_config_t bus_cfg = {
+            .clk_source                   = I2C_CLK_SRC_DEFAULT,
+            .i2c_port                     = TOUCH_I2C_PORT,
+            .scl_io_num                   = CTP_SCL,
+            .sda_io_num                   = CTP_SDA,
+            .glitch_ignore_cnt            = 7,
+            .flags.enable_internal_pullup = true,
+        };
+        err = i2c_new_master_bus(&bus_cfg, &s_bus);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "i2c_new_master_bus failed: %s", esp_err_to_name(err));
+            return;
+        }
+        ESP_LOGI(TAG, "Created I2C bus on port %d (SCL=%d SDA=%d)",
+                 (int)TOUCH_I2C_PORT, CTP_SCL, CTP_SDA);
+    } else if (err != ESP_OK) {
+        ESP_LOGE(TAG, "i2c_master_get_bus_handle failed: %s", esp_err_to_name(err));
         return;
+    } else {
+        ESP_LOGI(TAG, "Reusing existing I2C bus on port %d (SCL=%d SDA=%d)",
+                 (int)TOUCH_I2C_PORT, CTP_SCL, CTP_SDA);
     }
 
     // ── Driver ───────────────────────────────────────────────────────────

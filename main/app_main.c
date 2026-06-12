@@ -18,6 +18,8 @@
 #include "encoder.h"
 #include "touch.h"
 #include "buzzer.h"
+#include "rgb_led.h"
+#include "battery.h"
 #include "events_service.h"
 #include "dim_schedule.h"
 #include "radio_service.h"
@@ -26,6 +28,17 @@
 #include "mqtt_config.h"
 
 static const char *TAG = "MAIN";
+
+// Forward-declared from ESP-ADF's audio_board (components/audio_board/
+// esp32_s3_atlascube/board.h). We can't include board.h directly here:
+// ADF's audio_board CMakeLists.txt puts audio_hal in PRIV_REQUIRES, so
+// board.h's transitive #include "audio_hal.h" only resolves *inside* the
+// audio_board component. We only need the side effects (codec config +
+// PA enable on ES3C28P) and discard the returned handle, so an opaque
+// forward declaration is enough — the linker resolves the symbol via
+// `audio_board` in main/CMakeLists.txt REQUIRES.
+typedef struct audio_board_handle *audio_board_handle_t;
+audio_board_handle_t audio_board_init(void);
 
 void init_fs(void);
 void system_monitor_task(void *pv);
@@ -52,10 +65,28 @@ void app_main(void)
     bt_init();             // 2. no subscribe
     settings_init();       // 3. no subscribe
     buzzer_init(BUZZER_PIN);
+    // RGB LED + battery monitor — both return ESP_ERR_NOT_SUPPORTED with a
+    // log line on boards where the feature isn't wired (RGB_LED_PIN/BAT_ADC_PIN
+    // == -1), so the calls are safe regardless of variant.
+    rgb_led_init();
+    battery_init();
     events_service_init();
     ui_profile_load_from_file();   // layout overrides — must run before display_init()
     display_init();        // 4. ui_manager_init() → subscribe #1
     encoder_init();
+    // audio_board_init() MUST run before touch_init() on ES3C28P:
+    //   - ADF v2.8 audio_hal_init → es8311 → i2c_new_master_bus(I2C_NUM_0)
+    //     creates the shared I2C bus (SCL=15, SDA=16) and configures the
+    //     ES8311 codec. It also drives SC8002B PA enable (GPIO1) LOW.
+    //   - touch_init() then calls i2c_master_get_bus_handle() to attach
+    //     FT6336U as another device on the same bus.
+    //   - Reverse order would crash: touch_init would create a legacy-API
+    //     bus first, ADF's new-API bus_create would then abort with
+    //     "CONFLICT! driver_ng is not allowed to be used with this old driver".
+    //   - On AtlasCube this is a near-noop (no codec, no I2C bus from ADF)
+    //     and touch_init() falls back to creating the bus itself on
+    //     CTP_SCL=47 / CTP_SDA=48.
+    audio_board_init();
     touch_init();          // registers LVGL indev — must run before display_start()
     display_start();       // starts lvgl_task; no LVGL state may be touched from other tasks afterwards
     dim_schedule_init();   // periodic check of dim/bright window; no-op until NTP syncs
@@ -78,6 +109,7 @@ void app_main(void)
     // ── Audio (initialization independent of WiFi) ───────────────────────────
     // audio_player and radio_service only initialize structures/pipeline;
     // actual streaming happens only after calling play, which requires STA.
+    // audio_board_init() already ran above (had to be before touch_init).
     audio_player_init();
     playlist_load();
     radio_service_init();
