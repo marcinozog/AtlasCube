@@ -17,6 +17,7 @@ extern "C" {
 #define EVENTS_MAX          50
 #define EVENT_ID_LEN        9       // 8 hex + '\0'
 #define EVENT_TITLE_LEN     64
+#define EVENT_SOUND_LEN     48      // WAV filename on SD (/voice/<name>), '\0' incl.
 
 typedef enum {
     EV_BIRTHDAY = 0,
@@ -24,6 +25,7 @@ typedef enum {
     EV_REMINDER,
     EV_ANNIVERSARY,
     EV_ALARM,
+    EV_VOICE,
     EV_TYPE_COUNT
 } event_type_t;
 
@@ -55,10 +57,15 @@ typedef struct {
     // (resolved at fire time via playlist_get()).
     int                station;
 
-    // Used only when type == EV_ALARM: 0..100, applied via settings_set_volume()
+    // Used when type == EV_ALARM: 0..100, applied via settings_set_volume()
     // at fire time so the radio rings at a predictable level regardless of the
-    // user's last volume setting.
+    // user's last volume setting. Also reused as the voice-notification level.
     int                volume;
+
+    // Used only when type == EV_VOICE: filename of a WAV in /voice on the SD
+    // card (generated on the phone via TTS, uploaded over /api/sd/file). Empty
+    // for every other type.
+    char               sound[EVENT_SOUND_LEN];
 } event_t;
 
 // --------------------------------------------------------------------------

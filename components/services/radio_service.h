@@ -18,6 +18,16 @@ void radio_play_index(int index);
 void radio_stop(void);
 
 /**
+ * Plays a one-shot voice notification (WAV in /voice on the SD card) over the
+ * I2S output, interrupting the radio or BT source. `filename` is just the name
+ * (e.g. "v_ab12cd.wav"); `volume` (0–100) is applied live for the notification
+ * only. When the file ends the previous source is restored automatically:
+ * a playing station resumes, BT is switched back, a stopped radio stays stopped.
+ * Safe to call from the events scheduler task.
+ */
+void radio_play_notification(const char *filename, int volume);
+
+/**
  * Resumes the last station at boot if playback was active before the last
  * reboot. Opt-in via playlist.resume_on_boot; no-op when disabled or when the
  * radio was stopped. Requires STA mode (radio needs internet) — the caller

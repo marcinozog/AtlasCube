@@ -4,6 +4,7 @@
 #include "melodies.h"
 #include "playlist.h"
 #include "radio_service.h"
+#include "sdcard.h"
 #include "settings.h"
 #include "cJSON.h"
 #include "defines.h"
@@ -75,6 +76,7 @@ static const char *type_to_str(event_type_t t)
         case EV_REMINDER:    return "reminder";
         case EV_ANNIVERSARY: return "anniversary";
         case EV_ALARM:       return "alarm";
+        case EV_VOICE:       return "voice";
         default:             return "reminder";
     }
 }
@@ -86,6 +88,7 @@ static event_type_t type_from_str(const char *s)
     if (strcmp(s, "nameday")     == 0) return EV_NAMEDAY;
     if (strcmp(s, "anniversary") == 0) return EV_ANNIVERSARY;
     if (strcmp(s, "alarm")       == 0) return EV_ALARM;
+    if (strcmp(s, "voice")       == 0) return EV_VOICE;
     return EV_REMINDER;
 }
 
@@ -176,6 +179,9 @@ static esp_err_t load_from_file(void)
         if (e.volume < 0)   e.volume = 0;
         if (e.volume > 100) e.volume = 100;
 
+        j = cJSON_GetObjectItem(it, "sound");
+        if (cJSON_IsString(j)) strncpy(e.sound, j->valuestring, EVENT_SOUND_LEN - 1);
+
         s_events[s_count++] = e;
     }
 
@@ -204,6 +210,7 @@ static esp_err_t save_to_file(void)
         cJSON_AddBoolToObject  (o, "enabled",            e->enabled);
         cJSON_AddNumberToObject(o, "station",            e->station);
         cJSON_AddNumberToObject(o, "volume",             e->volume);
+        cJSON_AddStringToObject(o, "sound",              e->sound);
         cJSON_AddItemToArray(arr, o);
     }
 
@@ -287,6 +294,15 @@ static void fire_event(const event_t *e)
         } else {
             ESP_LOGW(TAG, "Alarm station %d out of range (playlist=%d) → silent",
                      e->station, n);
+        }
+    } else if (e->type == EV_VOICE) {
+        // Voice notification: play the pre-rendered WAV from the SD card,
+        // interrupting and then restoring the current source.
+        if (e->sound[0] && sdcard_is_mounted()) {
+            radio_play_notification(e->sound, e->volume);
+        } else {
+            ESP_LOGW(TAG, "Voice event '%s' has no sound/SD → reminder melody", e->id);
+            melody_play(MELODY_REMINDER);
         }
     } else if (e->type == EV_BIRTHDAY || e->type == EV_ANNIVERSARY) {
         melody_play(MELODY_BIRTHDAY);
@@ -482,6 +498,7 @@ const char *events_type_label(event_type_t t)
         case EV_NAMEDAY:     return "NAME DAY";
         case EV_ANNIVERSARY: return "ANNIVERSARY";
         case EV_ALARM:       return "ALARM";
+        case EV_VOICE:       return "VOICE";
         case EV_REMINDER:
         default:             return "REMINDER";
     }

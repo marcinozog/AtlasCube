@@ -10,6 +10,7 @@ const TYPE_ICON = {
     anniversary: '💍',
     reminder:    '⏰',
     alarm:       '⏰',
+    voice:       '🗣️',
 };
 
 const TYPE_LABEL = {
@@ -18,6 +19,7 @@ const TYPE_LABEL = {
     anniversary: 'Anniversary',
     reminder:    'Reminder',
     alarm:       'Alarm',
+    voice:       'Voice',
 };
 
 const REC_LABEL = {
@@ -48,9 +50,12 @@ async function loadStations() {
 }
 
 function evTypeChanged() {
-    const isAlarm = document.getElementById('ev_type').value === 'alarm';
+    const type    = document.getElementById('ev_type').value;
+    const isAlarm = type === 'alarm';
+    const isVoice = type === 'voice';
     document.getElementById('ev_station_group').style.display = isAlarm ? '' : 'none';
-    document.getElementById('ev_volume_group').style.display  = isAlarm ? '' : 'none';
+    document.getElementById('ev_volume_group').style.display  = (isAlarm || isVoice) ? '' : 'none';
+    document.getElementById('ev_sound_group').style.display   = isVoice ? '' : 'none';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -97,6 +102,8 @@ function makeRow(ev) {
         const st = stations[ev.station];
         const name = st ? st.name : `#${ev.station}`;
         extra = ` · 📻 ${escapeHtml(name)} · 🔊 ${ev.volume ?? 0}`;
+    } else if (ev.type === 'voice') {
+        extra = ` · 🗣️ ${escapeHtml(ev.sound || '(no audio)')} · 🔊 ${ev.volume ?? 0}`;
     }
 
     row.innerHTML = `
@@ -148,6 +155,7 @@ function evFormReset() {
     document.getElementById('ev_station').value = '0';
     document.getElementById('ev_volume').value = '50';
     document.getElementById('ev_volume_val').textContent = '50';
+    document.getElementById('ev_sound').value = '';
     evTypeChanged();
     setStatus('', '');
 }
@@ -170,6 +178,7 @@ function evEdit(id) {
     const vol = ev.volume ?? 50;
     document.getElementById('ev_volume').value = String(vol);
     document.getElementById('ev_volume_val').textContent = String(vol);
+    document.getElementById('ev_sound').value = ev.sound || '';
     evTypeChanged();
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -210,6 +219,9 @@ function formToEvent() {
         enabled:    document.getElementById('ev_enabled').checked,
         station,
         volume,
+        // Preserve the voice clip on edit; empty for non-voice events (ignored
+        // by the firmware). The web UI can't record audio — only the app sets it.
+        sound:      document.getElementById('ev_sound').value || '',
     };
 }
 

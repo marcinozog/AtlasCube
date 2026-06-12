@@ -4,8 +4,10 @@
 #include "settings.h"
 #include "bt.h"
 #include "playlist.h"
+#include "sdcard.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include <stdio.h>
 #include <string.h>
 
 static const char *TAG = "RADIO_SERVICE";
@@ -20,6 +22,15 @@ static esp_timer_handle_t s_ramp_timer;
 static int s_ramp_target;
 static int s_ramp_total;   // number of steps
 static int s_ramp_idx;     // steps done
+
+// ── voice notification (interrupt + restore) ────────────────────────────────
+// State captured when a voice notification starts, used by
+// on_notification_finished() to restore the previous audio source.
+static bool s_notif_active   = false;
+static bool s_notif_was_radio = false;
+static bool s_notif_was_bt    = false;
+static int  s_notif_prev_index  = 0;
+static int  s_notif_prev_volume = 0;
 
 static void ramp_tick(void *arg)
 {
@@ -79,14 +90,74 @@ static void on_bt_play_event(bool playing)
 /*
 void radio_service_init(void)
 */
+// Runs on the audio task when a voice-notification WAV reaches its end.
+// Restores whatever was playing before the notification interrupted it.
+static void on_notification_finished(void)
+{
+    if (!s_notif_active) return;
+    s_notif_active = false;
+
+    ESP_LOGI(TAG, "Notification done → restore (radio=%d, bt=%d, idx=%d, vol=%d)",
+             s_notif_was_radio, s_notif_was_bt, s_notif_prev_index, s_notif_prev_volume);
+
+    audio_player_set_volume(s_notif_prev_volume);   // undo the notification level
+
+    if (s_notif_was_bt) {
+        settings_set_bt_enable(true);    // mux back to the BT module
+        bt_send_raw("AT+PA");            // resume phone playback
+    } else if (s_notif_was_radio) {
+        radio_play_index(s_notif_prev_index);
+    }
+    // else: radio was stopped → stay stopped
+}
+
+
 void radio_service_init(void)
 {
     bt_set_play_event_cb(on_bt_play_event);
+    audio_player_set_finished_cb(on_notification_finished);
 
     app_state_update(&(app_state_patch_t){
         .has_radio = true,
         .radio_state = RADIO_STATE_STOPPED
     });
+}
+
+
+/*
+void radio_play_notification(const char *filename, int volume)
+*/
+void radio_play_notification(const char *filename, int volume)
+{
+    if (!filename || !filename[0]) {
+        ESP_LOGW(TAG, "notification: empty filename");
+        return;
+    }
+
+    char path[128];
+    snprintf(path, sizeof(path), "%s/voice/%s", SD_MOUNT_POINT, filename);
+
+    app_state_t *s = app_state_get();
+    s_notif_was_bt     = s->bt_enable;
+    s_notif_was_radio  = (s->radio_state == RADIO_STATE_PLAYING ||
+                          s->radio_state == RADIO_STATE_BUFFERING);
+    s_notif_prev_index  = s->curr_index;
+    s_notif_prev_volume = s->volume;
+    s_notif_active = true;
+
+    ESP_LOGI(TAG, "Voice notification: %s (vol=%d, was_radio=%d, was_bt=%d)",
+             path, volume, s_notif_was_radio, s_notif_was_bt);
+
+    if (volume >= 0) audio_player_set_volume(volume);   // live only, not persisted
+
+    // Hand the I2S output to the ESP side: pause + un-mux the BT module if it
+    // was the active source. (Radio teardown is handled by audio_player_play_file.)
+    if (s_notif_was_bt) {
+        if (s->bt_auto_switch) bt_pause();
+        settings_set_bt_enable(false);
+    }
+
+    audio_player_play_file(path);
 }
 
 

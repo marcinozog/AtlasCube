@@ -8,6 +8,8 @@
 #include "mp3_decoder.h"
 #include "aac_decoder.h"
 #include "flac_decoder.h"
+#include "wav_decoder.h"
+#include "fatfs_stream.h"
 #include "filter_resample.h"
 #include "esp_log.h"
 #include "esp_crt_bundle.h"
@@ -17,7 +19,9 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "esp_heap_caps.h"
+#include "esp_timer.h"
 #include <math.h>
+#include <stdio.h>
 #include <strings.h>
 
 static const char *TAG = "AUDIO_PLAYER";
@@ -26,6 +30,7 @@ static void audio_event_task(void *param);
 static void retry_task(void *param);
 static void audio_play_task(void *param);
 static void audio_play_internal(const char *url);
+static void audio_play_internal_file(const char *path);
 static int http_event_handler(icy_http_event_msg_t *msg);
 static void parse_stream_title(const char *meta);
 
@@ -47,12 +52,28 @@ static const char *codec_name[] = { "mp3", "aac", "flac" };
 static audio_pipeline_handle_t pipeline;
 static audio_element_handle_t
     http_stream_reader, mp3_decoder_el, aac_decoder_el, flac_decoder_el,
+    fatfs_stream_reader, wav_decoder_el,
     active_decoder_el, rsp_filter_el, dsp_el, i2s_stream_writer;
 
 static audio_event_iface_handle_t evt;
 
 static bool is_playing = false;
 static codec_type_t current_codec = CODEC_MP3;
+
+// True while the linked pipeline plays a local file (fatfs -> wav -> ...), as
+// opposed to a radio stream (http -> codec -> ...). Drives end-of-stream
+// handling (file end = success+restore, stream end = anomaly+retry) and forces
+// a relink back to the http source on the next radio play.
+static bool s_file_mode = false;
+static bool s_finish_requested = false;   // dedupe end-of-file signals per playback
+static audio_finished_cb_t s_finished_cb = NULL;
+
+// Deterministic end-of-file: element STATE_FINISHED events fire when the decoder
+// drains, not when the audio has actually played out, so they cut the tail.
+// Instead we time the teardown from the WAV's own duration (+ a drain margin).
+static esp_timer_handle_t s_file_end_timer = NULL;
+static uint32_t           s_file_duration_ms = 0;   // 0 = unknown → fall back to events
+#define FILE_END_DRAIN_MARGIN_MS 700
 
 static TaskHandle_t s_retry_task_handle = NULL;
 static int s_retry_count = 0;
@@ -63,9 +84,11 @@ static int s_retry_count = 0;
 // triggers it. (The actual TLS handshake / network I/O happens later in the
 // http element's own task.)
 static SemaphoreHandle_t s_play_sem  = NULL;  // binary: trigger
-static SemaphoreHandle_t s_play_lock = NULL;  // mutex: protects s_pending_url / s_pending_stop
+static SemaphoreHandle_t s_play_lock = NULL;  // mutex: protects s_pending_* below
 static char              s_pending_url[PLAY_URL_MAX];
 static bool              s_pending_stop = false; // set by audio_player_request_stop()
+static bool              s_pending_is_file = false; // pending request is a local file
+static bool              s_pending_finish = false;  // file reached its end → stop + cb
 
 static int last_rsp_sample_rate = 0;
 static int last_rsp_channels    = 0;
@@ -130,6 +153,8 @@ static void build_pipeline_for_codec(codec_type_t codec)
     const char *link_tag[5] = { "http", codec_name[codec], "rsp", "dsp", "i2s" };
     audio_pipeline_link(pipeline, link_tag, 5);
 
+    s_file_mode = false;
+
     // The listener is attached per-element in audio_player_init via
     // audio_element_msg_set_listener — it stays active after unlink/link,
     // so we don't touch it here. (audio_pipeline_set_listener /
@@ -184,6 +209,18 @@ void audio_player_init(void)
     flac_decoder_cfg.task_core   = 1;
 
     flac_decoder_el = flac_decoder_init(&flac_decoder_cfg);
+
+    // Local-file source for voice notifications: fatfs reader -> wav decoder.
+    // Shares the rsp/dsp/i2s tail with the radio chain.
+    fatfs_stream_cfg_t fatfs_cfg = FATFS_STREAM_CFG_DEFAULT();
+    fatfs_cfg.type        = AUDIO_STREAM_READER;
+    fatfs_cfg.task_core   = 1;
+    fatfs_stream_reader = fatfs_stream_init(&fatfs_cfg);
+
+    wav_decoder_cfg_t wav_decoder_cfg = DEFAULT_WAV_DECODER_CONFIG();
+    wav_decoder_cfg.out_rb_size = 32 * 1024;
+    wav_decoder_cfg.task_core   = 1;
+    wav_decoder_el = wav_decoder_init(&wav_decoder_cfg);
 
     // Resample filter — upsamples whatever the decoder outputs (22050/32000/48000…)
     // to PLAYBACK_SAMPLE_RATE. This way I2S and DSP can stay on a fixed
@@ -245,9 +282,11 @@ void audio_player_init(void)
     audio_dsp_set_volume(dsp_el, 0.1f);
 
     audio_pipeline_register(pipeline, http_stream_reader, "http");
+    audio_pipeline_register(pipeline, fatfs_stream_reader,"file");
     audio_pipeline_register(pipeline, mp3_decoder_el,     "mp3");
     audio_pipeline_register(pipeline, aac_decoder_el,     "aac");
     audio_pipeline_register(pipeline, flac_decoder_el,    "flac");
+    audio_pipeline_register(pipeline, wav_decoder_el,     "wav");
     audio_pipeline_register(pipeline, rsp_filter_el,      "rsp");
     audio_pipeline_register(pipeline, dsp_el,             "dsp");
     audio_pipeline_register(pipeline, i2s_stream_writer,  "i2s");
@@ -259,9 +298,11 @@ void audio_player_init(void)
     // is lost on audio_pipeline_unlink — on codec change events would not
     // reach event_task. Per-element listener survives unlink/link.
     audio_element_msg_set_listener(http_stream_reader, evt);
+    audio_element_msg_set_listener(fatfs_stream_reader, evt);
     audio_element_msg_set_listener(mp3_decoder_el,     evt);
     audio_element_msg_set_listener(aac_decoder_el,     evt);
     audio_element_msg_set_listener(flac_decoder_el,    evt);
+    audio_element_msg_set_listener(wav_decoder_el,     evt);
     audio_element_msg_set_listener(rsp_filter_el,      evt);
     audio_element_msg_set_listener(dsp_el,             evt);
     audio_element_msg_set_listener(i2s_stream_writer,  evt);
@@ -362,11 +403,39 @@ void audio_player_play(const char *url)
     strncpy(s_pending_url, url, PLAY_URL_MAX - 1);
     s_pending_url[PLAY_URL_MAX - 1] = '\0';
     s_pending_stop = false;                 // a new play supersedes a pending stop
+    s_pending_finish = false;
+    s_pending_is_file = false;
     xSemaphoreGive(s_play_lock);
 
     // Binary semaphore: if the task hasn't handled the previous give yet,
     // this one just gets "marked" and the task will handle the newest URL.
     xSemaphoreGive(s_play_sem);
+}
+
+
+/*
+void audio_player_play_file(const char *path)
+Local-file counterpart of audio_player_play. See header.
+*/
+void audio_player_play_file(const char *path)
+{
+    if (!path || !s_play_sem || !s_play_lock) return;
+
+    xSemaphoreTake(s_play_lock, portMAX_DELAY);
+    strncpy(s_pending_url, path, PLAY_URL_MAX - 1);
+    s_pending_url[PLAY_URL_MAX - 1] = '\0';
+    s_pending_stop = false;
+    s_pending_finish = false;
+    s_pending_is_file = true;
+    xSemaphoreGive(s_play_lock);
+
+    xSemaphoreGive(s_play_sem);
+}
+
+
+void audio_player_set_finished_cb(audio_finished_cb_t cb)
+{
+    s_finished_cb = cb;
 }
 
 
@@ -382,6 +451,8 @@ void audio_player_request_stop(void)
 
     xSemaphoreTake(s_play_lock, portMAX_DELAY);
     s_pending_stop = true;
+    s_pending_finish = false;
+    s_pending_is_file = false;
     xSemaphoreGive(s_play_lock);
 
     xSemaphoreGive(s_play_sem);
@@ -411,8 +482,10 @@ static void audio_play_internal(const char *url)
         codec = CODEC_MP3;
     }
 
-    if (codec != current_codec) {
-        ESP_LOGI(TAG, "Switching codec: %s -> %s",
+    // Relink to the http source if the codec changed, or if the pipeline is
+    // currently linked for local-file playback (fatfs -> wav).
+    if (codec != current_codec || s_file_mode) {
+        ESP_LOGI(TAG, "Switching to http source, codec: %s -> %s",
                  codec_name[current_codec], codec_name[codec]);
         build_pipeline_for_codec(codec);
     }
@@ -421,6 +494,116 @@ static void audio_play_internal(const char *url)
     audio_pipeline_run(pipeline);
 
     is_playing = true;
+}
+
+
+/*
+static uint32_t wav_duration_ms(const char *path)
+Reads the 44-byte WAV header and computes the clip length from the actual file
+size and the PCM byte rate. Returns 0 if the file can't be opened/parsed.
+*/
+static uint32_t wav_duration_ms(const char *path)
+{
+    FILE *f = fopen(path, "rb");
+    if (!f) return 0;
+
+    uint8_t h[44];
+    size_t got = fread(h, 1, sizeof(h), f);
+    fseek(f, 0, SEEK_END);
+    long fsize = ftell(f);
+    fclose(f);
+
+    if (got < sizeof(h) || fsize <= (long)sizeof(h)) return 0;
+
+    uint32_t sr   = h[24] | (h[25] << 8) | (h[26] << 16) | ((uint32_t)h[27] << 24);
+    uint16_t ch   = h[22] | (h[23] << 8);
+    uint16_t bits = h[34] | (h[35] << 8);
+    uint32_t byte_rate = sr * ch * (bits / 8);
+    if (byte_rate == 0) return 0;
+
+    uint64_t data_bytes = (uint64_t)(fsize - (long)sizeof(h));
+    return (uint32_t)(data_bytes * 1000ULL / byte_rate);
+}
+
+
+/*
+static void request_file_finish(void)
+Marks the current file playback as finished and wakes audio_play_task to do the
+teardown + source restore. Safe from the esp_timer task or audio_event_task.
+*/
+static void request_file_finish(void)
+{
+    if (!s_file_mode || s_finish_requested) return;
+    s_finish_requested = true;
+    if (s_play_lock && s_play_sem) {
+        xSemaphoreTake(s_play_lock, portMAX_DELAY);
+        s_pending_finish = true;
+        xSemaphoreGive(s_play_lock);
+        xSemaphoreGive(s_play_sem);
+    }
+}
+
+
+static void file_end_timer_cb(void *arg)
+{
+    (void)arg;
+    ESP_LOGI(TAG, "Voice end timer → finishing");
+    request_file_finish();
+}
+
+
+/*
+static void audio_play_internal_file(const char *path)
+Plays a local WAV from SD: relinks the pipeline to fatfs -> wav -> rsp -> dsp ->
+i2s and runs it. Called ONLY from audio_play_task.
+*/
+static void audio_play_internal_file(const char *path)
+{
+    ESP_LOGI(TAG, "Playing file: %s", path);
+
+    s_retry_count = 0;
+
+    // Compute the clip length up front (file not yet opened by fatfs).
+    s_file_duration_ms = wav_duration_ms(path);
+
+    if (is_playing) {
+        audio_player_stop();
+    }
+
+    audio_pipeline_unlink(pipeline);
+    active_decoder_el = wav_decoder_el;
+    const char *link_tag[5] = { "file", "wav", "rsp", "dsp", "i2s" };
+    audio_pipeline_link(pipeline, link_tag, 5);
+    s_file_mode = true;
+    s_finish_requested = false;
+    ESP_LOGI(TAG, "Pipeline linked: file -> wav -> rsp -> dsp -> i2s");
+
+    // New source → make the next MUSIC_INFO reconfigure the resampler.
+    last_rsp_sample_rate = 0;
+    last_rsp_channels    = 0;
+
+    audio_element_set_uri(fatfs_stream_reader, path);
+    audio_pipeline_run(pipeline);
+
+    is_playing = true;
+
+    // Arm the deterministic end-of-playback timer (duration + drain margin).
+    if (s_file_duration_ms > 0) {
+        if (!s_file_end_timer) {
+            const esp_timer_create_args_t a = {
+                .callback = file_end_timer_cb, .name = "file_end" };
+            esp_timer_create(&a, &s_file_end_timer);
+        }
+        if (s_file_end_timer) {
+            esp_timer_stop(s_file_end_timer);   // cancel any previous arming
+            esp_timer_start_once(s_file_end_timer,
+                ((uint64_t)s_file_duration_ms + FILE_END_DRAIN_MARGIN_MS) * 1000ULL);
+            ESP_LOGI(TAG, "Voice duration ~%lu ms, end timer armed",
+                     (unsigned long)s_file_duration_ms);
+        }
+    } else {
+        ESP_LOGW(TAG, "WAV duration unknown → relying on STATE_FINISHED event");
+    }
 }
 
 
@@ -437,16 +620,27 @@ static void audio_play_task(void *param)
         xSemaphoreTake(s_play_sem, portMAX_DELAY);
 
         xSemaphoreTake(s_play_lock, portMAX_DELAY);
-        bool stop = s_pending_stop;
-        s_pending_stop = false;
+        bool stop    = s_pending_stop;    s_pending_stop = false;
+        bool finish  = s_pending_finish;  s_pending_finish = false;
+        bool is_file = s_pending_is_file;
         strncpy(url, s_pending_url, PLAY_URL_MAX - 1);
         url[PLAY_URL_MAX - 1] = '\0';
         xSemaphoreGive(s_play_lock);
 
-        if (stop)
+        if (finish) {
+            // A local file reached its end: tear down here (off the event task)
+            // and let the owner restore the previous source. s_file_mode stays
+            // set so the restore's radio play forces a relink to the http source
+            // (audio_player_stop keeps the fatfs->wav topology linked).
             audio_player_stop();
-        else
+            if (s_finished_cb) s_finished_cb();
+        } else if (stop) {
+            audio_player_stop();
+        } else if (is_file) {
+            audio_play_internal_file(url);
+        } else {
             audio_play_internal(url);
+        }
     }
 }
 
@@ -456,6 +650,8 @@ void audio_player_stop(void)
 */
 void audio_player_stop(void)
 {
+    if (s_file_end_timer) esp_timer_stop(s_file_end_timer);   // cancel pending file-end
+
     if (!is_playing) return;
 
     audio_pipeline_stop(pipeline);
@@ -583,6 +779,22 @@ static void audio_event_task(void *param)
                                         music_info.sample_rates,
                                         music_info.channels);
             }
+        }
+
+        // --- LOCAL FILE end fallback (only when duration is unknown) ---
+        // Normally a WAV's end is handled deterministically by the duration
+        // timer (element STATE_FINISHED fires when the decoder drains, before
+        // the audio has played out, so it would cut the tail). This event path
+        // is just a safety net for files whose header we couldn't parse.
+        if (s_file_mode && !s_finish_requested && s_file_duration_ms == 0
+            && msg.source_type == AUDIO_ELEMENT_TYPE_ELEMENT
+            && msg.cmd == AEL_MSG_CMD_REPORT_STATUS
+            && msg.source == (void *)i2s_stream_writer
+            && (int)msg.data == AEL_STATUS_STATE_FINISHED) {
+
+            ESP_LOGI(TAG, "Voice file STATE_FINISHED → restoring previous source");
+            request_file_finish();
+            continue;
         }
 
         // --- HTTP ERROR / stream lost → signal to retry_task ---

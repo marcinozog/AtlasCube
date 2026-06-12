@@ -15,4 +15,5 @@ idf_component_register(
         display
         settings_ex
         bt_module
+        sdcard
 )

@@ -747,6 +747,7 @@ static const char *ev_type_str(event_type_t t)
         case EV_REMINDER:    return "reminder";
         case EV_ANNIVERSARY: return "anniversary";
         case EV_ALARM:       return "alarm";
+        case EV_VOICE:       return "voice";
         default:             return "reminder";
     }
 }
@@ -758,6 +759,7 @@ static event_type_t ev_type_from_str(const char *s)
     if (strcmp(s, "nameday")     == 0) return EV_NAMEDAY;
     if (strcmp(s, "anniversary") == 0) return EV_ANNIVERSARY;
     if (strcmp(s, "alarm")       == 0) return EV_ALARM;
+    if (strcmp(s, "voice")       == 0) return EV_VOICE;
     return EV_REMINDER;
 }
 
@@ -798,6 +800,7 @@ static cJSON *event_to_json(const event_t *e)
     cJSON_AddBoolToObject  (o, "enabled",           e->enabled);
     cJSON_AddNumberToObject(o, "station",           e->station);
     cJSON_AddNumberToObject(o, "volume",            e->volume);
+    cJSON_AddStringToObject(o, "sound",             e->sound);
     return o;
 }
 
@@ -833,6 +836,12 @@ static void event_patch_from_json(event_t *e, const cJSON *obj)
 
     j = cJSON_GetObjectItem(obj, "volume");
     if (cJSON_IsNumber(j)) e->volume = j->valueint;
+
+    j = cJSON_GetObjectItem(obj, "sound");
+    if (cJSON_IsString(j)) {
+        strncpy(e->sound, j->valuestring, EVENT_SOUND_LEN - 1);
+        e->sound[EVENT_SOUND_LEN - 1] = '\0';
+    }
 }
 
 // Validates field by field. Returns NULL if ok, otherwise an error message.
