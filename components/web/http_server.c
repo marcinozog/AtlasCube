@@ -1783,20 +1783,56 @@ static esp_err_t api_sd_get_handler(httpd_req_t *req)
     return ret;
 }
 
+// Create every intermediate directory in `path` up to (but not including) the
+// final component, so an upload to /voice/<id>/<id>.wav lands in folders that may
+// not exist yet. Walks each '/' after the mount point and mkdir()s the prefix,
+// ignoring failures — fopen() reports the real error afterwards. `path` is
+// modified in place and restored before returning.
+static void sd_mkdir_parents(char *path)
+{
+    size_t root = strlen(SD_MOUNT_POINT);
+    if (strlen(path) <= root + 1) return;
+    for (char *p = path + root + 1; *p; ++p) {
+        if (*p != '/') continue;
+        *p = '\0';
+        mkdir(path, 0777);   // ignore EEXIST and other errors
+        *p = '/';
+    }
+}
+
+// Recursively delete a directory and its contents (depth-first), or a plain file.
+// Lets the DELETE handler remove a whole event folder (e.g. /voice/<id>) in one
+// call. Returns 0 on success. Tree depth is shallow in practice.
+static int sd_rm_rf(const char *path)
+{
+    struct stat st = {0};
+    if (stat(path, &st) != 0) return -1;
+    if (!S_ISDIR(st.st_mode)) return remove(path);
+
+    DIR *d = opendir(path);
+    if (!d) return -1;
+    struct dirent *e;
+    int rc = 0;
+    while ((e = readdir(d)) != NULL) {
+        if (strcmp(e->d_name, ".") == 0 || strcmp(e->d_name, "..") == 0) continue;
+        char child[512];
+        snprintf(child, sizeof(child), "%s/%s", path, e->d_name);
+        if (sd_rm_rf(child) != 0) rc = -1;
+    }
+    closedir(d);
+    if (rc == 0) rc = rmdir(path);
+    return rc;
+}
+
 // POST /api/sd/file?path=/dir/name  → streams the body into the file (overwrite)
 static esp_err_t api_sd_post_handler(httpd_req_t *req)
 {
     char path[256];
     if (!sd_resolve_path(req, NULL, path, sizeof(path))) return ESP_FAIL;
 
-    // Auto-create the immediate parent directory (e.g. /slides) so uploads to a
-    // fresh folder just work without a separate mkdir step.
-    char *slash = strrchr(path, '/');
-    if (slash && (size_t)(slash - path) > strlen(SD_MOUNT_POINT)) {
-        *slash = '\0';
-        mkdir(path, 0777);   // ignore EEXIST
-        *slash = '/';
-    }
+    // Auto-create any missing parent directories so uploads to a fresh folder
+    // (e.g. /voice/<id>/<id>.wav) just work without separate mkdir steps.
+    sd_mkdir_parents(path);
 
     FILE *f = fopen(path, "wb");
     if (!f) {
@@ -1845,12 +1881,20 @@ static esp_err_t api_sd_delete_handler(httpd_req_t *req)
     char path[256];
     if (!sd_resolve_path(req, NULL, path, sizeof(path))) return ESP_FAIL;
 
+    // Never let a delete reach the mount root — recursive folder delete below
+    // would otherwise wipe the whole card.
+    if (strlen(path) <= strlen(SD_MOUNT_POINT) + 1) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Refusing to delete root");
+        return ESP_FAIL;
+    }
+
     struct stat st = {0};
     if (stat(path, &st) != 0) {
         httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Not found");
         return ESP_FAIL;
     }
-    int rc = S_ISDIR(st.st_mode) ? rmdir(path) : remove(path);
+    // Directories are removed recursively (one call clears a whole event folder).
+    int rc = S_ISDIR(st.st_mode) ? sd_rm_rf(path) : remove(path);
     if (rc != 0) {
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Delete failed");
         return ESP_FAIL;

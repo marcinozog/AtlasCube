@@ -33,6 +33,7 @@ const REC_LABEL = {
 let events    = [];
 let stations  = [];      // playlist entries, fetched once for the alarm picker
 let editingId = null;    // null = add mode, string = edit mode
+let clipUrl   = null;    // object URL of the loaded voice clip (revoked on reset)
 
 async function loadStations() {
     try {
@@ -56,6 +57,56 @@ function evTypeChanged() {
     document.getElementById('ev_station_group').style.display = isAlarm ? '' : 'none';
     document.getElementById('ev_volume_group').style.display  = (isAlarm || isVoice) ? '' : 'none';
     document.getElementById('ev_sound_group').style.display   = isVoice ? '' : 'none';
+}
+
+// Fetch the .txt sidecar that sits next to a voice WAV (same base name) and show
+// its spoken text. `sound` is the event's relative clip path (e.g.
+// "v_ab12cd/v_ab12cd.wav"); the sidecar lives at /voice/<base>.txt. Empty/missing
+// → cleared, the placeholder takes over.
+async function loadVoiceText(sound) {
+    const out = document.getElementById('ev_sound_text');
+    out.value = '';
+    if (!sound) return;
+    const txtPath = '/voice/' + sound.replace(/\.wav$/i, '.txt');
+    try {
+        const res = await fetch('/api/sd/file?path=' + encodeURIComponent(txtPath),
+                                { cache: 'no-store' });
+        if (res.ok) out.value = (await res.text()).trim();
+    } catch (e) {
+        // Sidecar absent or no card — leave blank.
+    }
+}
+
+// Stop playback and drop the loaded clip (called when the form changes events).
+function resetClipAudio() {
+    const audio = document.getElementById('ev_sound_audio');
+    audio.pause();
+    audio.removeAttribute('src');
+    audio.load();
+    if (clipUrl) { URL.revokeObjectURL(clipUrl); clipUrl = null; }
+    document.getElementById('ev_sound_play').textContent = '▶ Play';
+}
+
+// Play/stop the voice clip. Loaded lazily as a blob so the device's
+// Content-Type/Content-Disposition (octet-stream/attachment) don't block <audio>.
+async function evPlayClip() {
+    const audio = document.getElementById('ev_sound_audio');
+    const sound = document.getElementById('ev_sound').value;
+    if (!sound) return;
+    if (!audio.paused) { audio.pause(); return; }
+    if (!audio.getAttribute('src')) {
+        try {
+            const res = await fetch('/api/sd/file?path=' +
+                                    encodeURIComponent('/voice/' + sound), { cache: 'no-store' });
+            if (!res.ok) { setStatus('Audio not found on SD', 'error'); return; }
+            clipUrl = URL.createObjectURL(await res.blob());
+            audio.src = clipUrl;
+        } catch (e) {
+            setStatus('Audio load failed', 'error');
+            return;
+        }
+    }
+    audio.play();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -156,6 +207,9 @@ function evFormReset() {
     document.getElementById('ev_volume').value = '50';
     document.getElementById('ev_volume_val').textContent = '50';
     document.getElementById('ev_sound').value = '';
+    document.getElementById('ev_sound_text').value = '';
+    document.getElementById('ev_sound_play').style.display = 'none';
+    resetClipAudio();
     evTypeChanged();
     setStatus('', '');
 }
@@ -179,7 +233,11 @@ function evEdit(id) {
     document.getElementById('ev_volume').value = String(vol);
     document.getElementById('ev_volume_val').textContent = String(vol);
     document.getElementById('ev_sound').value = ev.sound || '';
+    resetClipAudio();
+    document.getElementById('ev_sound_play').style.display =
+        (ev.type === 'voice' && ev.sound) ? '' : 'none';
     evTypeChanged();
+    loadVoiceText(ev.type === 'voice' ? ev.sound : '');
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -321,6 +379,12 @@ function escapeHtml(s) {
 // Init
 // ─────────────────────────────────────────────────────────────────────────────
 (async () => {
+    const audio = document.getElementById('ev_sound_audio');
+    const btn   = document.getElementById('ev_sound_play');
+    audio.addEventListener('play',  () => btn.textContent = '⏹ Stop');
+    audio.addEventListener('pause', () => btn.textContent = '▶ Play');
+    audio.addEventListener('ended', () => btn.textContent = '▶ Play');
+
     await loadStations();
     evFormReset();
     await evLoad();
