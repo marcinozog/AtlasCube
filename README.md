@@ -121,7 +121,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Swipe gestures — horizontal swipes navigate between clock ↔ radio ↔ bt; swipe-up opens settings (clock) or playlist (radio); detection runs through LVGL on the existing pointer indev, no per-chip glue
 - On-screen controls overlay — tap a media screen to bring up a 5-button cross (play/pause, vol±, prev/next), auto-hides after a short timeout
 - Configurable layout (widget positions editable via JSON)
-- Screensavers — kick in after a configurable idle timeout; choose from clock hands, starfield, fireworks, plasma, Conway's Game of Life, blank (AMOLED-friendly "off"), or **Dashboard** (see below)
+- Screensavers — kick in after a configurable idle timeout; choose from clock hands, starfield, fireworks, plasma, Conway's Game of Life, blank (AMOLED-friendly "off"), **Dashboard**, or **Photo frame** (see below)
 
 **Dashboard screensaver**
 - A user-configurable ambient display that polls any JSON HTTP/HTTPS endpoint and renders a single value
@@ -129,6 +129,16 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - HTTPS supported out of the box via the ESP-IDF certificate bundle — works with public APIs that need no auth
 - Defaults ship with the NBP USD/PLN exchange rate; swap the fields to read pretty much anything serving JSON (weather, crypto, home automation, GitHub stats, …)
 - Polling runs in a dedicated FreeRTOS task only while the screensaver is active — no background traffic when another screen is shown
+
+**Photo-frame screensaver**
+- Turns the device into a digital photo frame — cycles through images stored on a microSD card
+- Images are pre-converted to LVGL's panel-sized RGB565 binary format (by the Android app or the [`scripts/img2lvgl.py`](scripts/img2lvgl.py) helper) and dropped on the card — there is **no JPEG/PNG decoder on the device**, so even large photos cost no extra firmware RAM
+- Configurable from the Settings web UI or the Android app: **source folder**, **order** (sequential / random), **seconds per slide**, **reveal effect** and **reveal speed**
+- The slow SD load is turned into the transition: each new image **develops over the previous one** with a configurable reveal — **top-down**, **wipe**, **dissolve**, **interlaced** (retro low-res → sharp), or **random per slide**
+- Renders into two full-screen PSRAM buffers and repaints only the area that changed each tick, so it stays light even while the radio streams
+- Settings apply live — changing the effect/order/timing updates the running slideshow within a slide, no need to leave the screensaver
+- Manage slides from anywhere: browse / upload / rename / delete them via the web **SD file manager** (Settings → Tools) or the Android app, which also converts and uploads phone photos in one step
+- Requires a microSD card wired to the build's SDMMC pins (1-bit mode)
 
 **Events & reminders**
 - Birthdays, namedays, anniversaries, plain reminders, alarms (radio)

@@ -121,7 +121,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Gesty swipe — w poziomie przeskakują między zegar ↔ radio ↔ bt, w górę otwierają ustawienia (z zegara) albo playlistę (z radia); rozpoznawane przez LVGL na zwykłym indevie wskaźnika, bez kombinowania per kontroler
 - Nakładka sterująca — tap w ekran mediów otwiera krzyż 5 przycisków (play/pauza, vol±, prev/next), znika po chwili bezczynności
 - Konfigurowalny layout (pozycje widgetów w JSON-ie)
-- Wygaszacze — startują po zadanym czasie bezczynności; do wyboru wskazówki zegara, pole gwiazd, fajerwerki, plazma, gra w życie Conwaya, czarny ekran (przyjazny AMOLED-om) albo **Dashboard** (niżej)
+- Wygaszacze — startują po zadanym czasie bezczynności; do wyboru wskazówki zegara, pole gwiazd, fajerwerki, plazma, gra w życie Conwaya, czarny ekran (przyjazny AMOLED-om), **Dashboard** albo **Fotoramka** (niżej)
 
 **Wygaszacz Dashboard**
 - Ambientowy ekran, który odpytuje dowolny endpoint JSON po HTTP/HTTPS i pokazuje jedną wartość
@@ -129,6 +129,16 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - HTTPS działa od ręki — ESP-IDF dostarcza pakiet certyfikatów, więc publiczne API bez auth łyka się bez kombinacji
 - Domyślnie ustawione na kurs USD/PLN z NBP; po podmianie pól pokaże praktycznie cokolwiek z JSON-a (pogoda, krypto, smart home, statystyki GitHuba…)
 - Odpytywanie chodzi w osobnym tasku FreeRTOS tylko gdy wygaszacz jest na ekranie — gdy widać inny ekran, ruchu w tle nie ma
+
+**Wygaszacz Fotoramka**
+- Zamienia urządzenie w cyfrową ramkę na zdjęcia — przewija obrazy z karty microSD
+- Zdjęcia są wcześniej konwertowane do binarnego formatu RGB565 LVGL w rozmiarze panelu (przez aplikację na Androida albo skrypt [`scripts/img2lvgl.py`](scripts/img2lvgl.py)) i wgrywane na kartę — na urządzeniu **nie ma dekodera JPG/PNG**, więc nawet duże zdjęcia nie kosztują dodatkowego RAM-u firmware'u
+- Konfiguracja z web UI albo z aplikacji na Androida: **folder źródłowy**, **kolejność** (po kolei / losowo), **czas na slajd**, **efekt** i **prędkość** odsłaniania
+- Wolne wczytywanie z SD jest tu zamienione w przejście: każde nowe zdjęcie **„wywołuje się" na poprzednim** wybranym efektem — **od góry**, **od boku**, **dissolve**, **interlaced** (retro: blokowy podgląd → ostrość) albo **losowo na slajd**
+- Renderuje do dwóch pełnoekranowych buforów w PSRAM i odświeża tylko zmieniony fragment w każdym ticku, więc jest lekkie nawet przy grającym radiu
+- Zmiany ustawień działają na żywo — zmiana efektu/kolejności/czasu aktualizuje trwający pokaz w ciągu jednego slajdu, bez wychodzenia z wygaszacza
+- Slajdami zarządzasz skąd chcesz: przeglądanie / upload / zmiana nazwy / usuwanie przez **menedżer plików SD** w web UI (Ustawienia → Narzędzia) albo aplikację na Androida, która od razu konwertuje i wysyła zdjęcia z telefonu
+- Wymaga karty microSD podpiętej do pinów SDMMC danego wariantu (tryb 1-bit)
 
 **Wydarzenia i przypomnienia**
 - Urodziny, imieniny, rocznice, zwykłe przypomnienia, alarmy (z radiem)
