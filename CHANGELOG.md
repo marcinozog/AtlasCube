@@ -9,6 +9,13 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-06-13
+
+### Added
+- **display:** add ILI9488 480x320 driver variant
+- **buzzer:** allow disabling buzzer with BUZZER_PIN -1
+- **events:** self-describing voice clips — sidecar text + WWW preview
+
 ## [0.16.0] - 2026-06-12
 
 ### Added
@@ -242,7 +249,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.17.0...HEAD
+[0.17.0]: https://github.com/marcinozog/AtlasCube/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/marcinozog/AtlasCube/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/marcinozog/AtlasCube/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/marcinozog/AtlasCube/compare/v0.13.0...v0.14.0
