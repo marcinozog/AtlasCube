@@ -160,6 +160,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 **Pamięć**
 - Opcjonalna karta microSD po SDMMC (tryb 1-bit), podpięta do pinów SDMMC danego wariantu
 - Webowy **menedżer plików SD** (Ustawienia → Narzędzia) — przeglądanie folderów, tworzenie katalogów, upload, zmiana nazwy i usuwanie plików prosto z przeglądarki; pliki może wysyłać też aplikacja Android
+- Webowy **backup/restore SPIFFS ⇄ SD** (Ustawienia → Narzędzia) — osobny dwupanelowy menedżer kopiujący pliki między SPIFFS urządzenia a kartą SD: kopia konfiguracji / web UI na kartę i przywrócenie później. Po stronie klienta, tylko kopiowanie
 - Obsługuje slajdy fotoramki oraz nagrania powiadomień głosowych; więcej zawartości z karty (logo stacji, lokalna muzyka) jest na liście planów
 
 **Aplikacja Android** *(beta)*
@@ -408,11 +409,12 @@ Dostępne pod IP urządzenia lub `<nazwa>.local` (tryb STA), albo pod `192.168.4
 | Korektor | `/eq.html` |
 | Edytor layoutu | `/layout.html` |
 | Edytor plików | `/editor.html` |
+| Menedżer plików (backup SPIFFS ⇄ SD) | `/manager.html` |
 | Widgety MQTT | `/mqtt.html` |
 
 Endpoint WebSocket: `ws://<ip-urzadzenia>/ws` — wypycha zmiany stanu (głośność, utwór, stan radia) na żywo.
 
-Wersja działającego firmware (z `git describe`) jest pokazywana w nagłówku web UI oraz na stronie konfiguracji Wi-Fi — szybki sposób na potwierdzenie, co dokładnie się wgrało.
+Wersja działającego firmware (z `git describe`) jest pokazywana w nagłówku web UI, na stronie konfiguracji Wi-Fi oraz — razem z adresem IP urządzenia — na **ekranie powitalnym (splash)** przez kilka sekund w trybie STA (przełączane w Ustawienia → Display). Szybki sposób na potwierdzenie, co się wgrało i jak dostać się do urządzenia.
 
 ---
 

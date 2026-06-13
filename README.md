@@ -160,6 +160,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 **Storage**
 - Optional microSD card over SDMMC (1-bit mode), wired to the build's SDMMC pins
 - Web **SD file manager** (Settings → Tools) — browse folders, create directories, upload, rename, and delete files straight from the browser; the Android app can push files too
+- Web **SPIFFS ⇄ SD backup/restore** (Settings → Tools) — a separate dual-pane manager that copies files between the device's SPIFFS and the SD card: back up configs / web UI to the card and restore them later. Client-side, copy-only
 - Backs the photo-frame slides and voice-notification clips; more on-card content (station logos, local music) is on the roadmap
 
 **Android app** *(beta)*
@@ -409,11 +410,12 @@ Available at the device IP or `<hostname>.local` (STA mode), or `192.168.4.1` (A
 | Equalizer | `/eq.html` |
 | Layout editor | `/layout.html` |
 | File editor | `/editor.html` |
+| File manager (SPIFFS ⇄ SD backup) | `/manager.html` |
 | MQTT widgets | `/mqtt.html` |
 
 WebSocket endpoint: `ws://<device-ip>/ws` — pushes state changes (volume, track, radio state) in real time.
 
-The running firmware version (from `git describe`) is shown in the web UI header and on the Wi-Fi setup page — a quick way to confirm exactly what was flashed.
+The running firmware version (from `git describe`) is shown in the web UI header, on the Wi-Fi setup page, and — together with the device IP — on the **boot splash** for a few seconds in STA mode (toggleable in Settings → Display). A quick way to confirm what was flashed and how to reach the device.
 
 ---
 
