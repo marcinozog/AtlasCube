@@ -97,7 +97,31 @@
         .crumbs a { color: var(--accent); cursor: pointer; text-decoration: none; }
         .crumbs a:hover { text-decoration: underline; }
         .crumbs .sep { color: var(--text-label); margin: 0 4px; }
+        .legend {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 8px 12px;
+            border-top: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+        }
+        .legend > span {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 2px 7px;
+            border-radius: 4px;
+            background: rgba(255,255,255,.05);
+            color: var(--text);
+            cursor: default;
+            white-space: nowrap;
+        }
+        .legend .ic { color: var(--text-dim); }
+        .legend .ic.copy { color: var(--accent); }
         .listing {
+            flex: 1 1 auto;
             overflow-y: auto;
             max-height: 62vh;
             min-height: 200px;
@@ -321,6 +345,10 @@
                 <button id="btn_backup" class="primary" onclick="backupAll()" title="Copy every SPIFFS file into /backup/<timestamp> on the SD card">💾 Backup all → SD</button>
             </div>
             <div class="listing" id="sp_listing"></div>
+            <div class="legend">
+                <span><span class="ic copy">⮕</span>Copy to SD</span>
+                <span><span class="ic">✎</span>Edit</span>
+            </div>
         </section>
 
         <!-- ───────────── SD pane ───────────── -->
@@ -339,6 +367,13 @@
             <div class="upload-bar" id="sd_bar"></div>
             <div class="crumbs" id="sd_crumbs">/</div>
             <div class="listing" id="sd_listing"></div>
+            <div class="legend">
+                <span><span class="ic copy">⬅</span>Copy to SPIFFS</span>
+                <span><span class="ic">✎</span>Edit</span>
+                <span><span class="ic">⬇</span>Download</span>
+                <span><span class="ic">✏️</span>Rename</span>
+                <span><span class="ic">🗑</span>Delete</span>
+            </div>
         </section>
     </div>
 
