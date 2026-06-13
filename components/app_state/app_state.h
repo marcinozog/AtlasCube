@@ -39,10 +39,14 @@ typedef struct {
     bool bt_auto_switch;        // Exclusive source: BT play stops radio & vice versa
     bt_state_t bt_state;        // Bluetooth connected
     int bt_volume;              // Bluetooth volume
+    bool bt_vol_sync;           // Sync module volume with the phone
     char bt_title[128];         // BT track title
     char bt_artist[64];         // BT track artist
     int  bt_duration_ms;        // BT track length (ms)
     int  bt_position_s;         // BT current position (s)
+    char bt_codec[16];          // BT audio codec name (e.g. "LDAC")
+    int  bt_sample_rate;        // BT audio sample rate (Hz)
+    int  bt_bits;               // BT audio bit depth
     bool time_synced;           // Time synced
     ui_screen_id_t screen;      // Current screen
     int brightness;             // Display brightness
@@ -94,6 +98,8 @@ typedef struct {
     bt_state_t bt_state;
     bool has_bt_volume;
     int bt_volume;
+    bool has_bt_vol_sync;
+    bool bt_vol_sync;
 
     bool has_bt_title;
     const char *bt_title;
@@ -103,6 +109,12 @@ typedef struct {
     int  bt_duration_ms;
     bool has_bt_position_s;
     int  bt_position_s;
+    bool has_bt_codec;
+    const char *bt_codec;
+    bool has_bt_sample_rate;
+    int  bt_sample_rate;
+    bool has_bt_bits;
+    int  bt_bits;
 
     bool has_time_synced;
     bool time_synced;

@@ -43,16 +43,17 @@
             <div class="np-inner">
                 <div id="bt_title"  class="station-name">---</div>
                 <div id="bt_artist" class="track-title">---</div>
+                <div id="bt_format" class="audio-info" style="margin-top: 4px;"></div>
             </div>
             <div id="bt_time" class="audio-info">0:00 / 0:00</div>
         </div>
 
         <!-- BT Transport -->
         <div class="screen-switcher" style="margin-top: 10px;">
-            <button onclick="btCtrl('AT+PV')">⏮</button>
-            <button onclick="btCtrl('AT+PA')">▶</button>
-            <button onclick="btCtrl('AT+PU')">⏸</button>
-            <button onclick="btCtrl('AT+PN')">⏭</button>
+            <button onclick="btTransport('bt_prev')">⏮</button>
+            <button onclick="btTransport('bt_play')">▶</button>
+            <button onclick="btTransport('bt_pause')">⏸</button>
+            <button onclick="btTransport('bt_next')">⏭</button>
         </div>
 
         <!-- BT Volume -->
@@ -63,6 +64,20 @@
             </div>
             <input type="range" min="0" max="100" value="15"
                    id="bt_volume_slider" oninput="onBtVolumeChange(this.value)" />
+        </div>
+    </section>
+
+    <!-- ── Module config ── -->
+    <section class="panel">
+        <div class="panel-label">MODULE CONFIG</div>
+
+        <!-- Volume sync (module ↔ phone) -->
+        <div class="slider-row" style="margin-top: 4px;">
+            <span class="slider-label">🔗 Volume sync</span>
+        </div>
+        <div class="theme-toggle" id="btSyncToggle" style="width:fit-content">
+            <button class="theme-btn" id="btSyncOnBtn"  onclick="setBtVolSync(true)">On</button>
+            <button class="theme-btn" id="btSyncOffBtn" onclick="setBtVolSync(false)">Off</button>
         </div>
     </section>
 

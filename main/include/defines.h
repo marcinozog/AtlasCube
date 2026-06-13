@@ -146,8 +146,10 @@
 #define BT_UART_NUM             UART_NUM_1
 #define BT_UART_BAUD            115200
 
-#define BT_AT_SVOL_MAX          15
-#define BT_VOL_STEP 5
+// Active BT module (selects the AT dialect descriptor, see bt_module.h).
+#define BT_MODULE_QCC5125V2
+
+#define BT_VOL_STEP 5           // UI volume step in % (not the module's SVSTEP)
 
 
 // ===== ENCODER =====

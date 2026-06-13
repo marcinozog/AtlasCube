@@ -104,7 +104,7 @@ static void on_notification_finished(void)
 
     if (s_notif_was_bt) {
         settings_set_bt_enable(true);    // mux back to the BT module
-        bt_send_raw("AT+PA");            // resume phone playback
+        bt_play();                       // resume phone playback
     } else if (s_notif_was_radio) {
         radio_play_index(s_notif_prev_index);
     }

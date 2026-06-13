@@ -63,6 +63,10 @@ void app_state_update(const app_state_patch_t *patch)
         s_state.bt_volume = patch->bt_volume;
     }
 
+    if (patch->has_bt_vol_sync) {
+        s_state.bt_vol_sync = patch->bt_vol_sync;
+    }
+
     if (patch->has_bt_title && patch->bt_title) {
         strncpy(s_state.bt_title, patch->bt_title, sizeof(s_state.bt_title) - 1);
         s_state.bt_title[sizeof(s_state.bt_title) - 1] = 0;
@@ -79,6 +83,19 @@ void app_state_update(const app_state_patch_t *patch)
 
     if (patch->has_bt_position_s) {
         s_state.bt_position_s = patch->bt_position_s;
+    }
+
+    if (patch->has_bt_codec && patch->bt_codec) {
+        strncpy(s_state.bt_codec, patch->bt_codec, sizeof(s_state.bt_codec) - 1);
+        s_state.bt_codec[sizeof(s_state.bt_codec) - 1] = 0;
+    }
+
+    if (patch->has_bt_sample_rate) {
+        s_state.bt_sample_rate = patch->bt_sample_rate;
+    }
+
+    if (patch->has_bt_bits) {
+        s_state.bt_bits = patch->bt_bits;
     }
 
     if (patch->has_volume) {
@@ -147,10 +164,14 @@ void app_state_update(const app_state_patch_t *patch)
     if (patch->has_bt_auto_switch)    n += snprintf(buf + n, sizeof(buf) - n, " bt_auto_switch=%d", s_state.bt_auto_switch);
     if (patch->has_bt_state)          n += snprintf(buf + n, sizeof(buf) - n, " bt_connected=%d", s_state.bt_state);
     if (patch->has_bt_volume)         n += snprintf(buf + n, sizeof(buf) - n, " bt_volume=%d", s_state.bt_volume);
+    if (patch->has_bt_vol_sync)       n += snprintf(buf + n, sizeof(buf) - n, " bt_vol_sync=%d", s_state.bt_vol_sync);
     if (patch->has_bt_title)          n += snprintf(buf + n, sizeof(buf) - n, " bt_title=%s", s_state.bt_title);
     if (patch->has_bt_artist)         n += snprintf(buf + n, sizeof(buf) - n, " bt_artist=%s", s_state.bt_artist);
     if (patch->has_bt_duration_ms)    n += snprintf(buf + n, sizeof(buf) - n, " bt_duration=%dms", s_state.bt_duration_ms);
     if (patch->has_bt_position_s)     n += snprintf(buf + n, sizeof(buf) - n, " bt_pos=%ds", s_state.bt_position_s);
+    if (patch->has_bt_codec)          n += snprintf(buf + n, sizeof(buf) - n, " bt_codec=%s", s_state.bt_codec);
+    if (patch->has_bt_sample_rate)    n += snprintf(buf + n, sizeof(buf) - n, " bt_sr=%d", s_state.bt_sample_rate);
+    if (patch->has_bt_bits)           n += snprintf(buf + n, sizeof(buf) - n, " bt_bits=%d", s_state.bt_bits);
     if (patch->has_volume)            n += snprintf(buf + n, sizeof(buf) - n, " volume=%d", s_state.volume);
     if (patch->has_eq)                n += snprintf(buf + n, sizeof(buf) - n, " eq=*");
     if (patch->has_eq_enabled)        n += snprintf(buf + n, sizeof(buf) - n, " eq_enabled=%d", s_state.eq_enabled);

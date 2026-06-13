@@ -1,4 +1,5 @@
 #include "bt.h"
+#include "bt_module.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "driver/uart.h"
@@ -56,7 +57,12 @@ void bt_init(void)
 
     ESP_LOGI(TAG, "UART initialized (TX=%d RX=%d)", BT_MODULE_TX_PIN, BT_MODULE_RX_PIN);
 
-    ESP_LOGI(TAG, "BT MODULE initialized (GPIO %d) = LOW", BT_MOULE_PIN);
+    ESP_LOGI(TAG, "BT MODULE initialized (GPIO %d) = LOW, dialect=%s", BT_MOULE_PIN, g_bt->name);
+
+    // Enforce a fixed, fine-grained volume step so the 0–100% slider maps
+    // smoothly onto SVOL. The module persists this and applies it on its next
+    // reboot (power-cycle), so it may not take effect until then on first flash.
+    bt_send_raw(g_bt->cmd_set_vstep);
 
     // uint8_t test[] = { 0x02, 0x0b, 0x00 };
     // uart_write_bytes(UART_NUM_1, test, sizeof(test));
@@ -88,11 +94,11 @@ void bt_set_volume(int volume)
 
     s_bt_volume = volume;
 
-    int at_vol = (volume * BT_AT_SVOL_MAX + 50) / 100;
+    int at_vol = (volume * g_bt->vol_max + 50) / 100;
 
     char cmd[32];
-    snprintf(cmd, sizeof(cmd), "AT+SVOL=%d", at_vol);
-    ESP_LOGI(TAG, "bt_set_volume %d%% -> AT+SVOL=%d", volume, at_vol);
+    snprintf(cmd, sizeof(cmd), g_bt->fmt_set_vol, at_vol);
+    ESP_LOGI(TAG, "bt_set_volume %d%% -> %s", volume, cmd);
     bt_send_raw(cmd);
 }
 
@@ -101,9 +107,36 @@ int bt_get_volume()
     return s_bt_volume;
 }
 
+void bt_play(void)
+{
+    bt_send_raw(g_bt->cmd_play);
+}
+
 void bt_pause(void)
 {
-    bt_send_raw("AT+PU");
+    bt_send_raw(g_bt->cmd_pause);
+}
+
+void bt_next(void)
+{
+    bt_send_raw(g_bt->cmd_next);
+}
+
+void bt_prev(void)
+{
+    bt_send_raw(g_bt->cmd_prev);
+}
+
+void bt_set_vol_sync(bool on)
+{
+    ESP_LOGI(TAG, "bt_set_vol_sync %s", on ? "ON" : "OFF");
+    bt_send_raw(on ? g_bt->cmd_sync_vol_on : g_bt->cmd_sync_vol_off);
+}
+
+void bt_reboot(void)
+{
+    ESP_LOGI(TAG, "bt_reboot %s", g_bt->cmd_reboot);
+    bt_send_raw(g_bt->cmd_reboot);
 }
 
 void bt_set_play_event_cb(bt_play_event_cb_t cb)
@@ -112,8 +145,8 @@ void bt_set_play_event_cb(bt_play_event_cb_t cb)
 }
 
 void bt_check_connection() {
-    ESP_LOGI(TAG, "bt_check_connection AT+STATE");
-    bt_send_raw("AT+STATE");
+    ESP_LOGI(TAG, "bt_check_connection %s", g_bt->cmd_get_state);
+    bt_send_raw(g_bt->cmd_get_state);
 }
 
 void bt_send_raw(const char *cmd)
@@ -141,47 +174,49 @@ static bool bt_extract_field(const char *buf, const char *key, char *out, size_t
 }
 
 void bt_parse_cmd(const char *cmd) {
-    if (strstr(cmd, "BT_CN")) {
+    if (strstr(cmd, g_bt->evt_connected) ||
+        (g_bt->evt_connected_alt && strstr(cmd, g_bt->evt_connected_alt))) {
         app_state_update(&(app_state_patch_t){
             .has_bt_state  = true,
             .bt_state      = BT_CONNECTED
         });
     }
-    else if (strstr(cmd, "Connected")) {
-        app_state_update(&(app_state_patch_t){
-            .has_bt_state   = true,
-            .bt_state       = BT_CONNECTED
-        });
-    }
-    else if (strstr(cmd, "BT_DC")) {
+    else if (strstr(cmd, g_bt->evt_disconnected)) {
         app_state_update(&(app_state_patch_t){
             .has_bt_state   = true,
             .bt_state       = BT_DISCONNECTED
         });
         if (s_play_event_cb) s_play_event_cb(false);   // link gone → not playing
     }
-    else if (strstr(cmd, "ConnDiscoverable")) {
+    else if (strstr(cmd, g_bt->evt_discoverable)) {
         app_state_update(&(app_state_patch_t){
             .has_bt_state   = true,
             .bt_state       = BT_DISCOVERABLE
         });
     }
 
-    if (strstr(cmd, "+SRC=NONE")) {
+    if (strstr(cmd, g_bt->evt_src_none)) {
         app_state_update(&(app_state_patch_t){
             .has_bt_title       = true, .bt_title       = "",
             .has_bt_artist      = true, .bt_artist      = "",
             .has_bt_duration_ms = true, .bt_duration_ms = 0,
             .has_bt_position_s  = true, .bt_position_s  = 0,
+            .has_bt_codec       = true, .bt_codec       = "",
+            .has_bt_sample_rate = true, .bt_sample_rate = 0,
+            .has_bt_bits        = true, .bt_bits        = 0,
         });
         if (s_play_event_cb) s_play_event_cb(false);   // playback stopped
     }
 
     // Get metadata
-    if (strstr(cmd, "BT_PA")) {
-        bt_send_raw("AT+GMETA");
+    if (strstr(cmd, g_bt->evt_play)) {
+        bt_send_raw(g_bt->cmd_get_meta);
         vTaskDelay(pdMS_TO_TICKS(100));
-        bt_send_raw("AT+SMTIMEON");
+        bt_send_raw(g_bt->cmd_meta_time_on);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        bt_send_raw(g_bt->cmd_get_codec);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        bt_send_raw(g_bt->cmd_get_arate);
 
         // Phone started playing — let the source coordinator react (stop radio,
         // switch source to BT) when exclusive auto-switch is enabled.
@@ -190,30 +225,48 @@ void bt_parse_cmd(const char *cmd) {
 
     char buf[128];
 
-    if (bt_extract_field(cmd, "+TITL=", buf, sizeof(buf))) {
+    if (bt_extract_field(cmd, g_bt->key_title, buf, sizeof(buf))) {
         app_state_update(&(app_state_patch_t){
             .has_bt_title = true,
             .bt_title     = buf
         });
     }
-    if (bt_extract_field(cmd, "+ARTS=", buf, sizeof(buf))) {
+    if (bt_extract_field(cmd, g_bt->key_artist, buf, sizeof(buf))) {
         app_state_update(&(app_state_patch_t){
             .has_bt_artist = true,
             .bt_artist     = buf
         });
     }
-    if (bt_extract_field(cmd, "+PYTM=", buf, sizeof(buf))) {
+    if (bt_extract_field(cmd, g_bt->key_dur_ms, buf, sizeof(buf))) {
         int ms = atoi(buf);
         app_state_update(&(app_state_patch_t){
             .has_bt_duration_ms = true,
             .bt_duration_ms     = ms
         });
     }
-    if (bt_extract_field(cmd, "+PYPS=", buf, sizeof(buf))) {
+    if (bt_extract_field(cmd, g_bt->key_pos_s, buf, sizeof(buf))) {
         int s = atoi(buf);
         app_state_update(&(app_state_patch_t){
             .has_bt_position_s = true,
             .bt_position_s     = s
+        });
+    }
+    if (bt_extract_field(cmd, g_bt->key_codec, buf, sizeof(buf))) {
+        app_state_update(&(app_state_patch_t){
+            .has_bt_codec = true,
+            .bt_codec     = buf
+        });
+    }
+    if (bt_extract_field(cmd, g_bt->key_arate, buf, sizeof(buf))) {
+        app_state_update(&(app_state_patch_t){
+            .has_bt_sample_rate = true,
+            .bt_sample_rate     = atoi(buf)
+        });
+    }
+    if (bt_extract_field(cmd, g_bt->key_abit, buf, sizeof(buf))) {
+        app_state_update(&(app_state_patch_t){
+            .has_bt_bits = true,
+            .bt_bits     = atoi(buf)
         });
     }
     // else if (strstr(cmd, "+VOL1=")) {

@@ -57,6 +57,7 @@ esp_err_t settings_init(void)
         s_settings.bluetooth.show_screen    = true;
         s_settings.bluetooth.volume         = 15;
         s_settings.bluetooth.auto_switch    = true;
+        s_settings.bluetooth.vol_sync       = false;
         strncpy(s_settings.ntp.server1, "pool.ntp.org",                sizeof(s_settings.ntp.server1) - 1);
         strncpy(s_settings.ntp.server2, "time.cloudflare.com",         sizeof(s_settings.ntp.server2) - 1);
         strncpy(s_settings.ntp.tz,      "CET-1CEST,M3.5.0,M10.5.0/3", sizeof(s_settings.ntp.tz)      - 1);
@@ -243,6 +244,10 @@ static esp_err_t load_from_file(void)
         cJSON *bt_vol = cJSON_GetObjectItem(bluetooth, "volume");
         if (cJSON_IsNumber(bt_vol)) {
             s_settings.bluetooth.volume = bt_vol->valueint;
+        }
+        cJSON *bt_sync = cJSON_GetObjectItem(bluetooth, "vol_sync");
+        if (cJSON_IsBool(bt_sync)) {
+            s_settings.bluetooth.vol_sync = cJSON_IsTrue(bt_sync);
         }
         cJSON *bt_auto = cJSON_GetObjectItem(bluetooth, "auto_switch");
         if (cJSON_IsBool(bt_auto)) {
@@ -462,6 +467,7 @@ static esp_err_t save_to_file(void)
     cJSON_AddBoolToObject(bluetooth,   "show_screen", s_settings.bluetooth.show_screen);
     cJSON_AddNumberToObject(bluetooth, "volume", s_settings.bluetooth.volume);
     cJSON_AddBoolToObject(bluetooth,   "auto_switch", s_settings.bluetooth.auto_switch);
+    cJSON_AddBoolToObject(bluetooth,   "vol_sync", s_settings.bluetooth.vol_sync);
     cJSON_AddItemToObject(json, "bluetooth", bluetooth);
 
     // ntp
@@ -547,6 +553,8 @@ void settings_apply(void)
     audio_player_set_eq_enabled(s_settings.audio.eq_enabled);
     // Set last state to BT at start
     bt_set_enabled(s_settings.bluetooth.enable);
+    // Restore module config
+    bt_set_vol_sync(s_settings.bluetooth.vol_sync);
     // Set last volume to BT at start
     bt_set_volume(s_settings.bluetooth.volume);
     // Refresh BT connection
@@ -563,6 +571,7 @@ void settings_apply(void)
         .has_bt_enable          = true, .bt_enable = s_settings.bluetooth.enable,
         .has_bt_show_screen     = true, .bt_show_screen = s_settings.bluetooth.show_screen,
         .has_bt_volume          = true, .bt_volume = s_settings.bluetooth.volume,
+        .has_bt_vol_sync        = true, .bt_vol_sync = s_settings.bluetooth.vol_sync,
         .has_bt_auto_switch     = true, .bt_auto_switch = s_settings.bluetooth.auto_switch,
         .has_display_brightness = true, .display_brightness = s_settings.display.brightness,
         .has_theme              = true, .theme     = s_settings.display.theme,
@@ -705,6 +714,16 @@ void settings_set_bt_auto_switch(bool enable)
     if(s_settings.bluetooth.auto_switch != enable) {
         s_settings.bluetooth.auto_switch = enable;
         app_state_update(&(app_state_patch_t){ .has_bt_auto_switch = true, .bt_auto_switch = enable });
+        save_to_file();
+    }
+}
+
+void settings_set_bt_vol_sync(bool on)
+{
+    if(s_settings.bluetooth.vol_sync != on) {
+        s_settings.bluetooth.vol_sync = on;
+        app_state_update(&(app_state_patch_t){ .has_bt_vol_sync = true, .bt_vol_sync = on });
+        bt_set_vol_sync(on);
         save_to_file();
     }
 }
