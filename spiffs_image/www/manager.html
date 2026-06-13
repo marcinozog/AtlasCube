@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AtlasCube – File Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .mgr-wrap {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 14px;
+        }
+        .mgr-panes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        @media (max-width: 820px) {
+            .mgr-panes { grid-template-columns: 1fr; }
+        }
+        .pane {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+            overflow: hidden;
+        }
+        .pane-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            font-family: 'Chakra Petch', sans-serif;
+            font-weight: 600;
+            letter-spacing: .5px;
+        }
+        .pane-head .icon { color: var(--accent); }
+        .pane-head .meta {
+            color: var(--text-dim);
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 400;
+            margin-left: auto;
+        }
+        .pane-tools {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+        .pane-tools button,
+        .pane-tools label.upload {
+            padding: 6px 10px;
+            background: var(--bg-panel);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 12px;
+        }
+        .pane-tools button.primary,
+        .pane-tools label.upload.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #000;
+            font-weight: 600;
+        }
+        .pane-tools button:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+        .pane-tools button:not(:disabled):hover,
+        .pane-tools label.upload:hover { filter: brightness(1.15); }
+        .upload-bar {
+            height: 3px;
+            background: var(--accent);
+            width: 0;
+            transition: width .15s linear;
+        }
+        .crumbs {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            padding: 7px 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-dim);
+            word-break: break-all;
+        }
+        .crumbs a { color: var(--accent); cursor: pointer; text-decoration: none; }
+        .crumbs a:hover { text-decoration: underline; }
+        .crumbs .sep { color: var(--text-label); margin: 0 4px; }
+        .listing {
+            overflow-y: auto;
+            max-height: 62vh;
+            min-height: 200px;
+        }
+        table.files {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+        table.files td {
+            padding: 7px 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        table.files tr:last-child td { border-bottom: none; }
+        table.files tr.row { cursor: pointer; }
+        table.files tr.row:hover { background: var(--bg-panel); }
+        table.files tr.row.sel { background: var(--accent-glow); }
+        table.files td.size { text-align: right; color: var(--text-dim); white-space: nowrap; }
+        table.files td.actions { text-align: right; white-space: nowrap; }
+        table.files .name { color: var(--text); }
+        table.files .name.dir { color: var(--accent); }
+        table.files .name.dir:hover { text-decoration: underline; }
+        table.files .icon { margin-right: 6px; }
+        table.files .badge {
+            color: var(--text-label);
+            font-size: 10px;
+            margin-left: 6px;
+        }
+        table.files a.act, table.files button.act {
+            color: var(--text-dim);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            padding: 2px 5px;
+            text-decoration: none;
+        }
+        table.files button.act.del:hover { color: var(--red); }
+        table.files a.act:hover, table.files button.act:hover { color: var(--accent); }
+        .pane-status {
+            padding: 22px 12px;
+            text-align: center;
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+        }
+        .pane-status.err { color: var(--red); }
+        /* Transfer column between the two panes */
+        .mgr-transfer {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 12px 0;
+        }
+        .mgr-transfer button {
+            padding: 9px 16px;
+            background: var(--bg-panel);
+            color: var(--text);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+        }
+        .mgr-transfer button:not(:disabled):hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .mgr-transfer button:disabled { opacity: .4; cursor: not-allowed; }
+        .mgr-log {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-dim);
+            min-width: 200px;
+            text-align: center;
+        }
+        .mgr-log.ok  { color: var(--green); }
+        .mgr-log.err { color: var(--red); }
+        /* Inline editor modal (both panes) */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 20px;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            width: min(900px, 100%);
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .modal-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border);
+            font-family: 'Chakra Petch', sans-serif;
+            font-weight: 600;
+        }
+        .modal-head .src {
+            font-size: 11px;
+            font-family: 'JetBrains Mono', monospace;
+            color: #000;
+            background: var(--accent);
+            padding: 1px 8px;
+            border-radius: 10px;
+        }
+        .modal-head .name {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 400;
+            color: var(--text);
+            word-break: break-all;
+        }
+        .modal-head .close {
+            margin-left: auto;
+            cursor: pointer;
+            color: var(--text-dim);
+            background: none;
+            border: none;
+            font-size: 18px;
+            line-height: 1;
+        }
+        .modal-head .close:hover { color: var(--red); }
+        .modal textarea {
+            flex: 1;
+            min-height: 50vh;
+            padding: 12px;
+            background: var(--bg-input);
+            color: var(--text);
+            border: none;
+            border-bottom: 1px solid var(--border);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            resize: none;
+            tab-size: 4;
+            white-space: pre;
+            outline: none;
+        }
+        .modal-foot {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            flex-wrap: wrap;
+        }
+        .modal-foot .status,
+        .modal-foot .json-status {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--text-dim);
+        }
+        .modal-foot .status.ok  { color: var(--green); }
+        .modal-foot .status.err { color: var(--red); }
+        .modal-foot .status.warn { color: var(--orange); }
+        .modal-foot .json-status.ok  { color: var(--green); }
+        .modal-foot .json-status.err { color: var(--red); }
+        .modal-foot .json-status.hidden { display: none; }
+        .modal-foot .spacer { margin-left: auto; }
+        .modal-foot button {
+            padding: 8px 16px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            background: var(--bg-panel);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+        .modal-foot button.primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #000;
+            font-weight: 600;
+        }
+        .modal-foot button:hover { filter: brightness(1.15); }
+    </style>
+</head>
+<body>
+
+<header class="app-header">
+    <div class="logo">
+        <span class="logo-icon">◈</span>
+        <span class="logo-text">ATLAS <span class="logo-accent">CUBE</span> · FILE MANAGER</span>
+    </div>
+</header>
+
+<main class="mgr-wrap">
+    <a href="/settings.html" class="back-link">← Back to Settings</a>
+
+    <div class="section-title" style="margin: 16px 0 12px">🗂 File Manager</div>
+
+    <div class="mgr-transfer">
+        <button id="btn_to_sd" disabled title="Copy the selected SPIFFS file into the current SD folder">SPIFFS → SD ⮕</button>
+        <span class="mgr-log" id="log">Select a file in either pane to copy it across.</span>
+        <button id="btn_to_spiffs" disabled title="Copy the selected SD file into SPIFFS (text files only)">⬅ SD → SPIFFS</button>
+    </div>
+
+    <div class="mgr-panes">
+        <!-- ───────────── SPIFFS pane ───────────── -->
+        <section class="pane">
+            <div class="pane-head">
+                <span class="icon">📝</span> SPIFFS (flash)
+                <span class="meta" id="sp_meta">—</span>
+            </div>
+            <div class="pane-tools">
+                <button onclick="loadSpiffs()" title="Reload list">↺ Refresh</button>
+            </div>
+            <div class="listing" id="sp_listing"></div>
+        </section>
+
+        <!-- ───────────── SD pane ───────────── -->
+        <section class="pane">
+            <div class="pane-head">
+                <span class="icon">💾</span> SD card
+                <span class="meta" id="sd_meta">—</span>
+            </div>
+            <div class="pane-tools">
+                <button onclick="sdRefresh()" title="Reload current folder">↺ Refresh</button>
+                <button onclick="sdNewFolder()" title="Create a folder here">📁 New folder</button>
+                <label class="upload" title="Upload file(s) here">
+                    ⬆ Upload<input type="file" id="sd_upload" multiple hidden>
+                </label>
+            </div>
+            <div class="upload-bar" id="sd_bar"></div>
+            <div class="crumbs" id="sd_crumbs">/</div>
+            <div class="listing" id="sd_listing"></div>
+        </section>
+    </div>
+
+</main>
+
+<!-- Inline editor modal -->
+<div class="modal-overlay" id="modal">
+    <div class="modal">
+        <div class="modal-head">
+            <span class="src" id="ed_src">SPIFFS</span>
+            <span class="name" id="ed_name">—</span>
+            <button class="close" onclick="closeEditor()" title="Close (Esc)">✕</button>
+        </div>
+        <textarea id="ed_code" spellcheck="false"></textarea>
+        <div class="modal-foot">
+            <span class="status" id="ed_status">Ready</span>
+            <span class="json-status hidden" id="ed_json"></span>
+            <span class="spacer"></span>
+            <button onclick="closeEditor()">Cancel</button>
+            <button class="primary" onclick="saveEditor()" title="Ctrl+S">💾 Save</button>
+        </div>
+    </div>
+</div>
+
+<script src="manager.js"></script>
+</body>
+</html>

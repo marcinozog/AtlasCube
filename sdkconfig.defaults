@@ -82,4 +82,12 @@ CONFIG_LWIP_TCP_OOSEQ_MAX_PBUFS=4
 
 CONFIG_LV_USE_FONT_PLACEHOLDER=n
 
+# FATFS long file names on the SD card. The IDF default (LFN_NONE) restricts SD
+# filenames to 8.3, so anything with a >3-char extension (.html, .json) or >8-char
+# base fails fopen() — e.g. the SPIFFS↔SD backup manager and slides.json. HEAP
+# variant keeps the LFN work buffer off the (tight) internal DRAM and off the
+# audio/http task stacks; ~(MAX_LFN+1)*2 B malloc'd per directory op, freed after.
+CONFIG_FATFS_LFN_HEAP=y
+CONFIG_FATFS_MAX_LFN=255
+
 # CONFIG_LOG_DEFAULT_LEVEL_DEBUG=y
