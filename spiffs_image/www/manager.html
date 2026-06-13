@@ -192,7 +192,7 @@
             padding: 20px;
         }
         .modal-overlay.open { display: flex; }
-        .modal {
+        .ed-modal {
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: var(--radius);
@@ -235,7 +235,7 @@
             line-height: 1;
         }
         .modal-head .close:hover { color: var(--red); }
-        .modal textarea {
+        .ed-modal textarea {
             flex: 1;
             min-height: 50vh;
             padding: 12px;
@@ -346,7 +346,7 @@
 
 <!-- Inline editor modal -->
 <div class="modal-overlay" id="modal">
-    <div class="modal">
+    <div class="ed-modal">
         <div class="modal-head">
             <span class="src" id="ed_src">SPIFFS</span>
             <span class="name" id="ed_name">—</span>
