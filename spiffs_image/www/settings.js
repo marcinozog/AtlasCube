@@ -99,6 +99,19 @@ function setBgGradient(on) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Boot-info overlay on/off (version + IP on splash, STA only)
+// ─────────────────────────────────────────────────────────────────────────────
+function setShowBootInfo(on) {
+    document.getElementById('settingsBtnBootInfoOn') ?.classList.toggle('active', on);
+    document.getElementById('settingsBtnBootInfoOff')?.classList.toggle('active', !on);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { show_boot_info: on } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Brightness (display)
 // ─────────────────────────────────────────────────────────────────────────────
 function setDisplayBrightness(t) {
@@ -547,6 +560,10 @@ function populateForm(s) {
         const bgGrad = s.display.bg_gradient !== false;   // default on
         document.getElementById('settingsBtnBgGrad') ?.classList.toggle('active', bgGrad);
         document.getElementById('settingsBtnBgSolid')?.classList.toggle('active', !bgGrad);
+
+        const bootInfo = s.display.show_boot_info !== false;   // default on
+        document.getElementById('settingsBtnBootInfoOn') ?.classList.toggle('active', bootInfo);
+        document.getElementById('settingsBtnBootInfoOff')?.classList.toggle('active', !bootInfo);
 
         if (s.display.brightness !== undefined) {
             const b = s.display.brightness;

@@ -67,4 +67,5 @@ idf_component_register(
         buzzer                  # screensaver_dashboard notifications via melodies.h
         mqtt_svc                # screen_mqtt toggle widget
         sdcard                  # screensaver_photo reads slides from SD
+        esp_app_format          # esp_app_get_description() — version on splash
 )

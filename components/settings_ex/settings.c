@@ -43,6 +43,7 @@ esp_err_t settings_init(void)
         s_settings.display.screen           = SCREEN_CLOCK;
         s_settings.display.theme            = THEME_DARK;
         s_settings.display.bg_gradient      = true;
+        s_settings.display.show_boot_info   = true;
         s_settings.display.dim_schedule.enabled        = false;
         s_settings.display.dim_schedule.dim_hour       = 22;
         s_settings.display.dim_schedule.dim_minute     = 0;
@@ -200,6 +201,8 @@ static esp_err_t load_from_file(void)
         }
         cJSON *bg = cJSON_GetObjectItem(display, "bg_gradient");
         s_settings.display.bg_gradient = cJSON_IsBool(bg) ? cJSON_IsTrue(bg) : true;
+        cJSON *sbi = cJSON_GetObjectItem(display, "show_boot_info");
+        s_settings.display.show_boot_info = cJSON_IsBool(sbi) ? cJSON_IsTrue(sbi) : true;
 
         // dim schedule defaults (used if section is missing or partial)
         s_settings.display.dim_schedule.enabled        = false;
@@ -447,6 +450,7 @@ static esp_err_t save_to_file(void)
     cJSON_AddStringToObject(display, "theme",
         s_settings.display.theme == THEME_LIGHT ? "light" : "dark");
     cJSON_AddBoolToObject(display, "bg_gradient", s_settings.display.bg_gradient);
+    cJSON_AddBoolToObject(display, "show_boot_info", s_settings.display.show_boot_info);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s_settings.display.dim_schedule.enabled);
     cJSON_AddNumberToObject(dim, "dim_hour",       s_settings.display.dim_schedule.dim_hour);
@@ -764,6 +768,13 @@ void settings_set_bg_gradient(bool enabled)
     s_settings.display.bg_gradient = enabled;
     app_state_update(&(app_state_patch_t){ .has_bg_gradient = true, .bg_gradient = enabled });
     save_to_file();
+}
+
+void settings_set_show_boot_info(bool enabled)
+{
+    if (s_settings.display.show_boot_info == enabled) return;
+    s_settings.display.show_boot_info = enabled;
+    save_to_file();   // read once at next boot by the splash — no live app_state push
 }
 
 void settings_set_wifi(const char *ssid, const char *password)

@@ -93,9 +93,21 @@ void app_main(void)
         mqtt_svc_init();
     }
 
+    // ── Boot-info splash hold ────────────────────────────────────────────────
+    // WiFi state is final here (wifi_init blocks until STA connects or falls back
+    // to AP) and the splash is still the active screen — settings_apply() below
+    // is what navigates away. In STA, hold the splash so the version + IP overlay
+    // (screen_splash.c) is readable with the real lease before we leave it.
+    #define BOOT_INFO_MS 3000
+    if (wifi_get_run_mode() == WIFI_RUN_MODE_STA
+        && settings_get()->display.show_boot_info) {
+        vTaskDelay(pdMS_TO_TICKS(BOOT_INFO_MS));
+    }
+
     // ── Apply settings to hardware (after UI and WS subscriptions!) ──────────
-    // app_state_update() inside settings_apply() will notify all
-    // subscribers (#1 UI, #2 WS) — they must already be registered.
+    // app_state_update() inside settings_apply() will notify all subscribers
+    // (#1 UI, #2 WS) — they must already be registered. It also navigates to the
+    // saved screen, which is what ends the splash.
     settings_apply();
 
     // ── Resume radio if it was playing before the last reboot ────────────────
@@ -104,7 +116,9 @@ void app_main(void)
         radio_resume_on_boot();
     }
 
-    // ── Splash screen: wait at least 1500 ms from boot, then proceed ─────────
+    // ── Splash minimum on-screen time ────────────────────────────────────────
+    // settings_apply() above already navigated to the saved screen; this is just
+    // the original floor on total splash time for the fast-boot / AP path.
     #define SPLASH_MIN_MS 3000
     int64_t elapsed_ms = esp_timer_get_time() / 1000;
     if (elapsed_ms < SPLASH_MIN_MS) {

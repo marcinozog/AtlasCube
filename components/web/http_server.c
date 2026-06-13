@@ -68,6 +68,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(display, "theme",
         s->display.theme == THEME_LIGHT ? "light" : "dark");
     cJSON_AddBoolToObject(display, "bg_gradient", s->display.bg_gradient);
+    cJSON_AddBoolToObject(display, "show_boot_info", s->display.show_boot_info);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s->display.dim_schedule.enabled);
     cJSON_AddNumberToObject(dim, "dim_hour",       s->display.dim_schedule.dim_hour);
@@ -265,6 +266,11 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         if (cJSON_IsBool(bg)) {
             ESP_LOGI("HTTP", "POST bg_gradient: %d", cJSON_IsTrue(bg));
             settings_set_bg_gradient(cJSON_IsTrue(bg));
+        }
+        cJSON *sbi = cJSON_GetObjectItem(display, "show_boot_info");
+        if (cJSON_IsBool(sbi)) {
+            ESP_LOGI("HTTP", "POST show_boot_info: %d", cJSON_IsTrue(sbi));
+            settings_set_show_boot_info(cJSON_IsTrue(sbi));
         }
         cJSON *scr = cJSON_GetObjectItem(display, "screen");
         if (cJSON_IsString(scr)) {
