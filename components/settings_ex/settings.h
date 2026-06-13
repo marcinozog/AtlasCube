@@ -73,6 +73,8 @@ typedef struct
     int  photo_hold_s;     // seconds each slide stays on screen
     int  photo_effect;     // 0 topdown, 1 wipe, 2 dissolve, 3 interlaced, 4 random-per-slide
     int  photo_speed;      // reveal speed 1 (slow) .. 5 (fast)
+    int  photo_clock;      // 0 = hide, 1 = overlay HH:MM clock on the photo
+    int  photo_clock_size; // big-font size: 72 / 80 / 96 / 120
 } scrsaver_settings_t;
 
 typedef enum {
@@ -143,7 +145,8 @@ void settings_set_wifi(const char *ssid, const char *password);
 void settings_set_hostname(const char *hostname);
 void settings_set_scrsaver_delay(int delay);
 void settings_set_scrsaver_id(int id);
-void settings_set_photo(const char *dir, int order, int hold_s, int effect, int speed);
+void settings_set_photo(const char *dir, int order, int hold_s, int effect, int speed,
+                        int clock, int clock_size);
 // Bumped on every settings_set_photo() — lets the running photo screensaver
 // detect a config change and apply it live, without a re-entry.
 unsigned settings_photo_generation(void);

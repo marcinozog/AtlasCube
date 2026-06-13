@@ -121,6 +121,8 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(scrs_photo, "hold_s", s->scrsaver.photo_hold_s);
     cJSON_AddNumberToObject(scrs_photo, "effect", s->scrsaver.photo_effect);
     cJSON_AddNumberToObject(scrs_photo, "speed",  s->scrsaver.photo_speed);
+    cJSON_AddNumberToObject(scrs_photo, "clock",      s->scrsaver.photo_clock);
+    cJSON_AddNumberToObject(scrs_photo, "clock_size", s->scrsaver.photo_clock_size);
     cJSON_AddItemToObject(scrs, "photo", scrs_photo);
     cJSON_AddItemToObject(json, "scrsaver", scrs);
 
@@ -328,12 +330,16 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             cJSON *phs = cJSON_GetObjectItem(ph, "hold_s");
             cJSON *pe  = cJSON_GetObjectItem(ph, "effect");
             cJSON *psp = cJSON_GetObjectItem(ph, "speed");
+            cJSON *pck = cJSON_GetObjectItem(ph, "clock");
+            cJSON *pcs = cJSON_GetObjectItem(ph, "clock_size");
             settings_set_photo(
                 cJSON_IsString(pd) ? pd->valuestring     : cur->scrsaver.photo_dir,
                 cJSON_IsNumber(po) ? po->valueint        : cur->scrsaver.photo_order,
                 cJSON_IsNumber(phs)? phs->valueint       : cur->scrsaver.photo_hold_s,
                 cJSON_IsNumber(pe) ? pe->valueint        : cur->scrsaver.photo_effect,
-                cJSON_IsNumber(psp)? psp->valueint       : cur->scrsaver.photo_speed);
+                cJSON_IsNumber(psp)? psp->valueint       : cur->scrsaver.photo_speed,
+                cJSON_IsNumber(pck)? pck->valueint       : cur->scrsaver.photo_clock,
+                cJSON_IsNumber(pcs)? pcs->valueint       : cur->scrsaver.photo_clock_size);
         }
     }
 

@@ -302,6 +302,8 @@ async function saveScreensaverTab() {
                 hold_s: Math.max(1, parseInt(get('photo_hold')?.value, 10) || 8),
                 effect: parseInt(get('photo_effect')?.value, 10) || 0,
                 speed:  parseInt(get('photo_speed')?.value, 10)  || 3,
+                clock:      get('photo_clock')?.checked ? 1 : 0,
+                clock_size: parseInt(get('photo_clock_size')?.value, 10) || 96,
             },
         },
         dashboard: {
@@ -607,6 +609,9 @@ function populateForm(s) {
         setVal('photo_speed',  ph.speed  ?? 3);
         const psv = document.getElementById('photo_speed_value');
         if (psv) psv.textContent = String(ph.speed ?? 3);
+        const pcb = document.getElementById('photo_clock');
+        if (pcb) pcb.checked = !!(ph.clock ?? 1);
+        setVal('photo_clock_size', String(ph.clock_size ?? 96));
         onScreensaverStyleChange();
     }
     if (s.dashboard) {

@@ -17,6 +17,13 @@ static esp_err_t save_to_file(void);
 
 static app_settings_t s_settings;
 
+// Photo-clock font size must be one of the compiled digit fonts; snap anything
+// else to the 96 default.
+static int clamp_clock_size(int s)
+{
+    return (s == 72 || s == 80 || s == 96 || s == 120) ? s : 96;
+}
+
 
 /*
 esp_err_t settings_init(void)
@@ -68,6 +75,8 @@ esp_err_t settings_init(void)
         s_settings.scrsaver.photo_hold_s    = 8;
         s_settings.scrsaver.photo_effect    = 4;   // random-per-slide
         s_settings.scrsaver.photo_speed     = 3;
+        s_settings.scrsaver.photo_clock     = 1;   // overlay clock on photos
+        s_settings.scrsaver.photo_clock_size = 96;
         // Dashboard screensaver — defaults to NBP USD/PLN exchange rate
         strncpy(s_settings.dashboard.title,     "USD/PLN",                                                       sizeof(s_settings.dashboard.title)     - 1);
         strncpy(s_settings.dashboard.url,       "https://api.nbp.pl/api/exchangerates/rates/A/USD?format=json", sizeof(s_settings.dashboard.url)       - 1);
@@ -266,6 +275,8 @@ static esp_err_t load_from_file(void)
     s_settings.scrsaver.photo_hold_s = 8;
     s_settings.scrsaver.photo_effect = 4;
     s_settings.scrsaver.photo_speed  = 3;
+    s_settings.scrsaver.photo_clock  = 1;
+    s_settings.scrsaver.photo_clock_size = 96;
 
     cJSON *scrs = cJSON_GetObjectItem(json, "scrsaver");
     if (cJSON_IsObject(scrs)) {
@@ -286,6 +297,8 @@ static esp_err_t load_from_file(void)
             cJSON *phs = cJSON_GetObjectItem(ph, "hold_s");
             cJSON *pe  = cJSON_GetObjectItem(ph, "effect");
             cJSON *psp = cJSON_GetObjectItem(ph, "speed");
+            cJSON *pck = cJSON_GetObjectItem(ph, "clock");
+            cJSON *pcs = cJSON_GetObjectItem(ph, "clock_size");
             if (cJSON_IsString(pd) && pd->valuestring[0]) {
                 s_settings.scrsaver.photo_dir[0] = '\0';
                 strncpy(s_settings.scrsaver.photo_dir, pd->valuestring, sizeof(s_settings.scrsaver.photo_dir) - 1);
@@ -294,6 +307,8 @@ static esp_err_t load_from_file(void)
             if (cJSON_IsNumber(phs)) s_settings.scrsaver.photo_hold_s = phs->valueint < 1 ? 1 : phs->valueint;
             if (cJSON_IsNumber(pe))  s_settings.scrsaver.photo_effect = (pe->valueint < 0 || pe->valueint > 4) ? 4 : pe->valueint;
             if (cJSON_IsNumber(psp)) s_settings.scrsaver.photo_speed  = (psp->valueint < 1) ? 1 : (psp->valueint > 5 ? 5 : psp->valueint);
+            if (cJSON_IsNumber(pck)) s_settings.scrsaver.photo_clock      = pck->valueint ? 1 : 0;
+            if (cJSON_IsNumber(pcs)) s_settings.scrsaver.photo_clock_size = clamp_clock_size(pcs->valueint);
         }
     } else {
         s_settings.scrsaver.delay          = 60;
@@ -478,6 +493,8 @@ static esp_err_t save_to_file(void)
     cJSON_AddNumberToObject(photo, "hold_s", s_settings.scrsaver.photo_hold_s);
     cJSON_AddNumberToObject(photo, "effect", s_settings.scrsaver.photo_effect);
     cJSON_AddNumberToObject(photo, "speed",  s_settings.scrsaver.photo_speed);
+    cJSON_AddNumberToObject(photo, "clock",      s_settings.scrsaver.photo_clock);
+    cJSON_AddNumberToObject(photo, "clock_size", s_settings.scrsaver.photo_clock_size);
     cJSON_AddItemToObject(scrs, "photo", photo);
     cJSON_AddItemToObject(json, "scrsaver", scrs);
 
@@ -770,7 +787,8 @@ void settings_set_scrsaver_id(int id)
 
 static unsigned s_photo_gen = 0;
 
-void settings_set_photo(const char *dir, int order, int hold_s, int effect, int speed)
+void settings_set_photo(const char *dir, int order, int hold_s, int effect, int speed,
+                        int clock, int clock_size)
 {
     if (dir && dir[0]) {
         s_settings.scrsaver.photo_dir[0] = '\0';
@@ -780,6 +798,8 @@ void settings_set_photo(const char *dir, int order, int hold_s, int effect, int 
     s_settings.scrsaver.photo_hold_s = hold_s < 1 ? 1 : hold_s;
     s_settings.scrsaver.photo_effect = (effect < 0 || effect > 4) ? 4 : effect;
     s_settings.scrsaver.photo_speed  = speed < 1 ? 1 : (speed > 5 ? 5 : speed);
+    s_settings.scrsaver.photo_clock      = clock ? 1 : 0;
+    s_settings.scrsaver.photo_clock_size = clamp_clock_size(clock_size);
     s_photo_gen++;
     save_to_file();
 }

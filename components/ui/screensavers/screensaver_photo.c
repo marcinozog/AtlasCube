@@ -3,10 +3,13 @@
 #include "ui_profile.h"
 #include "sdcard.h"
 #include "settings.h"
+#include "ntp_service.h"
+#include "fonts/ui_fonts.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -70,6 +73,15 @@ static FILE      *s_fp    = NULL;
 static int        s_load_row = 0;
 static int64_t    s_hold_until = 0;
 
+// Clock overlay (HH:MM) drawn on top of the photo. 4 black copies offset by a
+// couple px form an outline behind the white label so it reads on any photo.
+#define CLOCK_LAYERS 5             // [0..3] outline, [4] white top
+static lv_obj_t  *s_clock[CLOCK_LAYERS] = {0};
+static bool       s_clock_on   = true;
+static int        s_clock_size = 96;       // 72 / 80 / 96 / 120
+static char       s_clock_txt[8] = "";     // last text shown (skip redundant sets)
+static int64_t    s_clock_next = 0;        // next clock refresh (esp_timer us)
+
 // Loaded from settings_ex at create()
 static char          s_dir[64];
 static int64_t       s_hold_ms    = 8000;
@@ -98,6 +110,76 @@ static void load_config(void)
     s_hold_ms    = (int64_t)st->scrsaver.photo_hold_s * 1000;
     s_effect_cfg = st->scrsaver.photo_effect;
     s_speed      = st->scrsaver.photo_speed;
+    s_clock_on   = st->scrsaver.photo_clock ? true : false;
+    s_clock_size = st->scrsaver.photo_clock_size;
+}
+
+// ── Clock overlay ──────────────────────────────────────────────────────────────
+// The big _72/_80/_96/_120 fonts are digit-only (0x30-0x3A) — which covers the
+// "0-9" and ":" of HH:MM exactly.
+static const lv_font_t *clock_font(int size)
+{
+    switch (size) {
+    case 72:  return &lv_font_montserrat_72;
+    case 80:  return &lv_font_montserrat_80;
+    case 120: return &lv_font_montserrat_120;
+    default:  return &lv_font_montserrat_96;
+    }
+}
+
+static void clock_destroy(void)
+{
+    for (int i = 0; i < CLOCK_LAYERS; i++) {
+        if (s_clock[i]) { lv_obj_delete(s_clock[i]); s_clock[i] = NULL; }
+    }
+    s_clock_txt[0] = '\0';
+}
+
+// Build the 5 centred labels on top of the canvas. Hidden until NTP syncs (the
+// digit-only font can't render a "--:--" placeholder anyway).
+static void clock_build(void)
+{
+    if (!s_clock_on || !s_root) return;
+    static const int OX[4] = { -2,  2, -2,  2 };
+    static const int OY[4] = { -2, -2,  2,  2 };
+    const lv_font_t *f = clock_font(s_clock_size);
+    for (int i = 0; i < CLOCK_LAYERS; i++) {
+        lv_obj_t *l = lv_label_create(s_root);
+        lv_obj_set_style_text_font(l, f, LV_PART_MAIN);
+        bool top = (i == CLOCK_LAYERS - 1);
+        lv_obj_set_style_text_color(l, top ? lv_color_white() : lv_color_black(), LV_PART_MAIN);
+        lv_obj_align(l, LV_ALIGN_CENTER, top ? 0 : OX[i], top ? 0 : OY[i]);
+        lv_label_set_text(l, "");
+        lv_obj_add_flag(l, LV_OBJ_FLAG_HIDDEN);
+        s_clock[i] = l;
+    }
+    s_clock_txt[0] = '\0';
+}
+
+static void clock_update(void)
+{
+    if (!s_clock_on || !s_clock[0]) return;
+
+    if (!ntp_service_is_synced()) {
+        if (!lv_obj_has_flag(s_clock[0], LV_OBJ_FLAG_HIDDEN))
+            for (int i = 0; i < CLOCK_LAYERS; i++) lv_obj_add_flag(s_clock[i], LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    time_t now = time(NULL);
+    struct tm t;
+    localtime_r(&now, &t);
+    char buf[8];
+    snprintf(buf, sizeof(buf), "%02d:%02d", t.tm_hour, t.tm_min);
+
+    bool hidden = lv_obj_has_flag(s_clock[0], LV_OBJ_FLAG_HIDDEN);
+    if (!hidden && strcmp(buf, s_clock_txt) == 0) return;   // nothing changed
+
+    strcpy(s_clock_txt, buf);
+    for (int i = 0; i < CLOCK_LAYERS; i++) {
+        lv_label_set_text(s_clock[i], buf);
+        lv_obj_clear_flag(s_clock[i], LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 // reveal progress
@@ -318,7 +400,17 @@ static void tick(lv_timer_t *t)
         load_config();
         if (s_fp) { fclose(s_fp); s_fp = NULL; }
         if (strcmp(old_dir, s_dir) != 0) scan_dir();
+        clock_destroy();            // toggle/size may have changed — rebuild
+        clock_build();
+        s_clock_next = 0;
         s_phase = PH_PICK;
+    }
+
+    // Refresh the clock overlay once a second (no-op when text is unchanged).
+    int64_t nowus = esp_timer_get_time();
+    if (nowus >= s_clock_next) {
+        s_clock_next = nowus + 1000000;
+        clock_update();
     }
 
     switch (s_phase) {
@@ -408,6 +500,10 @@ static void photo_create(lv_obj_t *parent)
     lv_canvas_set_buffer(s_canvas, s_canvas_buf, s_w, s_h, LV_COLOR_FORMAT_RGB565);
     lv_obj_align(s_canvas, LV_ALIGN_TOP_LEFT, 0, 0);
 
+    // Clock labels are created after the canvas so they sit on top of it.
+    s_clock_next = 0;
+    clock_build();
+
     if (!sdcard_is_mounted()) ESP_LOGW(TAG, "SD not mounted — no slides will load");
     scan_dir();
 
@@ -421,6 +517,8 @@ static void photo_destroy(void)
     if (s_fp)     { fclose(s_fp);              s_fp     = NULL; }
     if (s_canvas) { lv_obj_delete(s_canvas);   s_canvas = NULL; }
     if (s_root)   { lv_obj_delete(s_root);     s_root   = NULL; }
+    // Clock labels were children of s_root — already freed by its deletion.
+    for (int i = 0; i < CLOCK_LAYERS; i++) s_clock[i] = NULL;
     if (s_canvas_buf) { heap_caps_free(s_canvas_buf); s_canvas_buf = NULL; }
     if (s_stage_buf)  { heap_caps_free(s_stage_buf);  s_stage_buf  = NULL; }
     if (s_perm)   { free(s_perm); s_perm = NULL; }

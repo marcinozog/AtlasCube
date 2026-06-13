@@ -184,6 +184,18 @@
                        oninput="document.getElementById('photo_speed_value').textContent = this.value" />
                 <span id="photo_speed_value" class="slider-value">3</span>
             </div>
+
+            <label class="field-label" style="margin-top:10px">
+                <input type="checkbox" id="photo_clock" /> 🕒 Show clock over photos
+            </label>
+
+            <label class="field-label" style="margin-top:10px">Clock size</label>
+            <select id="photo_clock_size" class="field-input" style="width:240px">
+                <option value="72">Small (72)</option>
+                <option value="80">Medium (80)</option>
+                <option value="96">Large (96)</option>
+                <option value="120">Huge (120)</option>
+            </select>
         </div>
 
         <!-- Dashboard screensaver — webhook-driven widget config -->
