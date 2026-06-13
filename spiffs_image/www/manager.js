@@ -343,6 +343,64 @@ async function spiffsExists(name) {
     } catch (_) { return false; }
 }
 
+// Backup every SPIFFS file into /backup/<timestamp>/ on the SD card. The SD POST
+// handler auto-creates the parent dirs, so no explicit mkdir is needed. Files are
+// stored decompressed (same as the per-file ⮕ copy) so the backup is readable and
+// restorable via the ⬅ button. favicon.ico is excluded — /api/files doesn't list it.
+const btnBackup = document.getElementById("btn_backup");
+
+function backupStamp() {
+    const d = new Date();
+    const p = n => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_` +
+           `${p(d.getHours())}-${p(d.getMinutes())}-${p(d.getSeconds())}`;
+}
+
+async function backupAll() {
+    let list;
+    try {
+        const r = await fetch("/api/files", { cache: "no-store" });
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        list = await r.json();
+    } catch (e) {
+        setLog("✗ Backup failed: can't list SPIFFS (" + e.message + ")", "err");
+        return;
+    }
+    if (!list.length) { setLog("Nothing to back up.", "warn"); return; }
+
+    const dir = "/backup/" + backupStamp();
+    btnBackup.disabled = true;
+    let ok = 0, fail = 0;
+    try {
+        for (let i = 0; i < list.length; i++) {
+            const name = list[i].name;
+            setLog(`Backing up ${i + 1}/${list.length}: ${name}…`);
+            try {
+                const g = await fetch("/" + encodePath(name), { cache: "no-store" });
+                if (!g.ok) throw new Error("read " + g.status);
+                const blob = await g.blob();
+                const w = await fetch("/api/sd/file?path=" + encodeURIComponent(dir + "/" + name), {
+                    method: "POST", body: blob
+                });
+                if (w.status === 503) throw new Error("no SD card");
+                if (!w.ok) throw new Error("write " + w.status);
+                ok++;
+            } catch (e) {
+                if (/no SD card/.test(e.message)) {
+                    setLog(`✗ Backup aborted: ${e.message}`, "err");
+                    return;
+                }
+                fail++;
+            }
+        }
+        setLog(`✓ Backed up ${ok} file${ok === 1 ? "" : "s"} to ${dir}` +
+               (fail ? ` (${fail} failed)` : ""), fail ? "warn" : "ok");
+        if (ok) sdNavTo(dir);
+    } finally {
+        btnBackup.disabled = false;
+    }
+}
+
 // ── inline editor modal (both panes) ─────────────────────────────────────────
 let edSource = null;   // 'spiffs' | 'sd'
 let edName   = null;

@@ -178,8 +178,9 @@
             min-width: 200px;
             text-align: center;
         }
-        .mgr-log.ok  { color: var(--green); }
-        .mgr-log.err { color: var(--red); }
+        .mgr-log.ok   { color: var(--green); }
+        .mgr-log.err  { color: var(--red); }
+        .mgr-log.warn { color: var(--orange); }
         /* Inline editor modal (both panes) */
         .modal-overlay {
             position: fixed;
@@ -317,6 +318,7 @@
             </div>
             <div class="pane-tools">
                 <button onclick="loadSpiffs()" title="Reload list">↺ Refresh</button>
+                <button id="btn_backup" class="primary" onclick="backupAll()" title="Copy every SPIFFS file into /backup/<timestamp> on the SD card">💾 Backup all → SD</button>
             </div>
             <div class="listing" id="sp_listing"></div>
         </section>
