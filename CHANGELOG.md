@@ -9,6 +9,21 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-06-13
+
+### Added
+- **ui:** boot splash overlay with firmware version + STA IP
+- **bt:** per-module AT command descriptor, web sync/transport controls, codec & sample-rate info
+- **web:** move layout editor link from Tools to Display tab
+- **web:** add icon legend for each file-manager panel
+- **web:** add "backup all SPIFFS files" to file manager
+- **web:** per-file copy buttons in file manager
+- **web:** add dual-pane SPIFFS↔SD file manager with inline editor
+- **screensaver:** overlay clock on photo frame
+
+### Fixed
+- **web:** stop file-manager editor modal colliding with shared .modal
+
 ## [0.17.0] - 2026-06-13
 
 ### Added
@@ -249,7 +264,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.18.0...HEAD
+[0.18.0]: https://github.com/marcinozog/AtlasCube/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/marcinozog/AtlasCube/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/marcinozog/AtlasCube/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/marcinozog/AtlasCube/compare/v0.14.0...v0.15.0
