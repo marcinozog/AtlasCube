@@ -8,7 +8,7 @@
 #define THEME_FILE "/spiffs/theme.json"
 #define EVENTS_FILE "/spiffs/events.json"
 
-// WTD -> 37 -> PSRAM 33, 34, 35, 36, 37
+// WTD pin 37 and PSRAM 33, 34, 35, 36, 37
 
 // ===== USER CONFIG =====
 // Three independent hardware choices below — uncomment exactly one in each group.
@@ -23,23 +23,23 @@
 
 // ===== DISPLAY DRIVER =====
 // #define DISPLAY_ILI9341
-#define DISPLAY_ST7796
-// #define DISPLAY_CO5300
+// #define DISPLAY_ST7796
+#define DISPLAY_CO5300
 // #define DISPLAY_SSD1322
 
 
 
 // ===== UI PROFILE =====
-// #define UI_PROFILE_240X296
+#define UI_PROFILE_240X296
 // #define UI_PROFILE_320x240
-#define UI_PROFILE_480x320
+// #define UI_PROFILE_480x320
 // #define UI_PROFILE_MONO_128X64
 // #define UI_PROFILE_MONO_256X64
 
 
 // ===== TOUCH DRIVER =====
-#define TOUCH_FT6336U
-// #define TOUCH_CST816D
+// #define TOUCH_FT6336U
+#define TOUCH_CST816D
 // #define TOUCH_NONE
 
 
@@ -104,7 +104,6 @@
 
 // ===== SD CARD (SDMMC 1-bit) =====
 // 3 lines: CLK + CMD + D0. CMD and D0 need ~10k external pull-ups on the PCB.
-// On CO5300 builds pins 38/39/40 are taken by the QSPI display — pick others.
 #define HAS_SD_CARD
 #define SD_PIN_CLK   12
 #define SD_PIN_CMD   13
@@ -116,9 +115,9 @@
 // Single source of truth. ESP-ADF reads these via board_def.h, which includes
 // this header (components\audio_board\esp32_s3_atlascube\board_def.h).
 
-#define I2S_DATA        16 // GPIO_NUM_8
-#define I2S_BCK         15 // GPIO_NUM_7
-#define I2S_LCK         17 // GPIO_NUM_9
+#define I2S_DATA        16
+#define I2S_BCK         15
+#define I2S_LCK         17
 
 
 // ===== RADIO =====
@@ -148,7 +147,7 @@
 
 // ===== BUZZER =====
 
-#define BUZZER_PIN     6 //2
+#define BUZZER_PIN     6   // set to -1 to disable the buzzer
 
 
 // ===== WIFI =====

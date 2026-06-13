@@ -59,6 +59,11 @@ esp_err_t buzzer_init(gpio_num_t pin)
 {
     if (s_initialized) return ESP_OK;
 
+    if (pin < 0) {
+        ESP_LOGI(TAG, "Buzzer disabled (pin < 0)");
+        return ESP_OK;
+    }
+
     ledc_timer_config_t t = {
         .speed_mode      = BUZZER_LEDC_MODE,
         .timer_num       = BUZZER_LEDC_TIMER,
