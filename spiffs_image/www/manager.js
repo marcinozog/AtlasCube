@@ -56,7 +56,6 @@ function spiffsRejectReason(name, size) {
 }
 
 // ── SPIFFS pane (left) ──────────────────────────────────────────────────────
-let spSel = null;                                   // { name, size, gz }
 let spList = [];                                    // last listing, for re-render
 const spListEl = document.getElementById("sp_listing");
 const spMetaEl = document.getElementById("sp_meta");
@@ -85,28 +84,21 @@ function renderSpiffs() {
     let totBytes = 0;
     const rows = spList.map(f => {
         totBytes += f.size || 0;
-        const sel = spSel && spSel.name === f.name ? " sel" : "";
-        return `<tr class="row${sel}" onclick='spPick(${esc(JSON.stringify(f))})'>` +
+        return `<tr class="row">` +
             `<td class="name"><span class="icon">📄</span>${esc(f.name)}` +
             (f.gz ? `<span class="badge">gz</span>` : "") + `</td>` +
             `<td class="size">${fmtSize(f.size || 0)}</td>` +
             `<td class="actions">` +
-            `<button class="act" onclick='event.stopPropagation();openEditor("spiffs",${jsArg(f.name)})' title="Edit">✎</button>` +
+            `<button class="act copy" onclick='copyToSd(${jsArg(f.name)})' title="Copy to SD →">⮕</button>` +
+            `<button class="act" onclick='openEditor("spiffs",${jsArg(f.name)})' title="Edit">✎</button>` +
             `</td></tr>`;
     });
     spListEl.innerHTML = `<table class="files"><tbody>${rows.join("")}</tbody></table>`;
     spMetaEl.textContent = `${spList.length} file${spList.length === 1 ? "" : "s"} · ${fmtSize(totBytes)}`;
 }
 
-function spPick(f) {
-    spSel = (spSel && spSel.name === f.name) ? null : f;   // toggle
-    renderSpiffs();                                         // re-render highlight
-    syncButtons();
-}
-
 // ── SD pane (right) ─────────────────────────────────────────────────────────
 let sdPath = "/";
-let sdSel = null;                                   // { name, size } (files only)
 const sdListEl   = document.getElementById("sd_listing");
 const sdCrumbsEl = document.getElementById("sd_crumbs");
 const sdMetaEl   = document.getElementById("sd_meta");
@@ -136,8 +128,6 @@ function sdRenderCrumbs() {
 
 function sdNavTo(path) {
     sdPath = path || "/";
-    sdSel = null;
-    syncButtons();
     sdRefresh();
 }
 
@@ -184,20 +174,20 @@ function sdRender(entries) {
             );
         } else {
             nFiles++; totBytes += e.size || 0;
-            const sel = sdSel && sdSel.name === e.name ? " sel" : "";
             const dl = "/api/sd/file?path=" + encodeURIComponent(full);
             const edit = isEditable(e.name)
-                ? `<button class="act" onclick='event.stopPropagation();openEditor("sd",${jsArg(e.name)},${jsArg(full)})' title="Edit">✎</button>`
+                ? `<button class="act" onclick='openEditor("sd",${jsArg(e.name)},${jsArg(full)})' title="Edit">✎</button>`
                 : "";
             rows.push(
-                `<tr class="row${sel}" onclick='sdPick(${esc(JSON.stringify({ name: e.name, size: e.size || 0 }))})'>` +
+                `<tr class="row">` +
                 `<td class="name"><span class="icon">📄</span>${esc(e.name)}</td>` +
                 `<td class="size">${fmtSize(e.size || 0)}</td>` +
                 `<td class="actions">` +
+                `<button class="act copy" onclick='copyToSpiffs(${jsArg(e.name)},${e.size || 0},${jsArg(full)})' title="Copy to SPIFFS ←">⬅</button>` +
                 edit +
-                `<a class="act" href="${dl}" onclick="event.stopPropagation()" title="Download">⬇</a>` +
-                `<button class="act" onclick="event.stopPropagation();sdRename('${esc(full)}','${esc(e.name)}')" title="Rename">✏️</button>` +
-                `<button class="act del" onclick="event.stopPropagation();sdDelete('${esc(full)}','${esc(e.name)}',false)" title="Delete">🗑</button>` +
+                `<a class="act" href="${dl}" title="Download">⬇</a>` +
+                `<button class="act" onclick="sdRename('${esc(full)}','${esc(e.name)}')" title="Rename">✏️</button>` +
+                `<button class="act del" onclick="sdDelete('${esc(full)}','${esc(e.name)}',false)" title="Delete">🗑</button>` +
                 `</td></tr>`
             );
         }
@@ -206,12 +196,6 @@ function sdRender(entries) {
     if (rows.length === 0) sdShow("Empty folder.");
     else sdListEl.innerHTML = `<table class="files"><tbody>${rows.join("")}</tbody></table>`;
     sdMetaEl.textContent = `${nFiles} file${nFiles === 1 ? "" : "s"} · ${fmtSize(totBytes)}`;
-}
-
-function sdPick(f) {
-    sdSel = (sdSel && sdSel.name === f.name) ? null : f;   // toggle
-    sdRefresh();                                           // simplest re-highlight
-    syncButtons();
 }
 
 async function sdRename(path, name) {
@@ -249,9 +233,7 @@ async function sdDelete(path, name, isDir) {
         const r = await fetch("/api/sd/file?path=" + encodeURIComponent(path), { method: "DELETE" });
         if (r.status === 503) { alert("No SD card."); return; }
         if (!r.ok) { alert("Delete failed (" + r.status + ")."); return; }
-        if (sdSel && sdSel.name === name) sdSel = null;
         sdRefresh();
-        syncButtons();
     } catch (e) { alert("Connection error."); }
 }
 
@@ -282,20 +264,10 @@ function sdUploadOne(file, idx, count) {
     });
 }
 
-// ── transfer ──────────────────────────────────────────────────────────────
-const btnToSd     = document.getElementById("btn_to_sd");
-const btnToSpiffs = document.getElementById("btn_to_spiffs");
-
-function syncButtons() {
-    btnToSd.disabled     = !spSel;
-    btnToSpiffs.disabled = !sdSel;
-}
-
+// ── transfer (per-file copy buttons) ────────────────────────────────────────
 // SPIFFS → SD: read the (browser-decompressed) SPIFFS file, write it into the
 // SD folder currently shown in the right pane.
-btnToSd.addEventListener("click", async () => {
-    if (!spSel) return;
-    const name = spSel.name;
+async function copyToSd(name) {
     const dest = sdJoin(sdPath, name);
 
     // Warn before clobbering an existing SD file of the same name.
@@ -304,7 +276,6 @@ btnToSd.addEventListener("click", async () => {
     }
 
     setLog(`Copying ${name} → SD…`);
-    btnToSd.disabled = true;
     try {
         const r = await fetch("/" + encodePath(name), { cache: "no-store" });
         if (!r.ok) throw new Error("read HTTP " + r.status);
@@ -318,29 +289,22 @@ btnToSd.addEventListener("click", async () => {
         sdRefresh();
     } catch (e) {
         setLog(`✗ ${name} → SD failed: ${e.message}`, "err");
-    } finally {
-        syncButtons();
     }
-});
+}
 
 // SD → SPIFFS: read the SD file as text and PUT it to /api/files (the server
 // re-gzips html/css/js). Text formats only — mirror the server's limits.
-btnToSpiffs.addEventListener("click", async () => {
-    if (!sdSel) return;
-    const name = sdSel.name;
-
-    const reason = spiffsRejectReason(name, sdSel.size);
+async function copyToSpiffs(name, size, srcPath) {
+    const reason = spiffsRejectReason(name, size);
     if (reason) { setLog(`✗ Can't copy ${name} to SPIFFS: ${reason}`, "err"); return; }
 
     if (await spiffsExists(name)) {
         if (!confirm(`"${name}" already exists in SPIFFS. Overwrite (will replace the live UI file)?`)) return;
     }
 
-    const src = sdJoin(sdPath, name);
     setLog(`Copying ${name} → SPIFFS…`);
-    btnToSpiffs.disabled = true;
     try {
-        const r = await fetch("/api/sd/file?path=" + encodeURIComponent(src));
+        const r = await fetch("/api/sd/file?path=" + encodeURIComponent(srcPath));
         if (r.status === 503) throw new Error("no SD card");
         if (!r.ok) throw new Error("read HTTP " + r.status);
         const text = await r.text();
@@ -358,10 +322,8 @@ btnToSpiffs.addEventListener("click", async () => {
         loadSpiffs();
     } catch (e) {
         setLog(`✗ ${name} → SPIFFS failed: ${e.message}`, "err");
-    } finally {
-        syncButtons();
     }
-});
+}
 
 async function sdExists(name) {
     try {
@@ -534,4 +496,3 @@ modalEl.addEventListener("click", (e) => { if (e.target === modalEl) closeEditor
 // ── init ────────────────────────────────────────────────────────────────────
 loadSpiffs();
 sdRefresh();
-syncButtons();

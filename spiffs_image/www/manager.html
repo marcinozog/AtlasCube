@@ -113,13 +113,11 @@
             border-bottom: 1px solid var(--border);
         }
         table.files tr:last-child td { border-bottom: none; }
-        table.files tr.row { cursor: pointer; }
         table.files tr.row:hover { background: var(--bg-panel); }
-        table.files tr.row.sel { background: var(--accent-glow); }
         table.files td.size { text-align: right; color: var(--text-dim); white-space: nowrap; }
         table.files td.actions { text-align: right; white-space: nowrap; }
         table.files .name { color: var(--text); }
-        table.files .name.dir { color: var(--accent); }
+        table.files .name.dir { color: var(--accent); cursor: pointer; }
         table.files .name.dir:hover { text-decoration: underline; }
         table.files .icon { margin-right: 6px; }
         table.files .badge {
@@ -138,6 +136,8 @@
             text-decoration: none;
         }
         table.files button.act.del:hover { color: var(--red); }
+        table.files button.act.copy { color: var(--accent); font-size: 15px; }
+        table.files button.act.copy:hover { filter: brightness(1.3); }
         table.files a.act:hover, table.files button.act:hover { color: var(--accent); }
         .pane-status {
             padding: 22px 12px;
@@ -305,9 +305,7 @@
     <div class="section-title" style="margin: 16px 0 12px">🗂 File Manager</div>
 
     <div class="mgr-transfer">
-        <button id="btn_to_sd" disabled title="Copy the selected SPIFFS file into the current SD folder">SPIFFS → SD ⮕</button>
-        <span class="mgr-log" id="log">Select a file in either pane to copy it across.</span>
-        <button id="btn_to_spiffs" disabled title="Copy the selected SD file into SPIFFS (text files only)">⬅ SD → SPIFFS</button>
+        <span class="mgr-log" id="log">Use ⮕ / ⬅ on a file to copy it between SPIFFS and the current SD folder.</span>
     </div>
 
     <div class="mgr-panes">
