@@ -114,7 +114,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Resume on boot — optionally replays the last station after a restart if the radio was playing when it powered off (opt-in, toggled in the Settings web UI)
 
 **UI**
-- LVGL-based GUI — supports ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), CO5300 240×296 round AMOLED (QSPI), and SSD1322 256×64 mono OLED (SPI), switched via a single compile-time define
+- LVGL-based GUI — supports ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), ILI9488 480×320 (SPI, 18-bit), CO5300 240×296 round AMOLED (QSPI), and SSD1322 256×64 mono OLED (SPI), switched via a single compile-time define
 - Screens: clock, playlist, equalizer, settings, Bluetooth, events, WiFi AP
 - Rotary encoder navigation (turn + press)
 - Capacitive touch — CST816D (CO5300 round AMOLED) or FT6336U (ST7796U 480×320), both on I2C; coexists with the rotary encoder, either input works at any time
@@ -177,7 +177,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 | Board | Atlas Hub (custom) |
 | Flash | 8 MB |
 | PSRAM | OctoSPI, 80 MHz |
-| Display | ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), CO5300 240×296 AMOLED (QSPI), or SSD1322 256×64 mono OLED (SPI) — selected at compile time |
+| Display | ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), ILI9488 480×320 (SPI, 18-bit), CO5300 240×296 AMOLED (QSPI), or SSD1322 256×64 mono OLED (SPI) — selected at compile time |
 | Touch | CST816D or FT6336U capacitive controller (I2C) — gestures detected by LVGL on the standard pointer indev |
 | Input | Rotary encoder with push button + capacitive touch (swipes + tap-to-control overlay) |
 | I2S mux | 74HC157D — hardware switch between ESP32-S3 and QCC5125 I2S outputs; controlled via GPIO |
@@ -206,6 +206,7 @@ Open **[atlascube.net/flash](https://atlascube.net/flash/)** in Chrome / Edge / 
 |---|---|---|
 | `AtlasCube-ili9341.bin` | ILI9341 320×240 (SPI) | FT6336U |
 | `AtlasCube-st7796.bin`  | ST7796U 480×320 (SPI) | FT6336U |
+| `AtlasCube-ili9488.bin` | ILI9488 480×320 (SPI, 18-bit) | FT6336U |
 | `AtlasCube-co5300.bin`  | CO5300 240×296 (QSPI AMOLED) | CST816D |
 | `AtlasCube-ssd1322.bin` | SSD1322 256×64 (mono OLED, SPI) | — (encoder) |
 
@@ -239,7 +240,7 @@ That's it — no ESP-IDF, no ESP-ADF, no patches. The rest of this README descri
 Install [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf) (the official installer is the only manual step on Windows), open the ESP-IDF environment, then from the repo root run:
 
 ```bash
-python scripts/build.py co5300       # or ili9341 / st7796 / ssd1322
+python scripts/build.py co5300       # or ili9341 / st7796 / ili9488 / ssd1322
 python scripts/build.py              # interactive variant menu
 ```
 

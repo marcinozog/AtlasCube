@@ -34,6 +34,9 @@ void display_init(void)
 #elif CONFIG_DISPLAY_ST7796
     extern void st7796_init(void);
     st7796_init();
+#elif CONFIG_DISPLAY_ILI9488
+    extern void ili9488_init(void);
+    ili9488_init();
 #elif CONFIG_DISPLAY_SSD1322
     extern void ssd1322_init(void);
     ssd1322_init();

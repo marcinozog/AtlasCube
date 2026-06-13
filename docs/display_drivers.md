@@ -180,3 +180,31 @@ the render buffer in PSRAM sidesteps the internal-DRAM budget from §3 — only
 the 8 KB DMA scratch buffer lives in internal RAM.
 
 Reference implementation: [components/display/drivers/ssd1322.c](../components/display/drivers/ssd1322.c).
+
+## 5. ILI9488 — 18-bit RGB666 only over SPI
+
+The ILI9488 (480×320, `UI_PROFILE_480x320`, same wiring as ST7796U) looks
+like a drop-in cousin of the ST7796 but has one hard difference: in
+**4-wire SPI mode it cannot accept 16-bit RGB565**. The serial interface
+only supports 18-bit (RGB666, 3 bytes/pixel) or 3-bit. So unlike every
+other RGB driver here — which set `0x3A=0x55` and DMA the raw LVGL buffer
+after a `bswap16` — the ILI9488 driver:
+
+- sets `0x3A = 0x66` (18-bit), and
+- **expands every pixel in `flush_cb`**: each RGB565 word becomes three
+  bytes, the panel reading the top 6 bits of each (`R = (px&0xF800)>>8`,
+  `G = (px&0x07E0)>>3`, `B = (px&0x001F)<<3`).
+
+**Memory trap:** a full-frame 18-bit scratch buffer would be 1.5× the
+RGB565 buffer (≈29 kB for 480×20), which on top of the LVGL buffer blows
+the internal-DRAM budget from §3 and breaks ESP-ADF audio task creation.
+The driver avoids this by converting and pushing **one row at a time**
+through a small static `linebuf[DISPLAY_WIDTH*3]` (~1.4 kB), so the LVGL
+render buffer stays plain RGB565 at `LVGL_BUF_LINES = 20` like ST7796.
+
+> **Untested on real hardware** (added on request, no panel on hand). The
+> init sequence is a standard ILI9488 set; if colors are swapped, toggle
+> the BGR bit in `MADCTL` (`0x36`), and if the image is mirrored/rotated,
+> adjust the MX/MY/MV bits — the value mirrors ST7796's `0xE8`.
+
+Reference implementation: [components/display/drivers/ili9488.c](../components/display/drivers/ili9488.c).

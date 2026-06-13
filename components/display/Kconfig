@@ -13,6 +13,9 @@ config DISPLAY_CO5300
 config DISPLAY_ST7796
     bool "ST7796"
 
+config DISPLAY_ILI9488
+    bool "ILI9488"
+
 config DISPLAY_SSD1322
     bool "SSD1322"
 

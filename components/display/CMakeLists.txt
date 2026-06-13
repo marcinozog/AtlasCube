@@ -12,6 +12,10 @@ if(CONFIG_DISPLAY_ST7796)
     list(APPEND DRIVERS "drivers/st7796.c")
 endif()
 
+if(CONFIG_DISPLAY_ILI9488)
+    list(APPEND DRIVERS "drivers/ili9488.c")
+endif()
+
 if(CONFIG_DISPLAY_SSD1322)
     list(APPEND DRIVERS "drivers/ssd1322.c")
 endif()

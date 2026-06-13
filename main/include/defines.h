@@ -24,6 +24,7 @@
 // ===== DISPLAY DRIVER =====
 // #define DISPLAY_ILI9341
 // #define DISPLAY_ST7796
+// #define DISPLAY_ILI9488
 #define DISPLAY_CO5300
 // #define DISPLAY_SSD1322
 
@@ -61,6 +62,17 @@
 #elif CONFIG_DISPLAY_ST7796
 
 // ST7796U 480x320 — same wiring as ILI9341
+#define LCD_PIN_MOSI  39
+#define LCD_PIN_CLK   40
+#define LCD_PIN_CS    41
+#define LCD_PIN_DC    2
+#define LCD_PIN_RST   42
+#define LCD_LED       1
+
+#elif CONFIG_DISPLAY_ILI9488
+
+// ILI9488 480x320 — same wiring as ILI9341 / ST7796.
+// 18-bit RGB666 over 4-wire SPI (the panel can't do RGB565 in serial mode).
 #define LCD_PIN_MOSI  39
 #define LCD_PIN_CLK   40
 #define LCD_PIN_CS    41

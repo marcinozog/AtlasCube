@@ -43,13 +43,14 @@ EIM_URL = "https://github.com/espressif/idf-im-ui/releases/latest"
 VARIANTS = {
     "ili9341": ("ILI9341", "320x240",     "FT6336U", "16MB"),
     "st7796":  ("ST7796",  "480x320",     "FT6336U", "16MB"),
+    "ili9488": ("ILI9488", "480x320",     "FT6336U", "16MB"),
     "co5300":  ("CO5300",  "240X296",     "CST816D", "16MB"),
     "ssd1322": ("SSD1322", "MONO_256X64", "NONE",    "16MB"),
 }
 
 # Full member lists per #define group, so exactly one stays uncommented.
 GROUPS = {
-    "DISPLAY":    ["DISPLAY_ILI9341", "DISPLAY_ST7796", "DISPLAY_CO5300", "DISPLAY_SSD1322"],
+    "DISPLAY":    ["DISPLAY_ILI9341", "DISPLAY_ST7796", "DISPLAY_ILI9488", "DISPLAY_CO5300", "DISPLAY_SSD1322"],
     "TOUCH":      ["TOUCH_FT6336U", "TOUCH_CST816D", "TOUCH_NONE"],
     "UI_PROFILE": ["UI_PROFILE_240X296", "UI_PROFILE_320x240", "UI_PROFILE_480x320",
                    "UI_PROFILE_MONO_128X64", "UI_PROFILE_MONO_256X64"],
