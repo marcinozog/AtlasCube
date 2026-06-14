@@ -409,8 +409,9 @@ Available at the device IP or `<hostname>.local` (STA mode), or `192.168.4.1` (A
 | Events | `/events.html` |
 | Equalizer | `/eq.html` |
 | Layout editor | `/layout.html` |
-| File editor | `/editor.html` |
-| File manager (SPIFFS ⇄ SD backup) | `/manager.html` |
+| SPIFFS file editor | `/spiffs-editor.html` |
+| SD card file editor | `/sd-editor.html` |
+| File manager (SPIFFS / SD) | `/manager.html` |
 | MQTT widgets | `/mqtt.html` |
 
 WebSocket endpoint: `ws://<device-ip>/ws` — pushes state changes (volume, track, radio state) in real time.
@@ -508,7 +509,7 @@ mqtt:
 
 **File editor**
 
-`/editor.html` is an in-browser editor for files stored in SPIFFS — JSON configs (layouts, playlist, events), HTML/CSS/JS of the web UI itself, and any other text assets on the device. Lists files from the storage partition, lets you edit them with syntax highlighting, and saves back over HTTP without reflashing. Useful for tweaking layouts or web UI on a deployed device.
+`/spiffs-editor.html` is an in-browser editor for files stored in SPIFFS — JSON configs (layouts, playlist, events), HTML/CSS/JS of the web UI itself, and any other text assets on the device. Lists files from the storage partition, lets you edit them with syntax highlighting, and saves back over HTTP without reflashing. Useful for tweaking layouts or web UI on a deployed device.
 
 ---
 
@@ -527,7 +528,7 @@ Update the firmware over Wi-Fi from **Settings → Tools** — no USB cable, no 
 - The device stops playback during the write to free RAM and avoid flash/SPI contention.
 - **Backup first:** the *Export running firmware* button (`GET /api/ota/backup`) downloads the active slot as `atlascube-<version>.bin` — a re-flashable snapshot you can upload again to roll back manually.
 
-> SPIFFS (web UI assets) is not updated over OTA — there is only one storage partition (no A/B), so the `.bin` carries firmware only. Update web assets with the in-browser File editor (`/editor.html`) or a SPIFFS reflash.
+> SPIFFS (web UI assets) is not updated over OTA — there is only one storage partition (no A/B), so the `.bin` carries firmware only. Update web assets with the in-browser SPIFFS file editor (`/spiffs-editor.html`) or a SPIFFS reflash.
 
 ---
 

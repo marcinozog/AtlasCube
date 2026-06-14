@@ -408,8 +408,9 @@ Dostępne pod IP urządzenia lub `<nazwa>.local` (tryb STA), albo pod `192.168.4
 | Wydarzenia | `/events.html` |
 | Korektor | `/eq.html` |
 | Edytor layoutu | `/layout.html` |
-| Edytor plików | `/editor.html` |
-| Menedżer plików (backup SPIFFS ⇄ SD) | `/manager.html` |
+| Edytor plików SPIFFS | `/spiffs-editor.html` |
+| Edytor plików SD | `/sd-editor.html` |
+| Menedżer plików (SPIFFS / SD) | `/manager.html` |
 | Widgety MQTT | `/mqtt.html` |
 
 Endpoint WebSocket: `ws://<ip-urzadzenia>/ws` — wypycha zmiany stanu (głośność, utwór, stan radia) na żywo.
@@ -507,7 +508,7 @@ mqtt:
 
 **Edytor plików**
 
-`/editor.html` to edytor w przeglądarce do plików ze SPIFFS — JSON-ów z konfiguracją (layouty, playlista, wydarzenia), HTML/CSS/JS samego web UI i czegokolwiek innego tekstowego na urządzeniu. Listuje pliki z partycji storage, edytuje z podświetlaniem składni i zapisuje z powrotem przez HTTP — bez reflashowania. Przydatne do dłubania w layoucie albo web UI na urządzeniu, które już działa u kogoś.
+`/spiffs-editor.html` to edytor w przeglądarce do plików ze SPIFFS — JSON-ów z konfiguracją (layouty, playlista, wydarzenia), HTML/CSS/JS samego web UI i czegokolwiek innego tekstowego na urządzeniu. Listuje pliki z partycji storage, edytuje z podświetlaniem składni i zapisuje z powrotem przez HTTP — bez reflashowania. Przydatne do dłubania w layoucie albo web UI na urządzeniu, które już działa u kogoś.
 
 ---
 
@@ -526,7 +527,7 @@ Aktualizacja firmware przez Wi-Fi z **Ustawienia → Tools** — bez kabla USB, 
 - Urządzenie zatrzymuje odtwarzanie na czas zapisu, żeby zwolnić RAM i uniknąć kontencji na flash/SPI.
 - **Najpierw backup:** przycisk *Export running firmware* (`GET /api/ota/backup`) pobiera aktywny slot jako `atlascube-<wersja>.bin` — re-flashowalny snapshot, który można wgrać z powrotem, żeby ręcznie cofnąć aktualizację.
 
-> SPIFFS (zasoby web UI) nie jest aktualizowany przez OTA — jest tylko jedna partycja storage (bez A/B), więc `.bin` niesie wyłącznie firmware. Zasoby web aktualizuj edytorem plików w przeglądarce (`/editor.html`) albo reflashem SPIFFS.
+> SPIFFS (zasoby web UI) nie jest aktualizowany przez OTA — jest tylko jedna partycja storage (bez A/B), więc `.bin` niesie wyłącznie firmware. Zasoby web aktualizuj edytorem plików SPIFFS w przeglądarce (`/spiffs-editor.html`) albo reflashem SPIFFS.
 
 ---
 
