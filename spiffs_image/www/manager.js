@@ -78,10 +78,12 @@ function spiffsRejectReason(name, size) {
 }
 
 // ── SPIFFS pane (left) ──────────────────────────────────────────────────────
-let spList = [];                                    // last listing, for re-render
+let spList = [];                                    // full flat listing from /api/files
 let spInfo = null;                                  // { total, used, free } of the SPIFFS partition
-const spListEl = document.getElementById("sp_listing");
-const spMetaEl = document.getElementById("sp_meta");
+let spPath = "";                                    // current virtual dir ("" = root)
+const spListEl   = document.getElementById("sp_listing");
+const spMetaEl   = document.getElementById("sp_meta");
+const spCrumbsEl = document.getElementById("sp_crumbs");
 
 function spShow(msg, isErr) {
     spListEl.innerHTML = `<div class="pane-status${isErr ? " err" : ""}">${esc(msg)}</div>`;
@@ -102,23 +104,83 @@ async function loadSpiffs() {
     }
 }
 
+function spNavTo(path) {
+    spPath = path || "";
+    renderSpiffs();
+}
+
+function spRenderCrumbs() {
+    const parts = spPath.split("/").filter(Boolean);
+    let html = `<a onclick="spNavTo('')">SPIFFS</a>`;
+    let acc = "";
+    for (const part of parts) {
+        acc += (acc ? "/" : "") + part;
+        html += `<span class="sep">/</span><a onclick="spNavTo('${esc(acc)}')">${esc(part)}</a>`;
+    }
+    spCrumbsEl.innerHTML = html;
+}
+
+// SPIFFS is flat — names carry their full path (e.g. "data/playlist.csv"). Derive
+// the immediate children (sub-dirs + files) of a virtual dir from that flat list.
+function spChildren(path) {
+    const prefix = path ? path + "/" : "";
+    const dirs = new Set();
+    const files = [];
+    for (const f of spList) {
+        if (prefix && !f.name.startsWith(prefix)) continue;
+        const rest = f.name.slice(prefix.length);
+        const slash = rest.indexOf("/");
+        if (slash >= 0) dirs.add(rest.slice(0, slash));   // immediate sub-dir
+        else files.push({ ...f, base: rest });
+    }
+    return {
+        dirs: [...dirs].sort((a, b) => a.localeCompare(b)),
+        files: files.sort((a, b) => a.base.localeCompare(b.base)),
+    };
+}
+
 function renderSpiffs() {
+    spRenderCrumbs();
     if (!spList.length) { spShow("No editable files."); spMetaEl.textContent = "empty" + usageStr(spInfo); return; }
 
+    const { dirs, files } = spChildren(spPath);
+    const rows = [];
+
+    if (spPath !== "") {
+        const parent = spPath.includes("/") ? spPath.slice(0, spPath.lastIndexOf("/")) : "";
+        rows.push(
+            `<tr class="row"><td class="name dir" onclick="spNavTo('${esc(parent)}')">` +
+            `<span class="icon">📁</span>..</td><td class="size"></td><td class="actions"></td></tr>`
+        );
+    }
+
+    for (const d of dirs) {
+        const full = spPath ? spPath + "/" + d : d;
+        rows.push(
+            `<tr class="row"><td class="name dir" onclick="spNavTo('${esc(full)}')">` +
+            `<span class="icon">📁</span>${esc(d)}</td>` +
+            `<td class="size">—</td><td class="actions"></td></tr>`
+        );
+    }
+
     let totBytes = 0;
-    const rows = spList.map(f => {
+    for (const f of files) {
         totBytes += f.size || 0;
-        return `<tr class="row">` +
-            `<td class="name"><span class="icon">📄</span>${esc(f.name)}` +
+        rows.push(
+            `<tr class="row">` +
+            `<td class="name"><span class="icon">📄</span>${esc(f.base)}` +
             (f.gz ? `<span class="badge">gz</span>` : "") + `</td>` +
             `<td class="size">${fmtSize(f.size || 0)}</td>` +
             `<td class="actions">` +
             `<button class="act copy" onclick='copyToSd(${jsArg(f.name)})' title="Copy to SD →">⮕</button>` +
             `<button class="act" onclick='openEditor("spiffs",${jsArg(f.name)})' title="Edit">✎</button>` +
-            `</td></tr>`;
-    });
-    spListEl.innerHTML = `<table class="files"><tbody>${rows.join("")}</tbody></table>`;
-    spMetaEl.textContent = `${spList.length} file${spList.length === 1 ? "" : "s"} · ${fmtSize(totBytes)}` + usageStr(spInfo);
+            `</td></tr>`
+        );
+    }
+
+    if (rows.length === 0) spShow("Empty folder.");
+    else spListEl.innerHTML = `<table class="files"><tbody>${rows.join("")}</tbody></table>`;
+    spMetaEl.textContent = `${files.length} file${files.length === 1 ? "" : "s"} · ${fmtSize(totBytes)}` + usageStr(spInfo);
 }
 
 // ── SD pane (right) ─────────────────────────────────────────────────────────
