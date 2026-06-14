@@ -22,25 +22,25 @@
 
 
 // ===== DISPLAY DRIVER =====
-// #define DISPLAY_ILI9341
+#define DISPLAY_ILI9341
 // #define DISPLAY_ST7796
 // #define DISPLAY_ILI9488
-#define DISPLAY_CO5300
+// #define DISPLAY_CO5300
 // #define DISPLAY_SSD1322
 
 
 
 // ===== UI PROFILE =====
-#define UI_PROFILE_240X296
-// #define UI_PROFILE_320x240
+// #define UI_PROFILE_240X296
+#define UI_PROFILE_320x240
 // #define UI_PROFILE_480x320
 // #define UI_PROFILE_MONO_128X64
 // #define UI_PROFILE_MONO_256X64
 
 
 // ===== TOUCH DRIVER =====
-// #define TOUCH_FT6336U
-#define TOUCH_CST816D
+#define TOUCH_FT6336U
+// #define TOUCH_CST816D
 // #define TOUCH_NONE
 
 
@@ -55,9 +55,9 @@
 #define LCD_PIN_MOSI  39
 #define LCD_PIN_CLK   40
 #define LCD_PIN_CS    41
-#define LCD_PIN_DC    2 //39
-#define LCD_PIN_RST   42 //38
-#define LCD_LED       1 //40
+#define LCD_PIN_DC    2
+#define LCD_PIN_RST   42
+#define LCD_LED       1
 
 #elif CONFIG_DISPLAY_ST7796
 

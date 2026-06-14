@@ -108,6 +108,20 @@ static void handle_plain_cmd(const char *cmd)
         int idx = atoi(cmd + 12);
         radio_play_index(idx);
     }
+    // BT transport — semantic, mapped per module via g_bt. Lets the Android app
+    // bind a programmable button to BT play/pause/prev/next.
+    else if (strcmp(cmd, "bt_play") == 0) {
+        bt_play();
+    }
+    else if (strcmp(cmd, "bt_pause") == 0) {
+        bt_pause();
+    }
+    else if (strcmp(cmd, "bt_prev") == 0) {
+        bt_prev();
+    }
+    else if (strcmp(cmd, "bt_next") == 0) {
+        bt_next();
+    }
     else {
         ESP_LOGW(TAG, "Unknown plain CMD: %s", cmd);
     }
