@@ -74,6 +74,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
   </tr>
   <tr>
     <td align="center"><a href="https://atlascube.net/images/www_layouts.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_layouts.png" width="400"></a><br><sub>Layouts editor</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/www_files_manager.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_files_manager.png" width="400"></a><br><sub>Files manager</sub></td>
   </tr>
   <tr>
     <td align="center"><a href="https://atlascube.net/images/www_settings_disp.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_disp.png" width="400"></a><br><sub>Display</sub></td>
@@ -84,6 +85,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
     <td align="center"><a href="https://atlascube.net/images/www_settings_theme.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_theme.png" width="400"></a><br><sub>Theme</sub></td>
   </tr>
   <tr>
+    <td align="center"><a href="https://atlascube.net/images/www_settings_sleep.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_sleep.png" width="400"></a><br><sub>Sleep & Wake</sub></td>
     <td align="center"><a href="https://atlascube.net/images/www_settings_tools.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_tools.png" width="400"></a><br><sub>Tools</sub></td>
   </tr>
   <tr>
