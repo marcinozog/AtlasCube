@@ -9,6 +9,28 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-06-14
+
+### Added
+- **web:** English SD player UI + embedded EQ modal
+- **sd:** pause/resume + shuffle/repeat
+- **sd:** folder browsing + EQ link on the SD player
+- **web:** SD Player link on home + volume on the SD page
+- **sd:** folder-queue music player with web UI
+- **audio:** WS play_file test hook for SD music playback
+- **ws:** accept BT transport commands over plain-text WS
+
+### Changed
+- **audio:** split audio_player into engine + net/file source layers
+- **web:** rename file tools for clarity, file manager first
+- **web:** rename file tools for clarity — spiffs-editor / sd-editor / manager
+
+### Fixed
+- **audio:** BT↔SD source exclusivity + httpd stack overflow
+
+### Other
+- **ws:** drop plain-text BT transport handlers
+
 ## [0.19.0] - 2026-06-14
 
 ### Added
@@ -279,7 +301,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.19.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.20.0...HEAD
+[0.20.0]: https://github.com/marcinozog/AtlasCube/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/marcinozog/AtlasCube/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/marcinozog/AtlasCube/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/marcinozog/AtlasCube/compare/v0.16.0...v0.17.0
