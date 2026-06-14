@@ -160,6 +160,10 @@ void app_state_update(const app_state_patch_t *patch)
         strncpy(s_state.sd_track, patch->sd_track, sizeof(s_state.sd_track) - 1);
         s_state.sd_track[sizeof(s_state.sd_track) - 1] = 0;
     }
+    if (patch->has_sd_dir && patch->sd_dir) {
+        strncpy(s_state.sd_dir, patch->sd_dir, sizeof(s_state.sd_dir) - 1);
+        s_state.sd_dir[sizeof(s_state.sd_dir) - 1] = 0;
+    }
 
     notify();
 

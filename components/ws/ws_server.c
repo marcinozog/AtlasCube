@@ -294,14 +294,14 @@ static esp_err_t ws_handler(httpd_req_t *req)
             }
         }
 
-        // SD-card music player (folder queue).
+        // SD-card music player (folder browsing).
         else if (strcmp(cmd->valuestring, "sd_play") == 0) {
             cJSON *dir = cJSON_GetObjectItem(json, "dir");
             sd_player_play_folder((dir && cJSON_IsString(dir)) ? dir->valuestring : NULL);
         }
-        else if (strcmp(cmd->valuestring, "sd_play_index") == 0) {
-            cJSON *idx = cJSON_GetObjectItem(json, "index");
-            if (idx && cJSON_IsNumber(idx)) sd_player_play_index(idx->valueint);
+        else if (strcmp(cmd->valuestring, "sd_play_path") == 0) {
+            cJSON *p = cJSON_GetObjectItem(json, "path");
+            if (p && cJSON_IsString(p)) sd_player_play_path(p->valuestring);
         }
         else if (strcmp(cmd->valuestring, "sd_next") == 0) { sd_player_next(); }
         else if (strcmp(cmd->valuestring, "sd_prev") == 0) { sd_player_prev(); }
@@ -310,8 +310,27 @@ static esp_err_t ws_handler(httpd_req_t *req)
             cJSON *dir = cJSON_GetObjectItem(json, "dir");
             int count = sd_player_scan((dir && cJSON_IsString(dir)) ? dir->valuestring : NULL);
 
+            // Parent within the music tree (empty at the root).
+            const char *cur  = sd_player_dir();
+            const char *root = sd_player_root();
+            char parent[192] = "";
+            if (strcmp(cur, root) != 0) {
+                strncpy(parent, cur, sizeof(parent) - 1);
+                parent[sizeof(parent) - 1] = 0;
+                char *s = strrchr(parent, '/');
+                if (s && s != parent) *s = 0;
+                if (strlen(parent) < strlen(root)) strcpy(parent, root);
+            }
+
             cJSON *resp = cJSON_CreateObject();
             cJSON_AddStringToObject(resp, "type", "sd_list");
+            cJSON_AddStringToObject(resp, "dir", cur);
+            cJSON_AddStringToObject(resp, "parent", parent);
+            cJSON *folders = cJSON_AddArrayToObject(resp, "folders");
+            for (int i = 0; i < sd_player_folder_count(); i++) {
+                const char *f = sd_player_folder(i);
+                if (f) cJSON_AddItemToArray(folders, cJSON_CreateString(f));
+            }
             cJSON *arr = cJSON_AddArrayToObject(resp, "tracks");
             for (int i = 0; i < count; i++) {
                 const char *t = sd_player_track(i);
@@ -430,6 +449,7 @@ static void send_full_state(void)
     cJSON_AddNumberToObject(json, "sd_index", s->sd_index);
     cJSON_AddNumberToObject(json, "sd_count", s->sd_count);
     cJSON_AddStringToObject(json, "sd_track", s->sd_track[0] ? s->sd_track : "");
+    cJSON_AddStringToObject(json, "sd_dir", s->sd_dir[0] ? s->sd_dir : "");
 
     // WiFi RSSI (dBm) — 0 when STA not connected / AP mode
     wifi_ap_record_t ap;

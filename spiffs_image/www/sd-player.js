@@ -1,9 +1,13 @@
-// AtlasCube — SD music player UI. One persistent WebSocket (no per-command
-// reconnects, which fragment the device's internal RAM).
+// AtlasCube — SD music player UI with folder browsing. One persistent WebSocket
+// (no per-command reconnects, which fragment the device's internal RAM).
 
 let ws = null;
-let tracks = [];
-let curIndex = -1;
+let curDir = '';       // currently browsed folder
+let parentDir = '';    // parent of curDir ('' at the root)
+let folders = [];      // subfolders of curDir
+let tracks = [];       // audio files in curDir
+let playDir = '';      // folder of the playing track (from state)
+let playTrack = '';    // playing track file name (from state)
 let active = false;
 let volTimeout = null;
 
@@ -18,8 +22,15 @@ function connect() {
         let d;
         try { d = JSON.parse(msg.data); } catch { return; }
 
-        if (d.type === 'sd_list')      { tracks = d.tracks || []; renderList(); }
-        else if (d.type === 'state')   { applyState(d); }
+        if (d.type === 'sd_list') {
+            curDir    = d.dir || '';
+            parentDir = d.parent || '';
+            folders   = d.folders || [];
+            tracks    = d.tracks || [];
+            renderList();
+        } else if (d.type === 'state') {
+            applyState(d);
+        }
     };
 }
 
@@ -28,9 +39,14 @@ function send(obj) {
     else console.warn('WS not connected');
 }
 
+function joinPath(dir, name) {
+    return dir.replace(/\/+$/, '') + '/' + name;
+}
+
 function applyState(d) {
     if (d.sd_active !== undefined) active = !!d.sd_active;
-    if (d.sd_index  !== undefined) curIndex = d.sd_index;
+    if (d.sd_dir    !== undefined) playDir = d.sd_dir;
+    if (d.sd_track  !== undefined) playTrack = d.sd_track;
 
     const trackEl = document.getElementById('npTrack');
     const idxEl   = document.getElementById('npIndex');
@@ -62,26 +78,45 @@ function applyState(d) {
     highlight();
 }
 
+function makeItem(icon, label, onclick, isTrack) {
+    const li = document.createElement('li');
+    li.className = isTrack ? 'track-item' : 'folder-item';
+    li.innerHTML = `<span class="num">${icon}</span><span>${escapeHtml(label)}</span>`;
+    li.onclick = onclick;
+    return li;
+}
+
 function renderList() {
     const ul = document.getElementById('trackList');
-    if (!tracks.length) {
-        ul.innerHTML = '<li class="empty">Brak plików audio w /sdcard/music</li>';
-        return;
-    }
+    document.getElementById('dirLabel').innerText = curDir || '/sdcard/music';
     ul.innerHTML = '';
-    tracks.forEach((name, i) => {
-        const li = document.createElement('li');
-        li.innerHTML = `<span class="num">${i + 1}</span><span>${escapeHtml(name)}</span>`;
-        li.onclick = () => send({ cmd: 'sd_play_index', index: i });
+
+    if (parentDir) ul.appendChild(makeItem('⬆', '..', () => browse(parentDir), false));
+
+    folders.forEach(name =>
+        ul.appendChild(makeItem('📁', name, () => browse(joinPath(curDir, name)), false)));
+
+    tracks.forEach(name => {
+        const li = makeItem('🎵', name, () => playPath(joinPath(curDir, name)), true);
+        li.dataset.name = name;
         ul.appendChild(li);
     });
+
+    if (!folders.length && !tracks.length) {
+        const li = document.createElement('li');
+        li.className = 'empty';
+        li.innerText = 'Brak plików audio';
+        ul.appendChild(li);
+    }
+
     highlight();
 }
 
 function highlight() {
     const ul = document.getElementById('trackList');
-    [...ul.children].forEach((li, i) =>
-        li.classList.toggle('active', active && i === curIndex));
+    [...ul.querySelectorAll('.track-item')].forEach(li =>
+        li.classList.toggle('active',
+            active && curDir === playDir && li.dataset.name === playTrack));
 }
 
 function escapeHtml(s) {
@@ -101,10 +136,12 @@ function setVolumeUI(v) {
     document.getElementById('vol_value').innerText = v;
 }
 
-function scan()    { send({ cmd: 'sd_list' }); }
-function playAll() { send({ cmd: 'sd_play' }); }
-function next()    { send({ cmd: 'sd_next' }); }
-function prev()    { send({ cmd: 'sd_prev' }); }
-function stop()    { send({ cmd: 'sd_stop' }); }
+function browse(dir)    { send({ cmd: 'sd_list', dir }); }
+function playPath(path) { send({ cmd: 'sd_play_path', path }); }
+function scan()         { send({ cmd: 'sd_list', dir: curDir || undefined }); }
+function playAll()      { send({ cmd: 'sd_play', dir: curDir || undefined }); }
+function next()         { send({ cmd: 'sd_next' }); }
+function prev()         { send({ cmd: 'sd_prev' }); }
+function stop()         { send({ cmd: 'sd_stop' }); }
 
 connect();

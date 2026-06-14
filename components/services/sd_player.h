@@ -2,31 +2,39 @@
 
 #include <stdbool.h>
 
-// SD-card music player. Scans a folder for audio files (mp3/wav/flac/aac) and
-// plays them as a queue over the shared audio engine. Mutually exclusive with
-// the radio and BT sources — starting it takes over the I2S output.
+// SD-card music player with folder browsing. Scans a folder for audio files
+// (mp3/wav/flac/aac) and subfolders; plays files as a queue. Mutually exclusive
+// with the radio and BT sources. Browsing (sd_player_scan) and playback are
+// decoupled: playback is identified by the track's full path and the playing
+// folder is re-scanned on next/prev/auto-advance, so browsing elsewhere while a
+// track plays doesn't disturb the queue.
 
-// Scan `dir` (NULL → the default music folder) into the queue WITHOUT playing.
-// Returns the track count. Used by the web UI to list files before picking one.
+// --- Browsing (for the web UI listing) --------------------------------------
+// Scan `dir` (NULL → the default music folder) into the listing buffers WITHOUT
+// playing. Returns the file count; folders are available via the accessors.
 int sd_player_scan(const char *dir);
 
-// Current queue accessors (valid after a scan / play_folder).
-int sd_player_count(void);
-const char *sd_player_track(int index);   // queue file name, or NULL if out of range
+int  sd_player_count(void);                 // audio files in the last scan
+const char *sd_player_track(int index);     // file name, or NULL
+int  sd_player_folder_count(void);          // subfolders in the last scan
+const char *sd_player_folder(int index);    // subfolder name, or NULL
+const char *sd_player_dir(void);            // last scanned dir
+const char *sd_player_root(void);           // browse root (default music folder)
 
-// Scan `dir` (NULL → the default music folder) and start playing from track 0.
+// --- Playback ---------------------------------------------------------------
+// Play a specific file (absolute path under the SD mount). Its folder becomes
+// the playback queue.
+void sd_player_play_path(const char *path);
+
+// Scan `dir` (NULL → default) and play its first track.
 void sd_player_play_folder(const char *dir);
-
-// Play a specific track in the current queue (wraps out-of-range indices).
-void sd_player_play_index(int index);
 
 void sd_player_stop(void);
 void sd_player_next(void);
 void sd_player_prev(void);
 
-// Auto-advance to the next track. Called by the file-finished dispatcher in
-// radio_service when a track played by this module reaches its end; stops at
-// the end of the queue.
+// Auto-advance to the next track in the playing folder (called by the
+// file-finished dispatcher); stops at the end of the folder.
 void sd_player_on_track_end(void);
 
 bool sd_player_is_active(void);

@@ -58,6 +58,7 @@ typedef struct {
     int  sd_index;              // Current track in the scanned queue
     int  sd_count;              // Tracks in the queue
     char sd_track[128];         // Current track file name
+    char sd_dir[192];           // Folder of the current track
 } app_state_t;
 
 typedef struct {
@@ -148,6 +149,8 @@ typedef struct {
     int  sd_count;
     bool has_sd_track;
     const char *sd_track;
+    bool has_sd_dir;
+    const char *sd_dir;
 } app_state_patch_t;
 
 typedef void (*app_state_cb_t)(void);
