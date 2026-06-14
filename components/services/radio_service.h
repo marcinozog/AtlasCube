@@ -20,7 +20,7 @@ void radio_stop(void);
 /**
  * Plays a one-shot voice notification (WAV in /voice on the SD card) over the
  * I2S output, interrupting the radio or BT source. `filename` is the clip's
- * path relative to /voice (e.g. "wake-up-call-a3f9/wake-up-call-a3f9.wav");
+ * path relative to /voice (e.g. "wake-up-call-a3f9c1.wav");
  * `volume` (0–100) is applied live for the notification
  * only. When the file ends the previous source is restored automatically:
  * a playing station resumes, BT is switched back, a stopped radio stays stopped.

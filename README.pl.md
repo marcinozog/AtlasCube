@@ -145,7 +145,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Cykliczne: dziennie / co tydzień / miesiąc / rok
 - W momencie wyzwolenia: pełnoekranowe powiadomienie i melodia z buzzera; melodie zaszyte w firmware (webowy edytor w planach)
 - Tryb alarm — zamiast buzzera włącza wybraną stację z playlisty; strumień gra dalej po zamknięciu powiadomienia, aż ręcznie nie zatrzymasz radia
-- Tryb powiadomienia głosowego — w momencie wyzwolenia odtwarza nagranie z karty microSD, na chwilę przerywając i potem przywracając źródło (radio/Bluetooth). Aplikacja na Androida syntezuje mowę na telefonie (TTS) i wgrywa ją; każde nagranie ma własny katalog na karcie nazwany czytelnym slugiem tytułu wydarzenia (np. `voice/pobudka-a3f9/`), dzięki czemu karta pozostaje przejrzysta w menedżerze plików. Edytor webowy i aplikacja pozwalają odsłuchać nagranie
+- Tryb powiadomienia głosowego — w momencie wyzwolenia odtwarza nagranie z karty microSD, na chwilę przerywając i potem przywracając źródło (radio/Bluetooth). Aplikacja na Androida syntezuje mowę na telefonie (TTS) i wgrywa ją; każde nagranie to pojedynczy plik nazwany czytelnym slugiem tytułu wydarzenia (np. `voice/pobudka-a3f9c1.wav`), dzięki czemu karta pozostaje przejrzysta w menedżerze plików. Edytor webowy i aplikacja pozwalają odsłuchać nagranie
 - CRUD przez web UI
 
 **Łączność**
