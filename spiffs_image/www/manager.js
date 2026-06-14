@@ -117,7 +117,7 @@ function sdShow(msg, isErr) {
 
 function sdRenderCrumbs() {
     const parts = sdPath.split("/").filter(Boolean);
-    let html = `<a onclick="sdNavTo('/')">SD</a>`;
+    let html = `<a onclick="sdNavTo('/')">SDCARD</a>`;
     let acc = "";
     for (const part of parts) {
         acc += "/" + part;

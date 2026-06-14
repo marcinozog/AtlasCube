@@ -330,7 +330,7 @@
     <div class="section-title" style="margin: 16px 0 12px">🗂 File Manager</div>
 
     <div class="mgr-transfer">
-        <span class="mgr-log" id="log">Use ⮕ / ⬅ on a file to copy it between SPIFFS and the current SD folder.</span>
+        <span class="mgr-log" id="log">Use ⮕ / ⬅ on a file to copy it between SPIFFS and the current SD card folder.</span>
     </div>
 
     <div class="mgr-panes">
@@ -342,11 +342,11 @@
             </div>
             <div class="pane-tools">
                 <button onclick="loadSpiffs()" title="Reload list">↺ Refresh</button>
-                <button id="btn_backup" class="primary" onclick="backupAll()" title="Copy every SPIFFS file into /backup/<timestamp> on the SD card">💾 Backup all → SD</button>
+                <button id="btn_backup" class="primary" onclick="backupAll()" title="Copy every SPIFFS file into /backup/<timestamp> on the SD card">💾 Backup all → SD card</button>
             </div>
             <div class="listing" id="sp_listing"></div>
             <div class="legend">
-                <span><span class="ic copy">⮕</span>Copy to SD</span>
+                <span><span class="ic copy">⮕</span>Copy to SD card</span>
                 <span><span class="ic">✎</span>Edit</span>
             </div>
         </section>
