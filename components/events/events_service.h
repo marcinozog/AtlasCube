@@ -17,7 +17,7 @@ extern "C" {
 #define EVENTS_MAX          50
 #define EVENT_ID_LEN        9       // 8 hex + '\0'
 #define EVENT_TITLE_LEN     64
-#define EVENT_SOUND_LEN     48      // WAV filename on SD (/voice/<name>), '\0' incl.
+#define EVENT_SOUND_LEN     80      // /voice/<base>/<base>.wav rel. path, '\0' incl.
 
 typedef enum {
     EV_BIRTHDAY = 0,
