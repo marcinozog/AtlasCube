@@ -5,6 +5,7 @@ let ws = null;
 let tracks = [];
 let curIndex = -1;
 let active = false;
+let volTimeout = null;
 
 function connect() {
     ws = new WebSocket(`ws://${location.host}/ws`);
@@ -43,6 +44,8 @@ function applyState(d) {
         trackEl.innerText = '---';
         idxEl.innerText = '⏹ zatrzymane';
     }
+
+    if (d.volume !== undefined) setVolumeUI(d.volume);
 
     if (d.sr !== undefined) {
         if (active && d.sr > 0) {
@@ -83,6 +86,19 @@ function highlight() {
 
 function escapeHtml(s) {
     return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
+// Volume — shared with the radio/BT output (same set_volume command). Debounced
+// like the main page so dragging doesn't flood the socket.
+function onVolumeChange(v) {
+    document.getElementById('vol_value').innerText = v;
+    clearTimeout(volTimeout);
+    volTimeout = setTimeout(() => send({ cmd: 'set_volume', value: parseInt(v) }), 150);
+}
+
+function setVolumeUI(v) {
+    document.getElementById('volume_slider').value = v;
+    document.getElementById('vol_value').innerText = v;
 }
 
 function scan()    { send({ cmd: 'sd_list' }); }

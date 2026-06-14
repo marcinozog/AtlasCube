@@ -56,6 +56,15 @@
   </section>
 
   <section class="panel">
+    <div class="slider-row">
+      <span class="slider-label">🔊 Volume</span>
+      <span id="vol_value" class="slider-value">50</span>
+    </div>
+    <input type="range" min="0" max="100" value="50"
+           id="volume_slider" oninput="onVolumeChange(this.value)" />
+  </section>
+
+  <section class="panel">
     <div class="panel-label">UTWORY (/sdcard/music)</div>
     <ul id="trackList"><li class="empty">Kliknij „Skanuj"…</li></ul>
   </section>
