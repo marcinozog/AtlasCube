@@ -149,7 +149,7 @@ static void radio_on_input(ui_input_t input)
             if (vol < 0)   vol = 0;
             if (vol > 100) vol = 100;
 
-            settings_set_volume(vol);   // → audio_player + app_state + save
+            settings_set_volume(vol);   // → audio_engine + app_state + save
             vol_overlay_show(s_root, vol, true);
             break;
         }

@@ -1,6 +1,8 @@
 idf_component_register(
     SRCS 
-        "audio_player.c"
+        "audio_engine.c"
+        "audio_net_player.c"
+        "audio_file_player.c"
         "audio_dsp.c"
     INCLUDE_DIRS "."
     REQUIRES
@@ -9,5 +11,5 @@ idf_component_register(
         icy_http_stream
         # esp-adf-libs
         esp_http_client
-        settings_ex
+        app_state
 )

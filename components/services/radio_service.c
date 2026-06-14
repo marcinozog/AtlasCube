@@ -1,5 +1,7 @@
 #include "radio_service.h"
-#include "audio_player.h"
+#include "audio_engine.h"
+#include "audio_net_player.h"
+#include "audio_file_player.h"
 #include "app_state.h"
 #include "settings.h"
 #include "bt.h"
@@ -13,7 +15,7 @@
 static const char *TAG = "RADIO_SERVICE";
 
 // ── volume fade-in (night-mode wake) ────────────────────────────────────────
-// A periodic esp_timer steps the live output volume (audio_player_set_volume,
+// A periodic esp_timer steps the live output volume (audio_engine_set_volume,
 // no SPIFFS write) from 0 toward the target, then persists the final value
 // once via settings_set_volume(). The handle is created lazily and reused.
 #define RAMP_STEP_MS 200
@@ -42,7 +44,7 @@ static void ramp_tick(void *arg)
         return;
     }
     int vol = s_ramp_target * s_ramp_idx / s_ramp_total;   // 0 → target
-    audio_player_set_volume(vol);
+    audio_engine_set_volume(vol);
 }
 
 
@@ -78,7 +80,7 @@ static void on_bt_play_event(bool playing)
 
     if (s->radio_state == RADIO_STATE_PLAYING ||
         s->radio_state == RADIO_STATE_BUFFERING) {
-        audio_player_request_stop();                // async teardown on audio task
+        audio_engine_request_stop();                // async teardown on audio task
         app_state_update(&(app_state_patch_t){
             .has_radio = true, .radio_state = RADIO_STATE_STOPPED,
             .has_title = true, .title = ""
@@ -100,7 +102,7 @@ static void on_notification_finished(void)
     ESP_LOGI(TAG, "Notification done → restore (radio=%d, bt=%d, idx=%d, vol=%d)",
              s_notif_was_radio, s_notif_was_bt, s_notif_prev_index, s_notif_prev_volume);
 
-    audio_player_set_volume(s_notif_prev_volume);   // undo the notification level
+    audio_engine_set_volume(s_notif_prev_volume);   // undo the notification level
 
     if (s_notif_was_bt) {
         settings_set_bt_enable(true);    // mux back to the BT module
@@ -115,7 +117,7 @@ static void on_notification_finished(void)
 void radio_service_init(void)
 {
     bt_set_play_event_cb(on_bt_play_event);
-    audio_player_set_finished_cb(on_notification_finished);
+    audio_file_player_set_finished_cb(on_notification_finished);
 
     app_state_update(&(app_state_patch_t){
         .has_radio = true,
@@ -148,16 +150,16 @@ void radio_play_notification(const char *filename, int volume)
     ESP_LOGI(TAG, "Voice notification: %s (vol=%d, was_radio=%d, was_bt=%d)",
              path, volume, s_notif_was_radio, s_notif_was_bt);
 
-    if (volume >= 0) audio_player_set_volume(volume);   // live only, not persisted
+    if (volume >= 0) audio_engine_set_volume(volume);   // live only, not persisted
 
     // Hand the I2S output to the ESP side: pause + un-mux the BT module if it
-    // was the active source. (Radio teardown is handled by audio_player_play_file.)
+    // was the active source. (Radio teardown is handled by audio_file_player_play.)
     if (s_notif_was_bt) {
         if (s->bt_auto_switch) bt_pause();
         settings_set_bt_enable(false);
     }
 
-    audio_player_play_file(path);
+    audio_file_player_play(path);
 }
 
 
@@ -197,7 +199,7 @@ void radio_play_url(const char *url)
         settings_set_bt_enable(false);
     }
 
-    audio_player_play(url);
+    audio_net_player_play(url);
 
     app_state_update(&(app_state_patch_t){
         .has_radio = true,
@@ -223,7 +225,7 @@ void radio_play_index(int index)
     });
 
     settings_set_curr_index(index);   // save + update curr_index in state
-    radio_play_url(entry->url);           // or audio_player_play(entry->url)
+    radio_play_url(entry->url);           // or audio_net_player_play(entry->url)
 }
 
 
@@ -254,7 +256,7 @@ void radio_stop(void)
 
     if (s_ramp_timer) esp_timer_stop(s_ramp_timer);   // cancel a fade-in in progress
 
-    audio_player_stop();
+    audio_engine_stop();
 
     app_state_update(&(app_state_patch_t){
         .has_radio = true,
@@ -264,6 +266,11 @@ void radio_stop(void)
     });
 
     settings_set_was_playing(false);   // persist for resume-on-boot (no-op if unchanged)
+
+    // The stream just released its mbedTLS buffers → internal RAM is freed.
+    // Flush any settings write (e.g. curr_index from a station switch) that was
+    // deferred while an HTTPS stream had RAM pressure too high to fopen safely.
+    settings_flush_if_dirty();
 }
 
 
@@ -325,6 +332,6 @@ void radio_volume_ramp_to(int target_pct, int duration_ms)
     if (s_ramp_total < 1) s_ramp_total = 1;
     s_ramp_idx    = 0;
 
-    audio_player_set_volume(0);        // start quiet
+    audio_engine_set_volume(0);        // start quiet
     esp_timer_start_periodic(s_ramp_timer, RAMP_STEP_MS * 1000);
 }

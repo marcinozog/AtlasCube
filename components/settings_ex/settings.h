@@ -126,6 +126,10 @@ void      settings_apply(void);
 app_settings_t* settings_get(void);
 esp_err_t settings_save(void);
 
+// Retries a settings write that save_to_file() deferred because internal RAM was
+// critically low (see settings.c). Call where memory has just been freed.
+void settings_flush_if_dirty(void);
+
 void settings_set_volume(int volume);
 void settings_set_eq_10(int *bands);
 void settings_set_eq_enabled(bool enabled);

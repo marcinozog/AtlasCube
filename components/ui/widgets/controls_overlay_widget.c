@@ -70,7 +70,7 @@ static void btn_clicked_cb(lv_event_t *e)
                 if (vol < 0)   vol = 0;
                 if (vol > 100) vol = 100;
 
-                settings_set_volume(vol);   // → audio_player + app_state + save
+                settings_set_volume(vol);   // → audio_engine + app_state + save
                 break;
             }
             case CTRL_PLAY: {
@@ -103,7 +103,7 @@ static void btn_clicked_cb(lv_event_t *e)
                 if (vol < 0)   vol = 0;
                 if (vol > 100) vol = 100;
 
-                settings_set_bt_volume(vol);   // → audio_player + app_state + save
+                settings_set_bt_volume(vol);   // → audio_engine + app_state + save
                 break;
             }
             case CTRL_PLAY: {
@@ -133,7 +133,7 @@ static void btn_long_repeat_cb(lv_event_t *e)
                 if (vol < 0)   vol = 0;
                 if (vol > 100) vol = 100;
 
-                settings_set_volume(vol);   // → audio_player + app_state + save
+                settings_set_volume(vol);   // → audio_engine + app_state + save
                 break;
             }
             default: break;
@@ -148,7 +148,7 @@ static void btn_long_repeat_cb(lv_event_t *e)
                 if (vol < 0)   vol = 0;
                 if (vol > 100) vol = 100;
 
-                settings_set_bt_volume(vol);   // → audio_player + app_state + save
+                settings_set_bt_volume(vol);   // → audio_engine + app_state + save
                 break;
             }
             default: break;

@@ -3,7 +3,9 @@
 #include "esp_app_desc.h"
 #include "nvs_flash.h"
 #include "playlist.h"
-#include "audio_player.h"
+#include "audio_engine.h"
+#include "audio_net_player.h"
+#include "audio_file_player.h"
 #include "http_server.h"
 #include "wifi_manager.h"
 #include "mdns_service.h"
@@ -76,9 +78,13 @@ void app_main(void)
     }
 
     // ── Audio (initialization independent of WiFi) ───────────────────────────
-    // audio_player and radio_service only initialize structures/pipeline;
+    // The audio engine and radio_service only initialize structures/pipeline;
     // actual streaming happens only after calling play, which requires STA.
-    audio_player_init();
+    // Engine first (creates the pipeline + tasks), then the source layers
+    // (net/file only register their hooks with the engine).
+    audio_engine_init();
+    audio_net_player_init();
+    audio_file_player_init();
     playlist_load();
     radio_service_init();
 

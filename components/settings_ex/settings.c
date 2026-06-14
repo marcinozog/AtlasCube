@@ -3,7 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 #include "esp_log.h"
-#include "audio_player.h"
+#include "esp_heap_caps.h"
+#include "audio_engine.h"
 #include "app_state.h"
 #include "bt.h"
 #include "theme.h"
@@ -16,6 +17,16 @@ static esp_err_t load_from_file(void);
 static esp_err_t save_to_file(void);
 
 static app_settings_t s_settings;
+
+// Deferred-save guard: a write skipped under low internal RAM (see save_to_file)
+// sets this; the next successful save clears it.
+static bool s_save_dirty = false;
+
+// Min largest free internal block required to safely fopen() the settings file.
+// fopen() lazily grows the stdio FILE pool + its lock in internal DRAM; the
+// observed crash (fopen → lock_init → abort) hit at ~4.6 KB, so 8 KB leaves
+// headroom for both that and a concurrent mbedTLS handshake (~6 KB).
+#define SETTINGS_SAVE_MIN_INTERNAL (8 * 1024)
 
 // Photo-clock font size must be one of the compiled digit fonts; snap anything
 // else to the 96 default.
@@ -426,6 +437,20 @@ static esp_err_t save_to_file(void)
 */
 static esp_err_t save_to_file(void)
 {
+    // fopen() lazily grows the stdio FILE pool and creates its lock in *internal*
+    // DRAM. Under heavy TLS pressure (an HTTPS radio stream holds large mbedTLS
+    // buffers) that allocation can fail *inside* fopen and abort() — which the
+    // NULL check below can't catch. So when internal RAM is critically low we
+    // skip the write and mark it dirty; the next successful save (any settings
+    // change, or settings_flush_if_dirty() once the stream stops) persists it.
+    size_t internal_largest = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
+    if (internal_largest < SETTINGS_SAVE_MIN_INTERNAL) {
+        s_save_dirty = true;
+        ESP_LOGW("SETTINGS", "Internal RAM low (largest=%u) — deferring settings write",
+                 (unsigned)internal_largest);
+        return ESP_ERR_NO_MEM;
+    }
+
     cJSON *json = cJSON_CreateObject();
 
     // audio
@@ -543,6 +568,7 @@ static esp_err_t save_to_file(void)
 
     cJSON_Delete(json);
     free(str);
+    s_save_dirty = false;
     return ESP_OK;
 }
 
@@ -552,9 +578,9 @@ void settings_apply(void)
 */
 void settings_apply(void)
 {
-    audio_player_set_volume(s_settings.audio.volume);
-    audio_player_set_eq_10(s_settings.audio.eq);
-    audio_player_set_eq_enabled(s_settings.audio.eq_enabled);
+    audio_engine_set_volume(s_settings.audio.volume);
+    audio_engine_set_eq_10(s_settings.audio.eq);
+    audio_engine_set_eq_enabled(s_settings.audio.eq_enabled);
     // Set last state to BT at start
     bt_set_enabled(s_settings.bluetooth.enable);
     // Restore module config
@@ -590,11 +616,22 @@ void settings_apply(void)
 app_settings_t* settings_get(void)       { return &s_settings; }
 esp_err_t       settings_save(void)       { return save_to_file(); }
 
+/*
+void settings_flush_if_dirty(void)
+Retries a write that save_to_file() deferred under low internal RAM. Call from a
+point where memory has just been freed (e.g. after the radio stream stops).
+save_to_file() clears the dirty flag on success and re-arms it if still too low.
+*/
+void settings_flush_if_dirty(void)
+{
+    if (s_save_dirty) save_to_file();
+}
+
 
 void settings_set_volume(int volume)
 {
     s_settings.audio.volume = volume;
-    audio_player_set_volume(volume);
+    audio_engine_set_volume(volume);
     app_state_update(&(app_state_patch_t){ .has_volume = true, .volume = volume });
     save_to_file();
 }
@@ -602,7 +639,7 @@ void settings_set_volume(int volume)
 void settings_set_eq_10(int *bands)
 {
     memcpy(s_settings.audio.eq, bands, sizeof(int) * 10);
-    audio_player_set_eq_10(s_settings.audio.eq);
+    audio_engine_set_eq_10(s_settings.audio.eq);
     app_state_patch_t patch = { .has_eq = true };
     memcpy(patch.eq, s_settings.audio.eq, sizeof(patch.eq));
     app_state_update(&patch);
@@ -613,7 +650,7 @@ void settings_set_eq_enabled(bool enabled)
 {
     if (s_settings.audio.eq_enabled == enabled) return;
     s_settings.audio.eq_enabled = enabled;
-    audio_player_set_eq_enabled(enabled);
+    audio_engine_set_eq_enabled(enabled);
     app_state_update(&(app_state_patch_t){
         .has_eq_enabled = true, .eq_enabled = enabled
     });
