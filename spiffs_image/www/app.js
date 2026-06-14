@@ -285,6 +285,3 @@ connect();
 loadPlaylist();
 renderEQ();
 loadVersion();
-
-// Allow other pages to deep-link the EQ modal (e.g. /index.html#eq from sd-player).
-if (location.hash === '#eq') openEq();

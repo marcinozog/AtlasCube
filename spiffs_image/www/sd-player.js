@@ -13,6 +13,9 @@ let paused = false;
 let shuffleOn = false;
 let repeatMode = 0;    // 0 none, 1 all, 2 one
 let volTimeout = null;
+let eqTimeout = null;
+
+const freqs = ["31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"];
 
 function connect() {
     ws = new WebSocket(`ws://${location.host}/ws`);
@@ -61,11 +64,13 @@ function applyState(d) {
     if (active) {
         trackEl.innerText = d.sd_track || playTrack || '---';
         const pos = (d.sd_count ? `${(d.sd_index ?? 0) + 1} / ${d.sd_count} · ` : '');
-        idxEl.innerText = pos + (paused ? '⏸ pauza' : '▶ gra');
+        idxEl.innerText = pos + (paused ? '⏸ paused' : '▶ playing');
     } else {
         trackEl.innerText = '---';
-        idxEl.innerText = '⏹ zatrzymane';
+        idxEl.innerText = '⏹ stopped';
     }
+
+    if (d.eq !== undefined) setEqUI(d.eq);
 
     updateModeButtons();
 
@@ -113,7 +118,7 @@ function renderList() {
     if (!folders.length && !tracks.length) {
         const li = document.createElement('li');
         li.className = 'empty';
-        li.innerText = 'Brak plików audio';
+        li.innerText = 'No audio files';
         ul.appendChild(li);
     }
 
@@ -144,6 +149,73 @@ function setVolumeUI(v) {
     document.getElementById('vol_value').innerText = v;
 }
 
+// Equalizer — shared output EQ (same set_eq_10 command as the main page).
+// Modal copied from index.html.
+function renderEQ() {
+    const container = document.getElementById('eq_bands');
+    container.innerHTML = '';
+    freqs.forEach((f, i) => {
+        const el = document.createElement('div');
+        el.innerHTML = `
+            <label>${f}</label>
+            <input type="range" min="-13" max="13" value="0" id="eq_${i}" oninput="onEqBandChange()" />
+        `;
+        container.appendChild(el);
+    });
+}
+
+function onEqBandChange() {
+    clearTimeout(eqTimeout);
+    eqTimeout = setTimeout(() => {
+        const values = freqs.map((_, i) => parseInt(document.getElementById(`eq_${i}`).value));
+        drawEQ(values);
+        send({ cmd: 'set_eq_10', bands: values });
+    }, 150);
+}
+
+function setEqUI(eq) {
+    eq.forEach((v, i) => { const s = document.getElementById(`eq_${i}`); if (s) s.value = v; });
+    drawEQ(eq);
+}
+
+function drawEQ(values) {
+    const canvas = document.getElementById('eq_canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#0a0a0e'; ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = '#1e1e28'; ctx.lineWidth = 1;
+    [.25, .5, .75].forEach(r => {
+        ctx.beginPath(); ctx.moveTo(0, H * r); ctx.lineTo(W, H * r); ctx.stroke();
+    });
+    ctx.strokeStyle = '#00aaff'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    const step = W / (values.length - 1);
+    values.forEach((v, i) => {
+        const x = i * step, y = H / 2 - v * (H / 28);
+        if (i === 0) { ctx.moveTo(x, y); return; }
+        const px = (i - 1) * step, py = H / 2 - values[i - 1] * (H / 28);
+        ctx.quadraticCurveTo(px, py, (px + x) / 2, (py + y) / 2);
+    });
+    ctx.stroke();
+}
+
+function resetEQ() {
+    const values = new Array(freqs.length).fill(0);
+    setEqUI(values);
+    send({ cmd: 'set_eq_10', bands: values });
+}
+
+function openEq()  { document.getElementById('eq_modal').classList.remove('hidden'); }
+function closeEq() { document.getElementById('eq_modal').classList.add('hidden'); }
+
+function onModalBgClick(e, id) {
+    if (e.target === document.getElementById(id)) {
+        document.getElementById(id).classList.add('hidden');
+    }
+}
+
 function updateModeButtons() {
     const pp = document.getElementById('ppBtn');
     if (pp) pp.innerText = (active && !paused) ? '⏸' : '▶';
@@ -169,4 +241,5 @@ function stop()         { send({ cmd: 'sd_stop' }); }
 function shuffle()      { send({ cmd: 'sd_shuffle' }); }
 function repeat()       { send({ cmd: 'sd_repeat' }); }
 
+renderEQ();
 connect();

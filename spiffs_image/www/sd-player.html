@@ -44,18 +44,18 @@
   </section>
 
   <section class="panel">
-    <div class="panel-label">STEROWANIE</div>
+    <div class="panel-label">PLAYBACK</div>
     <div class="transport">
-      <button class="sdbtn" id="shufBtn" onclick="shuffle()" title="Losowo">🔀</button>
-      <button class="sdbtn" onclick="prev()" title="Poprzedni">⏮</button>
-      <button class="sdbtn primary" id="ppBtn" onclick="playPause()" title="Play / Pauza">⏯</button>
-      <button class="sdbtn" onclick="next()" title="Następny">⏭</button>
-      <button class="sdbtn" id="repBtn" onclick="repeat()" title="Powtarzanie">🔁</button>
+      <button class="sdbtn" id="shufBtn" onclick="shuffle()" title="Shuffle">🔀</button>
+      <button class="sdbtn" onclick="prev()" title="Previous">⏮</button>
+      <button class="sdbtn primary" id="ppBtn" onclick="playPause()" title="Play / Pause">⏯</button>
+      <button class="sdbtn" onclick="next()" title="Next">⏭</button>
+      <button class="sdbtn" id="repBtn" onclick="repeat()" title="Repeat">🔁</button>
     </div>
     <div class="transport">
       <button class="sdbtn" onclick="stop()" title="Stop">⏹</button>
-      <button class="sdbtn primary" style="flex:2" onclick="playAll()">▶ Odtwarzaj folder</button>
-      <button class="sdbtn" onclick="scan()">⟳ Skanuj</button>
+      <button class="sdbtn primary" style="flex:2" onclick="playAll()">▶ Play folder</button>
+      <button class="sdbtn" onclick="scan()">⟳ Scan</button>
     </div>
   </section>
 
@@ -70,15 +70,38 @@
 
   <section class="panel">
     <div class="panel-label" id="dirLabel">/sdcard/music</div>
-    <ul id="trackList"><li class="empty">Kliknij „Skanuj"…</li></ul>
+    <ul id="trackList"><li class="empty">Click "Scan"…</li></ul>
   </section>
 
   <!-- ── Toolbar ── -->
   <div class="toolbar">
-    <a href="/index.html" class="tool-btn tool-link">🏠 Główna</a>
-    <a href="/index.html#eq" class="tool-btn tool-link">🎛 Radio EQ</a>
+    <a href="/index.html" class="tool-btn tool-link">🏠 Home</a>
+    <button class="tool-btn" onclick="openEq()">🎛 Equalizer</button>
   </div>
 </main>
+
+<!-- ═══════════════════════ MODAL: EQUALIZER ═══════════════════════ -->
+<div id="eq_modal" class="modal hidden" onclick="onModalBgClick(event,'eq_modal')">
+  <div class="modal-content">
+    <div class="modal-header">
+      <span class="modal-title">🎛 Equalizer</span>
+      <button class="modal-close" onclick="closeEq()">✕</button>
+    </div>
+    <canvas id="eq_canvas" width="320" height="120"></canvas>
+    <div class="eq-wrapper">
+      <div id="eq_bands"></div>
+      <div class="eq-scale">
+        <span>+13</span>
+        <span>0</span>
+        <span>−13</span>
+      </div>
+    </div>
+    <div class="eq-footer">
+      <button class="btn-secondary" onclick="resetEQ()">↺ Reset</button>
+      <button class="btn-secondary" onclick="closeEq()">Close</button>
+    </div>
+  </div>
+</div>
 
 <script src="sd-player.js"></script>
 </body>
