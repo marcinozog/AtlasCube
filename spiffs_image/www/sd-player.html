@@ -14,6 +14,7 @@
          font:600 1rem/1 'Chakra Petch',sans-serif;cursor:pointer;transition:background .15s}
   .sdbtn:hover{background:var(--accent,#377aff);color:#fff}
   .sdbtn.primary{background:var(--accent,#377aff);color:#fff}
+  .sdbtn.on{background:var(--accent,#377aff);color:#fff}
   .np-index{font:500 .85rem 'JetBrains Mono',monospace;color:var(--muted,#8b98a9);margin-top:.25rem}
   #trackList{list-style:none;margin:.5rem 0 0;padding:0;max-height:50vh;overflow:auto}
   #trackList li{padding:.6rem .8rem;border-radius:8px;cursor:pointer;
@@ -45,11 +46,14 @@
   <section class="panel">
     <div class="panel-label">STEROWANIE</div>
     <div class="transport">
+      <button class="sdbtn" id="shufBtn" onclick="shuffle()" title="Losowo">🔀</button>
       <button class="sdbtn" onclick="prev()" title="Poprzedni">⏮</button>
-      <button class="sdbtn" onclick="stop()" title="Stop">⏹</button>
+      <button class="sdbtn primary" id="ppBtn" onclick="playPause()" title="Play / Pauza">⏯</button>
       <button class="sdbtn" onclick="next()" title="Następny">⏭</button>
+      <button class="sdbtn" id="repBtn" onclick="repeat()" title="Powtarzanie">🔁</button>
     </div>
     <div class="transport">
+      <button class="sdbtn" onclick="stop()" title="Stop">⏹</button>
       <button class="sdbtn primary" style="flex:2" onclick="playAll()">▶ Odtwarzaj folder</button>
       <button class="sdbtn" onclick="scan()">⟳ Skanuj</button>
     </div>

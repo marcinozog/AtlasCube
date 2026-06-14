@@ -8,6 +8,7 @@
 #include "bt.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
+#include "esp_random.h"
 #include <dirent.h>
 #include <string.h>
 #include <strings.h>
@@ -37,6 +38,11 @@ static char s_dir[SD_DIR_MAX];    // last browsed dir (reported to the UI)
 static char s_play_dir[SD_DIR_MAX];
 static int  s_play_index = -1;
 static int  s_play_count = 0;
+
+// Modes.
+typedef enum { SD_REPEAT_NONE = 0, SD_REPEAT_ALL, SD_REPEAT_ONE } sd_repeat_t;
+static bool        s_shuffle = false;
+static sd_repeat_t s_repeat  = SD_REPEAT_NONE;
 
 
 static bool has_audio_ext(const char *name)
@@ -133,6 +139,16 @@ static void take_over_output(void)
 }
 
 
+// Random index in [0,n), avoiding `cur` when possible.
+static int random_index(int n, int cur)
+{
+    if (n <= 1) return 0;
+    int r = cur;
+    while (r == cur) r = (int)(esp_random() % (uint32_t)n);
+    return r;
+}
+
+
 /*
 static void play_at(int idx, int n)
 Start the track at s_queue[idx] within s_play_dir. The caller must have just
@@ -154,6 +170,7 @@ static void play_at(int idx, int n)
         .has_sd_count  = true, .sd_count  = n,
         .has_sd_track  = true, .sd_track  = s_queue[idx],
         .has_sd_dir    = true, .sd_dir    = s_play_dir,
+        .has_sd_paused = true, .sd_paused = false,
         .has_title     = true, .title     = s_queue[idx],
     });
 
@@ -169,6 +186,7 @@ static void clear_play_state(void)
     s_play_count   = 0;
     app_state_update(&(app_state_patch_t){
         .has_sd_active = true, .sd_active = false,
+        .has_sd_paused = true, .sd_paused = false,
         .has_title     = true, .title     = "",
     });
 }
@@ -258,7 +276,8 @@ void sd_player_next(void)
     if (!s_play_dir[0]) return;
     int n = scan_dir(s_play_dir);          // re-derive the playing folder
     if (n <= 0) return;
-    play_at((s_play_index + 1) % n, n);
+    int idx = s_shuffle ? random_index(n, s_play_index) : (s_play_index + 1) % n;
+    play_at(idx, n);
 }
 
 
@@ -277,13 +296,65 @@ void sd_player_on_track_end(void)
     int n = scan_dir(s_play_dir);
     if (n <= 0) return;
 
-    int next = s_play_index + 1;
-    if (next >= n) {
-        ESP_LOGI(TAG, "Folder finished");
-        clear_play_state();
+    if (s_repeat == SD_REPEAT_ONE) {
+        play_at(s_play_index >= 0 && s_play_index < n ? s_play_index : 0, n);
         return;
     }
-    play_at(next, n);
+
+    int idx;
+    if (s_shuffle) {
+        idx = random_index(n, s_play_index);   // continuous random
+    } else {
+        idx = s_play_index + 1;
+        if (idx >= n) {
+            if (s_repeat == SD_REPEAT_ALL) {
+                idx = 0;
+            } else {
+                ESP_LOGI(TAG, "Folder finished");
+                clear_play_state();
+                return;
+            }
+        }
+    }
+    play_at(idx, n);
+}
+
+
+static void publish_modes(void)
+{
+    app_state_update(&(app_state_patch_t){
+        .has_sd_shuffle = true, .sd_shuffle = s_shuffle,
+        .has_sd_repeat  = true, .sd_repeat  = (int)s_repeat,
+    });
+}
+
+
+void sd_player_toggle_pause(void)
+{
+    if (!sd_player_is_active()) return;
+    if (audio_engine_is_paused()) {
+        audio_engine_resume();
+        app_state_update(&(app_state_patch_t){ .has_sd_paused = true, .sd_paused = false });
+    } else {
+        audio_engine_pause();
+        app_state_update(&(app_state_patch_t){ .has_sd_paused = true, .sd_paused = true });
+    }
+}
+
+
+void sd_player_toggle_shuffle(void)
+{
+    s_shuffle = !s_shuffle;
+    ESP_LOGI(TAG, "Shuffle %s", s_shuffle ? "on" : "off");
+    publish_modes();
+}
+
+
+void sd_player_cycle_repeat(void)
+{
+    s_repeat = (sd_repeat_t)(((int)s_repeat + 1) % 3);
+    ESP_LOGI(TAG, "Repeat %d", (int)s_repeat);
+    publish_modes();
 }
 
 

@@ -33,6 +33,12 @@ void sd_player_stop(void);
 void sd_player_next(void);
 void sd_player_prev(void);
 
+// Pause/resume the current track (toggle). Shuffle (toggle) and repeat (cycle
+// none → all → one) affect next/auto-advance selection.
+void sd_player_toggle_pause(void);
+void sd_player_toggle_shuffle(void);
+void sd_player_cycle_repeat(void);
+
 // Auto-advance to the next track in the playing folder (called by the
 // file-finished dispatcher); stops at the end of the folder.
 void sd_player_on_track_end(void);

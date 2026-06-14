@@ -40,6 +40,11 @@ void audio_engine_stop(void);
 // Async teardown on the audio task. Safe from small/latency-sensitive callers.
 void audio_engine_request_stop(void);
 
+// Pause / resume the running pipeline in place (keeps the position; no teardown).
+void audio_engine_pause(void);
+void audio_engine_resume(void);
+bool audio_engine_is_paused(void);
+
 // Restart the currently-linked pipeline in place (stop/terminate/reset/run)
 // without relinking. Used by the radio retry policy. Same event-task caveat as
 // audio_engine_stop.

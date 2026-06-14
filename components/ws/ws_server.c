@@ -306,6 +306,9 @@ static esp_err_t ws_handler(httpd_req_t *req)
         else if (strcmp(cmd->valuestring, "sd_next") == 0) { sd_player_next(); }
         else if (strcmp(cmd->valuestring, "sd_prev") == 0) { sd_player_prev(); }
         else if (strcmp(cmd->valuestring, "sd_stop") == 0) { sd_player_stop(); }
+        else if (strcmp(cmd->valuestring, "sd_pause") == 0)   { sd_player_toggle_pause(); }
+        else if (strcmp(cmd->valuestring, "sd_shuffle") == 0) { sd_player_toggle_shuffle(); }
+        else if (strcmp(cmd->valuestring, "sd_repeat") == 0)  { sd_player_cycle_repeat(); }
         else if (strcmp(cmd->valuestring, "sd_list") == 0) {
             cJSON *dir = cJSON_GetObjectItem(json, "dir");
             int count = sd_player_scan((dir && cJSON_IsString(dir)) ? dir->valuestring : NULL);
@@ -450,6 +453,9 @@ static void send_full_state(void)
     cJSON_AddNumberToObject(json, "sd_count", s->sd_count);
     cJSON_AddStringToObject(json, "sd_track", s->sd_track[0] ? s->sd_track : "");
     cJSON_AddStringToObject(json, "sd_dir", s->sd_dir[0] ? s->sd_dir : "");
+    cJSON_AddBoolToObject(json, "sd_paused", s->sd_paused);
+    cJSON_AddBoolToObject(json, "sd_shuffle", s->sd_shuffle);
+    cJSON_AddNumberToObject(json, "sd_repeat", s->sd_repeat);
 
     // WiFi RSSI (dBm) — 0 when STA not connected / AP mode
     wifi_ap_record_t ap;

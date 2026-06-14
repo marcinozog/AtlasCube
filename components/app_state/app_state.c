@@ -164,6 +164,9 @@ void app_state_update(const app_state_patch_t *patch)
         strncpy(s_state.sd_dir, patch->sd_dir, sizeof(s_state.sd_dir) - 1);
         s_state.sd_dir[sizeof(s_state.sd_dir) - 1] = 0;
     }
+    if (patch->has_sd_paused)  s_state.sd_paused  = patch->sd_paused;
+    if (patch->has_sd_shuffle) s_state.sd_shuffle = patch->sd_shuffle;
+    if (patch->has_sd_repeat)  s_state.sd_repeat  = patch->sd_repeat;
 
     notify();
 

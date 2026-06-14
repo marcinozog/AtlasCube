@@ -41,6 +41,7 @@ static audio_element_handle_t
 static audio_event_iface_handle_t evt;
 
 static bool is_playing = false;
+static bool is_paused  = false;
 
 // Source + codec currently linked into the pipeline. Drives the relink decision
 // on the next play (relink only when one of them changes).
@@ -54,6 +55,8 @@ static audio_codec_t current_codec = AUDIO_CODEC_MP3;
 static esp_timer_handle_t s_file_end_timer = NULL;
 static uint32_t           s_file_duration_ms = 0;
 static bool               s_finish_requested = false;   // dedupe end-of-file per playback
+static int64_t            s_file_deadline_us = 0;       // when the end timer will fire
+static int64_t            s_file_paused_us   = 0;       // remaining end-timer time while paused
 #define FILE_END_DRAIN_MARGIN_MS 700
 
 // Resampler reconfig tracking — re-armed whenever the source rate/channels change.
@@ -415,6 +418,8 @@ static void engine_start(audio_src_t src, audio_codec_t codec,
 
     audio_pipeline_run(pipeline);
     is_playing = true;
+    is_paused  = false;
+    s_file_paused_us = 0;
 
     // Arm the deterministic end-of-playback timer (duration + drain margin).
     if (src == AUDIO_SRC_FILE && s_file_duration_ms > 0) {
@@ -424,9 +429,10 @@ static void engine_start(audio_src_t src, audio_codec_t codec,
             esp_timer_create(&a, &s_file_end_timer);
         }
         if (s_file_end_timer) {
+            uint64_t us = ((uint64_t)s_file_duration_ms + FILE_END_DRAIN_MARGIN_MS) * 1000ULL;
             esp_timer_stop(s_file_end_timer);   // cancel any previous arming
-            esp_timer_start_once(s_file_end_timer,
-                ((uint64_t)s_file_duration_ms + FILE_END_DRAIN_MARGIN_MS) * 1000ULL);
+            esp_timer_start_once(s_file_end_timer, us);
+            s_file_deadline_us = esp_timer_get_time() + (int64_t)us;
             ESP_LOGI(TAG, "File duration ~%lu ms, end timer armed",
                      (unsigned long)s_file_duration_ms);
         }
@@ -491,6 +497,12 @@ static void pipeline_teardown(void)
 
     if (!is_playing) return;
 
+    // Resume first if paused — stopping a paused pipeline can wedge.
+    if (is_paused) {
+        audio_pipeline_resume(pipeline);
+        is_paused = false;
+    }
+
     audio_pipeline_stop(pipeline);
     audio_pipeline_wait_for_stop(pipeline);
     audio_pipeline_terminate(pipeline);
@@ -498,6 +510,7 @@ static void pipeline_teardown(void)
     audio_pipeline_reset_elements(pipeline);
 
     is_playing = false;
+    is_paused  = false;
 
     // force rsp reinit on next play (new station may have different sample rate)
     last_rsp_sample_rate = 0;
@@ -513,6 +526,48 @@ void audio_engine_stop(void)
     xSemaphoreTake(s_pipe_lock, portMAX_DELAY);
     pipeline_teardown();
     xSemaphoreGive(s_pipe_lock);
+}
+
+
+/*
+void audio_engine_pause(void) / audio_engine_resume(void)
+Pause/resume the running pipeline in place (no teardown). The deterministic
+file-end timer (WAV) is frozen on pause and re-armed with the remaining time on
+resume so a paused clip doesn't "end" while held.
+*/
+void audio_engine_pause(void)
+{
+    xSemaphoreTake(s_pipe_lock, portMAX_DELAY);
+    if (is_playing && !is_paused) {
+        audio_pipeline_pause(pipeline);
+        is_paused = true;
+        if (s_file_end_timer && s_file_duration_ms > 0) {
+            int64_t now = esp_timer_get_time();
+            s_file_paused_us = (s_file_deadline_us > now) ? (s_file_deadline_us - now) : 1;
+            esp_timer_stop(s_file_end_timer);
+        }
+    }
+    xSemaphoreGive(s_pipe_lock);
+}
+
+void audio_engine_resume(void)
+{
+    xSemaphoreTake(s_pipe_lock, portMAX_DELAY);
+    if (is_paused) {
+        audio_pipeline_resume(pipeline);
+        is_paused = false;
+        if (s_file_end_timer && s_file_paused_us > 0) {
+            esp_timer_start_once(s_file_end_timer, s_file_paused_us);
+            s_file_deadline_us = esp_timer_get_time() + s_file_paused_us;
+            s_file_paused_us = 0;
+        }
+    }
+    xSemaphoreGive(s_pipe_lock);
+}
+
+bool audio_engine_is_paused(void)
+{
+    return is_paused;
 }
 
 

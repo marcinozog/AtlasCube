@@ -59,6 +59,9 @@ typedef struct {
     int  sd_count;              // Tracks in the queue
     char sd_track[128];         // Current track file name
     char sd_dir[192];           // Folder of the current track
+    bool sd_paused;             // SD playback paused
+    bool sd_shuffle;            // Shuffle mode
+    int  sd_repeat;             // Repeat mode: 0=none, 1=all, 2=one
 } app_state_t;
 
 typedef struct {
@@ -151,6 +154,12 @@ typedef struct {
     const char *sd_track;
     bool has_sd_dir;
     const char *sd_dir;
+    bool has_sd_paused;
+    bool sd_paused;
+    bool has_sd_shuffle;
+    bool sd_shuffle;
+    bool has_sd_repeat;
+    int  sd_repeat;
 } app_state_patch_t;
 
 typedef void (*app_state_cb_t)(void);

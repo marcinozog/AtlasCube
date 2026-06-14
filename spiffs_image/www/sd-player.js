@@ -9,6 +9,9 @@ let tracks = [];       // audio files in curDir
 let playDir = '';      // folder of the playing track (from state)
 let playTrack = '';    // playing track file name (from state)
 let active = false;
+let paused = false;
+let shuffleOn = false;
+let repeatMode = 0;    // 0 none, 1 all, 2 one
 let volTimeout = null;
 
 function connect() {
@@ -44,22 +47,27 @@ function joinPath(dir, name) {
 }
 
 function applyState(d) {
-    if (d.sd_active !== undefined) active = !!d.sd_active;
-    if (d.sd_dir    !== undefined) playDir = d.sd_dir;
-    if (d.sd_track  !== undefined) playTrack = d.sd_track;
+    if (d.sd_active  !== undefined) active = !!d.sd_active;
+    if (d.sd_dir     !== undefined) playDir = d.sd_dir;
+    if (d.sd_track   !== undefined) playTrack = d.sd_track;
+    if (d.sd_paused  !== undefined) paused = !!d.sd_paused;
+    if (d.sd_shuffle !== undefined) shuffleOn = !!d.sd_shuffle;
+    if (d.sd_repeat  !== undefined) repeatMode = d.sd_repeat | 0;
 
     const trackEl = document.getElementById('npTrack');
     const idxEl   = document.getElementById('npIndex');
     const infoEl  = document.getElementById('npInfo');
 
-    if (active && d.sd_track) {
-        trackEl.innerText = d.sd_track;
+    if (active) {
+        trackEl.innerText = d.sd_track || playTrack || '---';
         const pos = (d.sd_count ? `${(d.sd_index ?? 0) + 1} / ${d.sd_count} · ` : '');
-        idxEl.innerText = pos + '▶ gra';
-    } else if (!active) {
+        idxEl.innerText = pos + (paused ? '⏸ pauza' : '▶ gra');
+    } else {
         trackEl.innerText = '---';
         idxEl.innerText = '⏹ zatrzymane';
     }
+
+    updateModeButtons();
 
     if (d.volume !== undefined) setVolumeUI(d.volume);
 
@@ -136,12 +144,29 @@ function setVolumeUI(v) {
     document.getElementById('vol_value').innerText = v;
 }
 
+function updateModeButtons() {
+    const pp = document.getElementById('ppBtn');
+    if (pp) pp.innerText = (active && !paused) ? '⏸' : '▶';
+
+    const sh = document.getElementById('shufBtn');
+    if (sh) sh.classList.toggle('on', shuffleOn);
+
+    const rp = document.getElementById('repBtn');
+    if (rp) {
+        rp.innerText = repeatMode === 2 ? '🔂' : '🔁';
+        rp.classList.toggle('on', repeatMode !== 0);
+    }
+}
+
 function browse(dir)    { send({ cmd: 'sd_list', dir }); }
 function playPath(path) { send({ cmd: 'sd_play_path', path }); }
 function scan()         { send({ cmd: 'sd_list', dir: curDir || undefined }); }
 function playAll()      { send({ cmd: 'sd_play', dir: curDir || undefined }); }
+function playPause()    { active ? send({ cmd: 'sd_pause' }) : playAll(); }
 function next()         { send({ cmd: 'sd_next' }); }
 function prev()         { send({ cmd: 'sd_prev' }); }
 function stop()         { send({ cmd: 'sd_stop' }); }
+function shuffle()      { send({ cmd: 'sd_shuffle' }); }
+function repeat()       { send({ cmd: 'sd_repeat' }); }
 
 connect();
