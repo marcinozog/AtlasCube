@@ -9,6 +9,21 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-06-14
+
+### Added
+- **web:** browsable folder tree in the SPIFFS pane + SD play legend
+- **web:** browsable folder tree in the SPIFFS panel
+- **web:** show SPIFFS and SD usage in the file manager
+- **events:** flat voice clip files, drop the per-clip folder
+- **web:** play voice clips from the events list rows
+- **web:** inline WAV/MP3 playback in the SD file manager
+- **voice:** readable slug folder names, drop text sidecar
+
+### Fixed
+- **events:** widen sound path buffer for readable clip folder names
+- **web:** label SD card consistently in file manager
+
 ## [0.18.0] - 2026-06-13
 
 ### Added
@@ -264,7 +279,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.18.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/marcinozog/AtlasCube/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/marcinozog/AtlasCube/compare/v0.17.0...v0.18.0
 [0.17.0]: https://github.com/marcinozog/AtlasCube/compare/v0.16.0...v0.17.0
 [0.16.0]: https://github.com/marcinozog/AtlasCube/compare/v0.15.0...v0.16.0
