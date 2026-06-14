@@ -235,12 +235,11 @@ void radio_play_url(const char *url)
 
     // Only act on BT when it is actually the active source — otherwise an
     // always-on radio would blast spurious AT+PU at the module on every
-    // (re)connect, disrupting an idle phone session. When we do take over from
-    // BT and exclusive auto-switch is on, pause the phone so it actually stops
-    // rather than just being muted by the source mux.
+    // (re)connect, disrupting an idle phone session. Taking over is an explicit
+    // action, so pause the phone unconditionally — it should actually stop, not
+    // keep playing muted behind the hardware mux (same as the SD takeover).
     if (app_state_get()->bt_enable) {
-        if (app_state_get()->bt_auto_switch)
-            bt_pause();
+        bt_pause();
         settings_set_bt_enable(false);
     }
 

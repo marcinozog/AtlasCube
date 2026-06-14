@@ -6,6 +6,7 @@
 #include "esp_heap_caps.h"
 #include "audio_engine.h"
 #include "app_state.h"
+#include "sd_player.h"
 #include "bt.h"
 #include "theme.h"
 #include "display.h"
@@ -717,28 +718,44 @@ void settings_set_night_schedule(const dim_schedule_t *ns)
 // stay off the flash (it runs on the BT UART task and can fire on every
 // reconnect). It still keeps s_settings/app_state/GPIO consistent so the guard
 // in the persisting variant can later switch the source back.
-static void apply_bt_enable(bool enable, bool persist)
+// notify=false skips app_state_update (and thus the WebSocket full-state
+// broadcast). Used by the SD takeover path, which runs deep on the httpd task
+// stack and folds the bt_enable change into its own single, shallower update.
+static void apply_bt_enable(bool enable, bool persist, bool notify)
 {
     if(s_settings.bluetooth.enable != enable) {
         s_settings.bluetooth.enable = enable;
-        app_state_update(&(app_state_patch_t){ .has_bt_enable = true, .bt_enable = enable });
+        if (notify)
+            app_state_update(&(app_state_patch_t){ .has_bt_enable = true, .bt_enable = enable });
         bt_set_enabled(enable);
         if (persist)
             save_to_file();
         // Update www/screen BT Volume only if turn on
-        if(enable)
+        if(enable) {
             bt_set_volume(s_settings.bluetooth.volume);
+            // BT takes the I2S output → the SD player must yield, otherwise it
+            // keeps playing and re-muxes back to the ESP on the next track
+            // (radio just gets muted by the hardware mux, but SD would fight it).
+            sd_player_stop();
+        }
     }
 }
 
 void settings_set_bt_enable(bool enable)
 {
-    apply_bt_enable(enable, true);
+    apply_bt_enable(enable, true, true);
 }
 
 void settings_set_bt_enable_volatile(bool enable)
 {
-    apply_bt_enable(enable, false);
+    apply_bt_enable(enable, false, true);
+}
+
+// Mux + state only, no SPIFFS write and no app_state broadcast. The caller is
+// responsible for reflecting the bt_enable change in app_state itself.
+void settings_set_bt_enable_quiet(bool enable)
+{
+    apply_bt_enable(enable, false, false);
 }
 
 void settings_set_bt_show_screen(bool show)

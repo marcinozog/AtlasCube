@@ -126,8 +126,15 @@ static void take_over_output(void)
     app_state_t *s = app_state_get();
 
     if (s->bt_enable) {
-        if (s->bt_auto_switch) bt_pause();
-        settings_set_bt_enable(false);
+        // Pause the phone unconditionally: playing an SD track is an explicit
+        // takeover, so the BT source should actually stop (not keep playing
+        // muted behind the hardware mux), regardless of bt_auto_switch.
+        bt_pause();
+        // Quiet: mux + state only, NO app_state broadcast here. This call runs
+        // deep on the httpd task stack; a full-state JSON build this deep
+        // overflows it. play_at() carries the bt_enable=false change in its own
+        // single, shallower app_state_update instead.
+        settings_set_bt_enable_quiet(false);
     }
 
     if (s->radio_state == RADIO_STATE_PLAYING ||
@@ -171,6 +178,9 @@ static void play_at(int idx, int n)
         .has_sd_track  = true, .sd_track  = s_queue[idx],
         .has_sd_dir    = true, .sd_dir    = s_play_dir,
         .has_sd_paused = true, .sd_paused = false,
+        // SD is the source now → reflect BT off here (take_over_output muxed it
+        // off quietly), in this one shallow broadcast.
+        .has_bt_enable = true, .bt_enable = false,
         .has_title     = true, .title     = s_queue[idx],
     });
 

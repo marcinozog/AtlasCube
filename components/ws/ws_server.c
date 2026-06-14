@@ -262,6 +262,12 @@ static esp_err_t ws_handler(httpd_req_t *req)
         }
         // Semantic transport — module-agnostic, resolved via the BT descriptor.
         else if (strcmp(cmd->valuestring, "bt_play") == 0) {
+            // Explicit "play BT" = make BT the active source. The phone may
+            // already be playing (no rising edge for on_bt_play_event), so switch
+            // the source here: it muxes to BT and stops the SD player; bt_play()
+            // then ensures the module is playing. Volatile — no save_to_file()
+            // on the httpd task (its stack can't take the full-settings JSON build).
+            settings_set_bt_enable_volatile(true);
             bt_play();
         }
         else if (strcmp(cmd->valuestring, "bt_pause") == 0) {

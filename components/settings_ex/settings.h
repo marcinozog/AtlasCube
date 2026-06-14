@@ -141,6 +141,7 @@ void settings_set_brightness(int brightness);
 void settings_set_night_schedule(const dim_schedule_t *ns);
 void settings_set_bt_enable(bool enable);
 void settings_set_bt_enable_volatile(bool enable);   // runtime switch, no SPIFFS write
+void settings_set_bt_enable_quiet(bool enable);      // mux+state only, no broadcast/write
 void settings_set_bt_show_screen(bool show);
 void settings_set_bt_volume(int volume);
 void settings_set_bt_auto_switch(bool enable);
