@@ -59,24 +59,6 @@ function evTypeChanged() {
     document.getElementById('ev_sound_group').style.display   = isVoice ? '' : 'none';
 }
 
-// Fetch the .txt sidecar that sits next to a voice WAV (same base name) and show
-// its spoken text. `sound` is the event's relative clip path (e.g.
-// "v_ab12cd/v_ab12cd.wav"); the sidecar lives at /voice/<base>.txt. Empty/missing
-// → cleared, the placeholder takes over.
-async function loadVoiceText(sound) {
-    const out = document.getElementById('ev_sound_text');
-    out.value = '';
-    if (!sound) return;
-    const txtPath = '/voice/' + sound.replace(/\.wav$/i, '.txt');
-    try {
-        const res = await fetch('/api/sd/file?path=' + encodeURIComponent(txtPath),
-                                { cache: 'no-store' });
-        if (res.ok) out.value = (await res.text()).trim();
-    } catch (e) {
-        // Sidecar absent or no card — leave blank.
-    }
-}
-
 // Stop playback and drop the loaded clip (called when the form changes events).
 function resetClipAudio() {
     const audio = document.getElementById('ev_sound_audio');
@@ -207,7 +189,6 @@ function evFormReset() {
     document.getElementById('ev_volume').value = '50';
     document.getElementById('ev_volume_val').textContent = '50';
     document.getElementById('ev_sound').value = '';
-    document.getElementById('ev_sound_text').value = '';
     document.getElementById('ev_sound_play').style.display = 'none';
     resetClipAudio();
     evTypeChanged();
@@ -237,7 +218,6 @@ function evEdit(id) {
     document.getElementById('ev_sound_play').style.display =
         (ev.type === 'voice' && ev.sound) ? '' : 'none';
     evTypeChanged();
-    loadVoiceText(ev.type === 'voice' ? ev.sound : '');
 
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }

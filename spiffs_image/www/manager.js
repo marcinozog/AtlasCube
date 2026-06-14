@@ -510,6 +510,7 @@ async function saveEditor() {
             const info = await r.json().catch(() => null);
             edSetStatus("Saved" + (info ? " (" + (info.gz ? "gz " : "") + fmtSize(info.size) + ")" : ""), "ok");
             loadSpiffs();
+            setTimeout(closeEditor, 600);
         } else {
             const r = await fetch("/api/sd/file?path=" + encodeURIComponent(edPath), {
                 method: "POST",
@@ -520,6 +521,7 @@ async function saveEditor() {
             if (!r.ok) throw new Error("HTTP " + r.status);
             edSetStatus("Saved", "ok");
             sdRefresh();
+            setTimeout(closeEditor, 600);
         }
     } catch (e) {
         edSetStatus("Save failed: " + e.message, "err");

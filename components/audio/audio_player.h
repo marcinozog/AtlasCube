@@ -8,7 +8,7 @@ void audio_player_play(const char *url);
 void audio_player_stop(void);
 
 // Plays a local audio file (WAV) from the mounted SD/FAT filesystem, e.g.
-// "/sdcard/voice/v_ab12cd.wav". Unlike a radio stream the file has a real end:
+// "/sdcard/voice/wake-up-call-a3f9/wake-up-call-a3f9.wav". Unlike a radio stream the file has a real end:
 // when it finishes the pipeline is torn down and the finished callback (if set)
 // is invoked — the radio retry logic does NOT kick in. Used for voice
 // notifications. Async, like audio_player_play.
