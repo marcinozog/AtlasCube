@@ -17,4 +17,6 @@ idf_component_register(
         espressif__zlib
         mqtt_svc
         sdcard
+        spiffs
+        fatfs
 )

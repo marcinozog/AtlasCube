@@ -27,6 +27,8 @@
 #include "mqtt_svc.h"
 #include "mqtt_config.h"
 #include "sdcard.h"
+#include "esp_spiffs.h"
+#include "esp_vfs_fat.h"
 #include "cJSON.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -1485,6 +1487,26 @@ static esp_err_t api_files_get_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+// GET /api/spiffs  → { total, used, free } bytes of the SPIFFS partition
+static esp_err_t api_spiffs_get_handler(httpd_req_t *req)
+{
+    size_t total = 0, used = 0;
+    esp_spiffs_info("storage", &total, &used);
+
+    cJSON *o = cJSON_CreateObject();
+    cJSON_AddNumberToObject(o, "total", (double)total);
+    cJSON_AddNumberToObject(o, "used",  (double)used);
+    cJSON_AddNumberToObject(o, "free",  (double)(total - used));
+    char *str = cJSON_PrintUnformatted(o);
+    cJSON_Delete(o);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    httpd_resp_sendstr(req, str);
+    free(str);
+    return ESP_OK;
+}
+
 static esp_err_t api_files_put_handler(httpd_req_t *req)
 {
     const char *prefix = "/api/files/";
@@ -1705,6 +1727,31 @@ static bool sd_resolve_path(httpd_req_t *req, const char *def, char *out, size_t
     size_t L = strlen(out);
     while (L > strlen(SD_MOUNT_POINT) + 1 && out[L - 1] == '/') out[--L] = '\0';
     return true;
+}
+
+// GET /api/sd/info  → { total, used, free } bytes of the SD card (503 if absent)
+static esp_err_t api_sd_info_handler(httpd_req_t *req)
+{
+    if (!sdcard_is_mounted()) return sd_send_no_card(req);
+
+    uint64_t total = 0, freeb = 0;
+    if (esp_vfs_fat_info(SD_MOUNT_POINT, &total, &freeb) != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "fat_info failed");
+        return ESP_FAIL;
+    }
+
+    cJSON *o = cJSON_CreateObject();
+    cJSON_AddNumberToObject(o, "total", (double)total);
+    cJSON_AddNumberToObject(o, "used",  (double)(total - freeb));
+    cJSON_AddNumberToObject(o, "free",  (double)freeb);
+    char *str = cJSON_PrintUnformatted(o);
+    cJSON_Delete(o);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    httpd_resp_sendstr(req, str);
+    free(str);
+    return ESP_OK;
 }
 
 // GET /api/sd/list?path=/dir  → { path, entries:[{name,dir,size}] }
@@ -2510,7 +2557,21 @@ void http_server_start(void)
     };
     httpd_register_uri_handler(server, &api_files_put);
 
+    httpd_uri_t api_spiffs_get = {
+        .uri     = "/api/spiffs",
+        .method  = HTTP_GET,
+        .handler = api_spiffs_get_handler,
+    };
+    httpd_register_uri_handler(server, &api_spiffs_get);
+
     // ── SD CARD file manager ──────────────────────────────────────────────────
+    httpd_uri_t api_sd_info = {
+        .uri     = "/api/sd/info",
+        .method  = HTTP_GET,
+        .handler = api_sd_info_handler,
+    };
+    httpd_register_uri_handler(server, &api_sd_info);
+
     httpd_uri_t api_sd_list = {
         .uri     = "/api/sd/list",
         .method  = HTTP_GET,

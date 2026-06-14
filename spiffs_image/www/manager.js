@@ -22,6 +22,21 @@ function encodePath(p) {
     return p.split("/").map(encodeURIComponent).join("/");
 }
 
+// Partition/card usage: GET an endpoint returning { total, used, free } bytes.
+// Returns null if unavailable (e.g. no SD card → 503) so the meta line just omits it.
+async function fetchUsage(url) {
+    try {
+        const r = await fetch(url, { cache: "no-store" });
+        if (!r.ok) return null;
+        return await r.json();
+    } catch (_) { return null; }
+}
+function usageStr(u) {
+    return (u && u.total)
+        ? ` · ${fmtSize(u.used)} / ${fmtSize(u.total)} (${fmtSize(u.free)} free)`
+        : "";
+}
+
 // Extensions the inline editor will open as text. Anything else (images,
 // .bin, .wav, .ico) gets no ✎ button.
 const TEXT_EXTS = [".html", ".htm", ".css", ".js", ".json", ".csv",
@@ -64,6 +79,7 @@ function spiffsRejectReason(name, size) {
 
 // ── SPIFFS pane (left) ──────────────────────────────────────────────────────
 let spList = [];                                    // last listing, for re-render
+let spInfo = null;                                  // { total, used, free } of the SPIFFS partition
 const spListEl = document.getElementById("sp_listing");
 const spMetaEl = document.getElementById("sp_meta");
 
@@ -78,6 +94,7 @@ async function loadSpiffs() {
         if (!r.ok) throw new Error("HTTP " + r.status);
         spList = await r.json();
         spList.sort((a, b) => a.name.localeCompare(b.name));
+        spInfo = await fetchUsage("/api/spiffs");
         renderSpiffs();
     } catch (e) {
         spShow("Failed to list SPIFFS: " + e.message, true);
@@ -86,7 +103,7 @@ async function loadSpiffs() {
 }
 
 function renderSpiffs() {
-    if (!spList.length) { spShow("No editable files."); spMetaEl.textContent = "empty"; return; }
+    if (!spList.length) { spShow("No editable files."); spMetaEl.textContent = "empty" + usageStr(spInfo); return; }
 
     let totBytes = 0;
     const rows = spList.map(f => {
@@ -101,11 +118,12 @@ function renderSpiffs() {
             `</td></tr>`;
     });
     spListEl.innerHTML = `<table class="files"><tbody>${rows.join("")}</tbody></table>`;
-    spMetaEl.textContent = `${spList.length} file${spList.length === 1 ? "" : "s"} · ${fmtSize(totBytes)}`;
+    spMetaEl.textContent = `${spList.length} file${spList.length === 1 ? "" : "s"} · ${fmtSize(totBytes)}` + usageStr(spInfo);
 }
 
 // ── SD pane (right) ─────────────────────────────────────────────────────────
 let sdPath = "/";
+let sdInfo = null;                                  // { total, used, free } of the SD card
 const sdListEl   = document.getElementById("sd_listing");
 const sdCrumbsEl = document.getElementById("sd_crumbs");
 const sdMetaEl   = document.getElementById("sd_meta");
@@ -141,6 +159,7 @@ function sdNavTo(path) {
 async function sdRefresh() {
     sdRenderCrumbs();
     sdShow("Loading…");
+    sdInfo = await fetchUsage("/api/sd/info");   // null when no card (503)
     try {
         const r = await fetch("/api/sd/list?path=" + encodeURIComponent(sdPath));
         if (r.status === 503) { sdShow("No SD card inserted.", true); sdMetaEl.textContent = "no card"; return; }
@@ -210,7 +229,7 @@ function sdRender(entries) {
 
     if (rows.length === 0) sdShow("Empty folder.");
     else sdListEl.innerHTML = `<table class="files"><tbody>${rows.join("")}</tbody></table>`;
-    sdMetaEl.textContent = `${nFiles} file${nFiles === 1 ? "" : "s"} · ${fmtSize(totBytes)}`;
+    sdMetaEl.textContent = `${nFiles} file${nFiles === 1 ? "" : "s"} · ${fmtSize(totBytes)}` + usageStr(sdInfo);
 }
 
 // ── inline WAV preview (SD pane) ─────────────────────────────────────────────
