@@ -109,6 +109,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - 10-pasmowy EQ parametryczny + miękka regulacja głośności (własny element DSP, rdzeń 1)
 - Playlista — do 50 stacji, trzymana w SPIFFS
 - Bluetooth audio — A2DP sink i HFP hands-free (zewnętrzny moduł QCC5125, Bluetooth 5.1); kodeki: LDAC, aptX HD, aptX LL, aptX, SBC, AAC
+- Odtwarzacz muzyki z karty SD — granie plików MP3 / WAV / FLAC / AAC wprost z folderu na microSD. Przeglądanie podfolderów, kolejka z losowaniem i powtarzaniem (brak / cała / utwór), pauza/wznowienie i auto-przejście — wszystko ze strony `/sd-player.html`. Trzecie źródło dźwięku obok radia i Bluetooth (jedno aktywne naraz); współdzieli EQ i głośność z wyjściem radia
 - Sprzętowe przełączanie źródła I2S — multiplekser 74HC157D wpina do DAC-a albo ESP32-S3, albo QCC5125, jednym GPIO
 - Automatyczne wznawianie po utracie strumienia
 - Wznawianie po restarcie — opcjonalnie odtwarza ostatnią stację po ponownym uruchomieniu, jeśli radio grało w chwili wyłączenia (opcja włączana w ustawieniach przez Web UI)
@@ -161,7 +162,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Opcjonalna karta microSD po SDMMC (tryb 1-bit), podpięta do pinów SDMMC danego wariantu
 - Webowy **menedżer plików SD** (Ustawienia → Narzędzia) — przeglądanie folderów, tworzenie katalogów, upload, zmiana nazwy i usuwanie plików prosto z przeglądarki; pliki może wysyłać też aplikacja Android
 - Webowy **backup/restore SPIFFS ⇄ SD** (Ustawienia → Narzędzia) — osobny dwupanelowy menedżer kopiujący pliki między SPIFFS urządzenia a kartą SD: kopia konfiguracji / web UI na kartę i przywrócenie później. Po stronie klienta, tylko kopiowanie
-- Obsługuje slajdy fotoramki oraz nagrania powiadomień głosowych; więcej zawartości z karty (logo stacji, lokalna muzyka) jest na liście planów
+- Obsługuje slajdy fotoramki, nagrania powiadomień głosowych oraz lokalną muzykę dla odtwarzacza SD; więcej zawartości z karty (np. logo stacji) jest na liście planów
 
 **Aplikacja Android** *(beta)*
 - Pilot do odtwarzania, zmiany stacji i głośności
@@ -403,6 +404,7 @@ Dostępne pod IP urządzenia lub `<nazwa>.local` (tryb STA), albo pod `192.168.4
 | Strona | Ścieżka |
 |---|---|
 | Radio / now playing | `/` |
+| Odtwarzacz muzyki SD | `/sd-player.html` |
 | Ustawienia | `/settings.html` |
 | Playlista | `/playlist.html` |
 | Wydarzenia | `/events.html` |
@@ -546,7 +548,7 @@ Notatki architektury i decyzji projektowych w [`docs/`](docs/):
 ## Roadmap
 
 - **Obudowa** — drukowana 3D, w trakcie projektowania; firmware aktualnie chodzi na gołej płytce deweloperskiej
-- **Więcej zawartości z karty SD** — karta microSD jest już zamontowana (napędza fotoramkę i nagrania powiadomień głosowych); rozszerzenie na logo stacji i lokalne odtwarzanie muzyki
+- **Więcej zawartości z karty SD** — karta microSD napędza już fotoramkę, nagrania powiadomień głosowych i odtwarzacz muzyki; rozszerzenie m.in. na logo stacji
 - **Webowy edytor melodii** — narzędzie w przeglądarce do komponowania własnych melodii na buzzer
 
 ---

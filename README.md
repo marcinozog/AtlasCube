@@ -111,6 +111,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - 10-band parametric EQ + soft volume (custom DSP element, core 1)
 - Playlist — up to 50 stations, stored in SPIFFS
 - Bluetooth audio — A2DP sink and HFP hands-free (external QCC5125 module, Bluetooth 5.1); supported codecs: LDAC, aptX HD, aptX LL, aptX, SBC, AAC
+- SD card music player — play MP3 / WAV / FLAC / AAC files straight from a microSD folder. Browse subfolders, queue with shuffle and repeat (none / all / one), pause/resume, and auto-advance — all from the `/sd-player.html` web page. A third audio source alongside radio and Bluetooth (one active at a time); shares the EQ and volume with the radio output
 - Hardware I2S source switching — a 74HC157D multiplexer routes either the ESP32-S3 or the QCC5125 I2S output to the DAC, selected by a single GPIO
 - Automatic retry on stream loss
 - Resume on boot — optionally replays the last station after a restart if the radio was playing when it powered off (opt-in, toggled in the Settings web UI)
@@ -163,7 +164,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Optional microSD card over SDMMC (1-bit mode), wired to the build's SDMMC pins
 - Web **SD file manager** (Settings → Tools) — browse folders, create directories, upload, rename, and delete files straight from the browser; the Android app can push files too
 - Web **SPIFFS ⇄ SD backup/restore** (Settings → Tools) — a separate dual-pane manager that copies files between the device's SPIFFS and the SD card: back up configs / web UI to the card and restore them later. Client-side, copy-only
-- Backs the photo-frame slides and voice-notification clips; more on-card content (station logos, local music) is on the roadmap
+- Backs the photo-frame slides, voice-notification clips, and local music for the SD player; more on-card content (e.g. station logos) is on the roadmap
 
 **Android app** *(beta)*
 - Remote control for playback, station switching, and volume
@@ -406,6 +407,7 @@ Available at the device IP or `<hostname>.local` (STA mode), or `192.168.4.1` (A
 | Page | Path |
 |---|---|
 | Radio / now playing | `/` |
+| SD music player | `/sd-player.html` |
 | Settings | `/settings.html` |
 | Playlist | `/playlist.html` |
 | Events | `/events.html` |
@@ -549,7 +551,7 @@ Architecture and design notes in [`docs/`](docs/):
 ## Roadmap
 
 - **Enclosure** — 3D-printed case currently in design; firmware is developed and tested on the bare development board
-- **More SD-backed content** — the microSD card is already mounted (powers the photo frame and voice-notification clips); extending it to station logos and local music playback
+- **More SD-backed content** — the microSD card already powers the photo frame, voice-notification clips, and local music playback; extending it to e.g. station logos
 - **Web melody editor** — in-browser tool for composing custom buzzer notification tunes
 
 ---
