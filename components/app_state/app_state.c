@@ -153,6 +153,14 @@ void app_state_update(const app_state_patch_t *patch)
     if (patch->has_scrsaver_delay)  s_state.scrsaver_delay  = patch->scrsaver_delay;
     if (patch->has_scrsaver_id)     s_state.scrsaver_id     = patch->scrsaver_id;
 
+    if (patch->has_sd_active) s_state.sd_active = patch->sd_active;
+    if (patch->has_sd_index)  s_state.sd_index  = patch->sd_index;
+    if (patch->has_sd_count)  s_state.sd_count  = patch->sd_count;
+    if (patch->has_sd_track && patch->sd_track) {
+        strncpy(s_state.sd_track, patch->sd_track, sizeof(s_state.sd_track) - 1);
+        s_state.sd_track[sizeof(s_state.sd_track) - 1] = 0;
+    }
+
     notify();
 
     char buf[256];
@@ -187,6 +195,10 @@ void app_state_update(const app_state_patch_t *patch)
     if (patch->has_bg_gradient)       n += snprintf(buf + n, sizeof(buf) - n, " bg_gradient=%d", s_state.bg_gradient);
     if (patch->has_scrsaver_delay)    n += snprintf(buf + n, sizeof(buf) - n, " scrsaver_delay=%d", s_state.scrsaver_delay);
     if (patch->has_scrsaver_id)       n += snprintf(buf + n, sizeof(buf) - n, " scrsaver_id=%d", s_state.scrsaver_id);
+    if (patch->has_sd_active)         n += snprintf(buf + n, sizeof(buf) - n, " sd_active=%d", s_state.sd_active);
+    if (patch->has_sd_index)          n += snprintf(buf + n, sizeof(buf) - n, " sd_index=%d", s_state.sd_index);
+    if (patch->has_sd_count)          n += snprintf(buf + n, sizeof(buf) - n, " sd_count=%d", s_state.sd_count);
+    if (patch->has_sd_track)          n += snprintf(buf + n, sizeof(buf) - n, " sd_track=%s", s_state.sd_track);
 
     if (n > 0) {
         ESP_LOGI("STATE", "Updated:%s", buf);

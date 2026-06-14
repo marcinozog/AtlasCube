@@ -3,6 +3,7 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "radio_service.h"
+#include "sd_player.h"
 #include "cJSON.h"
 #include <string.h>
 #include <stdlib.h>
@@ -20,6 +21,7 @@ static const char *TAG = "WS";
 static void broadcast_task(void *arg);
 static void send_full_state(void);
 static void on_state_change(void);
+static void ws_broadcast(const char *data, size_t len);
 
 static int ws_clients[MAX_WS_CLIENTS] = {0};
 static httpd_handle_t g_server = NULL;
@@ -284,12 +286,40 @@ static esp_err_t ws_handler(httpd_req_t *req)
             }
         }
 
-        // Test hook: play a local audio file from the SD card (SD music WIP).
+        // Test hook: play a single local audio file from the SD card.
         else if (strcmp(cmd->valuestring, "play_file") == 0) {
             cJSON *path = cJSON_GetObjectItem(json, "path");
             if (path && cJSON_IsString(path)) {
                 radio_play_file(path->valuestring);
             }
+        }
+
+        // SD-card music player (folder queue).
+        else if (strcmp(cmd->valuestring, "sd_play") == 0) {
+            cJSON *dir = cJSON_GetObjectItem(json, "dir");
+            sd_player_play_folder((dir && cJSON_IsString(dir)) ? dir->valuestring : NULL);
+        }
+        else if (strcmp(cmd->valuestring, "sd_play_index") == 0) {
+            cJSON *idx = cJSON_GetObjectItem(json, "index");
+            if (idx && cJSON_IsNumber(idx)) sd_player_play_index(idx->valueint);
+        }
+        else if (strcmp(cmd->valuestring, "sd_next") == 0) { sd_player_next(); }
+        else if (strcmp(cmd->valuestring, "sd_prev") == 0) { sd_player_prev(); }
+        else if (strcmp(cmd->valuestring, "sd_stop") == 0) { sd_player_stop(); }
+        else if (strcmp(cmd->valuestring, "sd_list") == 0) {
+            cJSON *dir = cJSON_GetObjectItem(json, "dir");
+            int count = sd_player_scan((dir && cJSON_IsString(dir)) ? dir->valuestring : NULL);
+
+            cJSON *resp = cJSON_CreateObject();
+            cJSON_AddStringToObject(resp, "type", "sd_list");
+            cJSON *arr = cJSON_AddArrayToObject(resp, "tracks");
+            for (int i = 0; i < count; i++) {
+                const char *t = sd_player_track(i);
+                if (t) cJSON_AddItemToArray(arr, cJSON_CreateString(t));
+            }
+            char *out = cJSON_PrintUnformatted(resp);
+            if (out) { ws_broadcast(out, strlen(out)); free(out); }
+            cJSON_Delete(resp);
         }
 
         // SCREENS
@@ -396,6 +426,10 @@ static void send_full_state(void)
     cJSON_AddNumberToObject(json, "ch", s->channels);
     cJSON_AddNumberToObject(json, "br", s->bitrate);
     cJSON_AddNumberToObject(json, "fmt", s->codec_fmt);
+    cJSON_AddBoolToObject(json, "sd_active", s->sd_active);
+    cJSON_AddNumberToObject(json, "sd_index", s->sd_index);
+    cJSON_AddNumberToObject(json, "sd_count", s->sd_count);
+    cJSON_AddStringToObject(json, "sd_track", s->sd_track[0] ? s->sd_track : "");
 
     // WiFi RSSI (dBm) — 0 when STA not connected / AP mode
     wifi_ap_record_t ap;

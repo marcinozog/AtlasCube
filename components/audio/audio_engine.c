@@ -202,6 +202,11 @@ void audio_engine_init(void)
     fatfs_stream_cfg_t fatfs_cfg = FATFS_STREAM_CFG_DEFAULT();
     fatfs_cfg.type        = AUDIO_STREAM_READER;
     fatfs_cfg.task_core   = 1;
+    // Stack in PSRAM (like the HTTP reader). The file source is I/O-bound (SD
+    // reads), so it doesn't need an internal stack — and keeping it out of
+    // internal SRAM leaves a contiguous block free for the rsp/dsp stacks, which
+    // otherwise failed to allocate when replaying a file after a stop.
+    fatfs_cfg.ext_stack   = true;
     fatfs_stream_reader = fatfs_stream_init(&fatfs_cfg);
 
     wav_decoder_cfg_t wav_decoder_cfg = DEFAULT_WAV_DECODER_CONFIG();

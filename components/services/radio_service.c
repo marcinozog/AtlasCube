@@ -2,6 +2,7 @@
 #include "audio_engine.h"
 #include "audio_net_player.h"
 #include "audio_file_player.h"
+#include "sd_player.h"
 #include "app_state.h"
 #include "settings.h"
 #include "bt.h"
@@ -78,6 +79,8 @@ static void on_bt_play_event(bool playing)
     // in sync (so radio_play_url can later switch back) without a flash write.
     settings_set_bt_enable_volatile(true);
 
+    if (sd_player_is_active()) sd_player_stop();    // BT supersedes SD music
+
     if (s->radio_state == RADIO_STATE_PLAYING ||
         s->radio_state == RADIO_STATE_BUFFERING) {
         audio_engine_request_stop();                // async teardown on audio task
@@ -114,10 +117,26 @@ static void on_notification_finished(void)
 }
 
 
+// Single file-finished dispatcher (audio_file_player has one callback). A voice
+// notification restoring the previous source takes priority; otherwise, if the
+// SD music player owns the file, advance its queue.
+static void on_file_finished(void)
+{
+    if (s_notif_active) {
+        on_notification_finished();
+        return;
+    }
+    if (sd_player_is_active()) {
+        sd_player_on_track_end();
+        return;
+    }
+}
+
+
 void radio_service_init(void)
 {
     bt_set_play_event_cb(on_bt_play_event);
-    audio_file_player_set_finished_cb(on_notification_finished);
+    audio_file_player_set_finished_cb(on_file_finished);
 
     app_state_update(&(app_state_patch_t){
         .has_radio = true,
@@ -225,6 +244,8 @@ void radio_play_url(const char *url)
         settings_set_bt_enable(false);
     }
 
+    if (sd_player_is_active()) sd_player_stop();   // radio supersedes SD music
+
     audio_net_player_play(url);
 
     app_state_update(&(app_state_patch_t){
@@ -281,6 +302,10 @@ void radio_stop(void)
     ESP_LOGI(TAG, "Stop");
 
     if (s_ramp_timer) esp_timer_stop(s_ramp_timer);   // cancel a fade-in in progress
+
+    // Generic stop: also clear the SD player if it was the active source
+    // (clears its state; the engine teardown below is shared).
+    if (sd_player_is_active()) sd_player_stop();
 
     audio_engine_stop();
 

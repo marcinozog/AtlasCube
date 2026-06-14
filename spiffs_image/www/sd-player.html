@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AtlasCube · SD</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+  .transport{display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0}
+  .sdbtn{flex:1;min-width:64px;padding:.7rem 1rem;border:none;border-radius:10px;
+         background:var(--panel-2,#1c2330);color:var(--text,#e6edf3);
+         font:600 1rem/1 'Chakra Petch',sans-serif;cursor:pointer;transition:background .15s}
+  .sdbtn:hover{background:var(--accent,#377aff);color:#fff}
+  .sdbtn.primary{background:var(--accent,#377aff);color:#fff}
+  .np-index{font:500 .85rem 'JetBrains Mono',monospace;color:var(--muted,#8b98a9);margin-top:.25rem}
+  #trackList{list-style:none;margin:.5rem 0 0;padding:0;max-height:50vh;overflow:auto}
+  #trackList li{padding:.6rem .8rem;border-radius:8px;cursor:pointer;
+                font:500 .92rem 'JetBrains Mono',monospace;color:var(--text,#e6edf3);
+                display:flex;gap:.6rem;align-items:center}
+  #trackList li:hover{background:var(--panel-2,#1c2330)}
+  #trackList li.active{background:var(--accent,#377aff);color:#fff}
+  #trackList li .num{color:var(--muted,#8b98a9);min-width:1.8rem;text-align:right}
+  #trackList li.active .num{color:#dbe6ff}
+  .empty{color:var(--muted,#8b98a9);padding:.6rem .2rem;font-size:.9rem}
+</style>
+</head>
+<body>
+<header class="app-header">
+  <div class="logo"><span class="logo-icon">◈</span>
+    <span class="logo-text">ATLAS <span class="logo-accent">CUBE</span></span></div>
+  <span class="fw-version">SD MUSIC</span>
+</header>
+
+<main class="card">
+  <section class="now-playing">
+    <div class="np-inner">
+      <div id="npTrack" class="track-title">---</div>
+      <div id="npIndex" class="np-index">—</div>
+      <div id="npInfo"  class="audio-info">---</div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-label">STEROWANIE</div>
+    <div class="transport">
+      <button class="sdbtn" onclick="prev()" title="Poprzedni">⏮</button>
+      <button class="sdbtn" onclick="stop()" title="Stop">⏹</button>
+      <button class="sdbtn" onclick="next()" title="Następny">⏭</button>
+    </div>
+    <div class="transport">
+      <button class="sdbtn primary" style="flex:2" onclick="playAll()">▶ Odtwarzaj folder</button>
+      <button class="sdbtn" onclick="scan()">⟳ Skanuj</button>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-label">UTWORY (/sdcard/music)</div>
+    <ul id="trackList"><li class="empty">Kliknij „Skanuj"…</li></ul>
+  </section>
+</main>
+
+<script src="sd-player.js"></script>
+</body>
+</html>

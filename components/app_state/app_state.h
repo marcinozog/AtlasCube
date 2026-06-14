@@ -54,6 +54,10 @@ typedef struct {
     bool bg_gradient;           // Dithered gradient background on/off (false = solid)
     int  scrsaver_delay;        // Idle seconds before activation (0 = off)
     int  scrsaver_id;           // screensaver_id_t (see screensavers.h)
+    bool sd_active;             // SD music player is the active source
+    int  sd_index;              // Current track in the scanned queue
+    int  sd_count;              // Tracks in the queue
+    char sd_track[128];         // Current track file name
 } app_state_t;
 
 typedef struct {
@@ -135,6 +139,15 @@ typedef struct {
     int  scrsaver_delay;
     bool has_scrsaver_id;
     int  scrsaver_id;
+
+    bool has_sd_active;
+    bool sd_active;
+    bool has_sd_index;
+    int  sd_index;
+    bool has_sd_count;
+    int  sd_count;
+    bool has_sd_track;
+    const char *sd_track;
 } app_state_patch_t;
 
 typedef void (*app_state_cb_t)(void);

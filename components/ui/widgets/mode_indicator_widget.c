@@ -34,6 +34,9 @@ void mode_indicator_update(void)
     if (s->bt_enable) {
         lv_label_set_text(s_label, LV_SYMBOL_BLUETOOTH);
         lv_obj_set_style_text_color(s_label, lv_color_hex(th->bt_brand), LV_PART_MAIN);
+    } else if (s->sd_active) {
+        lv_label_set_text(s_label, LV_SYMBOL_SD_CARD);
+        lv_obj_set_style_text_color(s_label, lv_color_hex(th->accent), LV_PART_MAIN);
     } else {
         lv_label_set_text(s_label, LV_SYMBOL_AUDIO);
         lv_obj_set_style_text_color(s_label, lv_color_hex(th->accent), LV_PART_MAIN);
