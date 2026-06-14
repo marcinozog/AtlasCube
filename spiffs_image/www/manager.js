@@ -33,6 +33,13 @@ function fileExt(name) {
 function isEditable(name) { return TEXT_EXTS.includes(fileExt(name)); }
 function isJson(name) { return fileExt(name) === ".json"; }
 
+// Extensions the inline ▶ player will play (SD pane only). Voice clips are WAV;
+// .mp3 is cheap to allow too. Like the editor, playback streams the file as a
+// blob because the device serves it as octet-stream/attachment, which a plain
+// <audio src> won't play.
+const AUDIO_EXTS = [".wav", ".mp3"];
+function isAudio(name) { return AUDIO_EXTS.includes(fileExt(name)); }
+
 // Embed a string as a JS argument inside a single-quoted onclick attribute:
 // JSON-encode (handles JS-level quoting) then HTML-escape (handles the
 // attribute), so the parser hands JS a clean string literal.
@@ -146,6 +153,10 @@ async function sdRefresh() {
 }
 
 function sdRender(entries) {
+    // The rows (and their ▶ buttons) are about to be replaced; stop any clip so
+    // the play state doesn't dangle on a detached button.
+    mgrStopAudio();
+
     entries.sort((a, b) => {
         if (a.dir !== b.dir) return a.dir ? -1 : 1;
         return a.name.localeCompare(b.name, undefined, { numeric: true });
@@ -178,6 +189,9 @@ function sdRender(entries) {
             const edit = isEditable(e.name)
                 ? `<button class="act" onclick='openEditor("sd",${jsArg(e.name)},${jsArg(full)})' title="Edit">✎</button>`
                 : "";
+            const play = isAudio(e.name)
+                ? `<button class="act" onclick='playClip(this,${jsArg(full)})' title="Play">▶</button>`
+                : "";
             rows.push(
                 `<tr class="row">` +
                 `<td class="name"><span class="icon">📄</span>${esc(e.name)}</td>` +
@@ -185,6 +199,7 @@ function sdRender(entries) {
                 `<td class="actions">` +
                 `<button class="act copy" onclick='copyToSpiffs(${jsArg(e.name)},${e.size || 0},${jsArg(full)})' title="Copy to SPIFFS ←">⬅</button>` +
                 edit +
+                play +
                 `<a class="act" href="${dl}" title="Download">⬇</a>` +
                 `<button class="act" onclick="sdRename('${esc(full)}','${esc(e.name)}')" title="Rename">✏️</button>` +
                 `<button class="act del" onclick="sdDelete('${esc(full)}','${esc(e.name)}',false)" title="Delete">🗑</button>` +
@@ -196,6 +211,42 @@ function sdRender(entries) {
     if (rows.length === 0) sdShow("Empty folder.");
     else sdListEl.innerHTML = `<table class="files"><tbody>${rows.join("")}</tbody></table>`;
     sdMetaEl.textContent = `${nFiles} file${nFiles === 1 ? "" : "s"} · ${fmtSize(totBytes)}`;
+}
+
+// ── inline WAV preview (SD pane) ─────────────────────────────────────────────
+// One shared player at a time. Files are streamed as a blob (object URL) to
+// dodge the device's octet-stream/attachment headers — same trick the events
+// editor uses for clip preview.
+let mgrAudio    = null;   // active HTMLAudioElement
+let mgrAudioUrl = null;   // its object URL, revoked on stop
+let mgrPlayBtn  = null;   // the ▶/⏹ button bound to it
+
+function mgrStopAudio() {
+    if (mgrAudio) { mgrAudio.pause(); mgrAudio = null; }
+    if (mgrAudioUrl) { URL.revokeObjectURL(mgrAudioUrl); mgrAudioUrl = null; }
+    if (mgrPlayBtn) { mgrPlayBtn.textContent = "▶"; mgrPlayBtn = null; }
+}
+
+async function playClip(btn, path) {
+    if (mgrPlayBtn === btn) { mgrStopAudio(); return; }  // same button → stop
+    mgrStopAudio();                                       // other clip → replace
+    setLog(`Loading ${path.split("/").pop()}…`);
+    try {
+        const r = await fetch("/api/sd/file?path=" + encodeURIComponent(path));
+        if (r.status === 503) throw new Error("no SD card");
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        mgrAudioUrl = URL.createObjectURL(await r.blob());
+        mgrAudio = new Audio(mgrAudioUrl);
+        mgrAudio.onended = mgrStopAudio;
+        mgrAudio.onerror = () => { setLog("✗ Playback failed", "err"); mgrStopAudio(); };
+        await mgrAudio.play();
+        btn.textContent = "⏹";
+        mgrPlayBtn = btn;
+        setLog(`▶ Playing ${path.split("/").pop()}`, "ok");
+    } catch (e) {
+        setLog(`✗ Play failed: ${e.message}`, "err");
+        mgrStopAudio();
+    }
 }
 
 async function sdRename(path, name) {
