@@ -72,6 +72,7 @@ function resetClipAudio() {
 // Play/stop the voice clip. Loaded lazily as a blob so the device's
 // Content-Type/Content-Disposition (octet-stream/attachment) don't block <audio>.
 async function evPlayClip() {
+    stopRowAudio();   // don't overlap a list-row clip
     const audio = document.getElementById('ev_sound_audio');
     const sound = document.getElementById('ev_sound').value;
     if (!sound) return;
@@ -106,7 +107,42 @@ async function evLoad() {
     render();
 }
 
+// Inline clip playback from a list row. One shared player; streams the WAV as a
+// blob (same reason as evPlayClip — the device serves it as octet-stream so a
+// plain <audio src> won't play). Mutually exclusive with the editor's preview.
+let rowAudio = null, rowAudioUrl = null, rowPlayBtn = null;
+
+function stopRowAudio() {
+    if (rowAudio) { rowAudio.pause(); rowAudio = null; }
+    if (rowAudioUrl) { URL.revokeObjectURL(rowAudioUrl); rowAudioUrl = null; }
+    if (rowPlayBtn) { rowPlayBtn.textContent = '▶'; rowPlayBtn = null; }
+}
+
+async function evPlayRow(btn, sound) {
+    if (rowPlayBtn === btn) { stopRowAudio(); return; }  // same button → stop
+    stopRowAudio();
+    resetClipAudio();                                    // don't overlap the editor preview
+    try {
+        const res = await fetch('/api/sd/file?path=' +
+                                encodeURIComponent('/voice/' + sound), { cache: 'no-store' });
+        if (!res.ok) { setStatus('Audio not found on SD', 'error'); return; }
+        rowAudioUrl = URL.createObjectURL(await res.blob());
+        rowAudio = new Audio(rowAudioUrl);
+        rowAudio.onended = stopRowAudio;
+        rowAudio.onerror = () => { setStatus('Playback failed', 'error'); stopRowAudio(); };
+        await rowAudio.play();
+        btn.textContent = '⏹';
+        rowPlayBtn = btn;
+    } catch (e) {
+        setStatus('Audio load failed', 'error');
+        stopRowAudio();
+    }
+}
+
 function render() {
+    // Rows (and their ▶ buttons) are rebuilt below; stop any clip first.
+    stopRowAudio();
+
     const list = document.getElementById('ev_list');
     list.innerHTML = '';
     document.getElementById('ev_count').textContent = events.length;
@@ -151,6 +187,12 @@ function makeRow(ev) {
                    onchange="evToggleEnabled('${ev.id}', this.checked)" />
             on
         </label>
+        ${ev.type === 'voice'
+            ? (ev.sound
+                ? `<button class="ev-btn" title="Play" onclick="evPlayRow(this, '${ev.sound}')">▶</button>`
+                : `<span class="ev-btn" title="No audio clip — will ring the reminder melody"
+                         style="cursor:default;opacity:.6">⚠️</span>`)
+            : ''}
         <button class="ev-btn" title="Edit" onclick="evEdit('${ev.id}')">✎</button>
         <button class="ev-btn danger" title="Delete" onclick="evDelete('${ev.id}')">✕</button>
     `;
