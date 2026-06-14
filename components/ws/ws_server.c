@@ -284,6 +284,14 @@ static esp_err_t ws_handler(httpd_req_t *req)
             }
         }
 
+        // Test hook: play a local audio file from the SD card (SD music WIP).
+        else if (strcmp(cmd->valuestring, "play_file") == 0) {
+            cJSON *path = cJSON_GetObjectItem(json, "path");
+            if (path && cJSON_IsString(path)) {
+                radio_play_file(path->valuestring);
+            }
+        }
+
         // SCREENS
         else if (strcmp(cmd->valuestring, "set_screen") == 0) {
             cJSON *v = cJSON_GetObjectItem(json, "value");

@@ -164,6 +164,32 @@ void radio_play_notification(const char *filename, int volume)
 
 
 /*
+void radio_play_file(const char *path)
+Test hook for SD music playback: plays a local audio file over I2S, taking the
+output from BT if that was the active source. No playlist/queue or radio_state
+integration yet — when the file ends the pipeline just stops.
+*/
+void radio_play_file(const char *path)
+{
+    if (!path || !path[0]) {
+        ESP_LOGW(TAG, "play_file: empty path");
+        return;
+    }
+
+    ESP_LOGI(TAG, "Play file: %s", path);
+
+    // Take the I2S output from the BT module if it was the active source
+    // (same handover as radio_play_url).
+    if (app_state_get()->bt_enable) {
+        if (app_state_get()->bt_auto_switch) bt_pause();
+        settings_set_bt_enable(false);
+    }
+
+    audio_file_player_play(path);
+}
+
+
+/*
 void radio_play_url(const char *url)
 */
 void radio_play_url(const char *url)

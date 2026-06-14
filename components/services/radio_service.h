@@ -29,6 +29,14 @@ void radio_stop(void);
 void radio_play_notification(const char *filename, int volume);
 
 /**
+ * Plays a local audio file (mp3/wav/flac/aac) from the SD card over the I2S
+ * output, taking it from the radio/BT source. `path` is absolute, e.g.
+ * "/sdcard/music/track.mp3". Test hook for SD music playback — no playlist/queue
+ * or radio_state integration yet; on end the pipeline just stops.
+ */
+void radio_play_file(const char *path);
+
+/**
  * Resumes the last station at boot if playback was active before the last
  * reboot. Opt-in via playlist.resume_on_boot; no-op when disabled or when the
  * radio was stopped. Requires STA mode (radio needs internet) — the caller
