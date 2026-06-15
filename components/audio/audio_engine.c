@@ -16,7 +16,9 @@
 #include "app_state.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/idf_additions.h"   // xTaskCreatePinnedToCoreWithCaps
 #include "freertos/semphr.h"
+#include "esp_heap_caps.h"            // MALLOC_CAP_SPIRAM
 #include "esp_timer.h"
 #include <math.h>
 #include <string.h>
@@ -313,7 +315,11 @@ void audio_engine_init(void)
     s_pipe_lock = xSemaphoreCreateMutex();
 
     xTaskCreate(audio_event_task, "audio_evt",  4096, NULL, 5, NULL);
-    xTaskCreate(audio_play_task,  "audio_play", 8192, NULL, 5, NULL);
+    // audio_play only orchestrates start/stop/teardown — it never touches flash
+    // or runs on the audio hot path, so its 8 KB stack lives in PSRAM to keep
+    // contiguous internal SRAM free for the TLS handshake (needs ~6 KB block).
+    xTaskCreatePinnedToCoreWithCaps(audio_play_task, "audio_play", 8192, NULL, 5,
+                                    NULL, tskNO_AFFINITY, MALLOC_CAP_SPIRAM);
 }
 
 

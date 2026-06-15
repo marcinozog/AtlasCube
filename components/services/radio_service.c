@@ -316,11 +316,6 @@ void radio_stop(void)
     });
 
     settings_set_was_playing(false);   // persist for resume-on-boot (no-op if unchanged)
-
-    // The stream just released its mbedTLS buffers → internal RAM is freed.
-    // Flush any settings write (e.g. curr_index from a station switch) that was
-    // deferred while an HTTPS stream had RAM pressure too high to fopen safely.
-    settings_flush_if_dirty();
 }
 
 

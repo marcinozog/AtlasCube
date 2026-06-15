@@ -206,8 +206,8 @@ static void clear_play_state(void)
 
 int sd_player_scan(const char *dir)
 {
-    if (!sdcard_is_mounted()) {
-        ESP_LOGW(TAG, "No SD card mounted");
+    if (sdcard_init() != ESP_OK) {   // lazy mount on first SD use
+        ESP_LOGW(TAG, "No SD card available");
         s_count = s_folder_count = 0;
         return 0;
     }

@@ -40,9 +40,9 @@ void app_main(void)
 
     nvs_flash_init();
     init_fs();
-#ifdef HAS_SD_CARD
-    sdcard_init();   // non-fatal — a missing/failed card only logs a warning
-#endif
+    // SD is mounted lazily on first use (sdcard_init from the SD player / file
+    // manager / photo screensaver / voice events), not at boot — a radio-only
+    // session never pays the SDMMC+FATFS internal-RAM cost.
 
     // mqtt config must load after fs is mounted; before http_server starts
     // so /api/mqtt GET sees real data. mqtt_svc_init() also calls load again

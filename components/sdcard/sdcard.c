@@ -1,12 +1,19 @@
 #include "sdcard.h"
 #include "defines.h"
 #include "esp_log.h"
+
+#ifdef HAS_SD_CARD
 #include "esp_vfs_fat.h"
 #include "driver/sdmmc_host.h"
 #include "sdmmc_cmd.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
+#endif
 
 static const char *TAG = "SDCARD";
 
+#ifdef HAS_SD_CARD
 static sdmmc_card_t *s_card = NULL;
 
 bool sdcard_is_mounted(void)
@@ -14,12 +21,10 @@ bool sdcard_is_mounted(void)
     return s_card != NULL;
 }
 
-esp_err_t sdcard_init(void)
+// The real mount. Runs on the dedicated sd_mount worker task (see sdcard_init)
+// so its ~2-3 KB stack cost never lands on a shallow caller (httpd/WS, UI).
+static esp_err_t do_mount(void)
 {
-    if (s_card != NULL) {
-        return ESP_OK; // already mounted
-    }
-
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
         .format_if_mount_failed = false, // never reformat the user's card
         .max_files = 5,
@@ -58,3 +63,41 @@ esp_err_t sdcard_init(void)
     sdmmc_card_print_info(stdout, s_card);
     return ESP_OK;
 }
+
+static void mount_task(void *arg)
+{
+    SemaphoreHandle_t done = (SemaphoreHandle_t)arg;
+    do_mount();
+    xSemaphoreGive(done);
+    vTaskDelete(NULL);
+}
+
+esp_err_t sdcard_init(void)
+{
+    if (s_card != NULL) {
+        return ESP_OK; // already mounted — fast path, no task spawned
+    }
+
+    // Run the (stack-heavy) mount on its own task and block until it finishes,
+    // so callers on shallow stacks (httpd/WS, UI, events) can mount safely.
+    SemaphoreHandle_t done = xSemaphoreCreateBinary();
+    if (!done) return ESP_ERR_NO_MEM;
+
+    if (xTaskCreate(mount_task, "sd_mount", 4096, done, 5, NULL) != pdPASS) {
+        vSemaphoreDelete(done);
+        return ESP_ERR_NO_MEM;
+    }
+
+    xSemaphoreTake(done, portMAX_DELAY);
+    vSemaphoreDelete(done);
+
+    return s_card ? ESP_OK : ESP_FAIL;
+}
+
+#else  // !HAS_SD_CARD — variant has no SD hardware
+
+bool sdcard_is_mounted(void) { return false; }
+
+esp_err_t sdcard_init(void) { return ESP_ERR_NOT_SUPPORTED; }
+
+#endif

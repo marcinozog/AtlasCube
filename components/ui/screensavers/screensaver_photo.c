@@ -504,7 +504,7 @@ static void photo_create(lv_obj_t *parent)
     s_clock_next = 0;
     clock_build();
 
-    if (!sdcard_is_mounted()) ESP_LOGW(TAG, "SD not mounted — no slides will load");
+    if (sdcard_init() != ESP_OK) ESP_LOGW(TAG, "SD not available — no slides will load");
     scan_dir();
 
     s_timer = lv_timer_create(tick, TICK_MS, NULL);

@@ -6,6 +6,7 @@
 #include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/idf_additions.h"   // xTaskCreatePinnedToCoreWithCaps
 #include <string.h>
 #include <strings.h>
 
@@ -208,7 +209,12 @@ static void retry_task(void *param)
 
 void audio_net_player_init(void)
 {
-    xTaskCreate(retry_task, "audio_retry", 4096, NULL, 4, &s_retry_task_handle);
+    // Retry orchestration only (waits on a notify, then restarts the pipeline) —
+    // off the audio hot path and no flash access, so its stack goes to PSRAM to
+    // spare contiguous internal SRAM for the TLS handshake.
+    xTaskCreatePinnedToCoreWithCaps(retry_task, "audio_retry", 4096, NULL, 4,
+                                    &s_retry_task_handle, tskNO_AFFINITY,
+                                    MALLOC_CAP_SPIRAM);
 
     audio_engine_set_meta_cb(on_meta);
     audio_engine_set_info_cb(on_info);

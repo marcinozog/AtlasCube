@@ -1685,7 +1685,7 @@ static void sd_url_decode(const char *src, char *dst, size_t dstlen)
 // path or a traversal attempt. `def` is used when no path param is present.
 static bool sd_resolve_path(httpd_req_t *req, const char *def, char *out, size_t outlen)
 {
-    if (!sdcard_is_mounted()) {
+    if (sdcard_init() != ESP_OK) {   // lazy mount on first SD use
         sd_send_no_card(req);
         return false;
     }
@@ -1732,7 +1732,7 @@ static bool sd_resolve_path(httpd_req_t *req, const char *def, char *out, size_t
 // GET /api/sd/info  → { total, used, free } bytes of the SD card (503 if absent)
 static esp_err_t api_sd_info_handler(httpd_req_t *req)
 {
-    if (!sdcard_is_mounted()) return sd_send_no_card(req);
+    if (sdcard_init() != ESP_OK) return sd_send_no_card(req);   // lazy mount
 
     uint64_t total = 0, freeb = 0;
     if (esp_vfs_fat_info(SD_MOUNT_POINT, &total, &freeb) != ESP_OK) {
@@ -2343,6 +2343,11 @@ void http_server_start(void)
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn      = httpd_uri_match_wildcard;
     config.max_uri_handlers  = 40;
+    // WS handlers run on this task and chain deep: cJSON_Parse of the inbound
+    // payload → radio/settings play path → send_full_state (cJSON build of the
+    // whole state). The 4 KB HTTPD default overflows on that path (e.g. an
+    // SD→radio play_index) — 8 KB gives the JSON build + play chain headroom.
+    config.stack_size        = 8192;
     // max_open_sockets: each lwIP socket uses ~2KB internal RAM for buffers
     // TCP + control. On ESP32 with tight internal heap (radio TLS, WiFi, LVGL)
     // 13 sockets caused the TLS audio stream to drop on page open.

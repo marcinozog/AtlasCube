@@ -298,7 +298,7 @@ static void fire_event(const event_t *e)
     } else if (e->type == EV_VOICE) {
         // Voice notification: play the pre-rendered WAV from the SD card,
         // interrupting and then restoring the current source.
-        if (e->sound[0] && sdcard_is_mounted()) {
+        if (e->sound[0] && sdcard_init() == ESP_OK) {   // lazy mount on first SD use
             radio_play_notification(e->sound, e->volume);
         } else {
             ESP_LOGW(TAG, "Voice event '%s' has no sound/SD → reminder melody", e->id);

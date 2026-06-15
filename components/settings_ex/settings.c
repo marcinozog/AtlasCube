@@ -2,8 +2,9 @@
 #include "cJSON.h"
 #include <stdio.h>
 #include <string.h>
+#include <fcntl.h>      // open()
+#include <unistd.h>     // read/write/close/lseek
 #include "esp_log.h"
-#include "esp_heap_caps.h"
 #include "audio_engine.h"
 #include "app_state.h"
 #include "sd_player.h"
@@ -18,16 +19,6 @@ static esp_err_t load_from_file(void);
 static esp_err_t save_to_file(void);
 
 static app_settings_t s_settings;
-
-// Deferred-save guard: a write skipped under low internal RAM (see save_to_file)
-// sets this; the next successful save clears it.
-static bool s_save_dirty = false;
-
-// Min largest free internal block required to safely fopen() the settings file.
-// fopen() lazily grows the stdio FILE pool + its lock in internal DRAM; the
-// observed crash (fopen → lock_init → abort) hit at ~4.6 KB, so 8 KB leaves
-// headroom for both that and a concurrent mbedTLS handshake (~6 KB).
-#define SETTINGS_SAVE_MIN_INTERNAL (8 * 1024)
 
 // Photo-clock font size must be one of the compiled digit fonts; snap anything
 // else to the 96 default.
@@ -121,22 +112,28 @@ static esp_err_t load_from_file(void)
 */
 static esp_err_t load_from_file(void)
 {
-    FILE *f = fopen(SETTINGS_FILE, "r");
-    if (!f) return ESP_FAIL;
+    // POSIX open()/read()/close() (see save_to_file for the rationale — no stdio
+    // FILE pool / lock lazily allocated in internal DRAM).
+    int fd = open(SETTINGS_FILE, O_RDONLY);
+    if (fd < 0) return ESP_FAIL;
 
-    fseek(f, 0, SEEK_END);
-    long size = ftell(f);
-    rewind(f);
+    off_t size = lseek(fd, 0, SEEK_END);
+    lseek(fd, 0, SEEK_SET);
+    if (size <= 0) { close(fd); return ESP_FAIL; }
 
     char *buffer = malloc(size + 1);
     if (!buffer) {
-        fclose(f);
+        close(fd);
         return ESP_ERR_NO_MEM;
     }
 
-    fread(buffer, 1, size, f);
+    ssize_t got = read(fd, buffer, size);
+    close(fd);
+    if (got != (ssize_t)size) {
+        free(buffer);
+        return ESP_FAIL;
+    }
     buffer[size] = 0;
-    fclose(f);
 
     cJSON *json = cJSON_Parse(buffer);
     free(buffer);
@@ -438,20 +435,6 @@ static esp_err_t save_to_file(void)
 */
 static esp_err_t save_to_file(void)
 {
-    // fopen() lazily grows the stdio FILE pool and creates its lock in *internal*
-    // DRAM. Under heavy TLS pressure (an HTTPS radio stream holds large mbedTLS
-    // buffers) that allocation can fail *inside* fopen and abort() — which the
-    // NULL check below can't catch. So when internal RAM is critically low we
-    // skip the write and mark it dirty; the next successful save (any settings
-    // change, or settings_flush_if_dirty() once the stream stops) persists it.
-    size_t internal_largest = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
-    if (internal_largest < SETTINGS_SAVE_MIN_INTERNAL) {
-        s_save_dirty = true;
-        ESP_LOGW("SETTINGS", "Internal RAM low (largest=%u) — deferring settings write",
-                 (unsigned)internal_largest);
-        return ESP_ERR_NO_MEM;
-    }
-
     cJSON *json = cJSON_CreateObject();
 
     // audio
@@ -556,20 +539,34 @@ static esp_err_t save_to_file(void)
     cJSON_AddItemToObject(json, "dashboard", dash);
 
     char *str = cJSON_PrintUnformatted(json);
+    cJSON_Delete(json);
+    if (!str) {
+        // Out of heap building the JSON — degrade gracefully (no abort).
+        ESP_LOGE("SETTINGS", "JSON build failed — settings not saved");
+        return ESP_ERR_NO_MEM;
+    }
 
-    FILE *f = fopen(SETTINGS_FILE, "w");
-    if (!f) {
-        cJSON_Delete(json);
+    // POSIX open()/write()/close() instead of stdio fopen(): open() goes straight
+    // through the VFS to a pre-allocated SPIFFS fd and never lazily grows the
+    // stdio FILE pool / per-file lock in internal DRAM — so it can't abort under
+    // the low internal RAM of an active HTTPS stream (mbedTLS pressure). That is
+    // why the old "defer write when RAM low" guard is gone.
+    int fd = open(SETTINGS_FILE, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (fd < 0) {
+        ESP_LOGE("SETTINGS", "open(%s) failed", SETTINGS_FILE);
         free(str);
         return ESP_FAIL;
     }
 
-    fwrite(str, 1, strlen(str), f);
-    fclose(f);
-
-    cJSON_Delete(json);
+    size_t len = strlen(str);
+    ssize_t written = write(fd, str, len);
+    close(fd);
     free(str);
-    s_save_dirty = false;
+
+    if (written != (ssize_t)len) {
+        ESP_LOGE("SETTINGS", "short write (%d/%u)", (int)written, (unsigned)len);
+        return ESP_FAIL;
+    }
     return ESP_OK;
 }
 
@@ -616,17 +613,6 @@ void settings_apply(void)
 
 app_settings_t* settings_get(void)       { return &s_settings; }
 esp_err_t       settings_save(void)       { return save_to_file(); }
-
-/*
-void settings_flush_if_dirty(void)
-Retries a write that save_to_file() deferred under low internal RAM. Call from a
-point where memory has just been freed (e.g. after the radio stream stops).
-save_to_file() clears the dirty flag on success and re-arms it if still too low.
-*/
-void settings_flush_if_dirty(void)
-{
-    if (s_save_dirty) save_to_file();
-}
 
 
 void settings_set_volume(int volume)
