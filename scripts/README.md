@@ -27,13 +27,18 @@ partitions, so reflashing code or the UI never wipes your settings — only a
 factory flash resets them. To tweak the UI without flashing, edit files live in
 the browser (the on-device file editor / built-in setup page).
 
-## `build.py` — CI / release only
+## `env_setup.py` — shared module (don't run it)
+
+Not a script — a library of toolchain helpers (locate ESP-IDF/ESP-ADF, clone
+ESP-ADF if missing, patch ESP-ADF + ESP-IDF). Imported by both `build-flash.py`
+and `../ci/build.py` so the setup logic has a single home.
+
+## `../ci/build.py` — CI / release only
 
 Builds the merged, distributable per-variant image
 (`build/AtlasCube-<variant>.bin`) and is what the CI matrix runs. It selects the
-variant from a CLI argument and applies the same ESP-ADF/IDF patches as
-`build-flash.py` (which reuses its setup code). **Most users don't need it** —
-use `build-flash.py` above.
+variant from a CLI argument (overwriting `defines.h`) and reuses the setup from
+`env_setup.py`. **Most users don't need it** — use `build-flash.py` above.
 
 ## `../spiffs_image/tools/compress_web.py`
 

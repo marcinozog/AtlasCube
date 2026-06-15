@@ -16,7 +16,7 @@ the same flow the CI uses, so it's well-trodden.
 
 ## 1. Install ESP-IDF v5.5.4
 
-ESP-IDF is pinned to **v5.5.4** — `build.py` warns if a different version is
+ESP-IDF is pinned to **v5.5.4** — `ci/build.py` warns if a different version is
 active, and the FreeRTOS patch targets v5.5, so a mismatch can fail the build.
 
 1. Install the system prerequisites (Debian/Ubuntu shown; see the
@@ -55,11 +55,11 @@ variant:
 ```bash
 git clone https://github.com/marcinozog/AtlasCube.git
 cd AtlasCube
-python scripts/build.py co5300        # or ili9341 / st7796 / ssd1322
-python scripts/build.py               # omit the variant for an interactive menu
+python ci/build.py co5300        # or ili9341 / st7796 / ssd1322
+python ci/build.py               # omit the variant for an interactive menu
 ```
 
-`build.py` does everything else: it clones ESP-ADF v2.8 (into `./esp-adf`),
+`ci/build.py` does everything else: it clones ESP-ADF v2.8 (into `./esp-adf`),
 selects the variant in `main/include/defines.h`, patches ESP-ADF and ESP-IDF,
 compresses the web UI, sets the target to `esp32s3`, builds, and merges a single
 flashable image.
@@ -101,9 +101,9 @@ compile, no flash), `--monitor` to open the serial monitor afterwards.
 > If you switched the HW variant in `defines.h`, `build-flash.py` detects the stale
 > `sdkconfig` and offers to clean it (or pass `--clean` to force it).
 
-## Useful flags (build.py)
+## Useful flags (ci/build.py)
 
-`build.py` is the setup/release script (variant switch, ESP-ADF/IDF patches,
+`ci/build.py` is the setup/release script (variant switch, ESP-ADF/IDF patches,
 merged per-variant image). For build & flash to a board, prefer `build-flash.py` above.
 
 | Flag | Effect |
@@ -112,18 +112,18 @@ merged per-variant image). For build & flash to a board, prefer `build-flash.py`
 | `--adf-path <path>` | Use an existing ESP-ADF checkout instead of cloning into `./esp-adf`. |
 | `--no-clean` | Skip the set-target/clean reconfigure (faster rebuilds; dev only). |
 
-`build.py` is idempotent — safe to re-run, including after switching variants.
+`ci/build.py` is idempotent — safe to re-run, including after switching variants.
 
 ## Troubleshooting
 
 - **`IDF_PATH is not set`** — you didn't activate the environment in this
   terminal. Run `. ~/esp/esp-idf/export.sh` (or your alias) before
-  `build.py`. It has to be re-run in every new shell.
+  `ci/build.py`. It has to be re-run in every new shell.
 - **A warning about the ESP-IDF / ESP-ADF version** — you installed a version
   other than v5.5.4 / v2.8. Re-clone ESP-IDF at `-b v5.5.4`; the build may fail
   on a mismatched version (the FreeRTOS patch targets v5.5).
 - **`region 'iram0_0_seg' overflowed`** — the build ran for plain `esp32`
-  instead of `esp32s3`. `build.py` sets the target automatically; if you passed
+  instead of `esp32s3`. `ci/build.py` sets the target automatically; if you passed
   `--no-clean` on a fresh checkout, drop it so the target gets configured.
 - **Which serial port?** ESP32-S3 over its native USB usually enumerates as
   `/dev/ttyACM0`; through an external USB-UART bridge it's `/dev/ttyUSB0`. Run

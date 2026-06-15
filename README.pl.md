@@ -237,16 +237,16 @@ Tyle — bez ESP-IDF, bez ESP-ADF, bez patchy. Reszta README to build dewelopers
 
 **Build jedną komendą (zalecane)**
 
-> Pełne przepisy krok po kroku: [docs/build-windows.md](docs/build-windows.md) (ESP-IDF Installation Manager) oraz [docs/build-linux.md](docs/build-linux.md) (`install.sh` + `export.sh`). Oba kończą się na tym samym `scripts/build.py`.
+> Pełne przepisy krok po kroku: [docs/build-windows.md](docs/build-windows.md) (ESP-IDF Installation Manager) oraz [docs/build-linux.md](docs/build-linux.md) (`install.sh` + `export.sh`). Oba kończą się na tym samym `ci/build.py`.
 
 Zainstaluj [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf) (na Windows oficjalny instalator to jedyny ręczny krok), otwórz środowisko ESP-IDF i z katalogu repo odpal:
 
 ```bash
-python scripts/build.py co5300       # albo ili9341 / st7796 / ili9488 / ssd1322
-python scripts/build.py              # interaktywne menu wariantu
+python ci/build.py co5300       # albo ili9341 / st7796 / ili9488 / ssd1322
+python ci/build.py              # interaktywne menu wariantu
 ```
 
-`build.py` to wieloplatformowy punkt wejścia do setupu/release (Windows, Linux, CI). Klonuje ESP-ADF v2.8 jeśli go nie ma, ustawia wariant w `defines.h`, aplikuje wszystkie patche ESP-ADF/ESP-IDF, kompresuje web UI, buduje i produkuje gotowy do wgrania `build/AtlasCube-<wariant>.bin`. Jest idempotentny — można puszczać wielokrotnie. Przydatne flagi: `--skip-build` (tylko setup), `--adf-path <ścieżka>`. Do budowania i wgrywania **własnej, skonfigurowanej płytki** używaj `scripts/build-flash.py` — przy pierwszym uruchomieniu sam robi ten setup, więc to jedyny skrypt, jakiego potrzebujesz (zob. *Budowanie i wgrywanie na urządzenie* niżej). `build.py` służy głównie do obrazu per-wariant i CI.
+`ci/build.py` to wieloplatformowy punkt wejścia do setupu/release (Windows, Linux, CI). Klonuje ESP-ADF v2.8 jeśli go nie ma, ustawia wariant w `defines.h`, aplikuje wszystkie patche ESP-ADF/ESP-IDF, kompresuje web UI, buduje i produkuje gotowy do wgrania `build/AtlasCube-<wariant>.bin`. Jest idempotentny — można puszczać wielokrotnie. Przydatne flagi: `--skip-build` (tylko setup), `--adf-path <ścieżka>`. Do budowania i wgrywania **własnej, skonfigurowanej płytki** używaj `scripts/build-flash.py` — przy pierwszym uruchomieniu sam robi ten setup, więc to jedyny skrypt, jakiego potrzebujesz (zob. *Budowanie i wgrywanie na urządzenie* niżej). `ci/build.py` służy głównie do obrazu per-wariant i CI.
 
 Robi tyle:
 
@@ -259,7 +259,7 @@ Robi tyle:
 `sdkconfig.defaults` już zawiera `CONFIG_ESP32_S3_ATLASCUBE_BOARD=y`.
 
 <details>
-<summary>Kroki ręczne — co build.py automatyzuje, do podejrzenia / debugowania</summary>
+<summary>Kroki ręczne — co ci/build.py automatyzuje, do podejrzenia / debugowania</summary>
 
 Jakbyś chciał zrobić to z palca (albo debugujesz setup):
 
@@ -303,13 +303,13 @@ Jakbyś chciał zrobić to z palca (albo debugujesz setup):
 
 **Wybór wariantu sprzętowego**
 
-Aktywny wariant siedzi w [`main/include/defines.h`](main/include/defines.h) — trzy niezależne grupy `#define`: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. `scripts/build.py <wariant>` przełącza je za Ciebie; ręcznie — odkomentuj dokładnie jeden wpis w każdej grupie.
+Aktywny wariant siedzi w [`main/include/defines.h`](main/include/defines.h) — trzy niezależne grupy `#define`: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. `ci/build.py <wariant>` przełącza je za Ciebie; ręcznie — odkomentuj dokładnie jeden wpis w każdej grupie.
 
-Po ręcznej zmianie wariantu puść `idf.py fullclean`, żeby `sdkconfig` wygenerował się od nowa dla nowej kombinacji (`build.py` robi to automatycznie).
+Po ręcznej zmianie wariantu puść `idf.py fullclean`, żeby `sdkconfig` wygenerował się od nowa dla nowej kombinacji (`ci/build.py` robi to automatycznie).
 
 **Build i flash ręcznie**
 
-Gdy wariant i patche są na miejscu (`scripts/build.py --skip-build` robi sam setup), działa standardowy flow ESP-IDF:
+Gdy wariant i patche są na miejscu (`ci/build.py --skip-build` robi sam setup), działa standardowy flow ESP-IDF:
 
 ```bash
 idf.py build
@@ -319,7 +319,7 @@ idf.py flash
 > **Edycja plików boardu przy iteracji zwykłym `idf.py`** (np. przycisk build
 > wtyczki ESP-IDF w VS Code): `idf.py` buduje kopię wewnątrz Twojego klona
 > ESP-ADF, więc zmiany w repo w `components/audio_board/esp32_s3_atlascube/` nie
-> zadziałają, dopóki nie puścisz ponownie `scripts/build.py --skip-build`. Żeby
+> zadziałają, dopóki nie puścisz ponownie `ci/build.py --skip-build`. Żeby
 > edycje były na bieżąco, zastąp kopię w ADF junctionem (bez uprawnień admina):
 >
 > ```powershell
@@ -328,7 +328,7 @@ idf.py flash
 > New-Item -ItemType Junction -Path $dest -Target "<repo>\components\audio_board\esp32_s3_atlascube"
 > ```
 >
-> `build.py` wykrywa istniejący symlink/junction i go nie nadpisuje.
+> `ci/build.py` wykrywa istniejący symlink/junction i go nie nadpisuje.
 
 **Budowanie i wgrywanie na urządzenie**
 
@@ -352,7 +352,7 @@ Układ flasha dzieli dawną partycję storage na `www` (edytowalne web UI) i `co
 
 **Pojedynczy scalony obraz (do dystrybucji)**
 
-`build.py` tworzy go automatycznie jako `build/AtlasCube-<wariant>.bin`. Skleja bootloader, partition table, aplikację i oba obrazy SPIFFS (`www` + `config`) w jeden plik wgrywany od offsetu `0x0` przez `esptool` albo web flasher. Ręcznie:
+`ci/build.py` tworzy go automatycznie jako `build/AtlasCube-<wariant>.bin`. Skleja bootloader, partition table, aplikację i oba obrazy SPIFFS (`www` + `config`) w jeden plik wgrywany od offsetu `0x0` przez `esptool` albo web flasher. Ręcznie:
 
 ```bash
 python spiffs_image/tools/compress_web.py

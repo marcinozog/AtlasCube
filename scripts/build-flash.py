@@ -36,50 +36,23 @@ Run inside an ESP-IDF environment (the "ESP-IDF PowerShell", or after export.ps1
     python scripts/build-flash.py --scope all --monitor
     python scripts/build-flash.py --clean            # force a clean sdkconfig first
 
-For CI / multi-variant release images, use scripts/build.py instead.
+For CI / multi-variant release images, use ci/build.py instead.
 """
 
 import argparse
-import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
-# Reuse the one-time toolchain setup (clone + patch ESP-ADF/IDF) from build.py,
-# so there's a single source of truth and a fresh checkout "just works".
+# Toolchain setup (clone + patch ESP-ADF/IDF) and shared helpers live in
+# scripts/env_setup.py — also used by ci/build.py.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import build  # noqa: E402  — scripts/build.py
+from env_setup import (REPO_ROOT, BOARD_NAME, die, warn, run,  # noqa: E402
+                       resolve_idf, resolve_adf, patch_adf)
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFINES_H = REPO_ROOT / "main" / "include" / "defines.h"
 SDKCONFIG = REPO_ROOT / "sdkconfig"
 WWW_IMAGE = REPO_ROOT / "build" / "www.bin"
-
-
-def die(msg):
-    print(f"ERROR: {msg}", file=sys.stderr, flush=True)
-    sys.exit(1)
-
-
-def warn(msg):
-    print(f"WARN: {msg}", file=sys.stderr, flush=True)
-
-
-def resolve_idf():
-    idf = os.environ.get("IDF_PATH")
-    if not idf or not Path(idf).is_dir():
-        die("IDF_PATH is not set — run this from inside an ESP-IDF environment "
-            "(open the ESP-IDF terminal, or run its export.ps1 / export.sh first).")
-    idf_py = Path(idf) / "tools" / "idf.py"
-    if not idf_py.is_file():
-        die(f"idf.py not found at {idf_py} — is IDF_PATH correct?")
-    return Path(idf), idf_py
-
-
-def run(cmd):
-    print("    $ " + " ".join(str(c) for c in cmd), flush=True)
-    subprocess.run(cmd, check=True)
 
 
 def active_define(text, prefix):
@@ -142,10 +115,10 @@ def ensure_setup(idf_path, adf_arg, force):
     build.py's helpers (idempotent), but skips variant selection — the user sets
     the hardware in defines.h by hand. Fast-path: skip the patch step once the
     board is installed; `--setup` forces a re-run."""
-    adf = build.resolve_adf(adf_arg)  # clones ./esp-adf only if missing; sets ADF_PATH
-    board = adf / "components" / "audio_board" / build.BOARD_NAME
+    adf = resolve_adf(adf_arg)  # clones ./esp-adf only if missing; sets ADF_PATH
+    board = adf / "components" / "audio_board" / BOARD_NAME
     if force or not board.exists():
-        build.patch_adf(adf, idf_path)
+        patch_adf(adf, idf_path)
     else:
         print(f"ESP-ADF already set up at {adf} — skipping patch (use --setup to re-run).")
 
@@ -215,7 +188,7 @@ def main():
 
     if action == "build":
         print("\nBuild only — not flashing. Compressed web UI is in spiffs_image/web/; "
-              "build artifacts are in build/ (use scripts/build.py / idf.py merge-bin "
+              "build artifacts are in build/ (use ci/build.py / idf.py merge-bin "
               "for a distributable image).")
         return
 
