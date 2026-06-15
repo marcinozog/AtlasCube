@@ -3,6 +3,8 @@
 #include "ui_manager.h"
 #include "theme.h"
 #include "settings.h"
+#include "app_state.h"
+#include "sd_player.h"
 #include "esp_log.h"
 
 static const char *TAG = "CTRL_OVL";
@@ -112,6 +114,29 @@ static void btn_clicked_cb(lv_event_t *e)
             default: break;
         }
     }
+    else if (s_mode == CTRL_OVL_MODE_SD) {
+        switch (btn) {
+            case CTRL_VOL_UP:
+            case CTRL_VOL_DN: {
+                int vol = s->volume;            // SD plays through the main output
+                vol += (btn == CTRL_VOL_UP) ? 2 : -2;
+                if (vol < 0)   vol = 0;
+                if (vol > 100) vol = 100;
+
+                settings_set_volume(vol);
+                break;
+            }
+            case CTRL_PREV: sd_player_prev(); break;
+            case CTRL_NEXT: sd_player_next(); break;
+            case CTRL_PLAY:
+                sd_player_toggle_pause();
+                // app_state.sd_paused is updated synchronously by the toggle.
+                lv_label_set_text(s_play_lbl,
+                    s->sd_paused ? LV_SYMBOL_PLAY : LV_SYMBOL_PAUSE);
+                break;
+            default: break;
+        }
+    }
 
 
     // keep overlay open and reset the auto-hide timer
@@ -149,6 +174,21 @@ static void btn_long_repeat_cb(lv_event_t *e)
                 if (vol > 100) vol = 100;
 
                 settings_set_bt_volume(vol);   // → audio_engine + app_state + save
+                break;
+            }
+            default: break;
+        }
+    }
+    else if (s_mode == CTRL_OVL_MODE_SD) {
+        switch (btn) {
+            case CTRL_VOL_UP:
+            case CTRL_VOL_DN: {
+                int vol = s->volume;
+                vol += (btn == CTRL_VOL_UP) ? 2 : -2;
+                if (vol < 0)   vol = 0;
+                if (vol > 100) vol = 100;
+
+                settings_set_volume(vol);
                 break;
             }
             default: break;
@@ -242,8 +282,15 @@ void controls_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
     make_btn(s_overlay, LV_SYMBOL_NEXT,  CTRL_NEXT,   step,  0,    sz, btn_bg,    256,
         CTRL_EVT_SHORT);
 
-    bool playing = (app_state_get()->radio_state == RADIO_STATE_PLAYING);
-    lv_obj_t *play_btn = make_btn(s_overlay, playing ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY,  CTRL_PLAY,   0,     0,    sz, center_bg, 180,
+    const char *play_sym;
+    if (s_mode == CTRL_OVL_MODE_SD) {
+        // SD: play/pause toggle — show PLAY when paused, PAUSE when running.
+        play_sym = app_state_get()->sd_paused ? LV_SYMBOL_PLAY : LV_SYMBOL_PAUSE;
+    } else {
+        bool playing = (app_state_get()->radio_state == RADIO_STATE_PLAYING);
+        play_sym = playing ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY;
+    }
+    lv_obj_t *play_btn = make_btn(s_overlay, play_sym,  CTRL_PLAY,   0,     0,    sz, center_bg, 180,
         CTRL_EVT_SHORT);
     s_play_lbl = lv_obj_get_child(play_btn, 0);
 

@@ -22,6 +22,8 @@ typedef enum {
     SCREEN_EVENT_NOTIFICATION,
     SCREEN_MQTT,
     SCREEN_OTA,
+    SCREEN_SD,            // SD-card music player (now playing)
+    SCREEN_SD_BROWSER,    // SD-card file browser (folders + tracks)
     SCREEN_COUNT
 } ui_screen_id_t;
 

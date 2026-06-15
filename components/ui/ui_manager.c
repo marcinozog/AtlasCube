@@ -32,6 +32,8 @@ extern const ui_screen_t screen_events;
 extern const ui_screen_t screen_event_notification;
 extern const ui_screen_t screen_mqtt;
 extern const ui_screen_t screen_ota;
+extern const ui_screen_t screen_sd_player;
+extern const ui_screen_t screen_sd_browser;
 
 // --------------------------------------------------------------------------
 // Screen registry — order must match ui_screen_id_t
@@ -51,6 +53,8 @@ static const ui_screen_t *s_screens[SCREEN_COUNT] = {
     [SCREEN_EVENT_NOTIFICATION] = &screen_event_notification,
     [SCREEN_MQTT]               = &screen_mqtt,
     [SCREEN_OTA]                = &screen_ota,
+    [SCREEN_SD]                 = &screen_sd_player,
+    [SCREEN_SD_BROWSER]         = &screen_sd_browser,
 };
 
 // --------------------------------------------------------------------------

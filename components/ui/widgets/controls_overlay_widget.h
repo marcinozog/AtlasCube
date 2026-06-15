@@ -17,6 +17,7 @@ extern "C" {
 typedef enum {
     CTRL_OVL_MODE_RADIO,
     CTRL_OVL_MODE_BT,
+    CTRL_OVL_MODE_SD,
 } controls_overlay_mode_t;
 
 void controls_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode);

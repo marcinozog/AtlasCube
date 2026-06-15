@@ -8,6 +8,8 @@ idf_component_register(
         "screens/img_atlas_logo.c"
         "screens/screen_radio.c"
         "screens/screen_playlist.c"
+        "screens/screen_sd_player.c"
+        "screens/screen_sd_browser.c"
         "screens/screen_clock.c"
         # "screen_weather.c"
         "screens/screen_bt.c"
