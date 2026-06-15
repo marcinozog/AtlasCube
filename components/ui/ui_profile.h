@@ -260,7 +260,7 @@ void ui_profile_set(const ui_profile_t *src);
 // Reset the entire profile to defaults.
 void ui_profile_reset(void);
 
-// Persistence: /spiffs/ui_profile.json. The file stores per-field overrides;
+// Persistence: /config/ui_profile.json. The file stores per-field overrides;
 // missing fields → defaults. Format matches what /api/ui/profile/* returns
 // and accepts (per-screen sections).
 esp_err_t ui_profile_load_from_file(void);

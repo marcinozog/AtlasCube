@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define UI_PROFILE_FILE "/spiffs/ui_profile.json"
+#define UI_PROFILE_FILE "/config/ui_profile.json"
 
 static const char *TAG = "UI_PROFILE";
 

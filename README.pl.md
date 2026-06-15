@@ -156,7 +156,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - NTP z konfigurowalną strefą czasową
 - Web UI z SPIFFS (po wgraniu internet nie jest potrzebny)
 - Klient MQTT — zdalne sterowanie radiem (play/stop/głośność/stacja) plus do 6 konfigurowalnych widgetów (toggle / slider / label) na osobnym ekranie, do sterowania zewnętrznym sprzętem MQTT (Tasmota, zigbee2mqtt, Home Assistant…); szczegóły w [MQTT](#mqtt) niżej
-- Aktualizacja OTA — nowy obraz firmware wgrywasz prosto z Web UI (Ustawienia → Tools); trafia do nieaktywnego slotu, jest walidowany i urządzenie restartuje się do niego, z rollbackiem bootloadera gdy nowy obraz nie wstanie. Przycisk eksportu pobiera najpierw bieżący firmware. Dostępne w buildach z flashem 16 MB (podwójne partycje OTA); buildy 8 MB mają pojedynczy slot i wgrywa się je przez USB. Szczegóły w [Aktualizacje OTA](#aktualizacje-ota) niżej
+- Aktualizacja OTA — nowy obraz firmware wgrywasz prosto z Web UI (Ustawienia → Tools); trafia do nieaktywnego slotu, jest walidowany i urządzenie restartuje się do niego, z rollbackiem bootloadera gdy nowy obraz nie wstanie. Przycisk eksportu pobiera najpierw bieżący firmware. Web UI i ustawienia leżą na osobnych partycjach flasha, więc aktualizacja OTA aplikacji nigdy ich nie nadpisuje. Szczegóły w [Aktualizacje OTA](#aktualizacje-ota) niżej
 
 **Pamięć**
 - Opcjonalna karta microSD po SDMMC (tryb 1-bit), podpięta do pinów SDMMC danego wariantu
@@ -177,7 +177,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 |---|---|
 | MCU | ESP32-S3, 240 MHz, dwurdzeniowy |
 | Płytka | Atlas Hub (autorska) |
-| Flash | 8 MB |
+| Flash | 16 MB |
 | PSRAM | OctoSPI, 80 MHz |
 | Wyświetlacz | ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), ILI9488 480×320 (SPI, 18-bit), CO5300 240×296 AMOLED (QSPI) albo SSD1322 256×64 mono OLED (SPI) — wybór przy kompilacji |
 | Dotyk | Kontroler pojemnościowy CST816D albo FT6336U (I2C) — gesty po stronie LVGL na zwykłym indevie wskaźnika |
@@ -246,7 +246,7 @@ python scripts/build.py co5300       # albo ili9341 / st7796 / ili9488 / ssd1322
 python scripts/build.py              # interaktywne menu wariantu
 ```
 
-`build.py` to jeden, wieloplatformowy punkt wejścia (Windows, Linux, CI). Klonuje ESP-ADF v2.8 jeśli go nie ma, ustawia wariant w `defines.h`, aplikuje wszystkie patche ESP-ADF/ESP-IDF, kompresuje web UI, buduje i produkuje gotowy do wgrania `build/AtlasCube-<wariant>.bin`. Jest idempotentny — można puszczać wielokrotnie. Przydatne flagi: `--skip-build` (tylko setup), `--no-spiffs`, `--adf-path <ścieżka>`.
+`build.py` to wieloplatformowy punkt wejścia do setupu/release (Windows, Linux, CI). Klonuje ESP-ADF v2.8 jeśli go nie ma, ustawia wariant w `defines.h`, aplikuje wszystkie patche ESP-ADF/ESP-IDF, kompresuje web UI, buduje i produkuje gotowy do wgrania `build/AtlasCube-<wariant>.bin`. Jest idempotentny — można puszczać wielokrotnie. Przydatne flagi: `--skip-build` (tylko setup), `--adf-path <ścieżka>`. Po skonfigurowaniu toolchaina codzienne **budowanie i wgrywanie na płytkę** to `scripts/build-flash.py` (zob. *Budowanie i wgrywanie na urządzenie* niżej).
 
 Robi tyle:
 
@@ -330,41 +330,33 @@ idf.py flash
 >
 > `build.py` wykrywa istniejący symlink/junction i go nie nadpisuje.
 
-**Flash web UI (SPIFFS)**
+**Budowanie i wgrywanie na urządzenie**
 
-Pliki web UI trafiają do partycji SPIFFS `storage`. Dołączanie jest **domyślnie
-wyłączone** — żeby zwykły `idf.py build` / `flash` był szybki, gdy ruszasz tylko
-firmware — i włącza się per-build zmienną `ATLAS_SPIFFS`. Po zmianie czegokolwiek
-w `spiffs_image/www/` przegeneruj skompresowane assety i wgraj z dołączonym SPIFFS:
+Po jednorazowym setupie powyżej `scripts/build-flash.py` kompresuje web UI, buduje i wgrywa na podłączoną płytkę — pytając, ile urządzenia nadpisać:
 
 ```bash
-python spiffs_image/tools/compress_web.py   # www/ -> web/*.gz
-ATLAS_SPIFFS=1 idf.py reconfigure           # rejestruje obraz SPIFFS
-ATLAS_SPIFFS=1 idf.py flash
+python scripts/build-flash.py -p COM5
 ```
 
-Jest helper, który opakowuje całą sekwencję (i na końcu wraca do szybkiej
-konfiguracji bez SPIFFS, żeby przyciski flash w IDE dalej były szybkie):
+| Zakres | Wgrywa | Zachowuje |
+|---|---|---|
+| Sam firmware | slot aplikacji | web UI + ustawienia |
+| Firmware + Web UI | aplikacja + partycja `www` | ustawienia |
+| Wszystko (factory) | aplikacja + `www` + `config` | — (resetuje ustawienia do domyślnych) |
 
-```bash
-python scripts/flash-web.py -p COM5 flash
-```
+Układ flasha dzieli dawną partycję storage na `www` (edytowalne web UI) i `config` (JSON ustawień), więc ponowne wgranie kodu albo UI nigdy nie kasuje ustawień — dopiero pełny flash (factory) seeduje domyślne. Flaga `--scope fw|ui|all` pomija pytanie (albo `--scope build` — tylko kompilacja, bez flashowania), `--monitor` otwiera monitor szeregowy po wgraniu.
 
-> `ATLAS_SPIFFS` jest czytane na etapie **configure** CMake, więc przełączenie
-> wymaga `idf.py reconfigure` (helper robi to za Ciebie).
+Żeby poprawić web UI bez flashowania, edytuj pliki na żywo w przeglądarce (edytor plików na urządzeniu albo wbudowana strona setupu) — zapisują się prosto na partycję `www` po HTTP.
 
-> Zmieniasz wariant sprzętowy w `defines.h`? Helper wykrywa nieaktualny
-> `sdkconfig` (stare definicje wyświetlacza/dotyku zostają, bo zmienione
-> `sdkconfig.defaults` nie są ponownie aplikowane) i proponuje go usunąć dla
-> czystego buildu. Flaga `--clean` wymusza to bez pytania.
+> Zmieniasz wariant sprzętowy w `defines.h`? `build-flash.py` wykrywa nieaktualny `sdkconfig` (stare definicje wyświetlacza/dotyku zostają, bo zmienione `sdkconfig.defaults` nie są ponownie aplikowane) i proponuje go usunąć dla czystego buildu. Flaga `--clean` wymusza to bez pytania.
 
 **Pojedynczy scalony obraz (do dystrybucji)**
 
-Sklejony bootloader, partition table, aplikacja i SPIFFS w jednym pliku — wgrywany od offsetu `0x0` przez `esptool` albo web flasher. Ustaw `ATLAS_SPIFFS=1` (i wcześniej skompresuj assety), żeby web UI było w środku:
+`build.py` tworzy go automatycznie jako `build/AtlasCube-<wariant>.bin`. Skleja bootloader, partition table, aplikację i oba obrazy SPIFFS (`www` + `config`) w jeden plik wgrywany od offsetu `0x0` przez `esptool` albo web flasher. Ręcznie:
 
 ```bash
 python spiffs_image/tools/compress_web.py
-ATLAS_SPIFFS=1 idf.py build
+idf.py build
 idf.py merge-bin -o AtlasCube.bin
 ```
 
@@ -373,8 +365,6 @@ Flash:
 ```bash
 esptool.py write_flash 0x0 AtlasCube.bin
 ```
-
-Buildy CI zawsze ustawiają `ATLAS_SPIFFS=1`, więc opublikowane binarki release per wariant mają już web UI w środku.
 
 ### Własne czcionki
 
@@ -510,7 +500,7 @@ mqtt:
 
 **Edytor plików**
 
-`/spiffs-editor.html` to edytor w przeglądarce do plików ze SPIFFS — JSON-ów z konfiguracją (layouty, playlista, wydarzenia), HTML/CSS/JS samego web UI i czegokolwiek innego tekstowego na urządzeniu. Listuje pliki z partycji storage, edytuje z podświetlaniem składni i zapisuje z powrotem przez HTTP — bez reflashowania. Przydatne do dłubania w layoucie albo web UI na urządzeniu, które już działa u kogoś.
+`/spiffs-editor.html` to edytor w przeglądarce do plików web UI — HTML/CSS/JS i innych tekstowych zasobów. Listuje pliki z partycji `www`, edytuje z podświetlaniem składni i zapisuje z powrotem przez HTTP — bez reflashowania (HTML/CSS/JS są ponownie gzipowane na urządzeniu). Przydatne do dłubania w layoucie albo web UI na urządzeniu, które już działa u kogoś. JSON-y ustawień leżą na osobnej partycji `config` i edytuje się je przez własne ekrany (Ustawienia, Wydarzenia, MQTT, …).
 
 ---
 
@@ -518,9 +508,9 @@ mqtt:
 
 Aktualizacja firmware przez Wi-Fi z **Ustawienia → Tools** — bez kabla USB, bez esptool. Strona pokazuje bieżącą wersję, przyjmuje obraz firmware, streamuje go do urządzenia i restartuje do nowego. Postęp jest pokazywany też na ekranie urządzenia.
 
-**Wymaga buildu z flashem 16 MB.** OTA potrzebuje dwóch partycji aplikacji (`ota_0` / `ota_1`, zob. [`partitions16MB.csv`](partitions16MB.csv)), żeby zapisać nowy obraz do nieaktywnego slotu i przełączyć bootloader z rollbackiem. Layout 8 MB ma pojedynczą partycję `factory`, więc endpoint zwraca tam `501`, a takie buildy aktualizuje się przez USB.
+**Układ dwuslotowy.** OTA korzysta z dwóch partycji aplikacji (`ota_0` / `ota_1`, zob. [`partitions16MB.csv`](partitions16MB.csv)), żeby zapisać nowy obraz do nieaktywnego slotu i przełączyć bootloader z rollbackiem. Gdy nie ma nieaktywnego slotu, endpoint zwraca `501`.
 
-**Który plik:** wgrywasz **samą aplikację** `build/atlascube.bin` (~2,3 MB) — *nie* scalony `AtlasCube-<wariant>.bin`, który zawiera też bootloader, tablicę partycji i SPIFFS i służy do pełnego wgrania przez USB od `0x0`. Upewnij się, że obraz pasuje do Twojego wariantu wyświetlacza — wgranie binarki innego wariantu zepsuje UI.
+**Który plik:** wgrywasz **samą aplikację** `build/atlascube.bin` (~2,3 MB) — *nie* scalony `AtlasCube-<wariant>.bin`, który zawiera też bootloader, tablicę partycji oraz partycje `www`/`config` i służy do pełnego wgrania przez USB od `0x0`. Upewnij się, że obraz pasuje do Twojego wariantu wyświetlacza — wgranie binarki innego wariantu zepsuje UI.
 
 **Przejście na layout OTA:** przestawienie istniejącego urządzenia 16 MB na układ partycji OTA to jednorazowy pełny reflash przez USB (zmiana tablicy partycji nie przejdzie przez samo OTA). Potem każda kolejna aktualizacja idzie już przez web.
 
@@ -529,7 +519,7 @@ Aktualizacja firmware przez Wi-Fi z **Ustawienia → Tools** — bez kabla USB, 
 - Urządzenie zatrzymuje odtwarzanie na czas zapisu, żeby zwolnić RAM i uniknąć kontencji na flash/SPI.
 - **Najpierw backup:** przycisk *Export running firmware* (`GET /api/ota/backup`) pobiera aktywny slot jako `atlascube-<wersja>.bin` — re-flashowalny snapshot, który można wgrać z powrotem, żeby ręcznie cofnąć aktualizację.
 
-> SPIFFS (zasoby web UI) nie jest aktualizowany przez OTA — jest tylko jedna partycja storage (bez A/B), więc `.bin` niesie wyłącznie firmware. Zasoby web aktualizuj edytorem plików SPIFFS w przeglądarce (`/spiffs-editor.html`) albo reflashem SPIFFS.
+> OTA niesie **wyłącznie aplikację** — nie tyka partycji `www` (web UI) ani `config` (ustawienia), więc Twoje UI i ustawienia przeżywają aktualizację. Gdy nowy firmware niesie też nowe web UI, zaktualizuj je osobno: edytorem plików w przeglądarce (`/spiffs-editor.html`) albo wbudowaną stroną setupu, ewentualnie pełnym reflashem od `0x0`.
 
 ---
 

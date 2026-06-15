@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MQTT_CFG_FILE "/spiffs/mqtt.json"
+#define MQTT_CFG_FILE "/config/mqtt.json"
 
 static const char *TAG = "MQTT_CFG";
 

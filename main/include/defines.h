@@ -2,11 +2,14 @@
 
 #include "sdkconfig.h"
 
+// www partition (editable UI) is mounted at /spiffs; user settings live on a
+// separate `config` partition mounted at /config so a www update can't clobber them.
 #define WEB_ROOT "/spiffs"
-#define SETTINGS_FILE "/spiffs/settings.json"
-#define PLAYLIST_FILE "/spiffs/data/playlist.csv"
-#define THEME_FILE "/spiffs/theme.json"
-#define EVENTS_FILE "/spiffs/events.json"
+#define CONFIG_ROOT "/config"
+#define SETTINGS_FILE "/config/settings.json"
+#define PLAYLIST_FILE "/config/data/playlist.csv"
+#define THEME_FILE "/config/theme.json"
+#define EVENTS_FILE "/config/events.json"
 
 // WTD pin 37 and PSRAM 33, 34, 35, 36, 37
 
@@ -17,7 +20,7 @@
 
 
 // ===== FLASH SIZE =====
-// #define FLASH_8MB
+// Only the 16 MB dual-slot layout is supported (all boards ship with 16 MB).
 #define FLASH_16MB
 
 

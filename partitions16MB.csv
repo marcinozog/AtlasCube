@@ -7,14 +7,21 @@
 # phy_init  0x011000   0x001000   4 KB
 # ota_0     0x020000   0x600000   6 MB
 # ota_1     0x620000   0x600000   6 MB
-# storage   0xC20000   0x3E0000   ~3.875 MB  (fills to end of 16 MB flash)
+# www       0xC20000   0x3C0000   3.75 MB
+# config    0xFE0000   0x020000   128 KB
 # ----------------------------------------------
 # App is ~2.3 MB, so each 6 MB OTA slot has generous headroom for growth. An
 # oversized app slot costs nothing at runtime — the bootloader just boots from
 # the offset and ignores the unused tail (unlike SPIFFS, where a large partition
-# slows the boot-time mount scan). storage gets the remaining ~3.9 MB: plenty
-# for the compressed web UI (~132 KB) plus room to drop in graphics or extra
-# assets via the file editor.
+# slows the boot-time mount scan).
+#
+# Two SPIFFS partitions intentionally split the old `storage`:
+#   www    — editable web UI (gz assets), uploaded/edited at runtime. Re-flashed
+#            wholesale on a full flash; an OTA app update never touches it.
+#   config — user settings JSON (settings/theme/events/mqtt/ui_profile + playlist
+#            CSV). Physically isolated so wiping or re-uploading www can never
+#            clobber the user's configuration. 128 KB is ample for a few KB of
+#            JSON plus SPIFFS overhead.
 #
 # Two app slots are required for OTA: the new image is written to the inactive
 # slot, then the bootloader is switched over (with automatic rollback on boot
@@ -31,5 +38,7 @@ phy_init,   data, phy,      0x11000,  0x1000
 ota_0,      app,  ota_0,    0x20000,  0x600000
 ota_1,      app,  ota_1,            ,  0x600000
 
-# SPIFFS - main (www + storage), mounted at /spiffs. Fills the rest of the flash.
-storage,    data, spiffs,           ,  0x3E0000
+# SPIFFS — editable web UI, mounted at /spiffs.
+www,        data, spiffs,           ,  0x3C0000
+# SPIFFS — user settings, mounted at /config. Isolated from www.
+config,     data, spiffs,           ,  0x20000

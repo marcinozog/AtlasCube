@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AtlasCube – Setup</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #1a1a2e; color: #e0e0e0; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .card {
+    background: #16213e; border-radius: 12px; padding: 28px 24px;
+    width: 100%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .header { text-align: center; margin-bottom: 24px; }
+  .header h1 { font-size: 22px; font-weight: 700; color: #4fc3f7; letter-spacing: 1px; }
+  .header p { font-size: 13px; color: #888; margin-top: 6px; }
+  h2 {
+    font-size: 12px; color: #4fc3f7; text-transform: uppercase; letter-spacing: 1px;
+    margin: 24px 0 14px; padding-bottom: 8px; border-bottom: 1px solid #2a4a7f;
+  }
+  .form-group { margin-bottom: 16px; }
+  label { display: block; font-size: 11px; color: #aaa; margin-bottom: 6px;
+          text-transform: uppercase; letter-spacing: 0.8px; }
+  input[type="text"], input[type="password"], input[type="file"] {
+    width: 100%; padding: 12px 14px; background: #0f3460; border: 1px solid #2a4a7f;
+    border-radius: 8px; color: #e0e0e0; font-size: 15px; outline: none;
+  }
+  input[type="file"] { padding: 10px; font-size: 13px; }
+  input:focus { border-color: #4fc3f7; }
+  .show-pass { display: flex; align-items: center; gap: 8px; margin-top: 8px;
+               font-size: 13px; color: #888; cursor: pointer; user-select: none; }
+  button {
+    width: 100%; padding: 13px; background: #4fc3f7; color: #1a1a2e; border: none;
+    border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px;
+  }
+  button:hover:not(:disabled) { background: #81d4fa; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .status {
+    display: none; text-align: center; margin-top: 16px; font-size: 14px;
+    padding: 12px 16px; border-radius: 8px; background: rgba(79,195,247,0.12);
+    color: #4fc3f7; line-height: 1.5;
+  }
+  .status.error { background: rgba(244,143,177,0.12); color: #f48fb1; }
+  .status.visible { display: block; }
+  .hint { font-size: 12px; color: #666; margin-top: 10px; line-height: 1.5; }
+  .fw-version { text-align: center; font-size: 11px; color: #555; margin-top: 20px;
+                letter-spacing: 0.5px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <h1>AtlasCube</h1>
+    <p>Built-in setup page</p>
+  </div>
+
+  <h2>Wi-Fi</h2>
+  <form id="wifiForm" novalidate>
+    <div class="form-group">
+      <label for="ssid">Network SSID</label>
+      <input type="text" id="ssid" placeholder="Your Wi-Fi network name"
+             autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" required>
+    </div>
+    <div class="form-group">
+      <label for="pass">Password</label>
+      <input type="password" id="pass" placeholder="Wi-Fi password" autocomplete="new-password">
+      <label class="show-pass"><input type="checkbox" id="showPass"> Show password</label>
+    </div>
+    <button type="submit" id="wifiBtn">Save &amp; Connect</button>
+  </form>
+  <div class="status" id="wifiStatus"></div>
+
+  <h2>Web UI files</h2>
+  <div class="form-group">
+    <input type="file" id="files" multiple
+           accept=".html,.css,.js,.json,.csv,.svg">
+  </div>
+  <button type="button" id="uploadBtn">Upload selected files</button>
+  <div class="status" id="uploadStatus"></div>
+  <p class="hint">Pick the files from <code>spiffs_image/www/</code> (raw, uncompressed).
+     The device gzips HTML/CSS/JS on upload. Icons (.ico) are not supported here.</p>
+
+  <div class="fw-version" id="fwVersion"></div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  function show(id, msg, isError) {
+    var el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = 'status visible' + (isError ? ' error' : '');
+  }
+
+  document.getElementById('showPass').addEventListener('change', function () {
+    document.getElementById('pass').type = this.checked ? 'text' : 'password';
+  });
+
+  // Firmware version — confirms what is flashed.
+  fetch('/api/state', { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (s) {
+      if (s && s.version) document.getElementById('fwVersion').textContent = 'Firmware ' + s.version;
+    })
+    .catch(function () {});
+
+  // ── Wi-Fi ──────────────────────────────────────────────────────────────────
+  document.getElementById('wifiForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    var ssid = document.getElementById('ssid').value.trim();
+    var pass = document.getElementById('pass').value;
+    if (!ssid) { show('wifiStatus', 'Please enter the network name (SSID).', true); return; }
+    show('wifiStatus', 'Saving settings…', false);
+    try {
+      var r = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wifi: { ssid: ssid, password: pass } })
+      });
+      if (!r.ok) throw new Error('Server returned ' + r.status);
+      show('wifiStatus', 'Settings saved. Restarting device…', false);
+      try { await fetch('/api/restart', { method: 'POST' }); } catch (_) {}
+    } catch (err) {
+      show('wifiStatus', 'Error: ' + err.message, true);
+    }
+  });
+
+  // ── UI upload ────────────────────────────────────────────────────────────--
+  document.getElementById('uploadBtn').addEventListener('click', async function () {
+    var input = document.getElementById('files');
+    var btn   = document.getElementById('uploadBtn');
+    var list  = input.files;
+    if (!list.length) { show('uploadStatus', 'Select one or more files first.', true); return; }
+    btn.disabled = true;
+    var ok = 0, fail = 0;
+    for (var i = 0; i < list.length; i++) {
+      var file = list[i];
+      show('uploadStatus', 'Uploading ' + file.name + ' (' + (i + 1) + '/' + list.length + ')…', false);
+      try {
+        var buf = await file.arrayBuffer();
+        var r = await fetch('/api/files/' + encodeURIComponent(file.name), {
+          method: 'PUT', body: buf
+        });
+        if (!r.ok) throw new Error(r.status + '');
+        ok++;
+      } catch (err) {
+        fail++;
+        console.error('Upload failed for', file.name, err);
+      }
+    }
+    btn.disabled = false;
+    show('uploadStatus', 'Done: ' + ok + ' uploaded' + (fail ? ', ' + fail + ' failed' : '') +
+         '. Reload the page to use the new UI.', fail > 0);
+  });
+}());
+</script>
+</body>
+</html>

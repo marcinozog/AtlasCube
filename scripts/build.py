@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """
-Turnkey AtlasCube firmware build — one entry point for end users and CI.
+AtlasCube release/CI build — the ADVANCED entry point. NOT the script most users
+want: it switches HW variant, patches ESP-ADF/ESP-IDF, and produces a merged
+per-variant image for distribution. If you just want to build and flash your own
+configured board, use scripts/build-flash.py instead.
 
-Replaces the former bash helpers (select-variant.sh + patch-esp-adf.sh) with a
-single cross-platform script so a fresh Windows machine (or sandbox) only needs
-the official ESP-IDF installer — no bash, no extra tooling.
+This script is what the CI matrix runs to build all variants; it can also set up
+a fresh toolchain locally. It replaces the former bash helpers (select-variant.sh
++ patch-esp-adf.sh) with a single cross-platform script so a fresh Windows machine
+(or sandbox) only needs the official ESP-IDF installer — no bash, no extra tooling.
 
 What it does, end to end:
   1. Locate ESP-IDF (IDF_PATH) and ESP-ADF (ADF_PATH), cloning ESP-ADF v2.8 if absent.
@@ -54,7 +58,7 @@ GROUPS = {
     "TOUCH":      ["TOUCH_FT6336U", "TOUCH_CST816D", "TOUCH_NONE"],
     "UI_PROFILE": ["UI_PROFILE_240X296", "UI_PROFILE_320x240", "UI_PROFILE_480x320",
                    "UI_PROFILE_MONO_128X64", "UI_PROFILE_MONO_256X64"],
-    "FLASH":      ["FLASH_8MB", "FLASH_16MB"],
+    "FLASH":      ["FLASH_16MB"],
 }
 
 
@@ -260,12 +264,9 @@ def idf_cmd(idf_py, *args):
     return [sys.executable, str(idf_py), *args]
 
 
-def build(idf_py, variant, do_clean, do_build, with_spiffs):
+def build(idf_py, variant, do_clean, do_build):
     step("Compressing web UI assets")
     run([sys.executable, str(REPO_ROOT / "spiffs_image" / "tools" / "compress_web.py")])
-
-    if with_spiffs:
-        os.environ["ATLAS_SPIFFS"] = "1"
 
     if not do_build:
         print("\nSetup complete (--skip-build). Run `idf.py build` when ready.")
@@ -287,11 +288,10 @@ def build(idf_py, variant, do_clean, do_build, with_spiffs):
 
     built = REPO_ROOT / "build" / out_name
     print(f"\nDone. Flashable image: {built}")
-    if not with_spiffs:
-        print("App-only image (no web UI bundled) — flashing from 0x0 leaves the "
-              "existing storage/SPIFFS partition untouched.")
-    print("Flash it from offset 0x0 with the web flasher (atlascube.net/flash) "
-          "or:\n    esptool.py --chip esp32s3 -p <PORT> write_flash 0x0 "
+    print("Full image (bootloader + app + www + config partitions). A full flash "
+          "re-seeds default settings; an OTA app update never touches them.\n"
+          "Flash from offset 0x0 with the web flasher (atlascube.net/flash) or:\n"
+          "    esptool.py --chip esp32s3 -p <PORT> write_flash 0x0 "
           f"build/{out_name}")
 
 
@@ -313,22 +313,6 @@ def pick_variant_interactively():
         print("Invalid choice.")
 
 
-def pick_spiffs_interactively():
-    """Ask whether to bundle the web UI into the storage (SPIFFS) partition.
-
-    Yes  -> full image (bootloader + partition table + app + storage).
-    No   -> app-only image; flashing it from 0x0 leaves the existing storage
-            partition untouched (its region sits past the end of the app).
-    """
-    while True:
-        choice = input("Bundle web UI into storage partition? [Y/n]: ").strip().lower()
-        if choice in ("", "y", "yes"):
-            return True
-        if choice in ("n", "no"):
-            return False
-        print("Please answer y or n.")
-
-
 def main():
     ap = argparse.ArgumentParser(description="Turnkey AtlasCube firmware build.")
     ap.add_argument("variant", nargs="?", choices=list(VARIANTS),
@@ -336,9 +320,12 @@ def main():
     ap.add_argument("--adf-path", help="path to esp-adf checkout (default: $ADF_PATH or ./esp-adf, cloned if absent)")
     ap.add_argument("--skip-build", action="store_true", help="set up variant + patches + assets, but don't compile")
     ap.add_argument("--no-clean", action="store_true", help="skip the set-target/clean reconfigure before build (faster, dev only; assumes target already esp32s3)")
-    ap.add_argument("--no-spiffs", action="store_true", help="don't bundle the web UI (smaller, no atlascube web pages)")
-    ap.add_argument("--spiffs", action="store_true", help="force-bundle the web UI without prompting (CI/non-interactive)")
     args = ap.parse_args()
+
+    if sys.stdin.isatty():
+        print("NOTE: build.py is the release/CI build (switches HW variant, builds a\n"
+              "      distributable image). To just build & flash your own board, use\n"
+              "      scripts/build-flash.py.\n", file=sys.stderr, flush=True)
 
     variant = args.variant or pick_variant_interactively()
     print(f"AtlasCube build — variant '{variant}' (ESP-IDF {IDF_VERSION}, ESP-ADF {ADF_VERSION})")
@@ -351,22 +338,9 @@ def main():
 
     patch_adf(adf, idf)
 
-    # --no-spiffs forces app-only, --spiffs force-bundles (both for scripts/CI).
-    # Otherwise ask interactively; never prompt in CI, where isatty() can wrongly
-    # report a tty (esp-idf-ci-action) and input() would hang the build forever.
-    if args.no_spiffs:
-        with_spiffs = False
-    elif args.spiffs:
-        with_spiffs = True
-    elif sys.stdin.isatty():
-        with_spiffs = pick_spiffs_interactively()
-    else:
-        with_spiffs = True
-
     build(idf_py, variant,
           do_clean=not args.no_clean,
-          do_build=not args.skip_build,
-          with_spiffs=with_spiffs)
+          do_build=not args.skip_build)
 
 
 if __name__ == "__main__":

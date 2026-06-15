@@ -69,12 +69,30 @@ esptool.py --chip esp32s3 -p COM5 write_flash 0x0 build/AtlasCube-<variant>.bin
 
 (Substitute your serial port for `COM5`.)
 
-## Useful flags
+## Build & flash to a board
+
+For everyday build & flash, use `scripts/build-flash.py` — it compresses the web UI,
+builds, and asks how much of the device to overwrite (firmware only / firmware +
+web UI / everything). The web UI (`www`) and your settings (`config`) live in
+separate partitions, so reflashing code or the UI keeps your settings; only a
+factory flash resets them:
+
+```powershell
+python scripts/build-flash.py -p COM5
+```
+
+Pass `--scope fw|ui|all` to skip the prompt (or `--scope build` to just compile,
+no flash) and `--monitor` to open the serial monitor afterwards. If you switched the HW variant in `defines.h`, `build-flash.py`
+detects the stale `sdkconfig` and offers to clean it (or pass `--clean`).
+
+## Useful flags (build.py)
+
+`build.py` is the setup/release script (variant switch, ESP-ADF/IDF patches,
+merged per-variant image). For build & flash to a board, prefer `build-flash.py` above.
 
 | Flag | Effect |
 |---|---|
 | `--skip-build` | Set up the variant + patches + web assets, but don't compile. |
-| `--no-spiffs` | Don't bundle the web UI (smaller image, no on-device web pages). |
 | `--adf-path <path>` | Use an existing ESP-ADF checkout instead of cloning into `./esp-adf`. |
 | `--no-clean` | Skip the set-target/clean reconfigure (faster rebuilds; dev only). |
 

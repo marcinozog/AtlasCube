@@ -1300,7 +1300,7 @@ static esp_err_t api_ui_profile_reset_handler(httpd_req_t *req)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MQTT — GET/POST /api/mqtt — broker config + widget array (max 6)
-// Stored in /spiffs/mqtt.json by mqtt_config_*.
+// Stored in /config/mqtt.json by mqtt_config_*.
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t api_mqtt_get_handler(httpd_req_t *req)
 {
@@ -1530,7 +1530,7 @@ static esp_err_t api_files_get_handler(httpd_req_t *req)
 static esp_err_t api_spiffs_get_handler(httpd_req_t *req)
 {
     size_t total = 0, used = 0;
-    esp_spiffs_info("storage", &total, &used);
+    esp_spiffs_info("www", &total, &used);
 
     cJSON *o = cJSON_CreateObject();
     cJSON_AddNumberToObject(o, "total", (double)total);
@@ -2057,57 +2057,80 @@ static esp_err_t api_sd_rename_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+// Built-in setup page (Wi-Fi + UI upload), embedded in the app binary so a fresh
+// or wiped www partition can still be provisioned. See components/web/setup.html.
+extern const uint8_t setup_html_start[] asm("_binary_setup_html_start");
+extern const uint8_t setup_html_end[]   asm("_binary_setup_html_end");
+
+static esp_err_t serve_embedded_setup(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "text/html; charset=utf-8");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    return httpd_resp_send(req, (const char *)setup_html_start,
+                           setup_html_end - setup_html_start);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Wildcard — serve files from SPIFFS
+// Wildcard — serve files from the www partition (/spiffs), falling back to the
+// config partition (/config) for settings JSON / playlist CSV the browser fetches.
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t file_handler(httpd_req_t *req)
 {
-    char filepath[256];
-    char gz_filepath[260];
+    char filepath[300];
+    char gz_filepath[320];
+    char relpath[256];
 
-    strcpy(filepath, WEB_ROOT);
-
+    // Resolve the request to a path relative to the filesystem roots.
+    bool is_entry = false;
     if (strcmp(req->uri, "/") == 0) {
-        if (wifi_get_run_mode() == WIFI_RUN_MODE_AP) {
-            strcat(filepath, "/wifi_setup.html");
-        } else {
-            strcat(filepath, "/index.html");
-        }
+        is_entry = true;
+        strcpy(relpath, wifi_get_run_mode() == WIFI_RUN_MODE_AP
+                            ? "/wifi_setup.html" : "/index.html");
     } else {
-        if (strlen(filepath) + strlen(req->uri) >= sizeof(filepath)) {
+        if (strlen(req->uri) >= sizeof(relpath)) {
             httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Path too long");
             return ESP_FAIL;
         }
-        strcat(filepath, req->uri);
+        strcpy(relpath, req->uri);
+        is_entry = (strcmp(req->uri, "/index.html") == 0) ||
+                   (strcmp(req->uri, "/wifi_setup.html") == 0);
     }
 
     // Strip query string — static-file paths must not include "?..." parts,
-    // otherwise fopen() fails on e.g. /spiffs/settings.html?tab=screensaver
+    // otherwise fopen() fails on e.g. /settings.html?tab=screensaver
     // when a deep link is refreshed.
-    char *q = strchr(filepath, '?');
+    char *q = strchr(relpath, '?');
     if (q) *q = '\0';
 
     // Content-Type based on the original extension (before adding .gz)
     const char *content_type = "text/plain";
-    if      (strstr(filepath, ".html")) content_type = "text/html; charset=utf-8";
-    else if (strstr(filepath, ".css"))  content_type = "text/css";
-    else if (strstr(filepath, ".json")) content_type = "application/json"; // must come before js
-    else if (strstr(filepath, ".js"))   content_type = "application/javascript";
-    else if (strstr(filepath, ".ico"))  content_type = "image/x-icon";
+    if      (strstr(relpath, ".html")) content_type = "text/html; charset=utf-8";
+    else if (strstr(relpath, ".css"))  content_type = "text/css";
+    else if (strstr(relpath, ".json")) content_type = "application/json"; // must come before js
+    else if (strstr(relpath, ".js"))   content_type = "application/javascript";
+    else if (strstr(relpath, ".ico"))  content_type = "image/x-icon";
 
-    // Try .gz first
+    // Look under the www root first, then the config root (settings JSON / playlist
+    // CSV live on /config but are fetched by the browser through this handler).
+    static const char *const roots[] = { WEB_ROOT, CONFIG_ROOT };
     bool use_gz = false;
-    snprintf(gz_filepath, sizeof(gz_filepath), "%s.gz", filepath);
-    FILE *f = fopen(gz_filepath, "rb");
-    if (f) {
-        use_gz = true;
-        ESP_LOGD("HTTP", "Serving gz: %s", gz_filepath);
-    } else {
+    FILE *f = NULL;
+    for (int i = 0; i < 2 && !f; i++) {
+        snprintf(gz_filepath, sizeof(gz_filepath), "%s%s.gz", roots[i], relpath);
+        f = fopen(gz_filepath, "rb");
+        if (f) { use_gz = true; break; }
+        snprintf(filepath, sizeof(filepath), "%s%s", roots[i], relpath);
         f = fopen(filepath, "rb");
     }
 
     if (!f) {
-        ESP_LOGW("HTTP", "File not found: %s", filepath);
+        // Fresh/empty www partition: still serve the built-in setup page on the
+        // entry routes so Wi-Fi can be configured and the UI re-uploaded.
+        if (is_entry) {
+            ESP_LOGW("HTTP", "%s missing — serving embedded setup page", relpath);
+            return serve_embedded_setup(req);
+        }
+        ESP_LOGW("HTTP", "File not found: %s", relpath);
         httpd_resp_send_404(req);
         return ESP_FAIL;
     }
@@ -2126,9 +2149,9 @@ static esp_err_t file_handler(httpd_req_t *req)
     //  - rest (CSS/JS/ICO/fonts): long cache so the browser doesn't keep hitting
     //    the ESP on every tab open. Critical while radio is playing —
     //    parallel asset fetching + TLS audio caused stream drops.
-    bool is_html    = (strstr(filepath, ".html") != NULL);
-    bool is_mutable = (strstr(filepath, "/data/") != NULL) ||
-                      (strstr(filepath, ".json")  != NULL);
+    bool is_html    = (strstr(relpath, ".html") != NULL);
+    bool is_mutable = (strstr(relpath, "/data/") != NULL) ||
+                      (strstr(relpath, ".json")  != NULL);
     if (is_html || is_mutable) {
         httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
     } else {
@@ -2180,9 +2203,8 @@ static esp_err_t options_handler(httpd_req_t *req)
 // ─────────────────────────────────────────────────────────────────────────────
 // POST /api/ota  — firmware (app) over-the-air update
 // Streams the uploaded .bin straight into the inactive OTA slot, switches the
-// boot partition and reboots. Works only on the dual-slot layout (16 MB build);
-// on the single factory partition (8 MB) esp_ota_get_next_update_partition()
-// returns NULL and we report 501.
+// boot partition and reboots. If no inactive slot exists (unexpected on the
+// dual-slot layout) esp_ota_get_next_update_partition() returns NULL → 501.
 // ─────────────────────────────────────────────────────────────────────────────
 #define OTA_RECV_BUF_SIZE 4096
 

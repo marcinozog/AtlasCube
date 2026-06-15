@@ -33,7 +33,7 @@ jobs:
             # build.py is the single entry point shared with local/Windows builds:
             # it selects the variant, patches ESP-ADF/IDF, compresses the web UI,
             # builds, and merges the image. --no-clean: the CI checkout is always fresh.
-            python scripts/build.py ${{ matrix.variant }} --adf-path "$PWD/esp-adf" --no-clean --spiffs
+            python scripts/build.py ${{ matrix.variant }} --adf-path "$PWD/esp-adf" --no-clean
             echo "--- Looking for merged binary ---"
             ls -la "build/AtlasCube-${{ matrix.variant }}.bin"
 

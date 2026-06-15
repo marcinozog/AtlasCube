@@ -29,7 +29,7 @@ const ui_theme_colors_t *theme_palette_get(ui_theme_t t);
 void                     theme_palette_set(ui_theme_t t, const ui_theme_colors_t *c);
 void                     theme_palette_reset(ui_theme_t t);
 
-// Persistence — separate file /spiffs/theme.json
+// Persistence — separate file /config/theme.json
 esp_err_t theme_load_from_file(void);
 esp_err_t theme_save_to_file(void);
 

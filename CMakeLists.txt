@@ -21,7 +21,7 @@ string(REGEX MATCH "\n[ \t]*#define[ \t]+TOUCH_(CST816D|FT6336U|NONE)[^A-Za-z0-9
        _ "${_atlas_defines}")
 set(ATLAS_TOUCH "${CMAKE_MATCH_1}")
 
-string(REGEX MATCH "\n[ \t]*#define[ \t]+FLASH_(8MB|16MB)[^A-Za-z0-9_]"
+string(REGEX MATCH "\n[ \t]*#define[ \t]+FLASH_(16MB)[^A-Za-z0-9_]"
        _ "${_atlas_defines}")
 set(ATLAS_FLASH "${CMAKE_MATCH_1}")
 
@@ -60,11 +60,13 @@ set(PROJECT_VER_FROM_GIT 1)
 
 project(atlascube)
 
-# Bundle spiffs_image/web into the `storage` SPIFFS partition.
-# Off by default for fast code-only flashing. Enable per-build with:
-#   ATLAS_SPIFFS=1 idf.py build         (Linux/macOS)
-#   $env:ATLAS_SPIFFS=1; idf.py build   (PowerShell)
-# CI/release always sets ATLAS_SPIFFS=1 so the flashed firmware ships the web UI.
-if(DEFINED ENV{ATLAS_SPIFFS} AND NOT "$ENV{ATLAS_SPIFFS}" STREQUAL "0")
-    spiffs_create_partition_image(storage spiffs_image/web FLASH_IN_PROJECT)
-endif()
+# Build both SPIFFS partition images so the merged release .bin (and a full
+# `idf.py flash`) ships a working device:
+#   www    — the compressed web UI. Run spiffs_image/tools/compress_web.py first;
+#            build.py / CI do this automatically.
+#   config — default user settings for a fresh device.
+# An OTA app update never touches either partition; a full flash re-seeds them.
+# For code-only dev iteration that must preserve on-device settings, flash just
+# the app slot with `idf.py app-flash` instead of `idf.py flash`.
+spiffs_create_partition_image(www    spiffs_image/web    FLASH_IN_PROJECT)
+spiffs_create_partition_image(config spiffs_image/config FLASH_IN_PROJECT)

@@ -158,7 +158,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - NTP time sync with configurable timezone
 - Web UI served from SPIFFS (no internet required after flash)
 - MQTT client — remote control of the radio (play/stop/volume/station) plus up to 6 configurable widgets (toggle / slider / label) on a dedicated on-device screen, driving any external MQTT device (Tasmota, zigbee2mqtt, Home Assistant, …); see [MQTT](#mqtt) below
-- OTA firmware update — upload a new app image straight from the web UI (Settings → Tools); it streams into the inactive slot, validates, and reboots, with bootloader rollback if the new image won't start. A backup/export button downloads the currently running firmware first. Available on 16 MB-flash builds (dual OTA partitions); 8 MB builds keep a single app slot and are flashed over USB. See [OTA updates](#ota-updates) below
+- OTA firmware update — upload a new app image straight from the web UI (Settings → Tools); it streams into the inactive slot, validates, and reboots, with bootloader rollback if the new image won't start. A backup/export button downloads the currently running firmware first. The web UI and your settings live in separate flash partitions, so an OTA app update never overwrites them. See [OTA updates](#ota-updates) below
 
 **Storage**
 - Optional microSD card over SDMMC (1-bit mode), wired to the build's SDMMC pins
@@ -179,7 +179,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 |---|---|
 | MCU | ESP32-S3, 240 MHz, dual-core |
 | Board | Atlas Hub (custom) |
-| Flash | 8 MB |
+| Flash | 16 MB |
 | PSRAM | OctoSPI, 80 MHz |
 | Display | ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), ILI9488 480×320 (SPI, 18-bit), CO5300 240×296 AMOLED (QSPI), or SSD1322 256×64 mono OLED (SPI) — selected at compile time |
 | Touch | CST816D or FT6336U capacitive controller (I2C) — gestures detected by LVGL on the standard pointer indev |
@@ -248,7 +248,7 @@ python scripts/build.py co5300       # or ili9341 / st7796 / ili9488 / ssd1322
 python scripts/build.py              # interactive variant menu
 ```
 
-`build.py` is the single cross-platform entry point (Windows, Linux, CI). It clones ESP-ADF v2.8 if absent, selects the variant in `defines.h`, applies all ESP-ADF/ESP-IDF patches, compresses the web UI, builds, and produces a flashable `build/AtlasCube-<variant>.bin`. It is idempotent — safe to re-run. Useful flags: `--skip-build` (set up only), `--no-spiffs`, `--adf-path <path>`.
+`build.py` is the cross-platform setup/release entry point (Windows, Linux, CI). It clones ESP-ADF v2.8 if absent, selects the variant in `defines.h`, applies all ESP-ADF/ESP-IDF patches, compresses the web UI, builds, and produces a flashable `build/AtlasCube-<variant>.bin`. It is idempotent — safe to re-run. Useful flags: `--skip-build` (set up only), `--adf-path <path>`. Once the toolchain is set up, day-to-day **build & flash to your board** is `scripts/build-flash.py` (see *Build & flash to a device* below).
 
 It does the following:
 
@@ -332,42 +332,33 @@ idf.py flash
 >
 > `build.py` detects an existing symlink/junction and leaves it in place.
 
-**Flash web UI (SPIFFS)**
+**Build & flash to a device**
 
-The web UI assets live in the `storage` SPIFFS partition. Bundling is **off by
-default** — so a plain `idf.py build` / `flash` stays fast when you only touch
-firmware — and is enabled per-build through the `ATLAS_SPIFFS` env var. After
-changing anything in `spiffs_image/www/`, regenerate the gzipped assets and
-flash with the bundle:
+After the one-time setup above, `scripts/build-flash.py` compresses the web UI, builds, and flashes a connected board — asking how much of the device to overwrite:
 
 ```bash
-python spiffs_image/tools/compress_web.py   # www/ -> web/*.gz
-ATLAS_SPIFFS=1 idf.py reconfigure           # register the SPIFFS image
-ATLAS_SPIFFS=1 idf.py flash
+python scripts/build-flash.py -p COM5
 ```
 
-A helper wraps the whole sequence (and resets back to the fast, no-SPIFFS
-config afterwards so the IDE flash buttons stay quick):
+| Scope | Flashes | Keeps |
+|---|---|---|
+| Firmware only | app slot | web UI + settings |
+| Firmware + Web UI | app + `www` partition | settings |
+| Everything (factory) | app + `www` + `config` | — (resets settings to defaults) |
 
-```bash
-python scripts/flash-web.py -p COM5 flash
-```
+The flash layout splits the old storage partition into `www` (the editable web UI) and `config` (user settings JSON), so reflashing code or the UI never wipes your settings — only a factory flash reseeds defaults. Pass `--scope fw|ui|all` to skip the prompt (or `--scope build` to just compile, no flash) and `--monitor` to open the serial monitor afterwards.
 
-> `ATLAS_SPIFFS` is read at CMake **configure** time, so flipping it requires
-> `idf.py reconfigure` (the helper does this for you).
+To tweak the web UI without flashing at all, edit files live in the browser (the on-device file editor, or the built-in setup page upload) — they write straight to the `www` partition over HTTP.
 
-> Switching the HW variant in `defines.h`? The helper detects a stale
-> `sdkconfig` (the old display/touch defines linger because changed
-> `sdkconfig.defaults` aren't re-applied) and offers to delete it for a clean
-> build. Pass `--clean` to force it without the prompt.
+> Switching the HW variant in `defines.h`? `build-flash.py` detects a stale `sdkconfig` (the old display/touch defines linger because changed `sdkconfig.defaults` aren't re-applied) and offers to delete it for a clean build. Pass `--clean` to force it without the prompt.
 
 **Single merged image (for distribution)**
 
-Combines bootloader, partition table, app, and SPIFFS into one file that can be flashed from offset `0x0` with `esptool` or a web flasher. Set `ATLAS_SPIFFS=1` (and compress the assets first) so the web UI is included:
+`build.py` produces this automatically as `build/AtlasCube-<variant>.bin`. It combines bootloader, partition table, app, and both SPIFFS images (`www` + `config`) into one file flashable from offset `0x0` with `esptool` or a web flasher. To build it by hand:
 
 ```bash
 python spiffs_image/tools/compress_web.py
-ATLAS_SPIFFS=1 idf.py build
+idf.py build
 idf.py merge-bin -o AtlasCube.bin
 ```
 
@@ -376,8 +367,6 @@ Flash with:
 ```bash
 esptool.py write_flash 0x0 AtlasCube.bin
 ```
-
-CI builds always set `ATLAS_SPIFFS=1`, so the per-variant release binaries already bundle the web UI.
 
 ### Custom fonts
 
@@ -513,7 +502,7 @@ mqtt:
 
 **File editor**
 
-`/spiffs-editor.html` is an in-browser editor for files stored in SPIFFS — JSON configs (layouts, playlist, events), HTML/CSS/JS of the web UI itself, and any other text assets on the device. Lists files from the storage partition, lets you edit them with syntax highlighting, and saves back over HTTP without reflashing. Useful for tweaking layouts or web UI on a deployed device.
+`/spiffs-editor.html` is an in-browser editor for the web UI files — HTML/CSS/JS and other text assets. It lists files from the `www` partition, lets you edit them with syntax highlighting, and saves back over HTTP without reflashing (HTML/CSS/JS are re-gzipped on the device). Useful for tweaking layouts or the web UI on a deployed device. Settings JSON live on the separate `config` partition and are edited through their own screens (Settings, Events, MQTT, …).
 
 ---
 
@@ -521,9 +510,9 @@ mqtt:
 
 Update the firmware over Wi-Fi from **Settings → Tools** — no USB cable, no esptool. The page shows the running version, takes a firmware image, streams it to the device, and reboots into it. Progress is mirrored on the device screen.
 
-**Requires a 16 MB-flash build.** OTA needs two app partitions (`ota_0` / `ota_1`, see [`partitions16MB.csv`](partitions16MB.csv)) so the new image can be written to the inactive slot and the bootloader switched over with rollback. The 8 MB layout has a single `factory` partition, so the endpoint returns `501` there and those builds are updated over USB instead.
+**Dual-slot layout.** OTA uses the two app partitions (`ota_0` / `ota_1`, see [`partitions16MB.csv`](partitions16MB.csv)) so the new image can be written to the inactive slot and the bootloader switched over with rollback. If no inactive slot is present the endpoint returns `501`.
 
-**Which file:** upload the **app-only** `build/atlascube.bin` (~2.3 MB) — *not* the merged `AtlasCube-<variant>.bin`, which also contains the bootloader, partition table and SPIFFS and is meant for a full `0x0` USB flash. Make sure the image matches your display variant; flashing a different variant's binary will break the UI.
+**Which file:** upload the **app-only** `build/atlascube.bin` (~2.3 MB) — *not* the merged `AtlasCube-<variant>.bin`, which also contains the bootloader, partition table and the `www`/`config` partitions and is meant for a full `0x0` USB flash. Make sure the image matches your display variant; flashing a different variant's binary will break the UI.
 
 **Adopting the layout:** switching an existing 16 MB device to the OTA partition layout is a one-time full USB reflash (a partition-table change can't go through OTA itself). After that, every further update is web-only.
 
@@ -532,7 +521,7 @@ Update the firmware over Wi-Fi from **Settings → Tools** — no USB cable, no 
 - The device stops playback during the write to free RAM and avoid flash/SPI contention.
 - **Backup first:** the *Export running firmware* button (`GET /api/ota/backup`) downloads the active slot as `atlascube-<version>.bin` — a re-flashable snapshot you can upload again to roll back manually.
 
-> SPIFFS (web UI assets) is not updated over OTA — there is only one storage partition (no A/B), so the `.bin` carries firmware only. Update web assets with the in-browser SPIFFS file editor (`/spiffs-editor.html`) or a SPIFFS reflash.
+> OTA carries the **app only** — it never touches the `www` (web UI) or `config` (settings) partitions, so your UI and settings survive an update. When a firmware update also ships new web UI, update it separately: edit/upload via the in-browser file editor (`/spiffs-editor.html`) or the built-in setup page, or do a full `0x0` reflash.
 
 ---
 

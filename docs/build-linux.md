@@ -79,26 +79,31 @@ Flash it from offset `0x0` with the [web flasher](https://atlascube.net/flash)
 esptool.py --chip esp32s3 -p /dev/ttyACM0 write_flash 0x0 build/AtlasCube-<variant>.bin
 ```
 
-To re-flash during development and bundle the web UI (after editing anything in
-`spiffs_image/www/`), use the helper — it flashes with the SPIFFS image and then
-resets the project back to the fast, no-SPIFFS config:
+For everyday build & flash during development, use `scripts/build-flash.py` — it
+compresses the web UI, builds, and asks how much of the device to overwrite
+(firmware only / firmware + web UI / everything). The web UI (`www`) and your
+settings (`config`) live in separate partitions, so reflashing code or the UI
+keeps your settings; only a factory flash resets them:
 
 ```bash
-python scripts/flash-web.py -p /dev/ttyACM0 flash
+python scripts/build-flash.py -p /dev/ttyACM0
 ```
 
 Substitute your serial port for `/dev/ttyACM0` (see Troubleshooting for how to
-find it).
+find it). Pass `--scope fw|ui|all` to skip the prompt (or `--scope build` to just
+compile, no flash), `--monitor` to open the serial monitor afterwards.
 
-> If you switched the HW variant in `defines.h`, the helper detects the stale
+> If you switched the HW variant in `defines.h`, `build-flash.py` detects the stale
 > `sdkconfig` and offers to clean it (or pass `--clean` to force it).
 
-## Useful flags
+## Useful flags (build.py)
+
+`build.py` is the setup/release script (variant switch, ESP-ADF/IDF patches,
+merged per-variant image). For build & flash to a board, prefer `build-flash.py` above.
 
 | Flag | Effect |
 |---|---|
 | `--skip-build` | Set up the variant + patches + web assets, but don't compile. |
-| `--no-spiffs` | Don't bundle the web UI (smaller image, no on-device web pages). |
 | `--adf-path <path>` | Use an existing ESP-ADF checkout instead of cloning into `./esp-adf`. |
 | `--no-clean` | Skip the set-target/clean reconfigure (faster rebuilds; dev only). |
 

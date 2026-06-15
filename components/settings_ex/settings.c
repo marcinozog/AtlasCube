@@ -33,7 +33,7 @@ esp_err_t settings_init(void)
 */
 esp_err_t settings_init(void)
 {
-    theme_load_from_file();   // separate file /spiffs/theme.json (color palettes)
+    theme_load_from_file();   // separate file /config/theme.json (color palettes)
 
     if (load_from_file() != ESP_OK) {
         s_settings.audio.volume             = 15;

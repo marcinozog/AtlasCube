@@ -148,18 +148,31 @@ void app_main(void)
 
 void init_fs(void)
 {
-    esp_vfs_spiffs_conf_t conf = {
+    // Two SPIFFS partitions (see partitions16MB.csv):
+    //   www    → /spiffs : editable web UI, may be wiped/re-uploaded at runtime.
+    //   config → /config : user settings JSON, physically isolated so a www
+    //                       update can never clobber the configuration.
+    esp_vfs_spiffs_conf_t www_conf = {
         .base_path = "/spiffs",
-        .partition_label = "storage",
+        .partition_label = "www",
         .max_files = 5,
         .format_if_mount_failed = true
     };
+    esp_vfs_spiffs_register(&www_conf);
 
-    esp_vfs_spiffs_register(&conf);
+    esp_vfs_spiffs_conf_t config_conf = {
+        .base_path = "/config",
+        .partition_label = "config",
+        .max_files = 5,
+        .format_if_mount_failed = true
+    };
+    esp_vfs_spiffs_register(&config_conf);
 
     size_t total = 0, used = 0;
-    esp_spiffs_info("storage", &total, &used);
-    ESP_LOGI("SPIFFS", "Total: %d, Used: %d", total, used);
+    esp_spiffs_info("www", &total, &used);
+    ESP_LOGI("SPIFFS", "www:    Total: %d, Used: %d", total, used);
+    esp_spiffs_info("config", &total, &used);
+    ESP_LOGI("SPIFFS", "config: Total: %d, Used: %d", total, used);
 }
 
 void system_monitor_task(void *pv)
