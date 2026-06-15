@@ -9,6 +9,11 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-06-15
+
+### Changed
+- move playlist.csv from config to www partition
+
 ## [0.21.0] - 2026-06-15
 
 ### Added
@@ -321,7 +326,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.21.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.21.1...HEAD
+[0.21.1]: https://github.com/marcinozog/AtlasCube/compare/v0.21.0...v0.21.1
 [0.21.0]: https://github.com/marcinozog/AtlasCube/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/marcinozog/AtlasCube/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/marcinozog/AtlasCube/compare/v0.18.0...v0.19.0
