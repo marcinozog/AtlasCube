@@ -2,6 +2,7 @@
 #include "sdcard.h"
 #include "audio_file_player.h"
 #include "audio_engine.h"
+#include "id3.h"
 #include "app_state.h"
 #include "settings.h"
 #include "radio_service.h"
@@ -171,6 +172,13 @@ static void play_at(int idx, int n)
     char path[SD_DIR_MAX + SD_NAME_MAX];
     snprintf(path, sizeof(path), "%s/%s", s_play_dir, s_queue[idx]);
 
+    // Display title from the ID3 tag ("Artist - Title"); fall back to the file
+    // name when there's no usable tag. sd_track stays the file name (the queue
+    // / browser key used by the web + Android UIs).
+    char title[128];
+    if (!id3_read_title(path, title, sizeof(title)))
+        snprintf(title, sizeof(title), "%s", s_queue[idx]);
+
     app_state_update(&(app_state_patch_t){
         .has_sd_active = true, .sd_active = true,
         .has_sd_index  = true, .sd_index  = idx,
@@ -181,7 +189,7 @@ static void play_at(int idx, int n)
         // SD is the source now → reflect BT off here (take_over_output muxed it
         // off quietly), in this one shallow broadcast.
         .has_bt_enable = true, .bt_enable = false,
-        .has_title     = true, .title     = s_queue[idx],
+        .has_title     = true, .title     = title,
     });
 
     ESP_LOGI(TAG, "Play [%d/%d]: %s/%s", idx + 1, n, s_play_dir, s_queue[idx]);
@@ -278,6 +286,17 @@ void sd_player_stop(void)
     audio_engine_request_stop();
     clear_play_state();
     ESP_LOGI(TAG, "Stopped");
+}
+
+
+// Replay the current track (same folder + index). Used to bring SD music back
+// after a voice notification borrowed the output. No-op if nothing was queued.
+void sd_player_resume_current(void)
+{
+    if (!s_play_dir[0] || s_play_index < 0) return;
+    int n = scan_dir(s_play_dir);
+    if (n <= 0) return;
+    play_at(s_play_index < n ? s_play_index : 0, n);
 }
 
 

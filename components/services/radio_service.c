@@ -32,6 +32,7 @@ static int s_ramp_idx;     // steps done
 static bool s_notif_active   = false;
 static bool s_notif_was_radio = false;
 static bool s_notif_was_bt    = false;
+static bool s_notif_was_sd    = false;
 static int  s_notif_prev_index  = 0;
 static int  s_notif_prev_volume = 0;
 
@@ -112,8 +113,10 @@ static void on_notification_finished(void)
         bt_play();                       // resume phone playback
     } else if (s_notif_was_radio) {
         radio_play_index(s_notif_prev_index);
+    } else if (s_notif_was_sd) {
+        sd_player_resume_current();      // resume the SD track that was playing
     }
-    // else: radio was stopped → stay stopped
+    // else: nothing was playing → stay stopped
 }
 
 
@@ -162,12 +165,13 @@ void radio_play_notification(const char *filename, int volume)
     s_notif_was_bt     = s->bt_enable;
     s_notif_was_radio  = (s->radio_state == RADIO_STATE_PLAYING ||
                           s->radio_state == RADIO_STATE_BUFFERING);
+    s_notif_was_sd     = sd_player_is_active();
     s_notif_prev_index  = s->curr_index;
     s_notif_prev_volume = s->volume;
     s_notif_active = true;
 
-    ESP_LOGI(TAG, "Voice notification: %s (vol=%d, was_radio=%d, was_bt=%d)",
-             path, volume, s_notif_was_radio, s_notif_was_bt);
+    ESP_LOGI(TAG, "Voice notification: %s (vol=%d, was_radio=%d, was_bt=%d, was_sd=%d)",
+             path, volume, s_notif_was_radio, s_notif_was_bt, s_notif_was_sd);
 
     if (volume >= 0) audio_engine_set_volume(volume);   // live only, not persisted
 

@@ -33,6 +33,11 @@ void sd_player_stop(void);
 void sd_player_next(void);
 void sd_player_prev(void);
 
+// Replay the current track (same folder + index). Used by the voice-notification
+// restore path to resume SD music after the notification finishes. No-op if no
+// track was queued.
+void sd_player_resume_current(void);
+
 // Pause/resume the current track (toggle). Shuffle (toggle) and repeat (cycle
 // none → all → one) affect next/auto-advance selection.
 void sd_player_toggle_pause(void);
