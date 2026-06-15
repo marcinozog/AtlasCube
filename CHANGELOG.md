@@ -9,6 +9,26 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-06-15
+
+### Added
+- **build-flash:** add "first flash" option for blank chips
+- **build-flash:** group the menu
+- **build-flash:** add full chip erase menu option
+- **build-flash:** prompt for the serial port when -p is omitted
+- **scripts:** build-flash.py self-sets-up ESP-ADF on first run (single user entry) + scripts/README
+- **fs:** isolate settings on a config partition (www/config split) + built-in setup page
+- **ui:** ui profile for sd player screen
+- **ui:** on-device SD music player + file browser (LVGL)
+- **audio:** ID3 track titles + resume SD music after voice notification
+
+### Changed
+- **scripts:** split toolchain setup into env_setup.py, move build.py → ci/build.py; build-flash.py is the sole user script
+- **ram:** recover internal RAM + drop deferred settings write
+
+### Fixed
+- **ui:** show now-playing only for the active source
+
 ## [0.20.0] - 2026-06-14
 
 ### Added
@@ -301,7 +321,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.20.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.21.0...HEAD
+[0.21.0]: https://github.com/marcinozog/AtlasCube/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/marcinozog/AtlasCube/compare/v0.19.0...v0.20.0
 [0.19.0]: https://github.com/marcinozog/AtlasCube/compare/v0.18.0...v0.19.0
 [0.18.0]: https://github.com/marcinozog/AtlasCube/compare/v0.17.0...v0.18.0
