@@ -54,7 +54,12 @@ static void refresh_from_state(void)
     if (!s_title) return;
     app_state_t *s = app_state_get();
 
-    const char *t = s->title[0] ? s->title : (s->sd_track[0] ? s->sd_track : "—");
+    // Only show a track while SD is the active source — app_state.title is
+    // shared and otherwise holds the radio's ICY title.
+    const char *t = "—";
+    if (s->sd_active) {
+        t = s->title[0] ? s->title : (s->sd_track[0] ? s->sd_track : "—");
+    }
     lv_label_set_text(s_title, t);
 
     if (s->sd_active && s->sd_count > 0) {

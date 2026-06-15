@@ -60,8 +60,10 @@ void now_playing_widget_update(void)
     app_state_t *s = app_state_get();
     lv_label_set_text(s_label_station,
         s->station_name[0] ? s->station_name : "Atlas Radio");
+    // Show the title only while radio is the active source — otherwise the
+    // shared app_state.title holds the SD track and would leak onto this screen.
     lv_label_set_text(s_label_title,
-        s->title[0] ? s->title : "");
+        (!s->sd_active && s->title[0]) ? s->title : "");
 }
 
 void now_playing_widget_apply_theme(void)
