@@ -246,7 +246,7 @@ python scripts/build.py co5300       # albo ili9341 / st7796 / ili9488 / ssd1322
 python scripts/build.py              # interaktywne menu wariantu
 ```
 
-`build.py` to wieloplatformowy punkt wejścia do setupu/release (Windows, Linux, CI). Klonuje ESP-ADF v2.8 jeśli go nie ma, ustawia wariant w `defines.h`, aplikuje wszystkie patche ESP-ADF/ESP-IDF, kompresuje web UI, buduje i produkuje gotowy do wgrania `build/AtlasCube-<wariant>.bin`. Jest idempotentny — można puszczać wielokrotnie. Przydatne flagi: `--skip-build` (tylko setup), `--adf-path <ścieżka>`. Po skonfigurowaniu toolchaina codzienne **budowanie i wgrywanie na płytkę** to `scripts/build-flash.py` (zob. *Budowanie i wgrywanie na urządzenie* niżej).
+`build.py` to wieloplatformowy punkt wejścia do setupu/release (Windows, Linux, CI). Klonuje ESP-ADF v2.8 jeśli go nie ma, ustawia wariant w `defines.h`, aplikuje wszystkie patche ESP-ADF/ESP-IDF, kompresuje web UI, buduje i produkuje gotowy do wgrania `build/AtlasCube-<wariant>.bin`. Jest idempotentny — można puszczać wielokrotnie. Przydatne flagi: `--skip-build` (tylko setup), `--adf-path <ścieżka>`. Do budowania i wgrywania **własnej, skonfigurowanej płytki** używaj `scripts/build-flash.py` — przy pierwszym uruchomieniu sam robi ten setup, więc to jedyny skrypt, jakiego potrzebujesz (zob. *Budowanie i wgrywanie na urządzenie* niżej). `build.py` służy głównie do obrazu per-wariant i CI.
 
 Robi tyle:
 
@@ -332,7 +332,7 @@ idf.py flash
 
 **Budowanie i wgrywanie na urządzenie**
 
-Po jednorazowym setupie powyżej `scripts/build-flash.py` kompresuje web UI, buduje i wgrywa na podłączoną płytkę — pytając, ile urządzenia nadpisać:
+`scripts/build-flash.py` to skrypt all-in-one dla usera: ustaw sprzęt w `defines.h` i odpal — przy pierwszym uruchomieniu sam skonfiguruje ESP-ADF (bez osobnego kroku), skompresuje web UI, zbuduje i wgra na podłączoną płytkę, pytając ile urządzenia nadpisać:
 
 ```bash
 python scripts/build-flash.py -p COM5

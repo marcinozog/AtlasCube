@@ -3,8 +3,9 @@
 AtlasCube — build & flash. This is the script for end users.
 
 Configure your hardware ONCE in main/include/defines.h (display driver, touch,
-panel profile), then run this. It compresses the web UI, builds, and asks how
-much of the device to overwrite:
+panel profile), then run this — there's nothing else to set up first. On the
+first run it clones and patches ESP-ADF for you; afterwards it compresses the web
+UI, builds, and asks how much of the device to overwrite:
 
   1) Firmware only        — app slot only. Keeps the web UI and your settings.
   2) Firmware + Web UI    — app + www partition. Keeps your settings.
@@ -44,6 +45,11 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+
+# Reuse the one-time toolchain setup (clone + patch ESP-ADF/IDF) from build.py,
+# so there's a single source of truth and a fresh checkout "just works".
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import build  # noqa: E402  — scripts/build.py
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFINES_H = REPO_ROOT / "main" / "include" / "defines.h"
@@ -131,6 +137,19 @@ def ensure_fresh_sdkconfig(force):
     SDKCONFIG.unlink()
 
 
+def ensure_setup(idf_path, adf_arg, force):
+    """Make sure ESP-ADF is cloned + patched so a plain build works. Reuses
+    build.py's helpers (idempotent), but skips variant selection — the user sets
+    the hardware in defines.h by hand. Fast-path: skip the patch step once the
+    board is installed; `--setup` forces a re-run."""
+    adf = build.resolve_adf(adf_arg)  # clones ./esp-adf only if missing; sets ADF_PATH
+    board = adf / "components" / "audio_board" / build.BOARD_NAME
+    if force or not board.exists():
+        build.patch_adf(adf, idf_path)
+    else:
+        print(f"ESP-ADF already set up at {adf} — skipping patch (use --setup to re-run).")
+
+
 ACTIONS = {
     "fw":    "Firmware only        (app slot; keeps web UI and settings)",
     "ui":    "Firmware + Web UI    (app + www; keeps settings)",
@@ -160,6 +179,8 @@ def main():
     ap.add_argument("--scope", choices=list(ACTIONS), help="what to do: flash fw|ui|all, or build (compile only); skips the prompt")
     ap.add_argument("--monitor", action="store_true", help="open the serial monitor after flashing")
     ap.add_argument("--clean", action="store_true", help="force a clean sdkconfig before building")
+    ap.add_argument("--setup", action="store_true", help="force re-running the ESP-ADF/IDF setup patches")
+    ap.add_argument("--adf-path", help="path to an existing esp-adf checkout (default: $ADF_PATH or ./esp-adf, cloned if absent)")
     args = ap.parse_args()
 
     idf_path, idf_py = resolve_idf()
@@ -176,8 +197,12 @@ def main():
             cmd += ["--port", args.port]
         return cmd + ["write_partition", "--partition-name", partition, "--input", str(image)]
 
-    # Ask up front so the user isn't prompted after a long build.
+    # Ask up front so the user isn't prompted after a long build/setup.
     action = args.scope or pick_action()
+
+    # First run clones + patches ESP-ADF (and exports ADF_PATH for the build);
+    # later runs detect it's done and skip straight through.
+    ensure_setup(idf_path, args.adf_path, args.setup)
 
     # Drop a stale sdkconfig before configuring (variant switch guard).
     ensure_fresh_sdkconfig(args.clean)

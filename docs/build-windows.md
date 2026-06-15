@@ -52,6 +52,11 @@ selects the variant in `main/include/defines.h`, patches ESP-ADF and ESP-IDF,
 compresses the web UI, sets the target to `esp32s3`, builds, and merges a single
 flashable image.
 
+> Building for your own board (not a release image)? You can skip straight to
+> `scripts/build-flash.py` (next section) — it runs this same ESP-ADF setup on
+> its first run and then builds + flashes. Just set your hardware in `defines.h`
+> by hand first.
+
 ## 3. Flash
 
 The build prints the path to the merged image:

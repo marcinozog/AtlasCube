@@ -248,7 +248,7 @@ python scripts/build.py co5300       # or ili9341 / st7796 / ili9488 / ssd1322
 python scripts/build.py              # interactive variant menu
 ```
 
-`build.py` is the cross-platform setup/release entry point (Windows, Linux, CI). It clones ESP-ADF v2.8 if absent, selects the variant in `defines.h`, applies all ESP-ADF/ESP-IDF patches, compresses the web UI, builds, and produces a flashable `build/AtlasCube-<variant>.bin`. It is idempotent — safe to re-run. Useful flags: `--skip-build` (set up only), `--adf-path <path>`. Once the toolchain is set up, day-to-day **build & flash to your board** is `scripts/build-flash.py` (see *Build & flash to a device* below).
+`build.py` is the cross-platform setup/release entry point (Windows, Linux, CI). It clones ESP-ADF v2.8 if absent, selects the variant in `defines.h`, applies all ESP-ADF/ESP-IDF patches, compresses the web UI, builds, and produces a flashable `build/AtlasCube-<variant>.bin`. It is idempotent — safe to re-run. Useful flags: `--skip-build` (set up only), `--adf-path <path>`. For building & flashing **your own configured board**, prefer `scripts/build-flash.py` — it runs this same setup itself on first use, so it's the only script you need (see *Build & flash to a device* below). `build.py` is mainly for producing a per-variant image and for CI.
 
 It does the following:
 
@@ -334,7 +334,7 @@ idf.py flash
 
 **Build & flash to a device**
 
-After the one-time setup above, `scripts/build-flash.py` compresses the web UI, builds, and flashes a connected board — asking how much of the device to overwrite:
+`scripts/build-flash.py` is the all-in-one user script: set your hardware in `defines.h`, then run it — it sets up ESP-ADF on the first run (no separate step), compresses the web UI, builds, and flashes a connected board, asking how much of the device to overwrite:
 
 ```bash
 python scripts/build-flash.py -p COM5
