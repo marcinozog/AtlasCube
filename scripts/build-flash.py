@@ -139,7 +139,12 @@ def pick_action():
     names = list(ACTIONS)
     print("\nWhat do you want to do?")
     for i, name in enumerate(names, 1):
-        print(f"  {i}) {ACTIONS[name]}")
+        if name == "fw":
+            print("\n  Compile & flash to the device:")
+        elif name == "build":
+            print("\n  Other (no flash):")
+        print(f"    {i}) {ACTIONS[name]}")
+    print()
     while True:
         choice = input("Number [1]: ").strip() or "1"
         if choice.isdigit() and 1 <= int(choice) <= len(names):
