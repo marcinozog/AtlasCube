@@ -5,16 +5,22 @@ Run once before idf.py build when you change www files.
 Usage:
     python tools/compress_web.py
 
-Only the web UI lives in spiffs_image/www/. User settings (settings/theme/events/
-mqtt JSON + playlist CSV) live in spiffs_image/config/ and ship to the separate
-`config` partition uncompressed — they are not touched here.
+The web UI and the default station list (playlist.csv) live in spiffs_image/www/.
+Compressible assets (html/css/js/svg/ico) are gzip'd into spiffs_image/web/*.gz;
+files that the firmware reads with a plain fopen (playlist.csv) are copied verbatim
+so they stay readable. User settings (settings/theme/events/mqtt JSON) live in
+spiffs_image/config/ and ship to the separate `config` partition — not touched here.
 """
 import gzip
+import shutil
 from pathlib import Path
 
 SRC_DIR    = Path(__file__).parent.parent / "www"
 DST_DIR    = Path(__file__).parent.parent / "web"
 EXTENSIONS = {".html", ".css", ".js", ".svg", ".ico"}
+# Shipped verbatim (uncompressed): the firmware opens these with a plain fopen,
+# so they must not be gzip'd. Served over HTTP straight from the www partition.
+COPY_EXTENSIONS = {".csv"}
 
 def compress_file(src: Path):
     rel = src.relative_to(SRC_DIR)
@@ -31,6 +37,17 @@ def compress_file(src: Path):
     gz_kb   = dst.stat().st_size / 1024
     ratio   = (1 - gz_kb / orig_kb) * 100 if orig_kb > 0 else 0
     print(f"  gz    {str(rel):<30} {orig_kb:6.1f} KB → {gz_kb:5.1f} KB  ({ratio:.0f}% smaller)")
+
+def copy_file(src: Path):
+    rel = src.relative_to(SRC_DIR)
+    dst = DST_DIR / rel
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if dst.exists() and dst.stat().st_mtime >= src.stat().st_mtime:
+        print(f"  skip  {rel}  (up to date)")
+        return
+    shutil.copy2(src, dst)
+    print(f"  copy  {str(rel):<30} {src.stat().st_size / 1024:6.1f} KB  (verbatim)")
+
 
 def prune_stale(expected: set):
     """Remove anything in web/ that no longer maps to a www/ source. Without this,
@@ -54,6 +71,9 @@ def main():
         if path.suffix in EXTENSIONS:
             compress_file(path)
             expected.add(DST_DIR / (str(path.relative_to(SRC_DIR)) + ".gz"))
+        elif path.suffix in COPY_EXTENSIONS:
+            copy_file(path)
+            expected.add(DST_DIR / path.relative_to(SRC_DIR))
     prune_stale(expected)
     print("\nDone. Flash with: idf.py build flash")
 

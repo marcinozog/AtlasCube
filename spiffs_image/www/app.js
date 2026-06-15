@@ -135,7 +135,7 @@ function setVolumeUI(v) {
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadPlaylist() {
     try {
-        const res  = await fetch('/data/playlist.csv', { cache: 'no-store' });
+        const res  = await fetch('/playlist.csv', { cache: 'no-store' });
         const text = await res.text();
         const lines = text.trim().split(/\r?\n/);
         stationsList = lines.map(line => {

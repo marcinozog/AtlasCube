@@ -120,7 +120,7 @@ function spRenderCrumbs() {
     spCrumbsEl.innerHTML = html;
 }
 
-// SPIFFS is flat — names carry their full path (e.g. "data/playlist.csv"). Derive
+// SPIFFS is flat — names carry their full path (e.g. "css/style.css"). Derive
 // the immediate children (sub-dirs + files) of a virtual dir from that flat list.
 function spChildren(path) {
     const prefix = path ? path + "/" : "";
