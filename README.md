@@ -342,11 +342,14 @@ python scripts/build-flash.py -p COM5
 
 | Scope | Flashes | Keeps |
 |---|---|---|
-| Firmware only | app slot | web UI + settings |
+| First flash (blank chip) | bootloader + partition table + app | — (leaves `www` empty → setup page) |
+| Firmware only | app slot (OTA-style update) | web UI + settings |
 | Firmware + Web UI | app + `www` partition | settings |
 | Everything (factory) | app + `www` + `config` | — (resets settings to defaults) |
 
-The flash layout splits the old storage partition into `www` (the editable web UI) and `config` (user settings JSON), so reflashing code or the UI never wipes your settings — only a factory flash reseeds defaults. Pass `--scope fw|ui|all` to skip the prompt (or `--scope build` to just compile, no flash) and `--monitor` to open the serial monitor afterwards.
+Use **First flash** on a fresh or erased chip: `Firmware only` writes just the app and needs a bootloader already present, so on a blank chip the device can't boot (`invalid header`). First flash writes the bootloader and partition table too, but leaves `www` empty, so the device boots serving the built-in setup page where you enter Wi-Fi and upload the web UI.
+
+The flash layout splits the old storage partition into `www` (the editable web UI) and `config` (user settings JSON), so reflashing code or the UI never wipes your settings — only a factory flash reseeds defaults. Pass `--scope fresh|fw|ui|all` to skip the prompt (or `--scope build` to just compile, no flash) and `--monitor` to open the serial monitor afterwards.
 
 To tweak the web UI without flashing at all, edit files live in the browser (the on-device file editor, or the built-in setup page upload) — they write straight to the `www` partition over HTTP.
 

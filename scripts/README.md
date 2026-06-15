@@ -14,13 +14,21 @@ step. Afterwards it compresses the web UI, builds, and asks what to flash:
 
 | Choice | Flashes | Keeps |
 |---|---|---|
-| Firmware only | app slot | web UI + settings |
+| First flash (blank chip) | bootloader + partition table + app | — (leaves `www` empty → setup page) |
+| Firmware only | app slot (OTA-style update) | web UI + settings |
 | Firmware + Web UI | app + `www` partition | settings |
 | Everything (factory) | app + `www` + `config` | — (resets settings) |
 | Build only | nothing (compile + `web/*.gz`) | everything |
 
-Flags: `-p PORT`, `--scope fw\|ui\|all\|build` (skip the prompt), `--monitor`,
-`--clean` (force a clean `sdkconfig`), `--setup` (re-run the ESP-ADF/IDF patches).
+Flags: `-p PORT`, `--scope fresh\|fw\|ui\|all\|build` (skip the prompt),
+`--monitor`, `--clean` (force a clean `sdkconfig`), `--setup` (re-run the
+ESP-ADF/IDF patches).
+
+Use **First flash** on a fresh or erased chip — `Firmware only` writes just the
+app and needs a bootloader already present, so a blank chip won't boot
+(`invalid header`). First flash writes the bootloader and partition table too,
+leaving `www` empty so the device boots into the built-in setup page (enter
+Wi-Fi, upload the web UI).
 
 The web UI (`www`) and your settings (`config`) live in separate flash
 partitions, so reflashing code or the UI never wipes your settings — only a

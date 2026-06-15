@@ -340,11 +340,14 @@ python scripts/build-flash.py -p COM5
 
 | Zakres | Wgrywa | Zachowuje |
 |---|---|---|
-| Sam firmware | slot aplikacji | web UI + ustawienia |
+| Pierwszy flash (czysty chip) | bootloader + tablica partycji + aplikacja | — (zostawia `www` puste → strona setupu) |
+| Sam firmware | slot aplikacji (aktualizacja OTA-style) | web UI + ustawienia |
 | Firmware + Web UI | aplikacja + partycja `www` | ustawienia |
 | Wszystko (factory) | aplikacja + `www` + `config` | — (resetuje ustawienia do domyślnych) |
 
-Układ flasha dzieli dawną partycję storage na `www` (edytowalne web UI) i `config` (JSON ustawień), więc ponowne wgranie kodu albo UI nigdy nie kasuje ustawień — dopiero pełny flash (factory) seeduje domyślne. Flaga `--scope fw|ui|all` pomija pytanie (albo `--scope build` — tylko kompilacja, bez flashowania), `--monitor` otwiera monitor szeregowy po wgraniu.
+Na świeżym lub wymazanym chipie wybierz **Pierwszy flash**: `Sam firmware` wgrywa samą aplikację i wymaga już obecnego bootloadera, więc na czystym chipie urządzenie nie wstanie (`invalid header`). Pierwszy flash wgrywa też bootloader i tablicę partycji, ale zostawia `www` puste, więc urządzenie startuje serwując wbudowaną stronę setupu, gdzie podajesz Wi-Fi i wgrywasz web UI.
+
+Układ flasha dzieli dawną partycję storage na `www` (edytowalne web UI) i `config` (JSON ustawień), więc ponowne wgranie kodu albo UI nigdy nie kasuje ustawień — dopiero pełny flash (factory) seeduje domyślne. Flaga `--scope fresh|fw|ui|all` pomija pytanie (albo `--scope build` — tylko kompilacja, bez flashowania), `--monitor` otwiera monitor szeregowy po wgraniu.
 
 Żeby poprawić web UI bez flashowania, edytuj pliki na żywo w przeglądarce (edytor plików na urządzeniu albo wbudowana strona setupu) — zapisują się prosto na partycję `www` po HTTP.
 
