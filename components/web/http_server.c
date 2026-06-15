@@ -1246,6 +1246,45 @@ static esp_err_t api_ui_profile_radio_post_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static esp_err_t api_ui_profile_sd_get_handler(httpd_req_t *req)
+{
+    cJSON *sd = (cJSON *)ui_profile_dump_sd();
+
+    char *str = cJSON_PrintUnformatted(sd);
+    cJSON_Delete(sd);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    httpd_resp_sendstr(req, str);
+    free(str);
+    return ESP_OK;
+}
+
+static esp_err_t api_ui_profile_sd_post_handler(httpd_req_t *req)
+{
+    char *buf = NULL;
+    if (read_body(req, &buf, 4096) != ESP_OK) return ESP_FAIL;
+
+    cJSON *json = cJSON_Parse(buf);
+    free(buf);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    ui_profile_patch_sd(json);
+    cJSON_Delete(json);
+
+    ui_profile_save_to_file();
+
+    ui_event_t ev = { .type = UI_EVT_PROFILE_CHANGED };
+    ui_event_send(&ev);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true}");
+    return ESP_OK;
+}
+
 static esp_err_t api_ui_profile_reset_handler(httpd_req_t *req)
 {
     ui_profile_reset();
@@ -2342,7 +2381,7 @@ void http_server_start(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn      = httpd_uri_match_wildcard;
-    config.max_uri_handlers  = 40;
+    config.max_uri_handlers  = 48;
     // WS handlers run on this task and chain deep: cJSON_Parse of the inbound
     // payload → radio/settings play path → send_full_state (cJSON build of the
     // whole state). The 4 KB HTTPD default overflows on that path (e.g. an
@@ -2524,6 +2563,20 @@ void http_server_start(void)
         .handler = api_ui_profile_radio_post_handler,
     };
     httpd_register_uri_handler(server, &api_ui_radio_post);
+
+    httpd_uri_t api_ui_sd_get = {
+        .uri = "/api/ui/profile/sd",
+        .method = HTTP_GET,
+        .handler = api_ui_profile_sd_get_handler,
+    };
+    httpd_register_uri_handler(server, &api_ui_sd_get);
+
+    httpd_uri_t api_ui_sd_post = {
+        .uri = "/api/ui/profile/sd",
+        .method = HTTP_POST,
+        .handler = api_ui_profile_sd_post_handler,
+    };
+    httpd_register_uri_handler(server, &api_ui_sd_post);
 
     httpd_uri_t api_ui_reset = {
         .uri = "/api/ui/profile/reset",

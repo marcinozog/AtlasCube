@@ -6,6 +6,9 @@
 #include "ui_nav.h"
 #include "controls_overlay_widget.h"
 #include "vol_overlay_widget.h"
+#include "clock_widget.h"
+#include "mode_indicator_widget.h"
+#include "event_indicator_widget.h"
 #include "app_state.h"
 #include "settings.h"
 #include "sd_player.h"
@@ -92,11 +95,22 @@ static void sd_player_screen_create(lv_obj_t *parent)
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
 
-    s_title = make_centered_label(parent, p->radio_np_title_font, th->text_primary, p->radio_np_y);
+    s_title = make_centered_label(parent, p->sd_title_font, th->text_primary, p->sd_title_y);
     lv_label_set_long_mode(s_title, LV_LABEL_LONG_DOT);
 
-    s_folder = make_centered_label(parent, p->radio_state_font,      th->accent,     p->radio_state_y);
-    s_info   = make_centered_label(parent, p->radio_audio_info_font, th->text_muted, p->radio_audio_info_y);
+    s_folder = make_centered_label(parent, p->sd_folder_font, th->accent,     p->sd_folder_y);
+    s_info   = make_centered_label(parent, p->sd_info_font,   th->text_muted, p->sd_info_y);
+
+    // Clock + indicators (own sd_* layout fields, same widgets as screen_radio).
+    if (p->sd_show_clock) {
+        clock_widget_create(parent, p->sd_clock_widget_x, p->sd_clock_widget_y, p->sd_clock_font);
+    }
+    if (p->sd_show_mode_indicator) {
+        mode_indicator_create(parent, p->sd_mode_indic_x, p->sd_mode_indic_y);
+    }
+    if (p->sd_show_event_indicator) {
+        event_indicator_create(parent, p->sd_event_indic_x, p->sd_event_indic_y);
+    }
 
     refresh_from_state();
 
@@ -109,6 +123,9 @@ static void sd_player_screen_destroy(void)
 {
     controls_overlay_destroy();
     vol_overlay_hide();
+    mode_indicator_destroy();
+    event_indicator_destroy();
+    clock_widget_destroy();
     s_root   = NULL;
     s_title  = NULL;
     s_folder = NULL;
@@ -120,6 +137,11 @@ static void sd_player_on_event(const ui_event_t *ev)
 {
     switch (ev->type) {
         case UI_EVT_STATE_CHANGED:
+            refresh_from_state();
+            mode_indicator_update();
+            event_indicator_update();
+            clock_widget_tick();
+            break;
         case UI_EVT_TITLE_CHANGED:
             refresh_from_state();
             break;
@@ -169,6 +191,11 @@ static void sd_player_apply_theme(void)
     if (s_title)  lv_obj_set_style_text_color(s_title,  lv_color_hex(th->text_primary), LV_PART_MAIN);
     if (s_folder) lv_obj_set_style_text_color(s_folder, lv_color_hex(th->accent),       LV_PART_MAIN);
     if (s_info)   lv_obj_set_style_text_color(s_info,   lv_color_hex(th->text_muted),   LV_PART_MAIN);
+
+    clock_widget_apply_theme();
+    mode_indicator_apply_theme();
+    event_indicator_apply_theme();
+
     lv_obj_invalidate(s_root);
 }
 

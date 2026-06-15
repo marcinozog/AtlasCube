@@ -116,6 +116,26 @@ typedef struct {
     int16_t          radio_event_indic_x;
     int16_t          radio_event_indic_y;
 
+    // screen_sd_player — absolute LCD coordinates (top-left origin). The three
+    // text rows are horizontally centered (Y only). Mirrors screen_radio.
+    int16_t          sd_title_y;               // track title (ID3 / file name)
+    const lv_font_t *sd_title_font;
+    int16_t          sd_folder_y;              // "<folder>   idx/count"
+    const lv_font_t *sd_folder_font;
+    int16_t          sd_info_y;                // "VOL: n%   PAUSED   SHUFFLE ..."
+    const lv_font_t *sd_info_font;
+
+    bool             sd_show_mode_indicator;
+    bool             sd_show_clock;
+    bool             sd_show_event_indicator;
+    int16_t          sd_mode_indic_x;
+    int16_t          sd_mode_indic_y;
+    int16_t          sd_clock_widget_x;
+    int16_t          sd_clock_widget_y;
+    const lv_font_t *sd_clock_font;            // "HH:MM" clock widget on SD screen
+    int16_t          sd_event_indic_x;
+    int16_t          sd_event_indic_y;
+
     // screen_playlist
     int16_t          playlist_header_h;
     int16_t          playlist_item_h;
@@ -258,6 +278,9 @@ void  ui_profile_patch_bt(const void *obj);
 
 void *ui_profile_dump_radio(void);
 void  ui_profile_patch_radio(const void *obj);
+
+void *ui_profile_dump_sd(void);
+void  ui_profile_patch_sd(const void *obj);
 
 #ifdef __cplusplus
 }

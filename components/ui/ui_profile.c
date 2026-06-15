@@ -68,6 +68,23 @@ static const ui_profile_t k_defaults = {
     .radio_event_indic_x       = 90,
     .radio_event_indic_y       = 8,
 
+    .sd_title_y                = 35,
+    .sd_title_font             = &lv_font_montserrat_14_pl,
+    .sd_folder_y               = 16,
+    .sd_folder_font            = &lv_font_montserrat_12_pl,
+    .sd_info_y                 = 30,
+    .sd_info_font              = &lv_font_montserrat_12_pl,
+    .sd_show_mode_indicator    = false,
+    .sd_show_clock             = false,
+    .sd_show_event_indicator   = false,
+    .sd_mode_indic_x           = 108,
+    .sd_mode_indic_y           = 8,
+    .sd_clock_widget_x         = 39,
+    .sd_clock_widget_y         = 0,
+    .sd_clock_font             = &lv_font_montserrat_18_pl,
+    .sd_event_indic_x          = 90,
+    .sd_event_indic_y          = 8,
+
     .playlist_header_h         = 14,
     .playlist_item_h           = 12,
     .playlist_item_pad         = 1,
@@ -220,6 +237,23 @@ static const ui_profile_t k_defaults = {
     .radio_clock_font          = &lv_font_montserrat_18_pl,
     .radio_event_indic_x       = 216,
     .radio_event_indic_y       = 4,
+
+    .sd_title_y                = 1,
+    .sd_title_font             = &lv_font_montserrat_14_pl,
+    .sd_folder_y               = 44,
+    .sd_folder_font            = &lv_font_montserrat_12_pl,
+    .sd_info_y                 = 52,
+    .sd_info_font              = &lv_font_montserrat_12_pl,
+    .sd_show_mode_indicator    = false,
+    .sd_show_clock             = false,
+    .sd_show_event_indicator   = false,
+    .sd_mode_indic_x           = 236,
+    .sd_mode_indic_y           = 4,
+    .sd_clock_widget_x         = 100,
+    .sd_clock_widget_y         = 0,
+    .sd_clock_font             = &lv_font_montserrat_18_pl,
+    .sd_event_indic_x          = 216,
+    .sd_event_indic_y          = 4,
 
     .playlist_header_h         = 16,
     .playlist_item_h           = 14,
@@ -376,6 +410,23 @@ static const ui_profile_t k_defaults = {
     .radio_clock_font          = &lv_font_montserrat_18_pl,
     .radio_event_indic_x       = 138,
     .radio_event_indic_y       = 1,
+
+    .sd_title_y                = 60,
+    .sd_title_font             = &lv_font_montserrat_14_pl,
+    .sd_folder_y               = 184,
+    .sd_folder_font            = &lv_font_montserrat_14_pl,
+    .sd_info_y                 = 233,
+    .sd_info_font              = &lv_font_montserrat_12_pl,
+    .sd_show_mode_indicator    = true,
+    .sd_show_clock             = true,
+    .sd_show_event_indicator   = true,
+    .sd_mode_indic_x           = 158,
+    .sd_mode_indic_y           = 1,
+    .sd_clock_widget_x         = 95,
+    .sd_clock_widget_y         = 0,
+    .sd_clock_font             = &lv_font_montserrat_18_pl,
+    .sd_event_indic_x          = 138,
+    .sd_event_indic_y          = 1,
 
     // Playlist: We use the screen height for more list items
     .playlist_header_h         = 45,
@@ -539,6 +590,23 @@ static const ui_profile_t k_defaults = {
     .radio_event_indic_x       = 282,
     .radio_event_indic_y       = 2,
 
+    .sd_title_y                = 64,
+    .sd_title_font             = &lv_font_montserrat_14_pl,
+    .sd_folder_y               = 209,
+    .sd_folder_font            = &lv_font_montserrat_14_pl,
+    .sd_info_y                 = 130,
+    .sd_info_font              = &lv_font_montserrat_12_pl,
+    .sd_show_mode_indicator    = true,
+    .sd_show_clock             = true,
+    .sd_show_event_indicator   = true,
+    .sd_mode_indic_x           = 300,
+    .sd_mode_indic_y           = 2,
+    .sd_clock_widget_x         = 135,
+    .sd_clock_widget_y         = 0,
+    .sd_clock_font             = &lv_font_montserrat_18_pl,
+    .sd_event_indic_x          = 282,
+    .sd_event_indic_y          = 2,
+
     .playlist_header_h         = 26,
     .playlist_item_h           = 28,
     .playlist_item_pad         = 2,
@@ -693,6 +761,23 @@ static const ui_profile_t k_defaults = {
     .radio_clock_font          = &lv_font_montserrat_48,
     .radio_event_indic_x       = 424,
     .radio_event_indic_y       = 4,
+
+    .sd_title_y                = 85,
+    .sd_title_font             = &lv_font_montserrat_14_pl,
+    .sd_folder_y               = 278,
+    .sd_folder_font            = &lv_font_montserrat_14_pl,
+    .sd_info_y                 = 174,
+    .sd_info_font              = &lv_font_montserrat_14_pl,
+    .sd_show_mode_indicator    = true,
+    .sd_show_clock             = true,
+    .sd_show_event_indicator   = true,
+    .sd_mode_indic_x           = 452,
+    .sd_mode_indic_y           = 4,
+    .sd_clock_widget_x         = 180,
+    .sd_clock_widget_y         = 0,
+    .sd_clock_font             = &lv_font_montserrat_48,
+    .sd_event_indic_x          = 424,
+    .sd_event_indic_y          = 4,
 
     .playlist_header_h         = 34,
     .playlist_item_h           = 38,
@@ -992,6 +1077,49 @@ static cJSON *dump_radio(const ui_profile_t *p)
     return o;
 }
 
+static void load_sd(const cJSON *obj, ui_profile_t *p)
+{
+    if (!cJSON_IsObject(obj)) return;
+    load_i16 (obj, "sd_title_y",                &p->sd_title_y);
+    load_font(obj, "sd_title_font",             &p->sd_title_font);
+    load_i16 (obj, "sd_folder_y",               &p->sd_folder_y);
+    load_font(obj, "sd_folder_font",            &p->sd_folder_font);
+    load_i16 (obj, "sd_info_y",                 &p->sd_info_y);
+    load_font(obj, "sd_info_font",              &p->sd_info_font);
+    load_bool(obj, "sd_show_mode_indicator",    &p->sd_show_mode_indicator);
+    load_bool(obj, "sd_show_clock",             &p->sd_show_clock);
+    load_bool(obj, "sd_show_event_indicator",   &p->sd_show_event_indicator);
+    load_i16 (obj, "sd_mode_indic_x",           &p->sd_mode_indic_x);
+    load_i16 (obj, "sd_mode_indic_y",           &p->sd_mode_indic_y);
+    load_i16 (obj, "sd_clock_widget_x",         &p->sd_clock_widget_x);
+    load_i16 (obj, "sd_clock_widget_y",         &p->sd_clock_widget_y);
+    load_font(obj, "sd_clock_font",             &p->sd_clock_font);
+    load_i16 (obj, "sd_event_indic_x",          &p->sd_event_indic_x);
+    load_i16 (obj, "sd_event_indic_y",          &p->sd_event_indic_y);
+}
+
+static cJSON *dump_sd(const ui_profile_t *p)
+{
+    cJSON *o = cJSON_CreateObject();
+    add_i16 (o, "sd_title_y",                p->sd_title_y);
+    add_font(o, "sd_title_font",             p->sd_title_font);
+    add_i16 (o, "sd_folder_y",               p->sd_folder_y);
+    add_font(o, "sd_folder_font",            p->sd_folder_font);
+    add_i16 (o, "sd_info_y",                 p->sd_info_y);
+    add_font(o, "sd_info_font",              p->sd_info_font);
+    add_bool(o, "sd_show_mode_indicator",    p->sd_show_mode_indicator);
+    add_bool(o, "sd_show_clock",             p->sd_show_clock);
+    add_bool(o, "sd_show_event_indicator",   p->sd_show_event_indicator);
+    add_i16 (o, "sd_mode_indic_x",           p->sd_mode_indic_x);
+    add_i16 (o, "sd_mode_indic_y",           p->sd_mode_indic_y);
+    add_i16 (o, "sd_clock_widget_x",         p->sd_clock_widget_x);
+    add_i16 (o, "sd_clock_widget_y",         p->sd_clock_widget_y);
+    add_font(o, "sd_clock_font",             p->sd_clock_font);
+    add_i16 (o, "sd_event_indic_x",          p->sd_event_indic_x);
+    add_i16 (o, "sd_event_indic_y",          p->sd_event_indic_y);
+    return o;
+}
+
 static cJSON *dump_bt(const ui_profile_t *p)
 {
     cJSON *o = cJSON_CreateObject();
@@ -1123,6 +1251,7 @@ esp_err_t ui_profile_load_from_file(void)
     load_clock(cJSON_GetObjectItem(json, "clock"), &s_runtime);
     load_bt   (cJSON_GetObjectItem(json, "bt"),    &s_runtime);
     load_radio(cJSON_GetObjectItem(json, "radio"), &s_runtime);
+    load_sd   (cJSON_GetObjectItem(json, "sd"),    &s_runtime);
     // (other sections will land here when exposed in the UI: playlist, ...)
 
     cJSON_Delete(json);
@@ -1168,6 +1297,18 @@ void ui_profile_patch_radio(const void *obj)
     load_radio((const cJSON *)obj, &s_runtime);
 }
 
+void *ui_profile_dump_sd(void)
+{
+    ensure_initialized();
+    return dump_sd(&s_runtime);
+}
+
+void ui_profile_patch_sd(const void *obj)
+{
+    ensure_initialized();
+    load_sd((const cJSON *)obj, &s_runtime);
+}
+
 esp_err_t ui_profile_save_to_file(void)
 {
     ensure_initialized();
@@ -1180,6 +1321,7 @@ esp_err_t ui_profile_save_to_file(void)
     cJSON_AddItemToObject(json, "clock", dump_clock(&s_runtime));
     cJSON_AddItemToObject(json, "bt",    dump_bt   (&s_runtime));
     cJSON_AddItemToObject(json, "radio", dump_radio(&s_runtime));
+    cJSON_AddItemToObject(json, "sd",    dump_sd   (&s_runtime));
 
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);

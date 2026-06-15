@@ -121,6 +121,28 @@ const RADIO_FIELDS = [
     { key: 'radio_event_indic_y',        label: 'Event indic. Y',    type: 'number' },
 ];
 
+const SD_FIELDS = [
+    { key: 'sd_title_y',    label: 'Title Y',          type: 'number' },
+    { key: 'sd_title_font', label: 'Title font',       type: 'font'   },
+
+    { key: 'sd_folder_y',    label: 'Folder Y',        type: 'number' },
+    { key: 'sd_folder_font', label: 'Folder font',     type: 'font'   },
+
+    { key: 'sd_info_y',    label: 'Info Y',            type: 'number' },
+    { key: 'sd_info_font', label: 'Info font',         type: 'font'   },
+
+    { key: 'sd_show_mode_indicator',  label: 'Show mode indic.',  type: 'bool' },
+    { key: 'sd_mode_indic_x',         label: 'Mode indic. X',     type: 'number' },
+    { key: 'sd_mode_indic_y',         label: 'Mode indic. Y',     type: 'number' },
+    { key: 'sd_show_clock',           label: 'Show clock',        type: 'bool' },
+    { key: 'sd_clock_widget_x',       label: 'Clock X',           type: 'number' },
+    { key: 'sd_clock_widget_y',       label: 'Clock Y',           type: 'number' },
+    { key: 'sd_clock_font',           label: 'Clock font',        type: 'font'   },
+    { key: 'sd_show_event_indicator', label: 'Show event indic.', type: 'bool' },
+    { key: 'sd_event_indic_x',        label: 'Event indic. X',    type: 'number' },
+    { key: 'sd_event_indic_y',        label: 'Event indic. Y',    type: 'number' },
+];
+
 // ── Sections registry ──────────────────────────────────────────────────────
 // Each entry: { title, fields, renderer (active section's renderSvg) }
 
@@ -128,6 +150,7 @@ const SECTIONS = {
     clock: { title: 'Clock',     fields: CLOCK_FIELDS, renderer: renderClock },
     bt:    { title: 'Bluetooth', fields: BT_FIELDS,    renderer: renderBt    },
     radio: { title: 'Radio',     fields: RADIO_FIELDS, renderer: renderRadio },
+    sd:    { title: 'SD Player', fields: SD_FIELDS,    renderer: renderSd    },
 };
 
 const state = {
@@ -136,6 +159,7 @@ const state = {
     clock:  {},
     bt:     {},
     radio:  {},
+    sd:     {},
 };
 
 // ── Bootstrap ───────────────────────────────────────────────────────────────
@@ -469,6 +493,39 @@ function renderRadio(svg) {
             x: r.radio_event_indic_x, y: r.radio_event_indic_y, w: 16, h: 16,
             label: 'evt', cls: 'label-rect',
             fields: { x: 'radio_event_indic_x', y: 'radio_event_indic_y' },
+        });
+    }
+}
+
+// ── SD PLAYER renderer ───────────────────────────────────────────────────────
+
+function renderSd(svg) {
+    const s = state.sd;
+
+    drawLabel(svg, 0, s.sd_title_y, s.sd_title_font, 'Artist - Title',
+              'title', { y: 'sd_title_y' });
+    drawLabel(svg, 0, s.sd_folder_y, s.sd_folder_font, 'Folder   3/12',
+              'folder', { y: 'sd_folder_y' });
+    drawLabel(svg, 0, s.sd_info_y, s.sd_info_font, 'VOL: 42%   SHUFFLE   REPEAT ALL',
+              'info', { y: 'sd_info_y' });
+
+    if (s.sd_show_mode_indicator) {
+        drawFreeElement(svg, {
+            x: s.sd_mode_indic_x, y: s.sd_mode_indic_y, w: 16, h: 16,
+            label: 'mode', cls: 'label-rect',
+            fields: { x: 'sd_mode_indic_x', y: 'sd_mode_indic_y' },
+        });
+    }
+    if (s.sd_show_clock) {
+        drawLabel(svg, s.sd_clock_widget_x, s.sd_clock_widget_y, s.sd_clock_font,
+                  '00:00', 'clock',
+                  { x: 'sd_clock_widget_x', y: 'sd_clock_widget_y' });
+    }
+    if (s.sd_show_event_indicator) {
+        drawFreeElement(svg, {
+            x: s.sd_event_indic_x, y: s.sd_event_indic_y, w: 16, h: 16,
+            label: 'evt', cls: 'label-rect',
+            fields: { x: 'sd_event_indic_x', y: 'sd_event_indic_y' },
         });
     }
 }
