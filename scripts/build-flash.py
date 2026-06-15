@@ -146,6 +146,36 @@ def pick_action():
         print("Invalid choice.")
 
 
+def list_serial_ports():
+    """Detected serial ports, best-effort (empty if pyserial isn't importable)."""
+    try:
+        from serial.tools import list_ports
+        return [p.device for p in list_ports.comports()]
+    except Exception:
+        return []
+
+
+def pick_port():
+    """Ask for the serial port when -p wasn't given. Without it idf.py auto-detects,
+    which fails on boards whose native USB doesn't enumerate as a plain serial port."""
+    ports = list_serial_ports()
+    if ports:
+        print("\nSerial port:")
+        for i, p in enumerate(ports, 1):
+            print(f"  {i}) {p}")
+        print("  0) let idf.py auto-detect")
+        while True:
+            choice = input("Port number [1]: ").strip() or "1"
+            if choice == "0":
+                return None
+            if choice.isdigit() and 1 <= int(choice) <= len(ports):
+                return ports[int(choice) - 1]
+            print("Invalid choice.")
+    val = input("\nNo serial ports detected. Type a port (e.g. COM5), "
+                "or leave empty to let idf.py auto-detect: ").strip()
+    return val or None
+
+
 def main():
     ap = argparse.ArgumentParser(description="AtlasCube build & flash (end-user script).")
     ap.add_argument("-p", "--port", help="serial port (e.g. COM5 / /dev/ttyUSB0); auto-detected if omitted")
@@ -158,20 +188,27 @@ def main():
 
     idf_path, idf_py = resolve_idf()
 
+    # Ask up front so the user isn't prompted after a long build/setup.
+    action = args.scope or pick_action()
+
+    # Serial port for flashing actions (build-only needs none). Ask when -p was
+    # omitted rather than leaning on idf.py auto-detect, which finds nothing on
+    # boards whose native USB doesn't enumerate as a plain serial port.
+    port = args.port
+    if action != "build" and not port and sys.stdin.isatty():
+        port = pick_port()
+
     def idf(*a):
         cmd = [sys.executable, str(idf_py)]
-        if args.port:
-            cmd += ["-p", args.port]
+        if port:
+            cmd += ["-p", port]
         return cmd + list(a)
 
     def parttool_write(partition, image):
         cmd = [sys.executable, str(idf_path / "components" / "partition_table" / "parttool.py")]
-        if args.port:
-            cmd += ["--port", args.port]
+        if port:
+            cmd += ["--port", port]
         return cmd + ["write_partition", "--partition-name", partition, "--input", str(image)]
-
-    # Ask up front so the user isn't prompted after a long build/setup.
-    action = args.scope or pick_action()
 
     # First run clones + patches ESP-ADF (and exports ADF_PATH for the build);
     # later runs detect it's done and skip straight through.
