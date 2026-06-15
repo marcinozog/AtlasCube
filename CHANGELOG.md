@@ -9,6 +9,12 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.21.2] - 2026-06-15
+
+### Fixed
+- **build:** default to esp32s3 target on a fresh checkout
+- **compress-web:** use ASCII arrow so logging doesn't crash on cp1250
+
 ## [0.21.1] - 2026-06-15
 
 ### Changed
@@ -326,7 +332,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.21.1...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.21.2...HEAD
+[0.21.2]: https://github.com/marcinozog/AtlasCube/compare/v0.21.1...v0.21.2
 [0.21.1]: https://github.com/marcinozog/AtlasCube/compare/v0.21.0...v0.21.1
 [0.21.0]: https://github.com/marcinozog/AtlasCube/compare/v0.20.0...v0.21.0
 [0.20.0]: https://github.com/marcinozog/AtlasCube/compare/v0.19.0...v0.20.0
