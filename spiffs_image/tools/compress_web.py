@@ -36,7 +36,7 @@ def compress_file(src: Path):
     orig_kb = len(data) / 1024
     gz_kb   = dst.stat().st_size / 1024
     ratio   = (1 - gz_kb / orig_kb) * 100 if orig_kb > 0 else 0
-    print(f"  gz    {str(rel):<30} {orig_kb:6.1f} KB → {gz_kb:5.1f} KB  ({ratio:.0f}% smaller)")
+    print(f"  gz    {str(rel):<30} {orig_kb:6.1f} KB -> {gz_kb:5.1f} KB  ({ratio:.0f}% smaller)")
 
 def copy_file(src: Path):
     rel = src.relative_to(SRC_DIR)
