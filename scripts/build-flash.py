@@ -134,7 +134,7 @@ ACTIONS = {
     "fw":    "Firmware only (e.g. OTA)      (app slot; keeps web UI and settings)",
     "ui":    "Firmware + Web UI             (app + www; keeps settings)",
     "all":   "Everything / factory          (app + www + config; RESETS settings)",
-    "build": "Build only                    (compile + compress web/*.gz; don't flash)",
+    "build": "Build only (e.g. OTA image)   (compile + compress web/*.gz; don't flash)",
     "erase": "Erase all                     (wipe the WHOLE flash: app + web UI + settings + NVS)",
 }
 

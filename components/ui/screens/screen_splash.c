@@ -32,10 +32,10 @@ static void info_refresh(lv_timer_t *t)
     if (wifi_get_run_mode() == WIFI_RUN_MODE_STA) {
         char ip[16];
         wifi_get_ip(ip, sizeof(ip));
-        lv_label_set_text_fmt(s_info_label, "v%s\nIP: %s",
+        lv_label_set_text_fmt(s_info_label, "%s\nIP: %s",
                               esp_app_get_description()->version, ip);
     } else {
-        lv_label_set_text_fmt(s_info_label, "v%s",
+        lv_label_set_text_fmt(s_info_label, "%s",
                               esp_app_get_description()->version);
     }
 }
