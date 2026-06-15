@@ -128,6 +128,7 @@ ACTIONS = {
     "ui":    "Firmware + Web UI    (app + www; keeps settings)",
     "all":   "Everything / factory (app + www + config; RESETS settings)",
     "build": "Build only           (compile + compress web/*.gz; don't flash)",
+    "erase": "Erase all            (wipe the WHOLE flash: app + web UI + settings + NVS)",
 }
 
 
@@ -213,6 +214,18 @@ def main():
     # First run clones + patches ESP-ADF (and exports ADF_PATH for the build);
     # later runs detect it's done and skip straight through.
     ensure_setup(idf_path, args.adf_path, args.setup)
+
+    # Erase is a standalone, destructive flash op — no build needed.
+    if action == "erase":
+        if sys.stdin.isatty():
+            ans = input("Erase the ENTIRE flash (app, web UI, settings, NVS)? [y/N] ").strip().lower()
+            if ans not in ("y", "yes"):
+                print("Aborted.")
+                return
+        run(idf("erase-flash"))
+        print("\nFlash erased. Restore a working device with '--scope all' "
+              "(or pick 'Everything' in the menu).")
+        return
 
     # Drop a stale sdkconfig before configuring (variant switch guard).
     ensure_fresh_sdkconfig(args.clean)
