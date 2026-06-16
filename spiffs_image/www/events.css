@@ -35,7 +35,7 @@
     flex-wrap: wrap;
 }
 
-#ev_save_btn {
+#ev_save_btn, .btn-primary {
     padding: 10px 18px;
     background: var(--accent);
     border: 1px solid var(--accent);
@@ -47,11 +47,11 @@
     cursor: pointer;
     transition: background .15s, border-color .15s;
 }
-#ev_save_btn:hover:not(:disabled) {
+#ev_save_btn:hover:not(:disabled), .btn-primary:hover:not(:disabled) {
     background: var(--accent-dim);
     border-color: var(--accent-dim);
 }
-#ev_save_btn:disabled {
+#ev_save_btn:disabled, .btn-primary:disabled {
     background: var(--border);
     border-color: var(--border);
     cursor: not-allowed;
