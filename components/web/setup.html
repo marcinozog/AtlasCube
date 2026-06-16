@@ -102,7 +102,7 @@
   });
 
   // Firmware version — confirms what is flashed.
-  fetch('/api/state', { cache: 'no-store' })
+  fetch('/api/state', { cache: 'no-store', credentials: 'same-origin' })
     .then(function (r) { return r.json(); })
     .then(function (s) {
       if (s && s.version) document.getElementById('fwVersion').textContent = 'Firmware ' + s.version;
@@ -119,12 +119,13 @@
     try {
       var r = await fetch('/api/settings', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ wifi: { ssid: ssid, password: pass } })
       });
       if (!r.ok) throw new Error('Server returned ' + r.status);
       show('wifiStatus', 'Settings saved. Restarting device…', false);
-      try { await fetch('/api/restart', { method: 'POST' }); } catch (_) {}
+      try { await fetch('/api/restart', { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } }); } catch (_) {}
     } catch (err) {
       show('wifiStatus', 'Error: ' + err.message, true);
     }
@@ -144,7 +145,8 @@
       try {
         var buf = await file.arrayBuffer();
         var r = await fetch('/api/files/' + encodeURIComponent(file.name), {
-          method: 'PUT', body: buf
+          method: 'PUT', credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: buf
         });
         if (!r.ok) throw new Error(r.status + '');
         ok++;
