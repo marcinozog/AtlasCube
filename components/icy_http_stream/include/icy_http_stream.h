@@ -13,6 +13,7 @@
 #pragma once
 
 #include "audio_element.h"
+#include "audio_common.h"   /* esp_codec_type_t */
 #include "esp_err.h"
 #include "esp_http_client.h"
 
@@ -32,6 +33,8 @@ typedef struct {
     audio_element_handle_t    el;
     void                     *user_data;
     int                       icy_metaint;  /*!< Meta interval in bytes; 0 if no ICY */
+    esp_codec_type_t          codec;        /*!< Codec from Content-Type, valid on POST_REQUEST;
+                                                 ESP_CODEC_TYPE_UNKNOW if the server gave no usable hint */
 } icy_http_event_msg_t;
 
 typedef int  (*icy_http_event_cb_t)(icy_http_event_msg_t *msg);

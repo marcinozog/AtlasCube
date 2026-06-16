@@ -46,6 +46,12 @@ typedef struct {
     icy_http_event_cb_t       event_cb;
     void                     *user_data;
 
+    /* Codec inferred from the Content-Type response header (both transports).
+     * ESP_CODEC_TYPE_UNKNOW until headers are parsed; surfaced to the engine in
+     * the POST_REQUEST event so it can relink the decoder if the URL-hint guess
+     * was wrong. */
+    esp_codec_type_t          detected_codec;
+
     /* ICY (Shoutcast) parsing state */
     int                       icy_metaint;
     int                       bytes_until_meta;
@@ -92,7 +98,8 @@ static esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         http->icy_metaint = atoi(evt->header_value);
         http->bytes_until_meta = http->icy_metaint;
     } else if (strcasecmp(evt->header_key, "Content-Type") == 0) {
-        audio_element_set_codec_fmt(el, _content_type_to_codec(evt->header_value));
+        http->detected_codec = _content_type_to_codec(evt->header_value);
+        audio_element_set_codec_fmt(el, http->detected_codec);
     }
     return ESP_OK;
 }
@@ -109,6 +116,7 @@ static int _dispatch(audio_element_handle_t self, icy_http_event_id_t id)
         .el          = self,
         .user_data   = http->user_data,
         .icy_metaint = http->icy_metaint,
+        .codec       = http->detected_codec,
     };
     return http->event_cb(&msg);
 }
@@ -172,7 +180,8 @@ static void _raw_apply_header(audio_element_handle_t self, icy_http_t *http,
         http->icy_metaint = atoi(val);
         http->bytes_until_meta = http->icy_metaint;
     } else if (strcasecmp(key, "content-type") == 0) {
-        audio_element_set_codec_fmt(self, _content_type_to_codec(val));
+        http->detected_codec = _content_type_to_codec(val);
+        audio_element_set_codec_fmt(self, http->detected_codec);
     }
 }
 
@@ -356,6 +365,7 @@ static esp_err_t _icy_open(audio_element_handle_t self)
     http->meta_received    = 0;
     http->_errno           = 0;
     http->raw_fd           = -1;
+    http->detected_codec   = ESP_CODEC_TYPE_UNKNOW;
 
     /* http:// → raw socket (esp_http_client can't talk to old SHOUTcast DNAS);
      * https:// → esp_http_client for TLS. */

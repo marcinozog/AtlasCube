@@ -31,20 +31,32 @@ header (`auto_ogg_dec.h`) is misleading. Many "FLAC Hi-Fi" Icecast streams
 serve `audio/ogg` with FLAC payload and **will not work**. Look for streams
 with `Content-Type: audio/flac` (raw FLAC).
 
-## Codec detection (URL hint + MP3 fallback)
+## Codec detection (URL hint → Content-Type relink)
 
 1. **URL hint** (zero-cost): `.flac` / `.aac` / `.aacp` / `.mp3` / `/aac` etc.
    Only matches with explicit dot prefix for FLAC — bare "flac" in path can
    be OGG/FLAC (e.g. `juventus_FLAC`).
 2. **Fallback**: MP3 — extension-less endpoints (typical SHOUTcast `host:port/;`)
    are MP3 in the vast majority of cases.
+3. **Content-Type relink** (authoritative): the pipeline links a fixed decoder
+   *before* the connection opens (it can't be swapped mid-stream), so the URL
+   hint is only a first guess. Once the response headers arrive,
+   `icy_http_stream` maps `Content-Type` → codec (`_content_type_to_codec`) and
+   reports it in the `POST_REQUEST` event. If it disagrees with the linked
+   decoder, `audio_engine`'s `http_event_handler` re-issues `audio_engine_play`
+   with the correct codec — a teardown + relink + reconnect on the same URL.
+   This fixes extension-less AAC/FLAC streams (e.g. an Icecast endpoint ending
+   in `…/90HD` that serves `audio/aacp`) without touching the playlist.
 
-The decoder is chosen **before** the connection opens (the pipeline is linked
-with a fixed decoder), so detection has to be upfront. An earlier pre-flight
-HTTP probe (`esp_http_client` + `Range`, reading `Content-Type`) was dropped:
-it was unreliable and hung on ancient SHOUTcast servers (see *HTTP transport*).
-The trade-off is no auto-detect for **extension-less AAC/FLAC** — add the
-codec to the URL or hard-code it per station if needed.
+Cost: **one extra reconnect**, and only when the URL hint guessed wrong (a
+correctly hinted station opens in one shot). The relink terminates — the next
+open reports the same `Content-Type`, now matching the linked decoder.
+
+Still unsolved: servers that send `application/octet-stream` (mapped to MP3) for
+a non-MP3 stream. That needs byte-sniffing (ADTS/`fLaC`/`OggS` magic), not done
+yet. An earlier pre-flight HTTP probe (`esp_http_client` + `Range`) was dropped
+as unreliable; reading `Content-Type` off the **real** connection (above)
+replaced it.
 
 ## HTTP transport
 

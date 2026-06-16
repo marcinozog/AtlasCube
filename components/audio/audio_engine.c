@@ -101,10 +101,46 @@ static void pipeline_teardown(void);
 /*
 static int http_event_handler(...)
 */
+// Content-Type (esp_codec_type_t) -> our audio_codec_t. Returns
+// AUDIO_CODEC_UNKNOWN for codecs we don't decode or an unusable header, so the
+// caller keeps the URL-hint guess instead of relinking to nothing.
+static audio_codec_t codec_from_ct(esp_codec_type_t ct)
+{
+    switch (ct) {
+        case ESP_CODEC_TYPE_MP3: return AUDIO_CODEC_MP3;
+        case ESP_CODEC_TYPE_AAC: return AUDIO_CODEC_AAC;
+        case ESP_CODEC_TYPE_WAV: return AUDIO_CODEC_WAV;
+        default:                 return AUDIO_CODEC_UNKNOWN;  // OPUS/UNKNOW: no decoder
+    }
+}
+
 static int http_event_handler(icy_http_event_msg_t *msg)
 {
     if (msg->event_id == ICY_HTTP_EVENT_PRE_REQUEST) {
         ESP_LOGI(TAG, "HTTP request start");
+        return ESP_OK;
+    }
+
+    // After headers are parsed the server's Content-Type is the authoritative
+    // codec. The pipeline was already linked with the URL-hint guess (MP3 by
+    // default); if it was wrong, relink+restart on the same URL. We can't swap a
+    // decoder element mid-stream, so this costs one reconnect — but only on a
+    // mismatch, and only on the first play of a mis-hinted station.
+    if (msg->event_id == ICY_HTTP_EVENT_POST_REQUEST && current_src == AUDIO_SRC_HTTP) {
+        audio_codec_t want = codec_from_ct(msg->codec);
+        if (want != AUDIO_CODEC_UNKNOWN && want != current_codec) {
+            char *uri = audio_element_get_uri(http_stream_reader);
+            if (uri) {
+                ESP_LOGW(TAG, "Codec mismatch: linked=%s, Content-Type=%s -> relinking",
+                         codec_name[current_codec], codec_name[want]);
+                // Re-enter through the play front-end: it just marks s_pending_*
+                // and wakes audio_play_task, which tears down + relinks under
+                // s_pipe_lock. Safe from this (http reader task) callback — same
+                // path the retry logic uses. Re-link terminates: the next open
+                // reports the same codec, now == current_codec.
+                audio_engine_play(AUDIO_SRC_HTTP, want, uri, 0);
+            }
+        }
     }
     return ESP_OK;
 }
