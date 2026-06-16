@@ -12,23 +12,24 @@ python scripts/build-flash.py
 The **first run** clones and patches ESP-ADF for you — there's no separate setup
 step. Afterwards it compresses the web UI, builds, and asks what to flash:
 
-| Choice | Flashes | Keeps |
+| Choice (`--scope`) | Flashes | Keeps |
 |---|---|---|
-| First flash (blank chip) | bootloader + partition table + app | — (leaves `www` empty → setup page) |
-| Firmware only | app slot (OTA-style update) | web UI + settings |
-| Firmware + Web UI | app + `www` partition | settings |
-| Everything (factory) | app + `www` + `config` | — (resets settings) |
-| Build only | nothing (compile + `web/*.gz`) | everything |
+| Everything / factory (`all`) | bootloader + partition table + app + `www` + `config` | — (works on a blank chip; resets settings) |
+| Firmware only (`fw`) | app slot (OTA-style update) | web UI + settings |
+| Firmware + Web UI (`ui`) | app + `www` partition | settings |
+| Build only (`build`) | nothing (compile + `web/*.gz`) | everything |
+| Erase all (`erase`) | wipes the whole flash (app + web UI + settings + NVS) | — |
 
-Flags: `-p PORT`, `--scope fresh\|fw\|ui\|all\|build` (skip the prompt),
+Flags: `-p PORT`, `--scope all\|fw\|ui\|build\|erase` (skip the prompt),
 `--monitor`, `--clean` (force a clean `sdkconfig`), `--setup` (re-run the
 ESP-ADF/IDF patches).
 
-Use **First flash** on a fresh or erased chip — `Firmware only` writes just the
-app and needs a bootloader already present, so a blank chip won't boot
-(`invalid header`). First flash writes the bootloader and partition table too,
-leaving `www` empty so the device boots into the built-in setup page (enter
-Wi-Fi, upload the web UI).
+Use **Everything / factory** (`all`) on a fresh or erased chip — it's the only
+scope that also writes the bootloader and partition table, so the chip can boot.
+`Firmware only` / `Firmware + Web UI` only update the app / web UI and need a
+bootloader already present (a blank chip won't boot — `invalid header`). `all`
+flashes the full web UI and resets settings to defaults; the device then comes up
+in AP mode for Wi-Fi setup.
 
 The web UI (`www`) and your settings (`config`) live in separate flash
 partitions, so reflashing code or the UI never wipes your settings — only a

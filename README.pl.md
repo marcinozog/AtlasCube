@@ -235,20 +235,37 @@ Tyle — bez ESP-IDF, bez ESP-ADF, bez patchy. Reszta README to build dewelopers
 - [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf)
 - [ESP-ADF v2.8](https://github.com/espressif/esp-adf)
 
-**Build jedną komendą (zalecane)**
+**Build i flash jedną komendą (zalecane)**
 
-> Pełne przepisy krok po kroku: [docs/build-windows.md](docs/build-windows.md) (ESP-IDF Installation Manager) oraz [docs/build-linux.md](docs/build-linux.md) (`install.sh` + `export.sh`). Oba kończą się na tym samym `ci/build.py`.
+> Pełne przepisy krok po kroku: [docs/build-windows.md](docs/build-windows.md) (ESP-IDF Installation Manager) oraz [docs/build-linux.md](docs/build-linux.md) (`install.sh` + `export.sh`).
 
-Zainstaluj [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf) (na Windows oficjalny instalator to jedyny ręczny krok), otwórz środowisko ESP-IDF i z katalogu repo odpal:
+`scripts/build-flash.py` to skrypt all-in-one dla usera. Ustaw wariant sprzętowy w [`main/include/defines.h`](main/include/defines.h), zainstaluj [ESP-IDF v5.5.4](https://github.com/espressif/esp-idf) (na Windows oficjalny instalator to jedyny ręczny krok), otwórz środowisko ESP-IDF i z katalogu repo odpal:
 
 ```bash
-python ci/build.py co5300       # albo ili9341 / st7796 / ili9488 / ssd1322
-python ci/build.py              # interaktywne menu wariantu
+python scripts/build-flash.py -p COM5
 ```
 
-`ci/build.py` to wieloplatformowy punkt wejścia do setupu/release (Windows, Linux, CI). Klonuje ESP-ADF v2.8 jeśli go nie ma, ustawia wariant w `defines.h`, aplikuje wszystkie patche ESP-ADF/ESP-IDF, kompresuje web UI, buduje i produkuje gotowy do wgrania `build/AtlasCube-<wariant>.bin`. Jest idempotentny — można puszczać wielokrotnie. Przydatne flagi: `--skip-build` (tylko setup), `--adf-path <ścieżka>`. Do budowania i wgrywania **własnej, skonfigurowanej płytki** używaj `scripts/build-flash.py` — przy pierwszym uruchomieniu sam robi ten setup, więc to jedyny skrypt, jakiego potrzebujesz (zob. *Budowanie i wgrywanie na urządzenie* niżej). `ci/build.py` służy głównie do obrazu per-wariant i CI.
+Przy **pierwszym uruchomieniu** sam konfiguruje ESP-ADF (clone + patche — bez osobnego kroku), potem kompresuje web UI, buduje i wgra na podłączoną płytkę, pytając ile urządzenia nadpisać:
 
-Robi tyle:
+| Zakres (`--scope`) | Wgrywa | Zachowuje |
+|---|---|---|
+| Wszystko / factory (`all`) | bootloader + tablica partycji + aplikacja + `www` + `config` | — (działa na czystym chipie; resetuje ustawienia do domyślnych) |
+| Sam firmware (`fw`) | slot aplikacji (aktualizacja OTA-style) | web UI + ustawienia |
+| Firmware + Web UI (`ui`) | aplikacja + partycja `www` | ustawienia |
+| Tylko build (`build`) | nic — kompilacja + `web/*.gz` | wszystko |
+| Wymaż wszystko (`erase`) | czyści cały flash (aplikacja + web UI + ustawienia + NVS) | — |
+
+Na świeżym lub wymazanym chipie wybierz **Wszystko / factory** (`all`) — to jedyny zakres, który wgrywa też bootloader i tablicę partycji, więc chip wstanie. `Sam firmware` / `Firmware + Web UI` aktualizują tylko aplikację / web UI i wymagają już obecnego bootloadera (czysty chip wywali `invalid header`). `all` wgrywa pełne web UI i resetuje ustawienia do domyślnych; urządzenie startuje potem w trybie AP do konfiguracji Wi-Fi pod `192.168.4.1`.
+
+Układ flasha dzieli dawną partycję storage na `www` (edytowalne web UI) i `config` (JSON ustawień), więc ponowne wgranie kodu albo UI nigdy nie kasuje ustawień — dopiero pełny flash (factory) seeduje domyślne. Flaga `--scope all|fw|ui|build|erase` pomija pytanie, `--monitor` otwiera monitor szeregowy po wgraniu.
+
+Żeby poprawić web UI bez flashowania, edytuj pliki na żywo w przeglądarce (edytor plików na urządzeniu albo wbudowana strona setupu) — zapisują się prosto na partycję `www` po HTTP.
+
+> Zmieniasz wariant sprzętowy w `defines.h`? `build-flash.py` wykrywa nieaktualny `sdkconfig` (stare definicje wyświetlacza/dotyku zostają, bo zmienione `sdkconfig.defaults` nie są ponownie aplikowane) i proponuje go usunąć dla czystego buildu. Flaga `--clean` wymusza to bez pytania.
+
+**Co robi setup przy pierwszym uruchomieniu**
+
+Logika setupu siedzi w `scripts/env_setup.py` i odpala się przy pierwszym buildzie (wspólna dla `build-flash.py` i `ci/build.py`). Jest idempotentna — można puszczać wielokrotnie; `build-flash.py --setup` puszcza same patche. Robi tyle:
 
 - Klonuje ESP-ADF v2.8 do `./esp-adf`, jeśli `ADF_PATH` nie jest ustawiony.
 - Inicjalizuje submoduły ESP-ADF `components/esp-adf-libs` i `components/esp-sr` (czysty clone ich nie pobiera, bo to gotowe biblioteki binarne).
@@ -259,7 +276,7 @@ Robi tyle:
 `sdkconfig.defaults` już zawiera `CONFIG_ESP32_S3_ATLASCUBE_BOARD=y`.
 
 <details>
-<summary>Kroki ręczne — co ci/build.py automatyzuje, do podejrzenia / debugowania</summary>
+<summary>Kroki ręczne — co setup automatyzuje, do podejrzenia / debugowania</summary>
 
 Jakbyś chciał zrobić to z palca (albo debugujesz setup):
 
@@ -303,13 +320,13 @@ Jakbyś chciał zrobić to z palca (albo debugujesz setup):
 
 **Wybór wariantu sprzętowego**
 
-Aktywny wariant siedzi w [`main/include/defines.h`](main/include/defines.h) — trzy niezależne grupy `#define`: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. `ci/build.py <wariant>` przełącza je za Ciebie; ręcznie — odkomentuj dokładnie jeden wpis w każdej grupie.
+Aktywny wariant siedzi w [`main/include/defines.h`](main/include/defines.h) — trzy niezależne grupy `#define`: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. Odkomentuj dokładnie jeden wpis w każdej grupie; `build-flash.py` czyta je as-is. (`ci/build.py <wariant>` nadpisuje je za Ciebie — przydatne w CI.)
 
-Po ręcznej zmianie wariantu puść `idf.py fullclean`, żeby `sdkconfig` wygenerował się od nowa dla nowej kombinacji (`ci/build.py` robi to automatycznie).
+Po ręcznej zmianie wariantu puść `idf.py fullclean`, żeby `sdkconfig` wygenerował się od nowa dla nowej kombinacji (`build-flash.py --clean` robi to za Ciebie).
 
 **Build i flash ręcznie**
 
-Gdy wariant i patche są na miejscu (`ci/build.py --skip-build` robi sam setup), działa standardowy flow ESP-IDF:
+Gdy wariant i patche są na miejscu (`build-flash.py --setup` robi sam setup), działa standardowy flow ESP-IDF:
 
 ```bash
 idf.py build
@@ -319,7 +336,7 @@ idf.py flash
 > **Edycja plików boardu przy iteracji zwykłym `idf.py`** (np. przycisk build
 > wtyczki ESP-IDF w VS Code): `idf.py` buduje kopię wewnątrz Twojego klona
 > ESP-ADF, więc zmiany w repo w `components/audio_board/esp32_s3_atlascube/` nie
-> zadziałają, dopóki nie puścisz ponownie `ci/build.py --skip-build`. Żeby
+> zadziałają, dopóki nie puścisz ponownie `build-flash.py --setup`. Żeby
 > edycje były na bieżąco, zastąp kopię w ADF junctionem (bez uprawnień admina):
 >
 > ```powershell
@@ -328,34 +345,18 @@ idf.py flash
 > New-Item -ItemType Junction -Path $dest -Target "<repo>\components\audio_board\esp32_s3_atlascube"
 > ```
 >
-> `ci/build.py` wykrywa istniejący symlink/junction i go nie nadpisuje.
+> Setup wykrywa istniejący symlink/junction i go nie nadpisuje.
 
-**Budowanie i wgrywanie na urządzenie**
+**Pojedynczy scalony obraz (CI / release)**
 
-`scripts/build-flash.py` to skrypt all-in-one dla usera: ustaw sprzęt w `defines.h` i odpal — przy pierwszym uruchomieniu sam skonfiguruje ESP-ADF (bez osobnego kroku), skompresuje web UI, zbuduje i wgra na podłączoną płytkę, pytając ile urządzenia nadpisać:
+`ci/build.py` to punkt wejścia do release'ów, który odpala CI: wybiera wariant z argumentu CLI (nadpisując `defines.h`), robi ten sam setup pierwszego uruchomienia, buduje i produkuje scalony, dystrybucyjny `build/AtlasCube-<wariant>.bin`. Większość userów go nie potrzebuje — `build-flash.py` powyżej ogarnia budowanie i wgrywanie własnej płytki.
 
 ```bash
-python scripts/build-flash.py -p COM5
+python ci/build.py co5300       # albo ili9341 / st7796 / ili9488 / ssd1322
+python ci/build.py              # interaktywne menu wariantu
 ```
 
-| Zakres | Wgrywa | Zachowuje |
-|---|---|---|
-| Pierwszy flash (czysty chip) | bootloader + tablica partycji + aplikacja | — (zostawia `www` puste → strona setupu) |
-| Sam firmware | slot aplikacji (aktualizacja OTA-style) | web UI + ustawienia |
-| Firmware + Web UI | aplikacja + partycja `www` | ustawienia |
-| Wszystko (factory) | aplikacja + `www` + `config` | — (resetuje ustawienia do domyślnych) |
-
-Na świeżym lub wymazanym chipie wybierz **Pierwszy flash**: `Sam firmware` wgrywa samą aplikację i wymaga już obecnego bootloadera, więc na czystym chipie urządzenie nie wstanie (`invalid header`). Pierwszy flash wgrywa też bootloader i tablicę partycji, ale zostawia `www` puste, więc urządzenie startuje serwując wbudowaną stronę setupu, gdzie podajesz Wi-Fi i wgrywasz web UI.
-
-Układ flasha dzieli dawną partycję storage na `www` (edytowalne web UI) i `config` (JSON ustawień), więc ponowne wgranie kodu albo UI nigdy nie kasuje ustawień — dopiero pełny flash (factory) seeduje domyślne. Flaga `--scope fresh|fw|ui|all` pomija pytanie (albo `--scope build` — tylko kompilacja, bez flashowania), `--monitor` otwiera monitor szeregowy po wgraniu.
-
-Żeby poprawić web UI bez flashowania, edytuj pliki na żywo w przeglądarce (edytor plików na urządzeniu albo wbudowana strona setupu) — zapisują się prosto na partycję `www` po HTTP.
-
-> Zmieniasz wariant sprzętowy w `defines.h`? `build-flash.py` wykrywa nieaktualny `sdkconfig` (stare definicje wyświetlacza/dotyku zostają, bo zmienione `sdkconfig.defaults` nie są ponownie aplikowane) i proponuje go usunąć dla czystego buildu. Flaga `--clean` wymusza to bez pytania.
-
-**Pojedynczy scalony obraz (do dystrybucji)**
-
-`ci/build.py` tworzy go automatycznie jako `build/AtlasCube-<wariant>.bin`. Skleja bootloader, partition table, aplikację i oba obrazy SPIFFS (`www` + `config`) w jeden plik wgrywany od offsetu `0x0` przez `esptool` albo web flasher. Ręcznie:
+Scalony `.bin` skleja bootloader, partition table, aplikację i oba obrazy SPIFFS (`www` + `config`) w jeden plik wgrywany od offsetu `0x0` przez `esptool` albo web flasher. Ręcznie:
 
 ```bash
 python spiffs_image/tools/compress_web.py

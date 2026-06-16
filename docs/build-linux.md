@@ -16,7 +16,7 @@ the same flow the CI uses, so it's well-trodden.
 
 ## 1. Install ESP-IDF v5.5.4
 
-ESP-IDF is pinned to **v5.5.4** — `ci/build.py` warns if a different version is
+ESP-IDF is pinned to **v5.5.4** — the build warns if a different version is
 active, and the FreeRTOS patch targets v5.5, so a mismatch can fail the build.
 
 1. Install the system prerequisites (Debian/Ubuntu shown; see the
@@ -47,64 +47,87 @@ active, and the FreeRTOS patch targets v5.5, so a mismatch can fail the build.
    alias such as `alias get_idf='. ~/esp/esp-idf/export.sh'` to your `~/.bashrc`
    so you can just type `get_idf`.
 
-## 2. Get the source and build
+## 2. Get the source, pick your variant, build & flash
 
-With the ESP-IDF environment active (step 1.3), clone the repo and build a
-variant:
+With the ESP-IDF environment active (step 1.3):
+
+1. Clone the repo:
+
+   ```bash
+   git clone https://github.com/marcinozog/AtlasCube.git
+   cd AtlasCube
+   ```
+2. **Pick your hardware variant** in [`main/include/defines.h`](../main/include/defines.h):
+   uncomment exactly one entry in each of the three `#define` groups —
+   `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`.
+3. Build and flash the connected board over USB:
+
+   ```bash
+   python scripts/build-flash.py -p /dev/ttyACM0
+   ```
+
+   Substitute your serial port for `/dev/ttyACM0` (see Troubleshooting for how to
+   find it).
+
+`scripts/build-flash.py` is the all-in-one user script and does everything: on
+its **first run** it clones ESP-ADF v2.8 (into `./esp-adf`) and patches ESP-ADF
+and ESP-IDF; then it compresses the web UI, sets the target to `esp32s3`, builds,
+and flashes the board — asking how much of the device to overwrite:
+
+| Scope (`--scope`) | Flashes | Keeps |
+|---|---|---|
+| Everything / factory (`all`) | bootloader + partition table + app + `www` + `config` | — (works on a blank chip; resets settings) |
+| Firmware only (`fw`) | app slot (OTA-style update) | web UI + settings |
+| Firmware + Web UI (`ui`) | app + `www` partition | settings |
+| Build only (`build`) | nothing (compile + `web/*.gz`) | everything |
+| Erase all (`erase`) | wipes the whole flash (app + web UI + settings + NVS) | — |
+
+On a fresh or erased chip pick **Everything / factory** (`all`) — it's the only
+scope that also writes the bootloader and partition table, so the chip can boot;
+`Firmware only` / `Firmware + Web UI` only update the app / web UI and need a
+bootloader already present (a blank chip fails with `invalid header`). The web UI
+(`www`) and your settings (`config`) live in separate partitions, so reflashing
+code or the UI keeps your settings; only a factory flash resets them.
+
+Pass `--scope all|fw|ui|build|erase` to skip the prompt, `--monitor` to open the
+serial monitor afterwards, and `--clean` if you switched the HW variant in
+`defines.h` (it detects a stale `sdkconfig` and offers to clean it anyway).
+
+## 3. Producing a merged release image (optional)
+
+`scripts/build-flash.py` covers building & flashing your own board. If you want a
+single `0x0`-flashable image instead — to distribute, or to flash with the
+[web flasher](https://atlascube.net/flash) — use `ci/build.py`, the CI/release
+entry point. It picks the variant from a CLI argument (overwriting `defines.h`),
+runs the same setup, builds, and merges bootloader + partition table + app +
+`www` + `config` into one file:
 
 ```bash
-git clone https://github.com/marcinozog/AtlasCube.git
-cd AtlasCube
-python ci/build.py co5300        # or ili9341 / st7796 / ssd1322
-python ci/build.py               # omit the variant for an interactive menu
+python ci/build.py co5300         # or ili9341 / st7796 / ili9488 / ssd1322
+python ci/build.py                # omit the variant for an interactive menu
 ```
 
-`ci/build.py` does everything else: it clones ESP-ADF v2.8 (into `./esp-adf`),
-selects the variant in `main/include/defines.h`, patches ESP-ADF and ESP-IDF,
-compresses the web UI, sets the target to `esp32s3`, builds, and merges a single
-flashable image.
-
-> Building for your own board (not a release image)? You can skip straight to
-> `scripts/build-flash.py` (next section) — it runs this same ESP-ADF setup on
-> its first run and then builds + flashes. Just set your hardware in `defines.h`
-> by hand first.
-
-## 3. Flash
-
-The build prints the path to the merged image:
-
-```
-build/AtlasCube-<variant>.bin
-```
-
-Flash it from offset `0x0` with the [web flasher](https://atlascube.net/flash)
-(use the "custom firmware" option) or with esptool:
+It prints the path to the merged image (`build/AtlasCube-<variant>.bin`), which
+you flash from offset `0x0` with the web flasher (use the "custom firmware"
+option) or with esptool:
 
 ```bash
 esptool.py --chip esp32s3 -p /dev/ttyACM0 write_flash 0x0 build/AtlasCube-<variant>.bin
 ```
 
-For everyday build & flash during development, use `scripts/build-flash.py` — it
-compresses the web UI, builds, and asks how much of the device to overwrite
-(firmware only / firmware + web UI / everything). The web UI (`www`) and your
-settings (`config`) live in separate partitions, so reflashing code or the UI
-keeps your settings; only a factory flash resets them:
+## Useful flags
 
-```bash
-python scripts/build-flash.py -p /dev/ttyACM0
-```
+`scripts/build-flash.py`:
 
-Substitute your serial port for `/dev/ttyACM0` (see Troubleshooting for how to
-find it). Pass `--scope fw|ui|all` to skip the prompt (or `--scope build` to just
-compile, no flash), `--monitor` to open the serial monitor afterwards.
+| Flag | Effect |
+|---|---|
+| `-p PORT` | Serial port (e.g. `/dev/ttyACM0`); auto-detected if omitted. |
+| `--scope all\|fw\|ui\|build\|erase` | What to do; skips the interactive prompt. |
+| `--monitor` | Open the serial monitor after flashing. |
+| `--clean` | Force a clean `sdkconfig` before building (variant switch). |
+| `--setup` | Re-run just the ESP-ADF/IDF setup patches. |
 
-> If you switched the HW variant in `defines.h`, `build-flash.py` detects the stale
-> `sdkconfig` and offers to clean it (or pass `--clean` to force it).
-
-## Useful flags (ci/build.py)
-
-`ci/build.py` is the setup/release script (variant switch, ESP-ADF/IDF patches,
-merged per-variant image). For build & flash to a board, prefer `build-flash.py` above.
+`ci/build.py` (CI / release):
 
 | Flag | Effect |
 |---|---|
@@ -112,19 +135,20 @@ merged per-variant image). For build & flash to a board, prefer `build-flash.py`
 | `--adf-path <path>` | Use an existing ESP-ADF checkout instead of cloning into `./esp-adf`. |
 | `--no-clean` | Skip the set-target/clean reconfigure (faster rebuilds; dev only). |
 
-`ci/build.py` is idempotent — safe to re-run, including after switching variants.
+Both scripts are idempotent — safe to re-run, including after switching variants.
 
 ## Troubleshooting
 
 - **`IDF_PATH is not set`** — you didn't activate the environment in this
   terminal. Run `. ~/esp/esp-idf/export.sh` (or your alias) before
-  `ci/build.py`. It has to be re-run in every new shell.
+  `build-flash.py`. It has to be re-run in every new shell.
 - **A warning about the ESP-IDF / ESP-ADF version** — you installed a version
   other than v5.5.4 / v2.8. Re-clone ESP-IDF at `-b v5.5.4`; the build may fail
   on a mismatched version (the FreeRTOS patch targets v5.5).
 - **`region 'iram0_0_seg' overflowed`** — the build ran for plain `esp32`
-  instead of `esp32s3`. `ci/build.py` sets the target automatically; if you passed
-  `--no-clean` on a fresh checkout, drop it so the target gets configured.
+  instead of `esp32s3`. The build sets the target automatically; if it lingers,
+  run `build-flash.py --clean` (or `ci/build.py` without `--no-clean`) so the
+  target gets reconfigured.
 - **Which serial port?** ESP32-S3 over its native USB usually enumerates as
   `/dev/ttyACM0`; through an external USB-UART bridge it's `/dev/ttyUSB0`. Run
   `ls /dev/ttyACM* /dev/ttyUSB*` before and after plugging the board in to spot
