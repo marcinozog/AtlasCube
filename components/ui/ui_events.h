@@ -57,7 +57,6 @@ typedef struct {
     char  type_label[16];   // e.g. "BIRTHDAY", "REMINDER" — ready to display
     int   hour;
     int   minute;
-    bool  is_alarm;         // EV_ALARM → dismiss leaves audio playing
 } ui_event_info_t;
 
 // --------------------------------------------------------------------------

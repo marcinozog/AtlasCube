@@ -760,7 +760,6 @@ static const char *ev_type_str(event_type_t t)
         case EV_NAMEDAY:     return "nameday";
         case EV_REMINDER:    return "reminder";
         case EV_ANNIVERSARY: return "anniversary";
-        case EV_ALARM:       return "alarm";
         case EV_VOICE:       return "voice";
         case EV_SCHEDULE:    return "schedule";
         default:             return "reminder";
@@ -773,7 +772,7 @@ static event_type_t ev_type_from_str(const char *s)
     if (strcmp(s, "birthday")    == 0) return EV_BIRTHDAY;
     if (strcmp(s, "nameday")     == 0) return EV_NAMEDAY;
     if (strcmp(s, "anniversary") == 0) return EV_ANNIVERSARY;
-    if (strcmp(s, "alarm")       == 0) return EV_ALARM;
+    if (strcmp(s, "alarm")       == 0) return EV_SCHEDULE;  // legacy → playback
     if (strcmp(s, "voice")       == 0) return EV_VOICE;
     if (strcmp(s, "schedule")    == 0) return EV_SCHEDULE;
     return EV_REMINDER;
@@ -870,11 +869,15 @@ static const char *event_validate(const event_t *e)
     if (e->hour < 0   || e->hour > 23)                       return "hour out of range";
     if (e->minute < 0 || e->minute > 59)                     return "minute out of range";
     if (e->type < 0 || e->type >= EV_TYPE_COUNT)             return "type invalid";
-    if (e->type == EV_ALARM) {
+    // Playback from the playlist (empty sound) needs a valid station; an SD
+    // path is validated lazily at fire time (the card may be absent now).
+    if (e->type == EV_SCHEDULE && e->sound[0] == '\0') {
         int n = playlist_get_count();
         if (n <= 0)                            return "playlist empty";
         if (e->station < 0 || e->station >= n) return "station out of range";
-        if (e->volume  < 0 || e->volume  > 100) return "volume out of range";
+    }
+    if (e->type == EV_SCHEDULE || e->type == EV_VOICE) {
+        if (e->volume < 0 || e->volume > 100)  return "volume out of range";
     }
     return NULL;
 }

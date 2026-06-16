@@ -13,7 +13,7 @@ extern "C" {
 // The owning screen passes its mode so the widget knows which audio source
 // the buttons control. Don't infer it from app_state.screen — that holds the
 // user's persisted preference, not the currently displayed screen, and the
-// two can legitimately diverge (e.g. alarm pops up RADIO while BT was saved).
+// two can legitimately diverge (e.g. a schedule pops up RADIO while BT was saved).
 typedef enum {
     CTRL_OVL_MODE_RADIO,
     CTRL_OVL_MODE_BT,

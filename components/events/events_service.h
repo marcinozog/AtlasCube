@@ -24,7 +24,6 @@ typedef enum {
     EV_NAMEDAY,
     EV_REMINDER,
     EV_ANNIVERSARY,
-    EV_ALARM,
     EV_VOICE,
     EV_SCHEDULE,
     EV_TYPE_COUNT
@@ -54,13 +53,13 @@ typedef struct {
     event_recurrence_t recurrence;
     bool               enabled;
 
-    // EV_ALARM, and EV_SCHEDULE with an empty `sound`: 0-based index into the
-    // playlist (resolved at fire time via playlist_get()).
+    // EV_SCHEDULE with an empty `sound`: 0-based index into the playlist
+    // (resolved at fire time via playlist_get()).
     int                station;
 
-    // EV_ALARM / EV_VOICE / EV_SCHEDULE: 0..100, applied via settings_set_volume()
-    // at fire time so playback starts at a predictable level regardless of the
-    // user's last volume setting.
+    // EV_VOICE / EV_SCHEDULE: 0..100, applied via settings_set_volume() at fire
+    // time so playback starts at a predictable level regardless of the user's
+    // last volume setting.
     int                volume;
 
     // EV_VOICE: filename of a WAV in /voice on the SD card (generated on the

@@ -9,7 +9,6 @@ const TYPE_ICON = {
     nameday:     '🌹',
     anniversary: '💍',
     reminder:    '⏰',
-    alarm:       '⏰',
     voice:       '🗣️',
     schedule:    '🎵',
 };
@@ -19,7 +18,6 @@ const TYPE_LABEL = {
     nameday:     'Name day',
     anniversary: 'Anniversary',
     reminder:    'Reminder',
-    alarm:       'Alarm',
     voice:       'Voice',
     schedule:    'Playback',
 };
@@ -71,7 +69,6 @@ async function loadStations() {
 function evTypeChanged() {
     const sched   = isScheduleTab();
     const type    = sched ? 'schedule' : document.getElementById('ev_type').value;
-    const isAlarm = type === 'alarm';
     const isVoice = type === 'voice';
     const src     = document.getElementById('ev_source').value;   // radio | sd
     const schedRadio = sched && src === 'radio';
@@ -79,9 +76,9 @@ function evTypeChanged() {
 
     document.getElementById('ev_type_group').style.display    = sched ? 'none' : '';
     document.getElementById('ev_source_group').style.display  = sched ? '' : 'none';
-    document.getElementById('ev_station_group').style.display = (isAlarm || schedRadio) ? '' : 'none';
+    document.getElementById('ev_station_group').style.display = schedRadio ? '' : 'none';
     document.getElementById('ev_sdpath_group').style.display  = schedSd ? '' : 'none';
-    document.getElementById('ev_volume_group').style.display  = (isAlarm || isVoice || sched) ? '' : 'none';
+    document.getElementById('ev_volume_group').style.display  = (isVoice || sched) ? '' : 'none';
     document.getElementById('ev_sound_group').style.display   = isVoice ? '' : 'none';
 }
 
@@ -282,11 +279,7 @@ function makeRow(ev) {
     const recStr  = REC_LABEL[ev.recurrence] || ev.recurrence;
 
     let extra = '';
-    if (ev.type === 'alarm') {
-        const st = stations[ev.station];
-        const name = st ? st.name : `#${ev.station}`;
-        extra = ` · 📻 ${escapeHtml(name)} · 🔊 ${ev.volume ?? 0}`;
-    } else if (ev.type === 'voice') {
+    if (ev.type === 'voice') {
         extra = ` · 🗣️ ${escapeHtml(ev.sound || '(no audio)')} · 🔊 ${ev.volume ?? 0}`;
     } else if (ev.type === 'schedule') {
         if (ev.sound) {
@@ -432,7 +425,7 @@ function formToEvent() {
         if (sound[0] !== '/') sound = '/' + sound;
     }
 
-    const needsStation = type === 'alarm' || (type === 'schedule' && source === 'radio');
+    const needsStation = type === 'schedule' && source === 'radio';
     if (needsStation && stations.length === 0) {
         setStatus('Add at least one station to the playlist first', 'error');
         return null;

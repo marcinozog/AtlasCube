@@ -76,7 +76,6 @@ static const char *type_to_str(event_type_t t)
         case EV_NAMEDAY:     return "nameday";
         case EV_REMINDER:    return "reminder";
         case EV_ANNIVERSARY: return "anniversary";
-        case EV_ALARM:       return "alarm";
         case EV_VOICE:       return "voice";
         case EV_SCHEDULE:    return "schedule";
         default:             return "reminder";
@@ -89,7 +88,9 @@ static event_type_t type_from_str(const char *s)
     if (strcmp(s, "birthday")    == 0) return EV_BIRTHDAY;
     if (strcmp(s, "nameday")     == 0) return EV_NAMEDAY;
     if (strcmp(s, "anniversary") == 0) return EV_ANNIVERSARY;
-    if (strcmp(s, "alarm")       == 0) return EV_ALARM;
+    // "alarm" is the legacy radio-at-time type, now folded into EV_SCHEDULE
+    // (empty sound → playlist station). Existing events re-save as "schedule".
+    if (strcmp(s, "alarm")       == 0) return EV_SCHEDULE;
     if (strcmp(s, "voice")       == 0) return EV_VOICE;
     if (strcmp(s, "schedule")    == 0) return EV_SCHEDULE;
     return EV_REMINDER;
@@ -286,22 +287,10 @@ static void fire_event(const event_t *e)
     ESP_LOGI(TAG, "FIRE: [%s] %s (type=%s)",
              e->id, e->title, type_to_str(e->type));
 
-    if (e->type == EV_ALARM) {
-        // Alarm: start the configured playlist station. The stream itself is
-        // the "ringtone" — keeps playing after dismiss until the user stops
-        // the radio.
-        int n = playlist_get_count();
-        if (e->station >= 0 && e->station < n) {
-            settings_set_volume(e->volume);
-            radio_play_index(e->station);
-        } else {
-            ESP_LOGW(TAG, "Alarm station %d out of range (playlist=%d) → silent",
-                     e->station, n);
-        }
-    } else if (e->type == EV_SCHEDULE) {
+    if (e->type == EV_SCHEDULE) {
         // Scheduled playback: start the configured source as if the user pressed
         // play at this time — no "ringtone"/toast semantics. The UI surfaces the
-        // player screen instead of the alarm toast (see ui_manager on_event_fired).
+        // player screen instead of a notification (see ui_manager on_event_fired).
         settings_set_volume(e->volume);
         if (e->sound[0]) {
             // SD source: path relative to the card root. A file plays that track
@@ -528,7 +517,6 @@ const char *events_type_label(event_type_t t)
         case EV_BIRTHDAY:    return "BIRTHDAY";
         case EV_NAMEDAY:     return "NAME DAY";
         case EV_ANNIVERSARY: return "ANNIVERSARY";
-        case EV_ALARM:       return "ALARM";
         case EV_VOICE:       return "VOICE";
         case EV_SCHEDULE:    return "PLAYBACK";
         case EV_REMINDER:
