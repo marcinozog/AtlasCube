@@ -9,6 +9,19 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-06-16
+
+### Added
+- **web:** add cross-page toolbar nav to bt.html and sd-player.html
+- **events:** timed playback schedules (radio or SD file/folder)
+- **audio:** auto-detect stream codec from Content-Type, relink on mismatch
+
+### Changed
+- **events:** replace alarm type with playback schedules
+
+### Fixed
+- **web:** style "Use this folder" button as primary in events.html
+
 ## [0.21.2] - 2026-06-15
 
 ### Fixed
@@ -332,7 +345,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.21.2...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.22.0...HEAD
+[0.22.0]: https://github.com/marcinozog/AtlasCube/compare/v0.21.2...v0.22.0
 [0.21.2]: https://github.com/marcinozog/AtlasCube/compare/v0.21.1...v0.21.2
 [0.21.1]: https://github.com/marcinozog/AtlasCube/compare/v0.21.0...v0.21.1
 [0.21.0]: https://github.com/marcinozog/AtlasCube/compare/v0.20.0...v0.21.0
