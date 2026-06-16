@@ -236,6 +236,17 @@ static void dismiss_screensaver(void)
 // Called from the esp_timer task — only non-blocking operations allowed.
 static void on_event_fired(const event_t *e)
 {
+    // Scheduled playback isn't a notification — it just starts a source. Surface
+    // the matching player screen instead of the fullscreen event toast.
+    if (e->type == EV_SCHEDULE) {
+        ui_event_t nav = {
+            .type      = UI_EVT_NAVIGATE,
+            .screen_id = e->sound[0] ? SCREEN_SD : SCREEN_RADIO,
+        };
+        ui_event_send(&nav);
+        return;
+    }
+
     ui_event_t uie = { .type = UI_EVT_EVENT_FIRED };
     strncpy(uie.event_info.id,    e->id,    sizeof(uie.event_info.id)    - 1);
     strncpy(uie.event_info.title, e->title, sizeof(uie.event_info.title) - 1);

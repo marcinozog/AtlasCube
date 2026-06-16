@@ -145,6 +145,45 @@
     border-color: var(--red);
 }
 
+/* ─── SD picker (Playback source) ─── */
+
+.sd-pick-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    z-index: 100;
+}
+
+.sd-pick-box {
+    width: 440px;
+    max-width: calc(100vw - 24px);
+}
+
+.sd-pick-row {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+    text-align: left;
+    background: var(--bg-station);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+.sd-pick-row:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+.sd-pick-row:hover .ev-title { color: #fff; }
+.sd-pick-row .ev-icon { font-size: 16px; }
+
 @media (max-width: 520px) {
     .ev-grid { grid-template-columns: 1fr; }
     .ev-row {

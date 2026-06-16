@@ -762,6 +762,7 @@ static const char *ev_type_str(event_type_t t)
         case EV_ANNIVERSARY: return "anniversary";
         case EV_ALARM:       return "alarm";
         case EV_VOICE:       return "voice";
+        case EV_SCHEDULE:    return "schedule";
         default:             return "reminder";
     }
 }
@@ -774,6 +775,7 @@ static event_type_t ev_type_from_str(const char *s)
     if (strcmp(s, "anniversary") == 0) return EV_ANNIVERSARY;
     if (strcmp(s, "alarm")       == 0) return EV_ALARM;
     if (strcmp(s, "voice")       == 0) return EV_VOICE;
+    if (strcmp(s, "schedule")    == 0) return EV_SCHEDULE;
     return EV_REMINDER;
 }
 

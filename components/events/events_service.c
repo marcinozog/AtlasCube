@@ -4,6 +4,7 @@
 #include "melodies.h"
 #include "playlist.h"
 #include "radio_service.h"
+#include "sd_player.h"
 #include "sdcard.h"
 #include "settings.h"
 #include "cJSON.h"
@@ -77,6 +78,7 @@ static const char *type_to_str(event_type_t t)
         case EV_ANNIVERSARY: return "anniversary";
         case EV_ALARM:       return "alarm";
         case EV_VOICE:       return "voice";
+        case EV_SCHEDULE:    return "schedule";
         default:             return "reminder";
     }
 }
@@ -89,6 +91,7 @@ static event_type_t type_from_str(const char *s)
     if (strcmp(s, "anniversary") == 0) return EV_ANNIVERSARY;
     if (strcmp(s, "alarm")       == 0) return EV_ALARM;
     if (strcmp(s, "voice")       == 0) return EV_VOICE;
+    if (strcmp(s, "schedule")    == 0) return EV_SCHEDULE;
     return EV_REMINDER;
 }
 
@@ -295,6 +298,34 @@ static void fire_event(const event_t *e)
             ESP_LOGW(TAG, "Alarm station %d out of range (playlist=%d) → silent",
                      e->station, n);
         }
+    } else if (e->type == EV_SCHEDULE) {
+        // Scheduled playback: start the configured source as if the user pressed
+        // play at this time — no "ringtone"/toast semantics. The UI surfaces the
+        // player screen instead of the alarm toast (see ui_manager on_event_fired).
+        settings_set_volume(e->volume);
+        if (e->sound[0]) {
+            // SD source: path relative to the card root. A file plays that track
+            // (its folder becomes the queue); a directory plays the whole folder.
+            if (sdcard_init() == ESP_OK) {   // lazy mount on first SD use
+                char path[160];
+                snprintf(path, sizeof(path), "%s%s", SD_MOUNT_POINT, e->sound);
+                struct stat st;
+                if (stat(path, &st) == 0 && S_ISDIR(st.st_mode))
+                    sd_player_play_folder(path);
+                else
+                    sd_player_play_path(path);
+            } else {
+                ESP_LOGW(TAG, "Schedule '%s' SD not available → silent", e->id);
+            }
+        } else {
+            int n = playlist_get_count();
+            if (e->station >= 0 && e->station < n) {
+                radio_play_index(e->station);
+            } else {
+                ESP_LOGW(TAG, "Schedule station %d out of range (playlist=%d)",
+                         e->station, n);
+            }
+        }
     } else if (e->type == EV_VOICE) {
         // Voice notification: play the pre-rendered WAV from the SD card,
         // interrupting and then restoring the current source.
@@ -499,6 +530,7 @@ const char *events_type_label(event_type_t t)
         case EV_ANNIVERSARY: return "ANNIVERSARY";
         case EV_ALARM:       return "ALARM";
         case EV_VOICE:       return "VOICE";
+        case EV_SCHEDULE:    return "PLAYBACK";
         case EV_REMINDER:
         default:             return "REMINDER";
     }

@@ -17,7 +17,7 @@ extern "C" {
 #define EVENTS_MAX          50
 #define EVENT_ID_LEN        9       // 8 hex + '\0'
 #define EVENT_TITLE_LEN     64
-#define EVENT_SOUND_LEN     80      // /voice/<base>/<base>.wav rel. path, '\0' incl.
+#define EVENT_SOUND_LEN     128     // SD path (rel. to card root) or /voice WAV, '\0' incl.
 
 typedef enum {
     EV_BIRTHDAY = 0,
@@ -26,6 +26,7 @@ typedef enum {
     EV_ANNIVERSARY,
     EV_ALARM,
     EV_VOICE,
+    EV_SCHEDULE,
     EV_TYPE_COUNT
 } event_type_t;
 
@@ -53,18 +54,20 @@ typedef struct {
     event_recurrence_t recurrence;
     bool               enabled;
 
-    // Used only when type == EV_ALARM: 0-based index into the playlist
-    // (resolved at fire time via playlist_get()).
+    // EV_ALARM, and EV_SCHEDULE with an empty `sound`: 0-based index into the
+    // playlist (resolved at fire time via playlist_get()).
     int                station;
 
-    // Used when type == EV_ALARM: 0..100, applied via settings_set_volume()
-    // at fire time so the radio rings at a predictable level regardless of the
-    // user's last volume setting. Also reused as the voice-notification level.
+    // EV_ALARM / EV_VOICE / EV_SCHEDULE: 0..100, applied via settings_set_volume()
+    // at fire time so playback starts at a predictable level regardless of the
+    // user's last volume setting.
     int                volume;
 
-    // Used only when type == EV_VOICE: filename of a WAV in /voice on the SD
-    // card (generated on the phone via TTS, uploaded over /api/sd/file). Empty
-    // for every other type.
+    // EV_VOICE: filename of a WAV in /voice on the SD card (generated on the
+    // phone via TTS). EV_SCHEDULE: path of an SD audio file or folder relative
+    // to the card root (e.g. "/music/wake.mp3" or "/music/morning"); empty
+    // means the EV_SCHEDULE plays the playlist `station` instead. Empty for
+    // every other type.
     char               sound[EVENT_SOUND_LEN];
 } event_t;
 

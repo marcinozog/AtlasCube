@@ -11,6 +11,7 @@ const TYPE_ICON = {
     reminder:    '⏰',
     alarm:       '⏰',
     voice:       '🗣️',
+    schedule:    '🎵',
 };
 
 const TYPE_LABEL = {
@@ -20,6 +21,7 @@ const TYPE_LABEL = {
     reminder:    'Reminder',
     alarm:       'Alarm',
     voice:       'Voice',
+    schedule:    'Playback',
 };
 
 const REC_LABEL = {
@@ -34,6 +36,20 @@ let events    = [];
 let stations  = [];      // playlist entries, fetched once for the alarm picker
 let editingId = null;    // null = add mode, string = edit mode
 let clipUrl   = null;    // object URL of the loaded voice clip (revoked on reset)
+let currentTab = 'events';  // 'events' | 'playback' (EV_SCHEDULE list)
+
+// Playback schedules share the events backend; the Playback tab just filters
+// the list to type==='schedule' and forces that type on the form.
+function isScheduleTab() { return currentTab === 'playback'; }
+
+function selectEvTab(name) {
+    if (name === currentTab) return;
+    currentTab = name;
+    document.getElementById('evTabEvents').classList.toggle('active', name === 'events');
+    document.getElementById('evTabPlayback').classList.toggle('active', name === 'playback');
+    evFormReset();
+    render();
+}
 
 async function loadStations() {
     try {
@@ -50,12 +66,22 @@ async function loadStations() {
         : '<option value="0" disabled>Playlist empty — add stations first</option>';
 }
 
+// Show/hide form groups based on the active tab, the selected type and (for
+// playback schedules) the radio-vs-SD source.
 function evTypeChanged() {
-    const type    = document.getElementById('ev_type').value;
+    const sched   = isScheduleTab();
+    const type    = sched ? 'schedule' : document.getElementById('ev_type').value;
     const isAlarm = type === 'alarm';
     const isVoice = type === 'voice';
-    document.getElementById('ev_station_group').style.display = isAlarm ? '' : 'none';
-    document.getElementById('ev_volume_group').style.display  = (isAlarm || isVoice) ? '' : 'none';
+    const src     = document.getElementById('ev_source').value;   // radio | sd
+    const schedRadio = sched && src === 'radio';
+    const schedSd    = sched && src === 'sd';
+
+    document.getElementById('ev_type_group').style.display    = sched ? 'none' : '';
+    document.getElementById('ev_source_group').style.display  = sched ? '' : 'none';
+    document.getElementById('ev_station_group').style.display = (isAlarm || schedRadio) ? '' : 'none';
+    document.getElementById('ev_sdpath_group').style.display  = schedSd ? '' : 'none';
+    document.getElementById('ev_volume_group').style.display  = (isAlarm || isVoice || sched) ? '' : 'none';
     document.getElementById('ev_sound_group').style.display   = isVoice ? '' : 'none';
 }
 
@@ -90,6 +116,91 @@ async function evPlayClip() {
         }
     }
     audio.play();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SD picker (Playback source) — browses /api/sd/list, picks a file or folder
+// ─────────────────────────────────────────────────────────────────────────────
+const AUDIO_EXT = ['.mp3', '.wav', '.flac', '.aac', '.m4a', '.ogg'];
+let sdPickPath = '/';
+
+function isAudioFile(name) {
+    const n = name.toLowerCase();
+    return AUDIO_EXT.some(ext => n.endsWith(ext));
+}
+
+function parentPath(p) {
+    if (!p || p === '/') return '/';
+    const i = p.replace(/\/$/, '').lastIndexOf('/');
+    return i <= 0 ? '/' : p.slice(0, i);
+}
+
+function sdPickOpen() {
+    // Start from the folder of the current path if one is set, else the root.
+    const cur = document.getElementById('ev_sdpath').value.trim();
+    sdPickPath = cur ? parentPath(cur) : '/';
+    document.getElementById('sd_pick').style.display = 'flex';
+    sdPickLoad(sdPickPath);
+}
+
+function sdPickClose() {
+    document.getElementById('sd_pick').style.display = 'none';
+}
+
+async function sdPickLoad(path) {
+    const listEl = document.getElementById('sd_pick_list');
+    document.getElementById('sd_pick_path').textContent = path || '/';
+    listEl.innerHTML = '<div class="pl-hint" style="padding:12px">Loading…</div>';
+    let data;
+    try {
+        const res = await fetch('/api/sd/list?path=' + encodeURIComponent(path), { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        data = await res.json();
+    } catch (e) {
+        listEl.innerHTML = '<div class="pl-hint" style="padding:12px;color:#e66">SD not available or path missing.</div>';
+        return;
+    }
+    sdPickPath = data.path || path || '/';
+    document.getElementById('sd_pick_path').textContent = sdPickPath;
+
+    const entries = (data.entries || []);
+    const folders = entries.filter(e => e.dir).sort((a, b) => a.name.localeCompare(b.name));
+    const files   = entries.filter(e => !e.dir && isAudioFile(e.name)).sort((a, b) => a.name.localeCompare(b.name));
+
+    listEl.innerHTML = '';
+    if (sdPickPath !== '/') {
+        listEl.appendChild(sdPickRow('⬆️', '..', () => sdPickLoad(parentPath(sdPickPath))));
+    }
+    folders.forEach(f => {
+        const full = (sdPickPath === '/' ? '' : sdPickPath) + '/' + f.name;
+        listEl.appendChild(sdPickRow('📁', f.name, () => sdPickLoad(full)));
+    });
+    files.forEach(f => {
+        const full = (sdPickPath === '/' ? '' : sdPickPath) + '/' + f.name;
+        listEl.appendChild(sdPickRow('🎵', f.name, () => sdPickChoose(full)));
+    });
+    if (folders.length === 0 && files.length === 0) {
+        listEl.appendChild(Object.assign(document.createElement('div'),
+            { className: 'pl-hint', style: 'padding:12px', textContent: 'No subfolders or audio files here.' }));
+    }
+}
+
+function sdPickRow(icon, label, onClick) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'sd-pick-row';
+    row.innerHTML = `<span class="ev-icon">${icon}</span><span class="ev-title">${escapeHtml(label)}</span>`;
+    row.onclick = onClick;
+    return row;
+}
+
+function sdPickChoose(path) {
+    document.getElementById('ev_sdpath').value = path;
+    sdPickClose();
+}
+
+function sdPickUseFolder() {
+    sdPickChoose(sdPickPath);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -143,16 +254,20 @@ function render() {
     // Rows (and their ▶ buttons) are rebuilt below; stop any clip first.
     stopRowAudio();
 
+    const sched = isScheduleTab();
+    const shown = events.filter(ev => (ev.type === 'schedule') === sched);
+
     const list = document.getElementById('ev_list');
     list.innerHTML = '';
-    document.getElementById('ev_count').textContent = events.length;
+    document.getElementById('ev_count').textContent = shown.length;
 
-    if (events.length === 0) {
-        list.innerHTML = '<div class="pl-hint" style="text-align:center;padding:20px 0">No events yet. Fill the form above and click Save.</div>';
+    if (shown.length === 0) {
+        const what = sched ? 'playback schedules' : 'events';
+        list.innerHTML = `<div class="pl-hint" style="text-align:center;padding:20px 0">No ${what} yet. Fill the form above and click Save.</div>`;
         return;
     }
 
-    events
+    shown
         .slice()
         .sort(sortByNextOccurrence)
         .forEach(ev => list.appendChild(makeRow(ev)));
@@ -173,6 +288,14 @@ function makeRow(ev) {
         extra = ` · 📻 ${escapeHtml(name)} · 🔊 ${ev.volume ?? 0}`;
     } else if (ev.type === 'voice') {
         extra = ` · 🗣️ ${escapeHtml(ev.sound || '(no audio)')} · 🔊 ${ev.volume ?? 0}`;
+    } else if (ev.type === 'schedule') {
+        if (ev.sound) {
+            extra = ` · 💾 ${escapeHtml(ev.sound)} · 🔊 ${ev.volume ?? 0}`;
+        } else {
+            const st = stations[ev.station];
+            const name = st ? st.name : `#${ev.station}`;
+            extra = ` · 📻 ${escapeHtml(name)} · 🔊 ${ev.volume ?? 0}`;
+        }
     }
 
     row.innerHTML = `
@@ -218,18 +341,23 @@ function sortByNextOccurrence(a, b) {
 // Form
 // ─────────────────────────────────────────────────────────────────────────────
 function evFormReset() {
+    const sched = isScheduleTab();
     editingId = null;
-    document.getElementById('ev_form_title').textContent = '➕ New event';
+    document.getElementById('ev_form_title').textContent =
+        sched ? '➕ New playback schedule' : '➕ New event';
     document.getElementById('ev_cancel_btn').style.display = 'none';
     document.getElementById('ev_type').value = 'reminder';
+    document.getElementById('ev_source').value = 'radio';
     document.getElementById('ev_title').value = '';
     document.getElementById('ev_date').value = todayStr();
     document.getElementById('ev_time').value = nowTimeStr();
-    document.getElementById('ev_recurrence').value = 'none';
+    // Schedules are usually recurring; one-off reminders default to one-time.
+    document.getElementById('ev_recurrence').value = sched ? 'daily' : 'none';
     document.getElementById('ev_enabled').checked = true;
     document.getElementById('ev_station').value = '0';
-    document.getElementById('ev_volume').value = '50';
-    document.getElementById('ev_volume_val').textContent = '50';
+    document.getElementById('ev_sdpath').value = '';
+    document.getElementById('ev_volume').value = '20';
+    document.getElementById('ev_volume_val').textContent = '20';
     document.getElementById('ev_sound').value = '';
     document.getElementById('ev_sound_play').style.display = 'none';
     resetClipAudio();
@@ -241,21 +369,29 @@ function evEdit(id) {
     const ev = events.find(e => e.id === id);
     if (!ev) return;
 
+    // Keep the active tab in sync with the edited event so the form shows the
+    // right fields (rows only ever appear on their own tab, but be defensive).
+    const wantTab = ev.type === 'schedule' ? 'playback' : 'events';
+    if (wantTab !== currentTab) selectEvTab(wantTab);
+
     editingId = id;
-    document.getElementById('ev_form_title').textContent = '✎ Edit event';
+    document.getElementById('ev_form_title').textContent =
+        ev.type === 'schedule' ? '✎ Edit playback schedule' : '✎ Edit event';
     document.getElementById('ev_cancel_btn').style.display = '';
 
     document.getElementById('ev_type').value     = ev.type;
+    document.getElementById('ev_source').value   = ev.sound ? 'sd' : 'radio';
     document.getElementById('ev_title').value    = ev.title;
     document.getElementById('ev_date').value     = `${ev.year}-${pad2(ev.month)}-${pad2(ev.day)}`;
     document.getElementById('ev_time').value     = `${pad2(ev.hour)}:${pad2(ev.minute)}`;
     document.getElementById('ev_recurrence').value = ev.recurrence;
     document.getElementById('ev_enabled').checked = !!ev.enabled;
     document.getElementById('ev_station').value = String(ev.station ?? 0);
+    document.getElementById('ev_sdpath').value = ev.type === 'schedule' ? (ev.sound || '') : '';
     const vol = ev.volume ?? 50;
     document.getElementById('ev_volume').value = String(vol);
     document.getElementById('ev_volume_val').textContent = String(vol);
-    document.getElementById('ev_sound').value = ev.sound || '';
+    document.getElementById('ev_sound').value = ev.type === 'voice' ? (ev.sound || '') : '';
     resetClipAudio();
     document.getElementById('ev_sound_play').style.display =
         (ev.type === 'voice' && ev.sound) ? '' : 'none';
@@ -275,14 +411,29 @@ function formToEvent() {
     const title = document.getElementById('ev_title').value.trim();
     if (!title) { setStatus('Title required', 'error'); return null; }
 
-    const type    = document.getElementById('ev_type').value;
+    const sched   = isScheduleTab();
+    const type    = sched ? 'schedule' : document.getElementById('ev_type').value;
+    const source  = document.getElementById('ev_source').value;   // radio | sd
     const station = parseInt(document.getElementById('ev_station').value, 10) || 0;
     let   volume  = parseInt(document.getElementById('ev_volume').value, 10);
     if (isNaN(volume)) volume = 50;
     if (volume < 0)   volume = 0;
     if (volume > 100) volume = 100;
 
-    if (type === 'alarm' && stations.length === 0) {
+    // The `sound` field is overloaded: a /voice WAV name for voice events, an SD
+    // path for SD-sourced schedules, empty otherwise (the firmware then plays the
+    // playlist `station`).
+    let sound = '';
+    if (type === 'voice') {
+        sound = document.getElementById('ev_sound').value || '';
+    } else if (type === 'schedule' && source === 'sd') {
+        sound = document.getElementById('ev_sdpath').value.trim();
+        if (!sound) { setStatus('Enter or browse to an SD file or folder', 'error'); return null; }
+        if (sound[0] !== '/') sound = '/' + sound;
+    }
+
+    const needsStation = type === 'alarm' || (type === 'schedule' && source === 'radio');
+    if (needsStation && stations.length === 0) {
         setStatus('Add at least one station to the playlist first', 'error');
         return null;
     }
@@ -299,9 +450,7 @@ function formToEvent() {
         enabled:    document.getElementById('ev_enabled').checked,
         station,
         volume,
-        // Preserve the voice clip on edit; empty for non-voice events (ignored
-        // by the firmware). The web UI can't record audio — only the app sets it.
-        sound:      document.getElementById('ev_sound').value || '',
+        sound,
     };
 }
 

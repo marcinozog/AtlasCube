@@ -23,6 +23,13 @@
 
     <div class="section-title">🗓️ Events &amp; Reminders</div>
 
+    <nav class="tab-nav" role="tablist">
+        <button type="button" class="tab-btn active" id="evTabEvents"
+                onclick="selectEvTab('events')">🗓️ Events</button>
+        <button type="button" class="tab-btn" id="evTabPlayback"
+                onclick="selectEvTab('playback')">🎵 Playback</button>
+    </nav>
+
     <!-- ══════════════════════════════════════════
          Form (add / edit)
     ══════════════════════════════════════════ -->
@@ -33,7 +40,7 @@
         </div>
 
         <div class="ev-grid">
-            <div class="field-group">
+            <div class="field-group" id="ev_type_group">
                 <label class="field-label">Type</label>
                 <select id="ev_type" class="field-input" onchange="evTypeChanged()">
                     <option value="birthday">🎂 Birthday</option>
@@ -50,14 +57,30 @@
                 <input type="text" id="ev_title" class="field-input" maxlength="63" placeholder="e.g. Ania's birthday" />
             </div>
 
+            <div class="field-group" id="ev_source_group" style="display:none">
+                <label class="field-label">Source</label>
+                <select id="ev_source" class="field-input" onchange="evTypeChanged()">
+                    <option value="radio" selected>📻 Radio station</option>
+                    <option value="sd">💾 SD card (file or folder)</option>
+                </select>
+            </div>
+
             <div class="field-group" id="ev_station_group" style="display:none">
                 <label class="field-label">Station</label>
                 <select id="ev_station" class="field-input"></select>
             </div>
 
+            <div class="field-group" id="ev_sdpath_group" style="display:none">
+                <label class="field-label">SD path (file or folder)</label>
+                <input type="text" id="ev_sdpath" class="field-input"
+                       placeholder="/music/track.mp3 or /music/morning" />
+                <button type="button" class="btn-secondary" onclick="sdPickOpen()"
+                        style="margin-top:8px">📂 Browse SD…</button>
+            </div>
+
             <div class="field-group" id="ev_volume_group" style="display:none">
-                <label class="field-label">Volume <span id="ev_volume_val">50</span></label>
-                <input type="range" id="ev_volume" class="field-input" min="0" max="100" step="1" value="50"
+                <label class="field-label">Volume <span id="ev_volume_val">20</span></label>
+                <input type="range" id="ev_volume" class="field-input" min="0" max="100" step="1" value="20"
                        oninput="document.getElementById('ev_volume_val').textContent = this.value" />
             </div>
 
@@ -116,6 +139,24 @@
         <div id="ev_list" class="ev-list"></div>
     </div>
 </main>
+
+<!-- ══════════════════════════════════════════
+     SD picker (Playback source)
+══════════════════════════════════════════ -->
+<div id="sd_pick" class="sd-pick-overlay" style="display:none">
+    <div class="sd-pick-box panel">
+        <div class="ev-form-header">
+            <span>📂 Pick SD file or folder</span>
+            <button class="btn-secondary" onclick="sdPickClose()">✕</button>
+        </div>
+        <div class="pl-hint" id="sd_pick_path" style="word-break:break-all">/</div>
+        <div id="sd_pick_list" class="ev-list" style="max-height:50vh;overflow:auto"></div>
+        <div class="ev-form-actions">
+            <button onclick="sdPickUseFolder()">✅ Use this folder</button>
+            <button class="btn-secondary" onclick="sdPickClose()">Cancel</button>
+        </div>
+    </div>
+</div>
 
 <script src="events.js"></script>
 </body>
