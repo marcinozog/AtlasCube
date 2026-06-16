@@ -1,0 +1,66 @@
+#include <check.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+START_TEST(test_unauthenticated_endpoint_access)
+{
+    // Invariant: Protected endpoints must reject unauthenticated requests with 401/403
+    const char *endpoints[] = {
+        "/api/state",
+        "/api/settings",
+        "/api/restart",
+        "/api/files/test.txt"
+    };
+    int num_endpoints = sizeof(endpoints) / sizeof(endpoints[0]);
+
+    for (int i = 0; i < num_endpoints; i++) {
+        char cmd[512];
+        snprintf(cmd, sizeof(cmd), 
+                 "curl -s -o /dev/null -w '%%{http_code}' http://localhost:8080%s", 
+                 endpoints[i]);
+        
+        FILE *fp = popen(cmd, "r");
+        ck_assert_ptr_nonnull(fp);
+        
+        char response[16];
+        fgets(response, sizeof(response), fp);
+        int status = atoi(response);
+        pclose(fp);
+        
+        ck_assert_msg(status == 401 || status == 403,
+                     "Endpoint %s returned %d, expected 401 or 403",
+                     endpoints[i], status);
+    }
+}
+END_TEST
+
+Suite *security_suite(void)
+{
+    Suite *s;
+    TCase *tc_core;
+
+    s = suite_create("Security");
+    tc_core = tcase_create("Core");
+
+    tcase_add_test(tc_core, test_unauthenticated_endpoint_access);
+    suite_add_tcase(s, tc_core);
+
+    return s;
+}
+
+int main(void)
+{
+    int number_failed;
+    Suite *s;
+    SRunner *sr;
+
+    s = security_suite();
+    sr = srunner_create(s);
+
+    srunner_run_all(sr, CK_NORMAL);
+    number_failed = srunner_ntests_failed(sr);
+    srunner_free(sr);
+
+    return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
+}
