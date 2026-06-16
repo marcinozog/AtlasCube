@@ -7,16 +7,15 @@ panel profile), then run this — there's nothing else to set up first. On the
 first run it clones and patches ESP-ADF for you; afterwards it compresses the web
 UI, builds, and asks how much of the device to overwrite:
 
-  1) First flash (blank chip) — bootloader + partition table + app. Leaves www
-                                empty, so the device boots serving the built-in
-                                setup page (Wi-Fi + UI upload). Use on a fresh or
-                                erased chip.
-  2) Firmware only            — app slot only (OTA-style update). Keeps the web UI
+  1) Everything (factory)     — bootloader + partition table + app + www + config
+                                (default settings JSON). A full image: use on a
+                                fresh or erased chip. This RESETS saved settings to
+                                defaults.
+  2) Firmware only            — app slot only, flashed over USB. Keeps the web UI
                                 and your settings. Needs a bootloader already on
-                                the chip (i.e. flashed before via option 1/4).
-  3) Firmware + Web UI        — app + www partition. Keeps your settings.
-  4) Everything (factory)     — app + www + config (default settings JSON). This
-                                RESETS saved settings to defaults.
+                                the chip (i.e. flashed before via option 1).
+  3) Firmware + Web UI        — app + www partition, flashed over USB. Keeps your
+                                settings.
 
 The choices map to the flash layout: the app, the editable web UI (`www`), and
 the user settings (`config`) live in separate partitions, so you can reflash code
@@ -130,10 +129,9 @@ def ensure_setup(idf_path, adf_arg, force):
 
 
 ACTIONS = {
-    "fresh": "First flash (blank chip)      (bootloader + partitions + app; empty www -> setup page)",
-    "fw":    "Firmware only (e.g. OTA)      (app slot; keeps web UI and settings)",
-    "ui":    "Firmware + Web UI             (app + www; keeps settings)",
-    "all":   "Everything / factory          (app + www + config; RESETS settings)",
+    "all":   "Everything / factory          (bootloader + partitions + app + www + config; works on a blank chip; RESETS settings)",
+    "fw":    "Firmware only                 (app slot only, over USB; keeps web UI and settings)",
+    "ui":    "Firmware + Web UI             (app + www, over USB; keeps settings)",
     "build": "Build only (e.g. OTA image)   (compile + compress web/*.gz; don't flash)",
     "erase": "Erase all                     (wipe the WHOLE flash: app + web UI + settings + NVS)",
 }
@@ -142,12 +140,12 @@ ACTIONS = {
 def pick_action():
     if not sys.stdin.isatty():
         die("No --scope given and not running interactively. "
-            "Pass --scope fresh|fw|ui|all|build.")
+            "Pass --scope all|fw|ui|build.")
     names = list(ACTIONS)
     print("\nWhat do you want to do?")
     for i, name in enumerate(names, 1):
-        if name == "fresh":
-            print("\n  Compile & flash to the device:")
+        if name == "all":
+            print("\n  Build & flash to the device:")
         elif name == "build":
             print("\n  Other (no flash):")
         print(f"    {i}) {ACTIONS[name]}")
@@ -193,7 +191,7 @@ def pick_port():
 def main():
     ap = argparse.ArgumentParser(description="AtlasCube build & flash (end-user script).")
     ap.add_argument("-p", "--port", help="serial port (e.g. COM5 / /dev/ttyUSB0); auto-detected if omitted")
-    ap.add_argument("--scope", choices=list(ACTIONS), help="what to do: flash fresh|fw|ui|all, or build (compile only); skips the prompt")
+    ap.add_argument("--scope", choices=list(ACTIONS), help="what to do: flash all|fw|ui, or build (compile only); skips the prompt")
     ap.add_argument("--monitor", action="store_true", help="open the serial monitor after flashing")
     ap.add_argument("--clean", action="store_true", help="force a clean sdkconfig before building")
     ap.add_argument("--setup", action="store_true", help="force re-running the ESP-ADF/IDF setup patches")
@@ -255,12 +253,7 @@ def main():
               "for a distributable image).")
         return
 
-    if action == "fresh":
-        # Blank/erased chip: app-flash alone leaves no bootloader or partition
-        # table, so the ROM can't boot. Write all three; www/config stay empty,
-        # so the device comes up serving the built-in setup page.
-        run(idf("bootloader-flash", "partition-table-flash", "app-flash"))
-    elif action == "fw":
+    if action == "fw":
         run(idf("app-flash"))
     elif action == "ui":
         run(idf("app-flash"))
