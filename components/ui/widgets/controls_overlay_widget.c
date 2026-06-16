@@ -129,10 +129,15 @@ static void btn_clicked_cb(lv_event_t *e)
             case CTRL_PREV: sd_player_prev(); break;
             case CTRL_NEXT: sd_player_next(); break;
             case CTRL_PLAY:
-                sd_player_toggle_pause();
-                // app_state.sd_paused is updated synchronously by the toggle.
-                lv_label_set_text(s_play_lbl,
-                    s->sd_paused ? LV_SYMBOL_PLAY : LV_SYMBOL_PAUSE);
+                // Stop/Play toggle (like radio): stop tears down playback but
+                // keeps the queue so play replays the current track.
+                if (sd_player_is_active()) {
+                    sd_player_stop_keep();
+                    lv_label_set_text(s_play_lbl, LV_SYMBOL_PLAY);
+                } else {
+                    sd_player_resume_current();
+                    lv_label_set_text(s_play_lbl, LV_SYMBOL_STOP);
+                }
                 break;
             default: break;
         }
@@ -284,8 +289,8 @@ void controls_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
 
     const char *play_sym;
     if (s_mode == CTRL_OVL_MODE_SD) {
-        // SD: play/pause toggle — show PLAY when paused, PAUSE when running.
-        play_sym = app_state_get()->sd_paused ? LV_SYMBOL_PLAY : LV_SYMBOL_PAUSE;
+        // SD: stop/play toggle — show STOP when playing, PLAY when stopped.
+        play_sym = sd_player_is_active() ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY;
     } else {
         bool playing = (app_state_get()->radio_state == RADIO_STATE_PLAYING);
         play_sym = playing ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY;

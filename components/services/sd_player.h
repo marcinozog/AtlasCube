@@ -30,6 +30,9 @@ void sd_player_play_path(const char *path);
 void sd_player_play_folder(const char *dir);
 
 void sd_player_stop(void);
+// Like sd_player_stop() but keeps the playing folder/index so a following
+// sd_player_resume_current() replays the current track (on-screen Stop/Play).
+void sd_player_stop_keep(void);
 void sd_player_next(void);
 void sd_player_prev(void);
 

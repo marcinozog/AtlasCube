@@ -197,11 +197,16 @@ static void play_at(int idx, int n)
 }
 
 
-static void clear_play_state(void)
+// Mark the SD source inactive. forget_queue: also drop the playing folder/index
+// (true when leaving SD for good); keep it false for the on-screen Stop so
+// sd_player_resume_current() can replay the current track.
+static void clear_play_state(bool forget_queue)
 {
-    s_play_dir[0]  = 0;
-    s_play_index   = -1;
-    s_play_count   = 0;
+    if (forget_queue) {
+        s_play_dir[0]  = 0;
+        s_play_index   = -1;
+        s_play_count   = 0;
+    }
     app_state_update(&(app_state_patch_t){
         .has_sd_active = true, .sd_active = false,
         .has_sd_paused = true, .sd_paused = false,
@@ -284,8 +289,19 @@ void sd_player_stop(void)
 {
     if (!sd_player_is_active()) return;
     audio_engine_request_stop();
-    clear_play_state();
+    clear_play_state(true);
     ESP_LOGI(TAG, "Stopped");
+}
+
+
+// On-screen Stop (Stop/Play toggle): tear down audio but keep the playing
+// folder/index so sd_player_resume_current() can replay the current track.
+void sd_player_stop_keep(void)
+{
+    if (!sd_player_is_active()) return;
+    audio_engine_request_stop();
+    clear_play_state(false);
+    ESP_LOGI(TAG, "Stopped (queue kept)");
 }
 
 
@@ -340,7 +356,7 @@ void sd_player_on_track_end(void)
                 idx = 0;
             } else {
                 ESP_LOGI(TAG, "Folder finished");
-                clear_play_state();
+                clear_play_state(true);
                 return;
             }
         }
