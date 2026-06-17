@@ -9,6 +9,16 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-06-17
+
+### Added
+- **ui:** custom splash logo from SD
+- **web:** preview LVGL .bin images in browser
+- **ui:** add SD wallpaper background option
+- **web:** add config partition to the file editor
+- **web:** replace "back to radio" with bottom toolbar nav on events/settings
+- **sd-player:** on-screen control changes pause to stop/play toggle
+
 ## [0.22.0] - 2026-06-16
 
 ### Added
@@ -345,7 +355,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.22.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.23.0...HEAD
+[0.23.0]: https://github.com/marcinozog/AtlasCube/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/marcinozog/AtlasCube/compare/v0.21.2...v0.22.0
 [0.21.2]: https://github.com/marcinozog/AtlasCube/compare/v0.21.1...v0.21.2
 [0.21.1]: https://github.com/marcinozog/AtlasCube/compare/v0.21.0...v0.21.1
