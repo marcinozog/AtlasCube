@@ -155,8 +155,27 @@ function renderWallpaperBrowser(d) {
     }
     (d.entries || []).forEach(e => {
         const full = (path.endsWith('/') ? path : path + '/') + e.name;
-        if (e.dir) addRow('📁 ' + e.name, () => browseWallpaper(full));
-        else if (e.name.toLowerCase().endsWith('.bin')) addRow('🖼️ ' + e.name, () => selectWallpaper(full));
+        if (e.dir) { addRow('📁 ' + e.name, () => browseWallpaper(full)); return; }
+        if (!e.name.toLowerCase().endsWith('.bin')) return;
+
+        // File row: name selects the wallpaper, 👁 opens a preview (lvbin.js).
+        const row = document.createElement('div');
+        row.style.cssText = 'padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:8px';
+        row.onmouseenter = () => row.style.background = 'rgba(255,255,255,.06)';
+        row.onmouseleave = () => row.style.background = '';
+        const name = document.createElement('span');
+        name.textContent = '🖼️ ' + e.name;
+        name.style.flex = '1';
+        name.onclick = () => selectWallpaper(full);
+        const eye = document.createElement('button');
+        eye.type = 'button';
+        eye.className = 'btn-secondary';
+        eye.textContent = '👁';
+        eye.title = 'Preview';
+        eye.style.cssText = 'padding:2px 8px';
+        eye.onclick = (ev) => { ev.stopPropagation(); LvBin.openPreview(full); };
+        row.append(name, eye);
+        list.appendChild(row);
     });
     box.appendChild(list);
 }

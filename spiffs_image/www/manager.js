@@ -55,6 +55,9 @@ function isJson(name) { return fileExt(name) === ".json"; }
 const AUDIO_EXTS = [".wav", ".mp3"];
 function isAudio(name) { return AUDIO_EXTS.includes(fileExt(name)); }
 
+// LVGL RGB565 .bin slides/wallpapers get a 👁 preview button (see lvbin.js).
+function isBin(name) { return fileExt(name) === ".bin"; }
+
 // Embed a string as a JS argument inside a single-quoted onclick attribute:
 // JSON-encode (handles JS-level quoting) then HTML-escape (handles the
 // attribute), so the parser hands JS a clean string literal.
@@ -273,6 +276,9 @@ function sdRender(entries) {
             const play = isAudio(e.name)
                 ? `<button class="act" onclick='playClip(this,${jsArg(full)})' title="Play">▶</button>`
                 : "";
+            const view = isBin(e.name)
+                ? `<button class="act" onclick='LvBin.openPreview(${jsArg(full)})' title="Preview">👁</button>`
+                : "";
             rows.push(
                 `<tr class="row">` +
                 `<td class="name"><span class="icon">📄</span>${esc(e.name)}</td>` +
@@ -281,6 +287,7 @@ function sdRender(entries) {
                 `<button class="act copy" onclick='copyToSpiffs(${jsArg(e.name)},${e.size || 0},${jsArg(full)})' title="Copy to SPIFFS ←">⬅</button>` +
                 edit +
                 play +
+                view +
                 `<a class="act" href="${dl}" title="Download">⬇</a>` +
                 `<button class="act" onclick="sdRename('${esc(full)}','${esc(e.name)}')" title="Rename">✏️</button>` +
                 `<button class="act del" onclick="sdDelete('${esc(full)}','${esc(e.name)}',false)" title="Delete">🗑</button>` +
