@@ -4,6 +4,7 @@
 #include "ui_background.h"
 #include "theme.h"
 #include "app_state.h"
+#include "settings.h"
 #include "wifi_manager.h"
 #include "screen_event_notification.h"
 #include "events_service.h"
@@ -72,6 +73,8 @@ static const ui_screen_t   *s_active      = NULL;
 static bool s_prev_bt_enable = false;
 static ui_theme_t     s_prev_theme    = THEME_DARK;
 static bool           s_prev_bg_gradient = true;
+static bool           s_prev_wallpaper_on = false;
+static char           s_prev_wallpaper_path[64] = "";
 
 // Screensaver overlay — runs on top of an existing screen.
 // While active, the underlying s_active widgets are torn down but s_active /
@@ -108,6 +111,19 @@ static void on_state_change(void)
 
     if (s->bg_gradient != s_prev_bg_gradient) {
         s_prev_bg_gradient = s->bg_gradient;
+        ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
+        ui_event_send(&ev);
+        return;
+    }
+
+    // Wallpaper toggle or path change → reapply the shared background. The path
+    // lives in settings (not app_state), so compare it directly here.
+    const char *wp_path = settings_get()->display.wallpaper_path;
+    if (s->wallpaper_on != s_prev_wallpaper_on ||
+        strcmp(wp_path, s_prev_wallpaper_path) != 0) {
+        s_prev_wallpaper_on = s->wallpaper_on;
+        strncpy(s_prev_wallpaper_path, wp_path, sizeof(s_prev_wallpaper_path) - 1);
+        s_prev_wallpaper_path[sizeof(s_prev_wallpaper_path) - 1] = '\0';
         ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
         ui_event_send(&ev);
         return;
@@ -389,7 +405,8 @@ void ui_manager_run(void)
                 continue;
             }
             if (ev.type == UI_EVT_BG_CHANGED) {
-                ui_background_apply(lv_scr_act());   // gradient toggled on/off
+                ui_background_reload_wallpaper();     // re-read SD wallpaper if any
+                ui_background_apply(lv_scr_act());    // gradient/wallpaper toggled
                 lv_obj_invalidate(lv_scr_act());
                 continue;
             }

@@ -37,6 +37,8 @@ typedef struct {
     int             brightness;
     ui_theme_t      theme;
     bool            bg_gradient;     // dithered gradient background on/off
+    bool            wallpaper_on;       // SD wallpaper background on/off (wins over gradient)
+    char            wallpaper_path[64]; // full path to a panel-sized RGB565 .bin on SD
     bool            show_boot_info;  // version + IP overlay on the splash (STA only)
     dim_schedule_t  dim_schedule;
 } display_settings_t;
@@ -145,6 +147,7 @@ void settings_set_bt_vol_sync(bool on);
 void settings_set_ntp(const char *server1, const char *server2, const char *tz);
 void settings_set_theme(ui_theme_t theme);
 void settings_set_bg_gradient(bool enabled);
+void settings_set_wallpaper(bool on, const char *path);
 void settings_set_show_boot_info(bool enabled);
 void settings_set_wifi(const char *ssid, const char *password);
 void settings_set_hostname(const char *hostname);

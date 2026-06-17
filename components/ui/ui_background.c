@@ -2,14 +2,108 @@
 #include "ui_profile.h"        // DISPLAY_WIDTH / DISPLAY_HEIGHT
 #include "theme.h"             // ui_theme_t, theme_current(), theme_get()
 #include "settings.h"          // settings_get()->display.bg_gradient
+#include "sdcard.h"            // SD_MOUNT_POINT
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 static const char *TAG = "UI_BG";
 
 #if !defined(UI_PROFILE_MONO_128X64) && !defined(UI_PROFILE_MONO_256X64)
+
+// ── Wallpaper ───────────────────────────────────────────────────────────────
+// A single full-screen LVGL .bin (RGB565, DISPLAY_WIDTH x DISPLAY_HEIGHT) loaded
+// from the SD path in settings (display.wallpaper_path) and used as the shared
+// screen background in place of the gradient when display.wallpaper_on is set.
+// Same .bin format the photo screensaver consumes — see scripts/img2lvgl.py.
+#define LV_BIN_MAGIC     0x19
+#define LV_BIN_RGB565    0x12
+
+typedef struct __attribute__((packed)) {
+    uint8_t  magic;
+    uint8_t  cf;
+    uint16_t flags;
+    uint16_t w;
+    uint16_t h;
+    uint16_t stride;
+    uint16_t reserved;
+} bin_header_t;
+
+static uint16_t      *s_wp_buf    = NULL;
+static lv_image_dsc_t s_wp_img;
+static bool           s_wp_loaded = false;
+static bool           s_wp_tried  = false;   // load attempted (success or not)
+
+// Read the wallpaper .bin into PSRAM once. Returns true if a valid, correctly
+// sized image is now in s_wp_img. Failures (off / no SD / no file / wrong size)
+// are latched and never retried until ui_background_reload_wallpaper() clears
+// the latch, so apply() falls back to the gradient meanwhile.
+static bool load_wallpaper(void)
+{
+    if (s_wp_tried) return s_wp_loaded;
+
+    // Disabled, or no path set: settle without touching the SD card so a
+    // radio-only session never pays the SDMMC+FATFS mount cost.
+    const app_settings_t *st = settings_get();
+    if (!st->display.wallpaper_on || !st->display.wallpaper_path[0]) {
+        s_wp_tried = true;
+        return false;
+    }
+
+    // ui_background_apply() runs very early (before the splash), so the SD card
+    // may not be mounted yet — mount it lazily. Until it's up, leave s_wp_tried
+    // unset so a later re-apply (e.g. UI_EVT_BG_CHANGED) retries.
+    if (sdcard_init() != ESP_OK || !sdcard_is_mounted()) {
+        ESP_LOGI(TAG, "SD not ready — wallpaper deferred");
+        return false;
+    }
+    s_wp_tried = true;
+
+    const int W = DISPLAY_WIDTH, H = DISPLAY_HEIGHT;
+    const char *path = st->display.wallpaper_path;
+    FILE *fp = fopen(path, "rb");
+    if (!fp) { ESP_LOGI(TAG, "no wallpaper at %s", path); return false; }
+
+    bin_header_t h;
+    if (fread(&h, sizeof(h), 1, fp) != 1 ||
+        h.magic != LV_BIN_MAGIC || h.cf != LV_BIN_RGB565 ||
+        h.w != W || h.h != H) {
+        ESP_LOGW(TAG, "wallpaper bad header or size %ux%u (need %dx%d)", h.w, h.h, W, H);
+        fclose(fp);
+        return false;
+    }
+
+    if (!s_wp_buf) {
+        s_wp_buf = heap_caps_malloc((size_t)W * H * 2, MALLOC_CAP_SPIRAM);
+        if (!s_wp_buf) { ESP_LOGE(TAG, "wallpaper buffer alloc failed"); fclose(fp); return false; }
+    }
+    size_t got = fread(s_wp_buf, (size_t)W * 2, H, fp);
+    fclose(fp);
+    if (got != (size_t)H) { ESP_LOGW(TAG, "wallpaper short read (%u/%d rows)", (unsigned)got, H); return false; }
+
+    s_wp_img.header.magic  = LV_IMAGE_HEADER_MAGIC;
+    s_wp_img.header.cf     = LV_COLOR_FORMAT_RGB565;
+    s_wp_img.header.w      = W;
+    s_wp_img.header.h      = H;
+    s_wp_img.header.stride = W * 2;
+    s_wp_img.data_size     = (uint32_t)(W * H * 2);
+    s_wp_img.data          = (const uint8_t *)s_wp_buf;
+    s_wp_loaded = true;
+    ESP_LOGI(TAG, "wallpaper loaded from %s", path);
+    return true;
+}
+
+// Forget the loaded wallpaper so the next ui_background_apply() re-reads it from
+// SD. Must run on the LVGL task (drops the image cache for the reused
+// descriptor); UI_EVT_BG_CHANGED is dispatched there.
+void ui_background_reload_wallpaper(void)
+{
+    if (s_wp_loaded) lv_image_cache_drop(&s_wp_img);
+    s_wp_tried  = false;
+    s_wp_loaded = false;
+}
 
 // Vertical gradient endpoints (top → bottom). The colours live in the per-theme
 // palette (ui_theme_colors_t.bg_grad_top/bottom), editable from the web UI.
@@ -102,6 +196,16 @@ void ui_background_apply(lv_obj_t *obj)
 {
     const ui_theme_t t = theme_current();
 
+    // Wallpaper (test): if a valid full-screen .bin is on the SD card, it wins
+    // over the gradient entirely.
+    if (load_wallpaper()) {
+        lv_obj_set_style_bg_image_src(obj, &s_wp_img, LV_PART_MAIN);
+        lv_obj_set_style_bg_image_tiled(obj, false, LV_PART_MAIN);
+        lv_obj_set_style_bg_image_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
+        return;
+    }
+
     // Solid background (gradient disabled): the pre-gradient look, theme-aware.
     if (!settings_get()->display.bg_gradient) {
         lv_obj_set_style_bg_image_src(obj, NULL, LV_PART_MAIN);
@@ -130,5 +234,6 @@ void ui_background_apply(lv_obj_t *obj)
 #else  // mono panel — no gradient background
 
 void ui_background_apply(lv_obj_t *obj) { (void)obj; }
+void ui_background_reload_wallpaper(void) { }
 
 #endif

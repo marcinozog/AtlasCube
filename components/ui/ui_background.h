@@ -13,6 +13,11 @@ extern "C" {
 // 1-bit noise) — the per-screen solid background is left in place.
 void ui_background_apply(lv_obj_t *obj);
 
+// Forget any loaded SD wallpaper so the next ui_background_apply() re-reads it
+// from settings (display.wallpaper_path). Call only from the LVGL task. On mono
+// panels this is a no-op.
+void ui_background_reload_wallpaper(void);
+
 #ifdef __cplusplus
 }
 #endif

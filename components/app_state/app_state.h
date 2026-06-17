@@ -52,6 +52,7 @@ typedef struct {
     int brightness;             // Display brightness
     ui_theme_t theme;
     bool bg_gradient;           // Dithered gradient background on/off (false = solid)
+    bool wallpaper_on;          // SD wallpaper background on/off (wins over gradient)
     int  scrsaver_delay;        // Idle seconds before activation (0 = off)
     int  scrsaver_id;           // screensaver_id_t (see screensavers.h)
     bool sd_active;             // SD music player is the active source
@@ -138,6 +139,9 @@ typedef struct {
 
     bool has_bg_gradient;
     bool bg_gradient;
+
+    bool has_wallpaper_on;
+    bool wallpaper_on;
 
     bool has_scrsaver_delay;
     int  scrsaver_delay;

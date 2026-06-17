@@ -365,9 +365,19 @@
 
         <div class="panel">
             <label class="field-label">Background</label>
-            <div class="theme-toggle" id="bgGradientToggle" style="width:fit-content">
-                <button class="theme-btn" id="settingsBtnBgGrad"  onclick="setBgGradient(true)">🌈 Gradient</button>
-                <button class="theme-btn" id="settingsBtnBgSolid" onclick="setBgGradient(false)">⬛ Solid</button>
+            <div class="theme-toggle wide" id="bgGradientToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnBgGrad"  onclick="setBackground('gradient')">🌈 Gradient</button>
+                <button class="theme-btn" id="settingsBtnBgSolid" onclick="setBackground('solid')">⬛ Solid</button>
+                <button class="theme-btn" id="settingsBtnBgWall"  onclick="setBackground('wallpaper')">🖼️ Wallpaper</button>
+            </div>
+            <div id="wallpaperPicker" style="display:none;margin-top:10px">
+                <div class="field-hint">Pick a panel-sized RGB565 <code>.bin</code> from the SD card (same format as photo-frame slides).</div>
+                <div style="margin:6px 0">
+                    <span style="opacity:.7">File:</span>
+                    <span id="wallpaperPath" style="font-family:monospace;font-size:12px">(none)</span>
+                </div>
+                <button class="btn-secondary" onclick="openWallpaperBrowser()">📂 Choose file…</button>
+                <div id="wallpaperBrowser" style="display:none;margin-top:8px"></div>
             </div>
         </div>
 

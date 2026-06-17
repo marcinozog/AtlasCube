@@ -110,6 +110,13 @@ body {
     color: var(--text-dim);
 }
 
+/* Auto-width variant for toggles whose buttons carry text labels (e.g. the
+   Gradient / Solid / Wallpaper background switch) so labels aren't clipped. */
+.theme-toggle.wide .theme-btn {
+    width: auto;
+    padding: 0 14px;
+}
+
 .theme-btn.active {
     background: var(--accent);
     color: #fff;

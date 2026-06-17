@@ -149,6 +149,7 @@ void app_state_update(const app_state_patch_t *patch)
     }
 
     if (patch->has_bg_gradient) s_state.bg_gradient = patch->bg_gradient;
+    if (patch->has_wallpaper_on) s_state.wallpaper_on = patch->wallpaper_on;
 
     if (patch->has_scrsaver_delay)  s_state.scrsaver_delay  = patch->scrsaver_delay;
     if (patch->has_scrsaver_id)     s_state.scrsaver_id     = patch->scrsaver_id;
@@ -200,6 +201,7 @@ void app_state_update(const app_state_patch_t *patch)
     if (patch->has_time_synced)       n += snprintf(buf + n, sizeof(buf) - n, " time_synced=%d", s_state.time_synced);
     if (patch->has_theme)             n += snprintf(buf + n, sizeof(buf) - n, " theme=%d", s_state.theme);
     if (patch->has_bg_gradient)       n += snprintf(buf + n, sizeof(buf) - n, " bg_gradient=%d", s_state.bg_gradient);
+    if (patch->has_wallpaper_on)      n += snprintf(buf + n, sizeof(buf) - n, " wallpaper_on=%d", s_state.wallpaper_on);
     if (patch->has_scrsaver_delay)    n += snprintf(buf + n, sizeof(buf) - n, " scrsaver_delay=%d", s_state.scrsaver_delay);
     if (patch->has_scrsaver_id)       n += snprintf(buf + n, sizeof(buf) - n, " scrsaver_id=%d", s_state.scrsaver_id);
     if (patch->has_sd_active)         n += snprintf(buf + n, sizeof(buf) - n, " sd_active=%d", s_state.sd_active);

@@ -46,6 +46,8 @@ esp_err_t settings_init(void)
         s_settings.display.screen           = SCREEN_CLOCK;
         s_settings.display.theme            = THEME_DARK;
         s_settings.display.bg_gradient      = true;
+        s_settings.display.wallpaper_on     = false;
+        s_settings.display.wallpaper_path[0] = '\0';
         s_settings.display.show_boot_info   = true;
         s_settings.display.dim_schedule.enabled        = false;
         s_settings.display.dim_schedule.dim_hour       = 22;
@@ -210,6 +212,13 @@ static esp_err_t load_from_file(void)
         }
         cJSON *bg = cJSON_GetObjectItem(display, "bg_gradient");
         s_settings.display.bg_gradient = cJSON_IsBool(bg) ? cJSON_IsTrue(bg) : true;
+        cJSON *wp = cJSON_GetObjectItem(display, "wallpaper_on");
+        s_settings.display.wallpaper_on = cJSON_IsBool(wp) ? cJSON_IsTrue(wp) : false;
+        cJSON *wpp = cJSON_GetObjectItem(display, "wallpaper_path");
+        s_settings.display.wallpaper_path[0] = '\0';
+        if (cJSON_IsString(wpp))
+            strncpy(s_settings.display.wallpaper_path, wpp->valuestring,
+                    sizeof(s_settings.display.wallpaper_path) - 1);
         cJSON *sbi = cJSON_GetObjectItem(display, "show_boot_info");
         s_settings.display.show_boot_info = cJSON_IsBool(sbi) ? cJSON_IsTrue(sbi) : true;
 
@@ -459,6 +468,8 @@ static esp_err_t save_to_file(void)
     cJSON_AddStringToObject(display, "theme",
         s_settings.display.theme == THEME_LIGHT ? "light" : "dark");
     cJSON_AddBoolToObject(display, "bg_gradient", s_settings.display.bg_gradient);
+    cJSON_AddBoolToObject(display, "wallpaper_on", s_settings.display.wallpaper_on);
+    cJSON_AddStringToObject(display, "wallpaper_path", s_settings.display.wallpaper_path);
     cJSON_AddBoolToObject(display, "show_boot_info", s_settings.display.show_boot_info);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s_settings.display.dim_schedule.enabled);
@@ -604,6 +615,7 @@ void settings_apply(void)
         .has_display_brightness = true, .display_brightness = s_settings.display.brightness,
         .has_theme              = true, .theme     = s_settings.display.theme,
         .has_bg_gradient        = true, .bg_gradient = s_settings.display.bg_gradient,
+        .has_wallpaper_on       = true, .wallpaper_on = s_settings.display.wallpaper_on,
         .has_scrsaver_delay     = true, .scrsaver_delay  = s_settings.scrsaver.delay,
         .has_scrsaver_id        = true, .scrsaver_id     = s_settings.scrsaver.screensaver_id,
     };
@@ -807,6 +819,27 @@ void settings_set_bg_gradient(bool enabled)
     if (s_settings.display.bg_gradient == enabled) return;
     s_settings.display.bg_gradient = enabled;
     app_state_update(&(app_state_patch_t){ .has_bg_gradient = true, .bg_gradient = enabled });
+    save_to_file();
+}
+
+void settings_set_wallpaper(bool on, const char *path)
+{
+    bool changed = false;
+    if (s_settings.display.wallpaper_on != on) {
+        s_settings.display.wallpaper_on = on;
+        changed = true;
+    }
+    if (path && strcmp(s_settings.display.wallpaper_path, path) != 0) {
+        s_settings.display.wallpaper_path[0] = '\0';
+        strncpy(s_settings.display.wallpaper_path, path,
+                sizeof(s_settings.display.wallpaper_path) - 1);
+        changed = true;
+    }
+    if (!changed) return;
+    // Always push (even on a path-only change): notify() fires unconditionally,
+    // letting ui_manager detect the path change and reload the wallpaper live.
+    app_state_update(&(app_state_patch_t){ .has_wallpaper_on = true,
+                                           .wallpaper_on = s_settings.display.wallpaper_on });
     save_to_file();
 }
 

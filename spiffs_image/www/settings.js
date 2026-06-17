@@ -86,15 +86,89 @@ function setDeviceTheme(t) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Background gradient on/off (display)
+// Background mode (display): gradient / solid / wallpaper
 // ─────────────────────────────────────────────────────────────────────────────
-function setBgGradient(on) {
-    document.getElementById('settingsBtnBgGrad') ?.classList.toggle('active', on);
-    document.getElementById('settingsBtnBgSolid')?.classList.toggle('active', !on);
+const SD_MOUNT = '/sdcard';
+
+function setBackground(mode) {
+    const grad = mode === 'gradient';
+    const wall = mode === 'wallpaper';
+    document.getElementById('settingsBtnBgGrad') ?.classList.toggle('active', grad);
+    document.getElementById('settingsBtnBgSolid')?.classList.toggle('active', mode === 'solid');
+    document.getElementById('settingsBtnBgWall') ?.classList.toggle('active', wall);
+    document.getElementById('wallpaperPicker').style.display = wall ? '' : 'none';
+    const body = wall ? { display: { wallpaper_on: true } }
+                      : { display: { wallpaper_on: false, bg_gradient: grad } };
     fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ display: { bg_gradient: on } })
+        body: JSON.stringify(body)
+    }).catch(console.error);
+}
+
+// SD file browser for picking a wallpaper .bin (reuses /api/sd/list).
+function openWallpaperBrowser() {
+    const box = document.getElementById('wallpaperBrowser');
+    box.style.display = '';
+    // Start in the folder of the currently selected wallpaper, if any.
+    const cur = document.getElementById('wallpaperPath').textContent;
+    let startDir = '/';
+    if (cur && cur.startsWith(SD_MOUNT + '/')) {
+        const rel = cur.slice(SD_MOUNT.length);     // "/wallpapers/10.bin"
+        startDir = rel.replace(/\/[^/]+$/, '') || '/';
+    }
+    browseWallpaper(startDir);
+}
+
+function browseWallpaper(path) {
+    fetch('/api/sd/list?path=' + encodeURIComponent(path))
+        .then(r => r.json())
+        .then(renderWallpaperBrowser)
+        .catch(() => { document.getElementById('wallpaperBrowser').textContent = 'SD card unavailable'; });
+}
+
+function renderWallpaperBrowser(d) {
+    const box = document.getElementById('wallpaperBrowser');
+    box.innerHTML = '';
+    const path = d.path || '/';
+
+    const head = document.createElement('div');
+    head.style.cssText = 'font-family:monospace;font-size:12px;margin-bottom:4px;opacity:.8';
+    head.textContent = path;
+    box.appendChild(head);
+
+    const list = document.createElement('div');
+    list.style.cssText = 'max-height:200px;overflow:auto;border:1px solid var(--border,#333);border-radius:6px';
+    const addRow = (label, fn) => {
+        const r = document.createElement('div');
+        r.textContent = label;
+        r.style.cssText = 'padding:6px 10px;cursor:pointer';
+        r.onmouseenter = () => r.style.background = 'rgba(255,255,255,.06)';
+        r.onmouseleave = () => r.style.background = '';
+        r.onclick = fn;
+        list.appendChild(r);
+    };
+
+    if (path !== '/' && path !== '') {
+        const parent = path.replace(/\/[^/]+\/?$/, '') || '/';
+        addRow('📁 ..', () => browseWallpaper(parent));
+    }
+    (d.entries || []).forEach(e => {
+        const full = (path.endsWith('/') ? path : path + '/') + e.name;
+        if (e.dir) addRow('📁 ' + e.name, () => browseWallpaper(full));
+        else if (e.name.toLowerCase().endsWith('.bin')) addRow('🖼️ ' + e.name, () => selectWallpaper(full));
+    });
+    box.appendChild(list);
+}
+
+function selectWallpaper(relPath) {
+    const fullPath = SD_MOUNT + relPath;   // fopen needs the mount-point prefix
+    document.getElementById('wallpaperPath').textContent = fullPath;
+    document.getElementById('wallpaperBrowser').style.display = 'none';
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { wallpaper_on: true, wallpaper_path: fullPath } })
     }).catch(console.error);
 }
 
@@ -557,9 +631,14 @@ function populateForm(s) {
         document.getElementById('settingsBtnDark') ?.classList.toggle('active', t === 'dark');
         document.getElementById('settingsBtnLight')?.classList.toggle('active', t === 'light');
 
+        const wallOn = s.display.wallpaper_on === true;
         const bgGrad = s.display.bg_gradient !== false;   // default on
-        document.getElementById('settingsBtnBgGrad') ?.classList.toggle('active', bgGrad);
-        document.getElementById('settingsBtnBgSolid')?.classList.toggle('active', !bgGrad);
+        document.getElementById('settingsBtnBgWall') ?.classList.toggle('active', wallOn);
+        document.getElementById('settingsBtnBgGrad') ?.classList.toggle('active', !wallOn && bgGrad);
+        document.getElementById('settingsBtnBgSolid')?.classList.toggle('active', !wallOn && !bgGrad);
+        document.getElementById('wallpaperPicker').style.display = wallOn ? '' : 'none';
+        const wpEl = document.getElementById('wallpaperPath');
+        if (wpEl) wpEl.textContent = s.display.wallpaper_path || '(none)';
 
         const bootInfo = s.display.show_boot_info !== false;   // default on
         document.getElementById('settingsBtnBootInfoOn') ?.classList.toggle('active', bootInfo);
