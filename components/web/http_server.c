@@ -1474,9 +1474,29 @@ static esp_err_t gzip_buffer(const char *src, size_t src_len,
     return ESP_OK;
 }
 
+// Resolve ?root=config → /config (user settings), default → /spiffs (www).
+static const char *files_root_from_query(httpd_req_t *req)
+{
+    const char *root = WEB_ROOT;
+    size_t qlen = httpd_req_get_url_query_len(req) + 1;
+    if (qlen > 1 && qlen < 256) {
+        char *q = malloc(qlen);
+        if (q && httpd_req_get_url_query_str(req, q, qlen) == ESP_OK) {
+            char val[16];
+            if (httpd_query_key_value(q, "root", val, sizeof(val)) == ESP_OK &&
+                strcmp(val, "config") == 0) {
+                root = CONFIG_ROOT;
+            }
+        }
+        free(q);
+    }
+    return root;
+}
+
 static esp_err_t api_files_get_handler(httpd_req_t *req)
 {
-    DIR *d = opendir(WEB_ROOT);
+    const char *root = files_root_from_query(req);
+    DIR *d = opendir(root);
     if (!d) {
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "opendir failed");
         return ESP_FAIL;
@@ -1509,7 +1529,7 @@ static esp_err_t api_files_get_handler(httpd_req_t *req)
         if (ext && strcmp(ext, ".ico") == 0) continue;
 
         char fullpath[320];
-        snprintf(fullpath, sizeof(fullpath), "%s/%s", WEB_ROOT, fname);
+        snprintf(fullpath, sizeof(fullpath), "%s/%s", root, fname);
         struct stat st = {0};
         long sz = (stat(fullpath, &st) == 0) ? (long)st.st_size : 0;
 
@@ -1594,7 +1614,11 @@ static esp_err_t api_files_put_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
-    bool do_gzip = (strcmp(ext, ".html") == 0 ||
+    const char *root = files_root_from_query(req);
+    // config holds raw JSON only — never gzip, even for html/css/js names
+    bool is_config = (strcmp(root, CONFIG_ROOT) == 0);
+    bool do_gzip = !is_config &&
+                   (strcmp(ext, ".html") == 0 ||
                     strcmp(ext, ".css")  == 0 ||
                     strcmp(ext, ".js")   == 0);
 
@@ -1622,9 +1646,9 @@ static esp_err_t api_files_put_handler(httpd_req_t *req)
 
     char dest_path[256];
     if (do_gzip)
-        snprintf(dest_path, sizeof(dest_path), "%s/%s.gz", WEB_ROOT, name);
+        snprintf(dest_path, sizeof(dest_path), "%s/%s.gz", root, name);
     else
-        snprintf(dest_path, sizeof(dest_path), "%s/%s",    WEB_ROOT, name);
+        snprintf(dest_path, sizeof(dest_path), "%s/%s",    root, name);
 
     char tmp_path[260];
     snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", dest_path);

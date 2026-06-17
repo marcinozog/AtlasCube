@@ -5,7 +5,10 @@
 
 let currentName = null;
 let currentIsGz = false;
+let currentRoot = 'www';   // 'www' (/spiffs) or 'config' (/config)
 
+const $root = document.getElementById('root_select');
+const $note = document.getElementById('config_note');
 const $sel  = document.getElementById('file_select');
 const $code = document.getElementById('code');
 const $meta = document.getElementById('file_meta');
@@ -62,7 +65,7 @@ function encodePath(p) {
 async function loadFileList(keepSelection) {
     setStatus('Loading file list…');
     try {
-        const r = await fetch('/api/files', { cache: 'no-store' });
+        const r = await fetch('/api/files?root=' + currentRoot, { cache: 'no-store' });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const list = await r.json();
         list.sort((a, b) => a.name.localeCompare(b.name));
@@ -78,7 +81,7 @@ async function loadFileList(keepSelection) {
             $sel.appendChild(opt);
         }
         if (!list.length) {
-            setStatus('No editable files in /spiffs', 'warn');
+            setStatus('No editable files in /' + currentRoot, 'warn');
             return;
         }
 
@@ -138,7 +141,7 @@ async function saveFile() {
     if (!currentName) return;
     setStatus('Saving ' + currentName + '…');
     try {
-        const r = await fetch('/api/files/' + encodePath(currentName), {
+        const r = await fetch('/api/files/' + encodePath(currentName) + '?root=' + currentRoot, {
             method: 'PUT',
             headers: { 'Content-Type': 'text/plain; charset=utf-8' },
             body: $code.value
@@ -170,6 +173,13 @@ function downloadFile() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 }
+
+$root.addEventListener('change', () => {
+    currentRoot = $root.value;
+    $note.style.display = (currentRoot === 'config') ? '' : 'none';
+    currentName = null;
+    loadFileList(false);
+});
 
 $sel.addEventListener('change', loadFile);
 

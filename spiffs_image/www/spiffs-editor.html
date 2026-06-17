@@ -114,6 +114,10 @@
     <div class="section-title" style="margin: 16px 0 12px">📝 File Editor</div>
 
     <div class="editor-toolbar">
+        <select id="root_select" title="Which partition to edit" style="flex:0 0 auto;min-width:120px">
+            <option value="www">www (web UI)</option>
+            <option value="config">config (settings)</option>
+        </select>
         <select id="file_select"></select>
         <button onclick="reloadFile()" title="Reload from flash">↺ Reload</button>
         <button onclick="downloadFile()" title="Save copy to your PC (sync back to www/)">⬇ Download</button>
@@ -127,6 +131,10 @@
         <span class="hint">Tab = 4 spaces · Ctrl+S = save · HTML/CSS/JS gzipped on save · JSON/CSV stored raw</span>
         <span class="status" id="status">Ready</span>
         <span class="json-status hidden" id="json_status"></span>
+    </div>
+
+    <div class="editor-footer" id="config_note" style="display:none">
+        <span class="hint" style="color:var(--orange)">⚠ Editing config writes straight to flash, bypassing the device's in-RAM settings. Restart the device for changes to take effect — and note the running firmware may overwrite your edit if it saves settings first.</span>
     </div>
 
 </main>
