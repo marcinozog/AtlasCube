@@ -72,6 +72,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddBoolToObject(display, "bg_gradient", s->display.bg_gradient);
     cJSON_AddBoolToObject(display, "wallpaper_on", s->display.wallpaper_on);
     cJSON_AddStringToObject(display, "wallpaper_path", s->display.wallpaper_path);
+    cJSON_AddStringToObject(display, "logo_path", s->display.logo_path);
     cJSON_AddBoolToObject(display, "show_boot_info", s->display.show_boot_info);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s->display.dim_schedule.enabled);
@@ -280,6 +281,11 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
                                                    : cur->display.wallpaper_path;
             ESP_LOGI("HTTP", "POST wallpaper: on=%d path=%s", on, path);
             settings_set_wallpaper(on, path);
+        }
+        cJSON *lgp = cJSON_GetObjectItem(display, "logo_path");
+        if (cJSON_IsString(lgp)) {
+            ESP_LOGI("HTTP", "POST logo_path: %s", lgp->valuestring);
+            settings_set_logo_path(lgp->valuestring);
         }
         cJSON *sbi = cJSON_GetObjectItem(display, "show_boot_info");
         if (cJSON_IsBool(sbi)) {

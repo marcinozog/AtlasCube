@@ -106,29 +106,34 @@ function setBackground(mode) {
     }).catch(console.error);
 }
 
-// SD file browser for picking a wallpaper .bin (reuses /api/sd/list).
-function openWallpaperBrowser() {
-    const box = document.getElementById('wallpaperBrowser');
-    box.style.display = '';
-    // Start in the folder of the currently selected wallpaper, if any.
-    const cur = document.getElementById('wallpaperPath').textContent;
-    let startDir = '/';
-    if (cur && cur.startsWith(SD_MOUNT + '/')) {
-        const rel = cur.slice(SD_MOUNT.length);     // "/wallpapers/10.bin"
-        startDir = rel.replace(/\/[^/]+$/, '') || '/';
-    }
-    browseWallpaper(startDir);
+// Generic SD .bin picker (reuses /api/sd/list), shared by the wallpaper and the
+// splash-logo controls. Renders into `box`; `onSelect(relPath)` fires when a
+// file is clicked, 👁 previews it (lvbin.js).
+function postDisplay(patch) {
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: patch })
+    }).catch(console.error);
 }
 
-function browseWallpaper(path) {
+// Folder of the currently selected file (mount-relative), or '/' if none.
+function sdDirOf(fullText) {
+    if (fullText && fullText.startsWith(SD_MOUNT + '/')) {
+        const rel = fullText.slice(SD_MOUNT.length);   // "/wallpapers/10.bin"
+        return rel.replace(/\/[^/]+$/, '') || '/';
+    }
+    return '/';
+}
+
+function browseBin(box, path, onSelect) {
     fetch('/api/sd/list?path=' + encodeURIComponent(path))
         .then(r => r.json())
-        .then(renderWallpaperBrowser)
-        .catch(() => { document.getElementById('wallpaperBrowser').textContent = 'SD card unavailable'; });
+        .then(d => renderBinBrowser(box, d, onSelect))
+        .catch(() => { box.textContent = 'SD card unavailable'; });
 }
 
-function renderWallpaperBrowser(d) {
-    const box = document.getElementById('wallpaperBrowser');
+function renderBinBrowser(box, d, onSelect) {
     box.innerHTML = '';
     const path = d.path || '/';
 
@@ -151,14 +156,14 @@ function renderWallpaperBrowser(d) {
 
     if (path !== '/' && path !== '') {
         const parent = path.replace(/\/[^/]+\/?$/, '') || '/';
-        addRow('📁 ..', () => browseWallpaper(parent));
+        addRow('📁 ..', () => browseBin(box, parent, onSelect));
     }
     (d.entries || []).forEach(e => {
         const full = (path.endsWith('/') ? path : path + '/') + e.name;
-        if (e.dir) { addRow('📁 ' + e.name, () => browseWallpaper(full)); return; }
+        if (e.dir) { addRow('📁 ' + e.name, () => browseBin(box, full, onSelect)); return; }
         if (!e.name.toLowerCase().endsWith('.bin')) return;
 
-        // File row: name selects the wallpaper, 👁 opens a preview (lvbin.js).
+        // File row: name picks the file, 👁 opens a preview (lvbin.js).
         const row = document.createElement('div');
         row.style.cssText = 'padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:8px';
         row.onmouseenter = () => row.style.background = 'rgba(255,255,255,.06)';
@@ -166,7 +171,7 @@ function renderWallpaperBrowser(d) {
         const name = document.createElement('span');
         name.textContent = '🖼️ ' + e.name;
         name.style.flex = '1';
-        name.onclick = () => selectWallpaper(full);
+        name.onclick = () => onSelect(full);
         const eye = document.createElement('button');
         eye.type = 'button';
         eye.className = 'btn-secondary';
@@ -180,15 +185,39 @@ function renderWallpaperBrowser(d) {
     box.appendChild(list);
 }
 
+// ── Wallpaper picker ──────────────────────────────────────────────────────────
+function openWallpaperBrowser() {
+    const box = document.getElementById('wallpaperBrowser');
+    box.style.display = '';
+    browseBin(box, sdDirOf(document.getElementById('wallpaperPath').textContent),
+              selectWallpaper);
+}
+
 function selectWallpaper(relPath) {
     const fullPath = SD_MOUNT + relPath;   // fopen needs the mount-point prefix
     document.getElementById('wallpaperPath').textContent = fullPath;
     document.getElementById('wallpaperBrowser').style.display = 'none';
-    fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ display: { wallpaper_on: true, wallpaper_path: fullPath } })
-    }).catch(console.error);
+    postDisplay({ wallpaper_on: true, wallpaper_path: fullPath });
+}
+
+// ── Splash-logo picker ──────────────────────────────────────────────────────────
+function openLogoBrowser() {
+    const box = document.getElementById('logoBrowser');
+    box.style.display = '';
+    browseBin(box, sdDirOf(document.getElementById('logoPath').textContent), selectLogo);
+}
+
+function selectLogo(relPath) {
+    const fullPath = SD_MOUNT + relPath;
+    document.getElementById('logoPath').textContent = fullPath;
+    document.getElementById('logoBrowser').style.display = 'none';
+    postDisplay({ logo_path: fullPath });
+}
+
+function resetLogo() {
+    document.getElementById('logoPath').textContent = '(built-in)';
+    document.getElementById('logoBrowser').style.display = 'none';
+    postDisplay({ logo_path: '' });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -662,6 +691,9 @@ function populateForm(s) {
         const bootInfo = s.display.show_boot_info !== false;   // default on
         document.getElementById('settingsBtnBootInfoOn') ?.classList.toggle('active', bootInfo);
         document.getElementById('settingsBtnBootInfoOff')?.classList.toggle('active', !bootInfo);
+
+        const logoEl = document.getElementById('logoPath');
+        if (logoEl) logoEl.textContent = s.display.logo_path || '(built-in)';
 
         if (s.display.brightness !== undefined) {
             const b = s.display.brightness;

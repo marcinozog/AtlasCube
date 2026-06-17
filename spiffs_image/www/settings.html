@@ -70,6 +70,18 @@
         </div>
 
         <div class="panel">
+            <label class="field-label">Splash logo</label>
+            <div class="field-hint">Custom logo from the SD card (LVGL RGB565 <code>.bin</code>, any size — auto-fit to the panel). Requires an SD card; empty = built-in logo.</div>
+            <div style="margin:6px 0">
+                <span style="opacity:.7">File:</span>
+                <span id="logoPath" style="font-family:monospace;font-size:12px">(built-in)</span>
+            </div>
+            <button class="btn-secondary" onclick="openLogoBrowser()">📂 Choose file…</button>
+            <button class="btn-secondary" onclick="resetLogo()">↺ Built-in</button>
+            <div id="logoBrowser" style="display:none;margin-top:8px"></div>
+        </div>
+
+        <div class="panel">
             <label class="field-label">Screen layout editor</label>
             <a href="/layout.html" class="tool-btn tool-link" style="width:fit-content;padding:8px 14px">🖼️ Open Layout Editor</a>
         </div>

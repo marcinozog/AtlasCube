@@ -48,6 +48,7 @@ esp_err_t settings_init(void)
         s_settings.display.bg_gradient      = true;
         s_settings.display.wallpaper_on     = false;
         s_settings.display.wallpaper_path[0] = '\0';
+        s_settings.display.logo_path[0]     = '\0';
         s_settings.display.show_boot_info   = true;
         s_settings.display.dim_schedule.enabled        = false;
         s_settings.display.dim_schedule.dim_hour       = 22;
@@ -219,6 +220,11 @@ static esp_err_t load_from_file(void)
         if (cJSON_IsString(wpp))
             strncpy(s_settings.display.wallpaper_path, wpp->valuestring,
                     sizeof(s_settings.display.wallpaper_path) - 1);
+        cJSON *lgp = cJSON_GetObjectItem(display, "logo_path");
+        s_settings.display.logo_path[0] = '\0';
+        if (cJSON_IsString(lgp))
+            strncpy(s_settings.display.logo_path, lgp->valuestring,
+                    sizeof(s_settings.display.logo_path) - 1);
         cJSON *sbi = cJSON_GetObjectItem(display, "show_boot_info");
         s_settings.display.show_boot_info = cJSON_IsBool(sbi) ? cJSON_IsTrue(sbi) : true;
 
@@ -470,6 +476,7 @@ static esp_err_t save_to_file(void)
     cJSON_AddBoolToObject(display, "bg_gradient", s_settings.display.bg_gradient);
     cJSON_AddBoolToObject(display, "wallpaper_on", s_settings.display.wallpaper_on);
     cJSON_AddStringToObject(display, "wallpaper_path", s_settings.display.wallpaper_path);
+    cJSON_AddStringToObject(display, "logo_path", s_settings.display.logo_path);
     cJSON_AddBoolToObject(display, "show_boot_info", s_settings.display.show_boot_info);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s_settings.display.dim_schedule.enabled);
@@ -841,6 +848,15 @@ void settings_set_wallpaper(bool on, const char *path)
     app_state_update(&(app_state_patch_t){ .has_wallpaper_on = true,
                                            .wallpaper_on = s_settings.display.wallpaper_on });
     save_to_file();
+}
+
+void settings_set_logo_path(const char *path)
+{
+    const char *p = path ? path : "";
+    if (strcmp(s_settings.display.logo_path, p) == 0) return;
+    s_settings.display.logo_path[0] = '\0';
+    strncpy(s_settings.display.logo_path, p, sizeof(s_settings.display.logo_path) - 1);
+    save_to_file();   // read once at next boot by the splash — no live app_state push
 }
 
 void settings_set_show_boot_info(bool enabled)
