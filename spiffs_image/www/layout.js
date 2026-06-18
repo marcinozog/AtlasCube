@@ -290,8 +290,9 @@ function renderClock(svg) {
     if (c.clock_show_time) {
         const fh = fontHeight(c.clock_time_font);
         const tw = Math.round(fh * 0.55) * 5;     // "00:00"
+        // Center-anchored: clock_time_x is the middle of the time text.
         drawFreeElement(svg, {
-            x: c.clock_time_x, y: c.clock_time_y, w: tw, h: fh,
+            x: c.clock_time_x - Math.round(tw / 2), y: c.clock_time_y, w: tw, h: fh,
             label: 'time', cls: 'label-rect',
             fields: { x: 'clock_time_x', y: 'clock_time_y' },
             text: '88:88', textSize: fh,
@@ -300,8 +301,9 @@ function renderClock(svg) {
     if (c.clock_show_date) {
         const fh = fontHeight(c.clock_date_font);
         const tw = Math.round(fh * 0.55) * 16;    // "Mon  YYYY-MM-DD"
+        // Center-anchored: clock_date_x is the middle of the date text.
         drawFreeElement(svg, {
-            x: c.clock_date_x, y: c.clock_date_y, w: tw, h: fh,
+            x: c.clock_date_x - Math.round(tw / 2), y: c.clock_date_y, w: tw, h: fh,
             label: 'date', cls: 'label-rect',
             fields: { x: 'clock_date_x', y: 'clock_date_y' },
             text: 'Mon  2026-05-01', textSize: fh,
@@ -310,8 +312,9 @@ function renderClock(svg) {
     if (c.clock_show_netinfo) {
         const fh = fontHeight(c.clock_netinfo_font);
         const tw = Math.round(fh * 0.55) * 28;    // "192.168.1.50   host.local"
+        // Center-anchored: clock_netinfo_x is the middle of the IP/host text.
         drawFreeElement(svg, {
-            x: c.clock_netinfo_x, y: c.clock_netinfo_y, w: tw, h: fh,
+            x: c.clock_netinfo_x - Math.round(tw / 2), y: c.clock_netinfo_y, w: tw, h: fh,
             label: 'ip', cls: 'label-rect',
             fields: { x: 'clock_netinfo_x', y: 'clock_netinfo_y' },
             text: '192.168.1.50  host.local', textSize: fh,

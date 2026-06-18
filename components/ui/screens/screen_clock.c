@@ -9,6 +9,7 @@
 #include "ui_profile.h"
 #include "fonts/ui_fonts.h"
 #include "ui_screen.h"
+#include "ui_label.h"
 #include "ui_events.h"
 #include "ui_manager.h"
 #include "ui_nav.h"
@@ -115,13 +116,15 @@ static void netinfo_update(void)
 
     if (!s_netinfo_label) {
         const ui_theme_colors_t *th = theme_get();
-        s_netinfo_label = lv_label_create(s_root);
+        // Center-anchored on clock_netinfo_x so the IP/host line stays centered
+        // on that point as its width changes.
+        s_netinfo_label = ui_anchored_label(s_root, p->clock_netinfo_x,
+                                            p->clock_netinfo_y, UI_ALIGN_CENTER);
         lv_obj_set_style_text_font(s_netinfo_label,
             p->clock_netinfo_font ? p->clock_netinfo_font : &lv_font_montserrat_12_pl,
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_netinfo_label,
             lv_color_hex(th->text_muted), LV_PART_MAIN);
-        lv_obj_set_pos(s_netinfo_label, p->clock_netinfo_x, p->clock_netinfo_y);
     }
 
     char ip[16];
@@ -145,25 +148,29 @@ static void clock_create(lv_obj_t *parent)
     // Time label — placed directly on the screen (parent), not inside the panel,
     // so the profile coordinates stay absolute.
     if (p->clock_show_time) {
-        s_time_label = lv_label_create(parent);
+        // Center-anchored on clock_time_x: the time block stays centered on that
+        // point as proportional digits change width, instead of wandering.
+        s_time_label = ui_anchored_label(parent, p->clock_time_x, p->clock_time_y,
+                                         UI_ALIGN_CENTER);
         lv_label_set_text(s_time_label, "--:--");
         lv_obj_set_style_text_font(s_time_label,
             p->clock_time_font ? p->clock_time_font : &lv_font_montserrat_18_pl,
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_time_label,
             lv_color_hex(th->text_primary), LV_PART_MAIN);
-        lv_obj_set_pos(s_time_label, p->clock_time_x, p->clock_time_y);
     }
 
     if (p->clock_show_date) {
-        s_date_label = lv_label_create(parent);
+        // Center-anchored on clock_date_x so the date stays centered on that
+        // point as its width changes.
+        s_date_label = ui_anchored_label(parent, p->clock_date_x, p->clock_date_y,
+                                         UI_ALIGN_CENTER);
         lv_label_set_text(s_date_label, "");
         lv_obj_set_style_text_font(s_date_label,
             p->clock_date_font ? p->clock_date_font : &lv_font_montserrat_18_pl,
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_date_label,
             lv_color_hex(th->text_secondary), LV_PART_MAIN);
-        lv_obj_set_pos(s_date_label, p->clock_date_x, p->clock_date_y);
     }
 
     s_clock_timer = lv_timer_create(clock_timer_cb, 60 * 1000, NULL);
