@@ -2,6 +2,7 @@
 #include "screen_clock.h"
 #include "mode_indicator_widget.h"
 #include "event_indicator_widget.h"
+#include "controls_overlay_widget.h"
 #include "vol_overlay_widget.h"
 #include "app_state.h"
 #include "settings.h"
@@ -34,6 +35,16 @@ static lv_obj_t  *s_netinfo_label = NULL;
 static lv_timer_t *s_clock_timer  = NULL;
 
 static void netinfo_update(void);
+
+// Active audio source → which set of buttons the controls overlay drives.
+// Mutually exclusive in practice (take_over_output mutes the others).
+static controls_overlay_mode_t clock_ctrl_mode(void)
+{
+    app_state_t *s = app_state_get();
+    if (s->bt_enable) return CTRL_OVL_MODE_BT;
+    if (s->sd_active) return CTRL_OVL_MODE_SD;
+    return CTRL_OVL_MODE_RADIO;
+}
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -209,12 +220,15 @@ static void clock_create(lv_obj_t *parent)
 
     netinfo_update();
 
+    controls_overlay_create(parent, clock_ctrl_mode());
+
     ESP_LOGI(TAG, "Created (theme=%d)", theme_current());
 }
 
 static void clock_destroy(void)
 {
     if (s_clock_timer) { lv_timer_del(s_clock_timer); s_clock_timer = NULL; }
+    controls_overlay_destroy();
     vol_overlay_hide();
 
     event_indicator_destroy();
@@ -236,6 +250,7 @@ static void clock_on_event(const ui_event_t *ev)
             netinfo_update();
             mode_indicator_update();
             event_indicator_update();
+            controls_overlay_set_mode(clock_ctrl_mode());
             break;
         case UI_EVT_TITLE_CHANGED:
             strip_update();

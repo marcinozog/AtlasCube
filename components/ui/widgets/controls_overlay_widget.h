@@ -23,6 +23,11 @@ typedef enum {
 void controls_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode);
 void controls_overlay_destroy(void);
 
+// Re-point the (already created) overlay at a different audio source and refresh
+// the center play/stop symbol. For hub screens like the clock, where the active
+// source can change while the overlay is alive. No-op if not created.
+void controls_overlay_set_mode(controls_overlay_mode_t mode);
+
 #ifdef __cplusplus
 }
 #endif

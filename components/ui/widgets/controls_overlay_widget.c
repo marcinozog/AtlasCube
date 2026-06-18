@@ -25,6 +25,17 @@ typedef enum { CTRL_VOL_UP, CTRL_VOL_DN, CTRL_PREV, CTRL_NEXT, CTRL_PLAY } ctrl_
 #define CTRL_EVT_SHORT   (1u << 0)   // LV_EVENT_SHORT_CLICKED       → btn_clicked_cb
 #define CTRL_EVT_REPEAT  (1u << 1)   // LV_EVENT_LONG_PRESSED_REPEAT → btn_long_repeat_cb
 
+// Center button glyph for the current mode/state: SD & radio show STOP while
+// playing and PLAY when stopped; BT's play button is a no-op so it stays PLAY.
+static const char *play_symbol_for_mode(controls_overlay_mode_t mode)
+{
+    if (mode == CTRL_OVL_MODE_SD) {
+        return sd_player_is_active() ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY;
+    }
+    bool playing = (app_state_get()->radio_state == RADIO_STATE_PLAYING);
+    return playing ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY;
+}
+
 static void autohide_cb(lv_timer_t *t)
 {
     (void)t;
@@ -287,19 +298,18 @@ void controls_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
     make_btn(s_overlay, LV_SYMBOL_NEXT,  CTRL_NEXT,   step,  0,    sz, btn_bg,    256,
         CTRL_EVT_SHORT);
 
-    const char *play_sym;
-    if (s_mode == CTRL_OVL_MODE_SD) {
-        // SD: stop/play toggle — show STOP when playing, PLAY when stopped.
-        play_sym = sd_player_is_active() ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY;
-    } else {
-        bool playing = (app_state_get()->radio_state == RADIO_STATE_PLAYING);
-        play_sym = playing ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY;
-    }
+    const char *play_sym = play_symbol_for_mode(s_mode);
     lv_obj_t *play_btn = make_btn(s_overlay, play_sym,  CTRL_PLAY,   0,     0,    sz, center_bg, 180,
         CTRL_EVT_SHORT);
     s_play_lbl = lv_obj_get_child(play_btn, 0);
 
     ESP_LOGI(TAG, "Created (btn=%dpx, step=%dpx)", sz, step);
+}
+
+void controls_overlay_set_mode(controls_overlay_mode_t mode)
+{
+    s_mode = mode;
+    if (s_play_lbl) lv_label_set_text(s_play_lbl, play_symbol_for_mode(mode));
 }
 
 void controls_overlay_destroy(void)
