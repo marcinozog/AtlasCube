@@ -9,6 +9,17 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-06-18
+
+### Added
+- **ui:** controls widget on screen clock
+- **ui:** center-anchor clock_widget and BT/radio screen labels
+- **ui:** anchored auto-width labels that don't wander on text change
+- **ui:** add idle auto-dim screensaver
+
+### Fixed
+- **ui:** clock controls resume SD instead of starting radio
+
 ## [0.23.0] - 2026-06-17
 
 ### Added
@@ -355,7 +366,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.23.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.24.0...HEAD
+[0.24.0]: https://github.com/marcinozog/AtlasCube/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/marcinozog/AtlasCube/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/marcinozog/AtlasCube/compare/v0.21.2...v0.22.0
 [0.21.2]: https://github.com/marcinozog/AtlasCube/compare/v0.21.1...v0.21.2
