@@ -401,6 +401,8 @@ function onScreensaverStyleChange() {
     document.getElementById('dashboard_panel').style.display = style === 'dashboard' ? '' : 'none';
     const pp = document.getElementById('photo_panel');
     if (pp) pp.style.display = style === 'photo' ? '' : 'none';
+    const dp = document.getElementById('dim_panel');
+    if (dp) dp.style.display = style === 'dim' ? '' : 'none';
 }
 
 function onDashboardValueTypeChange() {
@@ -431,6 +433,7 @@ async function saveScreensaverTab() {
         scrsaver: {
             delay,
             id: get('scrs_id').value,
+            dim_level: parseInt(get('scrs_dim_level')?.value, 10) || 0,
             photo: {
                 dir:    (get('photo_dir')?.value ?? '').trim(),
                 order:  parseInt(get('photo_order')?.value, 10)  || 0,
@@ -748,6 +751,10 @@ function populateForm(s) {
         setVal('scrs_delay', s.scrsaver.delay ?? 60);
         const sel = document.getElementById('scrs_id');
         if (sel) sel.value = s.scrsaver.id || 'clockhands';
+        const dlv = s.scrsaver.dim_level ?? 20;
+        setVal('scrs_dim_level', dlv);
+        const dlvLbl = document.getElementById('scrs_dim_level_value');
+        if (dlvLbl) dlvLbl.textContent = String(dlv);
         const ph = s.scrsaver.photo || {};
         setVal('photo_dir',    ph.dir ?? '/sdcard/slides');
         setVal('photo_order',  String(ph.order  ?? 1));

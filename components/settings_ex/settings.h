@@ -72,6 +72,9 @@ typedef struct
     int  delay;            // seconds of idle before activating (0 = off)
     int  screensaver_id;   // screensaver_id_t (see screensavers.h)
 
+    // dim screensaver (SCREENSAVER_DIM) — backlight level applied while idle
+    int  dim_level;        // 0–100
+
     // photo-frame screensaver (SCREENSAVER_PHOTO)
     char photo_dir[64];    // SD directory with .bin slides (default "/sdcard/slides")
     int  photo_order;      // 0 = sequential, 1 = random
@@ -155,6 +158,7 @@ void settings_set_wifi(const char *ssid, const char *password);
 void settings_set_hostname(const char *hostname);
 void settings_set_scrsaver_delay(int delay);
 void settings_set_scrsaver_id(int id);
+void settings_set_scrsaver_dim_level(int level);
 void settings_set_photo(const char *dir, int order, int hold_s, int effect, int speed,
                         int clock, int clock_size);
 // Bumped on every settings_set_photo() — lets the running photo screensaver

@@ -21,7 +21,7 @@
     <!-- Tab navigation -->
     <nav class="tab-nav" id="settingsTabNav" role="tablist">
         <button type="button" class="tab-btn" data-tab="display"     onclick="selectTab('display')">🖥️ Display</button>
-        <button type="button" class="tab-btn" data-tab="night"       onclick="selectTab('night')">🌙 Sleep &amp; Wake</button>
+        <button type="button" class="tab-btn" data-tab="night"       onclick="selectTab('night')">🔅 Dim &amp; Wake</button>
         <button type="button" class="tab-btn" data-tab="screensaver" onclick="selectTab('screensaver')">🌀 Screensaver</button>
         <button type="button" class="tab-btn" data-tab="audio"       onclick="selectTab('audio')">🎚️ Audio</button>
         <button type="button" class="tab-btn" data-tab="colors"      onclick="selectTab('colors')">🎨 Theme</button>
@@ -92,12 +92,13 @@
     ══════════════════════════════════════════ -->
     <section class="tab-pane" id="tab-night" data-tab="night">
         <div class="panel">
-            <label class="field-label">🌙 Sleep &amp; Wake schedule</label>
+            <label class="field-label">🔅 Dim &amp; Wake schedule</label>
             <div class="theme-toggle" id="dimSchedToggle" style="width:fit-content">
                 <button type="button" class="theme-btn" id="dimSchedOn"  onclick="setDimScheduleEnabled(true)">✅ On</button>
                 <button type="button" class="theme-btn" id="dimSchedOff" onclick="setDimScheduleEnabled(false)">❌ Off</button>
             </div>
             <div class="field-hint">At the evening time dims the screen and can stop the radio; at the morning time brightens and can start a station (fades in). Requires NTP-synced clock.</div>
+            <div class="field-hint">💡 For idle-based dimming (lowers brightness after inactivity, not by clock), see Screensaver → Style → Dim.</div>
 
             <div id="dim_sched_panel" style="margin-top:10px">
                 <div class="field-group">
@@ -170,7 +171,25 @@
                 <option value="mqtt">📡 MQTT</option>
                 <option value="photo">🖼️ Photo frame (SD)</option>
                 <option value="blank">⬛ Blank (off)</option>
+                <option value="dim">🔅 Dim (lower brightness)</option>
             </select>
+        </div>
+
+        <!-- Dim screensaver — keeps the current screen, just lowers backlight -->
+        <div id="dim_panel" class="panel">
+            <label class="field-label">🔅 Dim level</label>
+            <div class="field-hint" style="margin-bottom:8px">
+                After the idle delay the current screen stays on but the backlight
+                drops to this level. Any tap or encoder restores full brightness.
+            </div>
+            <div class="field-hint" style="margin-bottom:8px">
+                💡 For clock-based dimming (a fixed night window), see Dim &amp; Wake.
+            </div>
+            <div class="slider-row">
+                <input type="range" min="0" max="100" id="scrs_dim_level"
+                       oninput="document.getElementById('scrs_dim_level_value').textContent = this.value" />
+                <span id="scrs_dim_level_value" class="slider-value">20</span>
+            </div>
         </div>
 
         <!-- Photo-frame screensaver -->

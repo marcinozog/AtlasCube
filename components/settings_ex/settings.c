@@ -76,6 +76,7 @@ esp_err_t settings_init(void)
         // Screensaver
         s_settings.scrsaver.delay           = 60;
         s_settings.scrsaver.screensaver_id  = SCREENSAVER_CLOCKHANDS;
+        s_settings.scrsaver.dim_level       = 20;
         // Photo-frame screensaver
         s_settings.scrsaver.photo_dir[0]    = '\0';
         strncpy(s_settings.scrsaver.photo_dir, "/sdcard/slides", sizeof(s_settings.scrsaver.photo_dir) - 1);
@@ -300,6 +301,7 @@ static esp_err_t load_from_file(void)
     }
 
     // ── SCREENSAVER ───────────────────────────────────────────────────────────
+    s_settings.scrsaver.dim_level = 20;   // overridden below if present
     // Photo-frame defaults — overridden below if a "photo" object is present.
     s_settings.scrsaver.photo_dir[0] = '\0';
     strncpy(s_settings.scrsaver.photo_dir, "/sdcard/slides", sizeof(s_settings.scrsaver.photo_dir) - 1);
@@ -321,6 +323,11 @@ static esp_err_t load_from_file(void)
             s_settings.scrsaver.screensaver_id = id->valueint;
         } else {
             s_settings.scrsaver.screensaver_id = SCREENSAVER_CLOCKHANDS;
+        }
+        cJSON *dlv = cJSON_GetObjectItem(scrs, "dim_level");
+        if (cJSON_IsNumber(dlv)) {
+            int v = dlv->valueint;
+            s_settings.scrsaver.dim_level = v < 0 ? 0 : (v > 100 ? 100 : v);
         }
         cJSON *ph = cJSON_GetObjectItem(scrs, "photo");
         if (cJSON_IsObject(ph)) {
@@ -522,6 +529,7 @@ static esp_err_t save_to_file(void)
     // screensaver
     cJSON *scrs = cJSON_CreateObject();
     cJSON_AddNumberToObject(scrs, "delay",  s_settings.scrsaver.delay);
+    cJSON_AddNumberToObject(scrs, "dim_level", s_settings.scrsaver.dim_level);
     cJSON_AddStringToObject(scrs, "id",
         screensaver_name(s_settings.scrsaver.screensaver_id));
     cJSON *photo = cJSON_CreateObject();
@@ -901,6 +909,17 @@ void settings_set_scrsaver_id(int id)
     app_state_update(&(app_state_patch_t){
         .has_scrsaver_id = true, .scrsaver_id = id
     });
+    save_to_file();
+}
+
+void settings_set_scrsaver_dim_level(int level)
+{
+    if (level < 0)   level = 0;
+    if (level > 100) level = 100;
+    if (s_settings.scrsaver.dim_level == level) return;
+    s_settings.scrsaver.dim_level = level;
+    // Read directly from settings at activation time (lvgl task), so no
+    // app_state mirror is needed — just persist.
     save_to_file();
 }
 

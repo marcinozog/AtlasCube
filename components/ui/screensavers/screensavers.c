@@ -27,6 +27,11 @@ static const struct {
     { SCREENSAVER_MQTT,       &screensaver_mqtt,       "mqtt"       },
     { SCREENSAVER_PHOTO,      &screensaver_photo,      "photo"      },
     { SCREENSAVER_BLANK,      &screensaver_blank,      "blank"      },
+    // "dim" isn't a drawn screensaver: it keeps the current screen and only
+    // lowers the backlight. ui_manager special-cases SCREENSAVER_DIM in
+    // activate/dismiss, so the screen pointer below is just a harmless sentinel
+    // (never created/destroyed).
+    { SCREENSAVER_DIM,        &screensaver_blank,      "dim"        },
 };
 
 #define K_MAP_LEN (sizeof(k_map) / sizeof(k_map[0]))

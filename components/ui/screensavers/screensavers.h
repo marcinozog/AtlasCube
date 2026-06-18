@@ -14,6 +14,7 @@ typedef enum {
     SCREENSAVER_MQTT,
     SCREENSAVER_PHOTO,
     SCREENSAVER_BLANK,
+    SCREENSAVER_DIM,
     SCREENSAVER_COUNT,
 } screensaver_id_t;
 

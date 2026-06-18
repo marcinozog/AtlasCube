@@ -9,6 +9,7 @@
 #include "screen_event_notification.h"
 #include "events_service.h"
 #include "screensavers.h"
+#include "display.h"
 #include "lvgl.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
@@ -81,6 +82,13 @@ static char           s_prev_wallpaper_path[64] = "";
 // s_active_id still point at the underlying screen so we can rebuild it.
 static const ui_screen_t *s_ss_overlay     = NULL;
 static int64_t            s_last_input_us  = 0;
+
+// "Dim" screensaver state: it keeps the current screen alive and only lowers
+// the backlight. s_ss_dim marks that the active overlay is the dim-only one so
+// dismiss restores brightness instead of rebuilding the screen.
+static bool       s_ss_dim        = false;
+static uint8_t    s_ss_dim_saved  = 100;   // brightness to restore on wake
+static lv_obj_t  *s_ss_catcher    = NULL;  // transparent wake catcher on top
 
 static bool can_auto_screensaver_from(ui_screen_id_t id)
 {
@@ -164,7 +172,14 @@ static void do_rebuild_active(void)
 // Tear down whichever widget tree is currently on screen (overlay or screen).
 static void teardown_displayed(void)
 {
-    if (s_ss_overlay) {
+    if (s_ss_dim) {
+        // Dim overlay never tore down the screen; restore brightness before the
+        // navigation rebuilds a fresh screen over the (about to be cleaned) one.
+        display_set_backlight(s_ss_dim_saved);
+        s_ss_dim     = false;
+        s_ss_catcher = NULL;   // cleaned by lv_obj_clean() below
+        s_ss_overlay = NULL;
+    } else if (s_ss_overlay) {
         if (s_ss_overlay->destroy) s_ss_overlay->destroy();
         s_ss_overlay = NULL;
     } else if (s_active && s_active->destroy) {
@@ -207,12 +222,38 @@ static void ss_wake_cb(lv_event_t *e)
     ui_input_send(UI_INPUT_NONE);
 }
 
+// Transparent full-screen catcher: the first tap/press only wakes the
+// screensaver (posts UI_EVT_INPUT) and never reaches the screen underneath.
+static void add_ss_catcher(void)
+{
+    lv_obj_t *catcher = lv_obj_create(lv_scr_act());
+    lv_obj_remove_style_all(catcher);
+    lv_obj_set_size(catcher, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_style_bg_opa(catcher, LV_OPA_TRANSP, 0);
+    lv_obj_clear_flag(catcher, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(catcher, ss_wake_cb, LV_EVENT_PRESSED, NULL);
+    s_ss_catcher = catcher;
+}
+
 static void activate_screensaver(int ss_id)
 {
     if (s_ss_overlay) return;
 
     const ui_screen_t *ss = screensaver_get(ss_id);
     if (!ss) return;
+
+    // "Dim" screensaver: keep the current screen visible, just lower the
+    // backlight and lay a catcher on top so the first input only wakes.
+    if (ss_id == SCREENSAVER_DIM) {
+        const app_settings_t *st = settings_get();
+        s_ss_dim_saved = (uint8_t)st->display.brightness;
+        s_ss_dim       = true;
+        s_ss_overlay   = ss;   // non-NULL → input path dismisses on next tap
+        display_set_backlight((uint8_t)st->scrsaver.dim_level);
+        ESP_LOGI(TAG, "screensaver activate: dim (level=%d)", st->scrsaver.dim_level);
+        add_ss_catcher();
+        return;
+    }
 
     // Tear down the underlying screen's widgets but keep s_active pointer
     // so we can rebuild it on dismiss.
@@ -223,22 +264,29 @@ static void activate_screensaver(int ss_id)
     ESP_LOGI(TAG, "screensaver activate: %s", ss->name ? ss->name : "?");
     if (ss->create) ss->create(lv_scr_act());
 
-    lv_obj_t *catcher = lv_obj_create(lv_scr_act());
-    lv_obj_remove_style_all(catcher);
-    lv_obj_set_size(catcher, LV_PCT(100), LV_PCT(100));
-    lv_obj_set_style_bg_opa(catcher, LV_OPA_TRANSP, 0);
-    lv_obj_clear_flag(catcher, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_event_cb(catcher, ss_wake_cb, LV_EVENT_PRESSED, NULL);
+    add_ss_catcher();
 }
 
 static void dismiss_screensaver(void)
 {
     if (!s_ss_overlay) return;
 
+    // Dim "screensaver": the underlying screen was never torn down. Just remove
+    // the catcher and restore the saved brightness.
+    if (s_ss_dim) {
+        display_set_backlight(s_ss_dim_saved);
+        if (s_ss_catcher) { lv_obj_delete(s_ss_catcher); s_ss_catcher = NULL; }
+        ESP_LOGI(TAG, "screensaver dismiss → dim (brightness=%d)", s_ss_dim_saved);
+        s_ss_dim     = false;
+        s_ss_overlay = NULL;
+        return;
+    }
+
     if (s_ss_overlay->destroy) s_ss_overlay->destroy();
     ESP_LOGI(TAG, "screensaver dismiss → %s",
              s_active && s_active->name ? s_active->name : "?");
     s_ss_overlay = NULL;
+    s_ss_catcher = NULL;   // cleaned together with the overlay below
     lv_obj_clean(lv_scr_act());
 
     if (s_active && s_active->create) s_active->create(lv_scr_act());

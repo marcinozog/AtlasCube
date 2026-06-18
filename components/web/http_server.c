@@ -121,6 +121,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(scrs, "delay",  s->scrsaver.delay);
     cJSON_AddStringToObject(scrs, "id",
         screensaver_name(s->scrsaver.screensaver_id));
+    cJSON_AddNumberToObject(scrs, "dim_level", s->scrsaver.dim_level);
     cJSON *scrs_photo = cJSON_CreateObject();
     cJSON_AddStringToObject(scrs_photo, "dir",    s->scrsaver.photo_dir);
     cJSON_AddNumberToObject(scrs_photo, "order",  s->scrsaver.photo_order);
@@ -348,6 +349,8 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         } else if (cJSON_IsNumber(id)) {
             settings_set_scrsaver_id(id->valueint);
         }
+        cJSON *dlv = cJSON_GetObjectItem(scrs, "dim_level");
+        if (cJSON_IsNumber(dlv)) settings_set_scrsaver_dim_level(dlv->valueint);
         cJSON *ph = cJSON_GetObjectItem(scrs, "photo");
         if (cJSON_IsObject(ph)) {
             app_settings_t *cur = settings_get();
