@@ -52,3 +52,13 @@ void sd_player_cycle_repeat(void);
 void sd_player_on_track_end(void);
 
 bool sd_player_is_active(void);
+
+// True when a track is queued for resume (playing, or stopped via
+// sd_player_stop_keep() with the folder/index kept). Lets hub screens like the
+// clock treat SD as the current source even while paused/stopped.
+bool sd_player_has_queue(void);
+
+// Drop the kept playback queue (the stop-keep "limbo") without touching audio,
+// so a new source can fully supersede a paused SD session. No-op if active
+// (use sd_player_stop() then) or if nothing was queued.
+void sd_player_forget(void);

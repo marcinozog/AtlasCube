@@ -5,6 +5,7 @@
 #include "controls_overlay_widget.h"
 #include "vol_overlay_widget.h"
 #include "app_state.h"
+#include "sd_player.h"
 #include "settings.h"
 #include "theme.h"
 #include "ui_profile.h"
@@ -37,12 +38,16 @@ static lv_timer_t *s_clock_timer  = NULL;
 static void netinfo_update(void);
 
 // Active audio source → which set of buttons the controls overlay drives.
-// Mutually exclusive in practice (take_over_output mutes the others).
+// Priority: BT, then actively-playing radio, then SD if it's playing OR has a
+// resumable queue (stop-keep "limbo" — so an on-screen Stop doesn't drop us back
+// to radio and make the next Play start the radio), else radio as the default.
 static controls_overlay_mode_t clock_ctrl_mode(void)
 {
     app_state_t *s = app_state_get();
     if (s->bt_enable) return CTRL_OVL_MODE_BT;
-    if (s->sd_active) return CTRL_OVL_MODE_SD;
+    if (s->radio_state == RADIO_STATE_PLAYING ||
+        s->radio_state == RADIO_STATE_BUFFERING) return CTRL_OVL_MODE_RADIO;
+    if (s->sd_active || sd_player_has_queue()) return CTRL_OVL_MODE_SD;
     return CTRL_OVL_MODE_RADIO;
 }
 
@@ -105,8 +110,12 @@ static void strip_update(void)
 {
     if (!s_strip_station) return;
     app_state_t *s = app_state_get();
-    lv_label_set_text(s_strip_station,
-        s->station_name[0] ? s->station_name : "Atlas Radio");
+    // Source-aware top line: SD shows its own label (station_name stays the
+    // radio station, so it isn't stale over an mp3 and doesn't leak onto the
+    // radio screen); radio/idle shows the station with a friendly fallback.
+    const char *station = s->sd_active ? "SD Player"
+                        : (s->station_name[0] ? s->station_name : "Atlas Radio");
+    lv_label_set_text(s_strip_station, station);
     lv_label_set_text(s_strip_title,
         s->title[0] ? s->title : "");
 }

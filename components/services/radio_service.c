@@ -247,7 +247,10 @@ void radio_play_url(const char *url)
         settings_set_bt_enable(false);
     }
 
-    if (sd_player_is_active()) sd_player_stop();   // radio supersedes SD music
+    // Radio supersedes SD music: stop it if playing, or just drop a paused
+    // (stop-keep) SD session so it can't reclaim the source after radio stops.
+    if (sd_player_is_active()) sd_player_stop();
+    else                       sd_player_forget();
 
     audio_net_player_play(url);
 

@@ -189,10 +189,7 @@ static void play_at(int idx, int n)
         // SD is the source now → reflect BT off here (take_over_output muxed it
         // off quietly), in this one shallow broadcast.
         .has_bt_enable = true, .bt_enable = false,
-        // Replace any leftover radio station name on the clock strip with the
-        // SD source label, so the top line isn't a stale station over an mp3.
-        .has_station_name = true, .station_name = "SD Player",
-        .has_title        = true, .title        = title,
+        .has_title     = true, .title     = title,
     });
 
     ESP_LOGI(TAG, "Play [%d/%d]: %s/%s", idx + 1, n, s_play_dir, s_queue[idx]);
@@ -214,9 +211,6 @@ static void clear_play_state(bool forget_queue)
         .has_sd_active = true, .sd_active = false,
         .has_sd_paused = true, .sd_paused = false,
         .has_title     = true, .title     = "",
-        // Leaving SD for good → drop the "SD Player" strip label too, so it
-        // doesn't linger over a blank title. A later radio play re-sets it.
-        .has_station_name = forget_queue, .station_name = "",
     });
 }
 
@@ -412,4 +406,17 @@ void sd_player_cycle_repeat(void)
 bool sd_player_is_active(void)
 {
     return app_state_get()->sd_active;
+}
+
+bool sd_player_has_queue(void)
+{
+    return s_play_dir[0] && s_play_index >= 0;
+}
+
+void sd_player_forget(void)
+{
+    if (sd_player_is_active()) return;   // active → caller should sd_player_stop()
+    s_play_dir[0] = 0;
+    s_play_index  = -1;
+    s_play_count  = 0;
 }
