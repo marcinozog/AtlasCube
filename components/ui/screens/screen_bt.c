@@ -1,6 +1,7 @@
 #include "defines.h"
 #include "screen_bt.h"
 #include "ui_screen.h"
+#include "ui_label.h"
 #include "clock_widget.h"
 #include "mode_indicator_widget.h"
 #include "controls_overlay_widget.h"
@@ -93,7 +94,8 @@ static void bt_create(lv_obj_t *parent)
         mode_indicator_create(parent, p->bt_mode_indic_x, p->bt_mode_indic_y);
     }
     if (p->bt_show_clock) {
-        clock_widget_create(parent, p->bt_clock_widget_x, p->bt_clock_widget_y, p->bt_clock_font);
+        clock_widget_create(parent, p->bt_clock_widget_x, p->bt_clock_widget_y,
+                            p->bt_clock_font, UI_ALIGN_LEFT);
     }
 
     if (p->bt_show_circle) {
@@ -111,15 +113,13 @@ static void bt_create(lv_obj_t *parent)
         lv_obj_center(s_icon);
     }
 
-    s_brand_label = lv_label_create(parent);
+    s_brand_label = ui_anchored_label(parent, p->bt_brand_x, p->bt_brand_y, UI_ALIGN_CENTER);
     lv_label_set_text(s_brand_label, "Bluetooth Audio");
     lv_obj_set_style_text_font(s_brand_label, p->bt_brand_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_brand_label, lv_color_hex(th->bt_brand), LV_PART_MAIN);
-    lv_obj_set_pos(s_brand_label, p->bt_brand_x, p->bt_brand_y);
 
-    s_status_label = lv_label_create(parent);
+    s_status_label = ui_anchored_label(parent, p->bt_status_x, p->bt_status_y, UI_ALIGN_CENTER);
     lv_obj_set_style_text_font(s_status_label, p->bt_status_font, LV_PART_MAIN);
-    lv_obj_set_pos(s_status_label, p->bt_status_x, p->bt_status_y);
 
     bt_state_t btState = app_state_get()->bt_state;
 
@@ -137,11 +137,14 @@ static void bt_create(lv_obj_t *parent)
     // lv_obj_set_style_text_color(s_status_label,
     //     lv_color_hex(connected == BT_CONNECTED ? 0x00C853 : th->text_muted), LV_PART_MAIN);
 
-    s_vol_label = lv_label_create(parent);
+    // Center-anchored on bt_time_x, one line below the time label (same model as
+    // the layout editor), so it no longer needs lv_obj_align_to.
+    s_vol_label = ui_anchored_label(parent, p->bt_time_x,
+                                    p->bt_time_y + lv_font_get_line_height(p->bt_time_font) + 4,
+                                    UI_ALIGN_CENTER);
     lv_label_set_text(s_vol_label, "VOL: 0%");
     lv_obj_set_style_text_font(s_vol_label, p->bt_vol_label_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_vol_label, lv_color_hex(th->text_muted), LV_PART_MAIN);
-    // Positioned below s_time_label after it's created, see end of bt_create().
 
     // Track metadata labels
     s_title_label = lv_label_create(parent);
@@ -160,13 +163,10 @@ static void bt_create(lv_obj_t *parent)
     lv_obj_set_pos(s_artist_label, p->bt_artist_x, p->bt_artist_y);
     lv_label_set_text(s_artist_label, "");
 
-    s_time_label = lv_label_create(parent);
+    s_time_label = ui_anchored_label(parent, p->bt_time_x, p->bt_time_y, UI_ALIGN_CENTER);
     lv_obj_set_style_text_font(s_time_label, p->bt_time_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_time_label, lv_color_hex(th->text_secondary), LV_PART_MAIN);
-    lv_obj_set_pos(s_time_label, p->bt_time_x, p->bt_time_y);
     lv_label_set_text(s_time_label, "0:00 / 0:00");
-
-    lv_obj_align_to(s_vol_label, s_time_label, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 4);
 
     refresh_from_state();
 

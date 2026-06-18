@@ -108,7 +108,8 @@ static void sd_player_screen_create(lv_obj_t *parent)
 
     // Clock + indicators (own sd_* layout fields, same widgets as screen_radio).
     if (p->sd_show_clock) {
-        clock_widget_create(parent, p->sd_clock_widget_x, p->sd_clock_widget_y, p->sd_clock_font);
+        clock_widget_create(parent, p->sd_clock_widget_x, p->sd_clock_widget_y,
+                            p->sd_clock_font, UI_ALIGN_CENTER);
     }
     if (p->sd_show_mode_indicator) {
         mode_indicator_create(parent, p->sd_mode_indic_x, p->sd_mode_indic_y);

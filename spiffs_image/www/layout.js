@@ -397,9 +397,9 @@ function renderBt(svg) {
     }
 
     drawLabel(svg, b.bt_brand_x, b.bt_brand_y, b.bt_brand_font, 'Bluetooth Audio',
-              'brand', { x: 'bt_brand_x', y: 'bt_brand_y' });
+              'brand', { x: 'bt_brand_x', y: 'bt_brand_y' }, true);
     drawLabel(svg, b.bt_status_x, b.bt_status_y, b.bt_status_font, 'Connected',
-              'status', { x: 'bt_status_x', y: 'bt_status_y' });
+              'status', { x: 'bt_status_x', y: 'bt_status_y' }, true);
 
     // Track title — scrolling label, fixed width
     const titleFh = fontHeight(b.bt_title_font);
@@ -421,14 +421,14 @@ function renderBt(svg) {
 
     // Time "0:00 / 0:00"
     drawLabel(svg, b.bt_time_x, b.bt_time_y, b.bt_time_font, '0:00 / 0:00',
-              'time', { x: 'bt_time_x', y: 'bt_time_y' });
+              'time', { x: 'bt_time_x', y: 'bt_time_y' }, true);
 
-    // Vol label is placed below time by lv_obj_align_to in firmware — non-draggable preview
+    // Vol label is center-anchored on bt_time_x, one line below time — non-draggable preview
     const timeFh   = fontHeight(b.bt_time_font);
     const volFh    = fontHeight(b.bt_vol_label_font);
     const volX     = b.bt_time_x;
     const volY     = b.bt_time_y + timeFh + 4;
-    text(svg, volX, volY + volFh * 0.78, 'VOL: 50%', { 'font-size': volFh });
+    text(svg, volX, volY + volFh * 0.78, 'VOL: 50%', { 'font-size': volFh, 'text-anchor': 'middle' });
     tag(svg, volX + 2, volY + 7, 'vol');
 
     if (b.bt_show_mode_indicator) {
@@ -489,7 +489,7 @@ function renderRadio(svg) {
     if (r.radio_show_clock) {
         drawLabel(svg, r.radio_clock_widget_x, r.radio_clock_widget_y, r.radio_clock_font,
                   '00:00', 'clock',
-                  { x: 'radio_clock_widget_x', y: 'radio_clock_widget_y' });
+                  { x: 'radio_clock_widget_x', y: 'radio_clock_widget_y' }, true);
     }
     if (r.radio_show_event_indicator) {
         drawFreeElement(svg, {
@@ -522,7 +522,7 @@ function renderSd(svg) {
     if (s.sd_show_clock) {
         drawLabel(svg, s.sd_clock_widget_x, s.sd_clock_widget_y, s.sd_clock_font,
                   '00:00', 'clock',
-                  { x: 'sd_clock_widget_x', y: 'sd_clock_widget_y' });
+                  { x: 'sd_clock_widget_x', y: 'sd_clock_widget_y' }, true);
     }
     if (s.sd_show_event_indicator) {
         drawFreeElement(svg, {
@@ -533,12 +533,15 @@ function renderSd(svg) {
     }
 }
 
-function drawLabel(svg, x, y, fontId, text_str, name, fields) {
+function drawLabel(svg, x, y, fontId, text_str, name, fields, anchorCenter) {
     const fh = fontHeight(fontId);
     const tw = Math.round(fh * 0.55) * Math.max(text_str.length, 5);
     if (fields.x === undefined) {
         // Centered label: firmware draws it full-width with centered text.
         x = Math.round((state.meta.screen_w - tw) / 2);
+    } else if (anchorCenter) {
+        // Center-anchored: x is the middle of the text; drag still moves it.
+        x -= Math.round(tw / 2);
     }
     drawFreeElement(svg, {
         x, y, w: tw, h: fh,

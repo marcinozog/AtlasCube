@@ -73,7 +73,8 @@ static void radio_create(lv_obj_t *parent)
         mode_indicator_create(parent, p->radio_mode_indic_x, p->radio_mode_indic_y);
     }
     if (p->radio_show_clock) {
-        clock_widget_create(parent, p->radio_clock_widget_x, p->radio_clock_widget_y, p->radio_clock_font);
+        clock_widget_create(parent, p->radio_clock_widget_x, p->radio_clock_widget_y,
+                            p->radio_clock_font, UI_ALIGN_CENTER);
     }
     if (p->radio_show_event_indicator) {
         event_indicator_create(parent, p->radio_event_indic_x, p->radio_event_indic_y);

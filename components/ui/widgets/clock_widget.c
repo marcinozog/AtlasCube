@@ -36,17 +36,17 @@ static void timer_cb(lv_timer_t *timer)
     update_display(); 
 }
 
-void clock_widget_create(lv_obj_t *parent, int x, int y, const lv_font_t *font)
+void clock_widget_create(lv_obj_t *parent, int x, int y, const lv_font_t *font,
+                         ui_label_align_t align)
 {
     const ui_theme_colors_t *th = theme_get();
 
-    s_label_time = lv_label_create(parent);
+    s_label_time = ui_anchored_label(parent, x, y, align);
     lv_label_set_text(s_label_time, "--:--");
     lv_obj_set_style_text_font(s_label_time,
         font ? font : &lv_font_montserrat_18_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_time,
         lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_set_pos(s_label_time, x, y);
 
     s_timer = lv_timer_create(timer_cb, 60 * 1000, NULL);
     update_display();
