@@ -168,6 +168,7 @@ void app_state_update(const app_state_patch_t *patch)
     if (patch->has_sd_paused)  s_state.sd_paused  = patch->sd_paused;
     if (patch->has_sd_shuffle) s_state.sd_shuffle = patch->sd_shuffle;
     if (patch->has_sd_repeat)  s_state.sd_repeat  = patch->sd_repeat;
+    if (patch->has_sd_show_screen) s_state.sd_show_screen = patch->sd_show_screen;
 
     notify();
 
@@ -208,6 +209,7 @@ void app_state_update(const app_state_patch_t *patch)
     if (patch->has_sd_index)          n += snprintf(buf + n, sizeof(buf) - n, " sd_index=%d", s_state.sd_index);
     if (patch->has_sd_count)          n += snprintf(buf + n, sizeof(buf) - n, " sd_count=%d", s_state.sd_count);
     if (patch->has_sd_track)          n += snprintf(buf + n, sizeof(buf) - n, " sd_track=%s", s_state.sd_track);
+    if (patch->has_sd_show_screen)    n += snprintf(buf + n, sizeof(buf) - n, " sd_show_screen=%d", s_state.sd_show_screen);
 
     if (n > 0) {
         ESP_LOGI("STATE", "Updated:%s", buf);

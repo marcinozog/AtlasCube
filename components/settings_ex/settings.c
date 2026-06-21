@@ -50,6 +50,7 @@ esp_err_t settings_init(void)
         s_settings.display.wallpaper_path[0] = '\0';
         s_settings.display.logo_path[0]     = '\0';
         s_settings.display.show_boot_info   = true;
+        s_settings.display.sd_show_screen   = true;
         s_settings.display.dim_schedule.enabled        = false;
         s_settings.display.dim_schedule.dim_hour       = 22;
         s_settings.display.dim_schedule.dim_minute     = 0;
@@ -228,6 +229,8 @@ static esp_err_t load_from_file(void)
                     sizeof(s_settings.display.logo_path) - 1);
         cJSON *sbi = cJSON_GetObjectItem(display, "show_boot_info");
         s_settings.display.show_boot_info = cJSON_IsBool(sbi) ? cJSON_IsTrue(sbi) : true;
+        cJSON *sds = cJSON_GetObjectItem(display, "sd_show_screen");
+        s_settings.display.sd_show_screen = cJSON_IsBool(sds) ? cJSON_IsTrue(sds) : true;
 
         // dim schedule defaults (used if section is missing or partial)
         s_settings.display.dim_schedule.enabled        = false;
@@ -443,6 +446,7 @@ static esp_err_t load_from_file(void)
     ESP_LOGI("SETTINGS", "curr_index: %d",          s_settings.playlist.curr_index);
     ESP_LOGI("SETTINGS", "Brightness: %d",          s_settings.display.brightness);
     ESP_LOGI("SETTINGS", "Show BT screen: %s",      s_settings.bluetooth.show_screen == true ? "true" : "false");
+    ESP_LOGI("SETTINGS", "Show SD screen: %s",      s_settings.display.sd_show_screen == true ? "true" : "false");
     ESP_LOGI("SETTINGS", "NTP srv1: %s",            s_settings.ntp.server1);
     ESP_LOGI("SETTINGS", "NTP srv2: %s",            s_settings.ntp.server2);
     ESP_LOGI("SETTINGS", "NTP TZ:   %s",            s_settings.ntp.tz);
@@ -485,6 +489,7 @@ static esp_err_t save_to_file(void)
     cJSON_AddStringToObject(display, "wallpaper_path", s_settings.display.wallpaper_path);
     cJSON_AddStringToObject(display, "logo_path", s_settings.display.logo_path);
     cJSON_AddBoolToObject(display, "show_boot_info", s_settings.display.show_boot_info);
+    cJSON_AddBoolToObject(display, "sd_show_screen", s_settings.display.sd_show_screen);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s_settings.display.dim_schedule.enabled);
     cJSON_AddNumberToObject(dim, "dim_hour",       s_settings.display.dim_schedule.dim_hour);
@@ -631,6 +636,7 @@ void settings_apply(void)
         .has_theme              = true, .theme     = s_settings.display.theme,
         .has_bg_gradient        = true, .bg_gradient = s_settings.display.bg_gradient,
         .has_wallpaper_on       = true, .wallpaper_on = s_settings.display.wallpaper_on,
+        .has_sd_show_screen     = true, .sd_show_screen = s_settings.display.sd_show_screen,
         .has_scrsaver_delay     = true, .scrsaver_delay  = s_settings.scrsaver.delay,
         .has_scrsaver_id        = true, .scrsaver_id     = s_settings.scrsaver.screensaver_id,
     };
@@ -776,6 +782,15 @@ void settings_set_bt_show_screen(bool show)
     if(s_settings.bluetooth.show_screen != show) {
         s_settings.bluetooth.show_screen = show;
         app_state_update(&(app_state_patch_t){ .has_bt_show_screen = true, .bt_show_screen = show });
+        save_to_file();
+    }
+}
+
+void settings_set_sd_show_screen(bool show)
+{
+    if(s_settings.display.sd_show_screen != show) {
+        s_settings.display.sd_show_screen = show;
+        app_state_update(&(app_state_patch_t){ .has_sd_show_screen = true, .sd_show_screen = show });
         save_to_file();
     }
 }

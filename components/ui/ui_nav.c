@@ -9,6 +9,7 @@
 // --------------------------------------------------------------------------
 
 static bool cond_bt_screen(void)    { return app_state_get()->bt_show_screen; }
+static bool cond_sd_screen(void)    { return app_state_get()->sd_show_screen; }
 static bool cond_mqtt_enabled(void) { return mqtt_config_get()->enabled; }
 
 // --------------------------------------------------------------------------
@@ -26,7 +27,7 @@ typedef struct {
 static const nav_ring_entry_t s_ring[] = {
     { SCREEN_BT,    cond_bt_screen    },
     { SCREEN_RADIO, NULL              },
-    { SCREEN_SD,    NULL              },
+    { SCREEN_SD,    cond_sd_screen    },
     { SCREEN_CLOCK, NULL              },
     { SCREEN_MQTT,  cond_mqtt_enabled },
 };

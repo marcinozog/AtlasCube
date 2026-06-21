@@ -41,6 +41,7 @@ typedef struct {
     char            wallpaper_path[64]; // full path to a panel-sized RGB565 .bin on SD
     char            logo_path[64];      // full path to a splash logo .bin on SD ("" = built-in)
     bool            show_boot_info;  // version + IP overlay on the splash (STA only)
+    bool            sd_show_screen;  // show/hide SD player screen in the nav ring
     dim_schedule_t  dim_schedule;
 } display_settings_t;
 
@@ -154,6 +155,7 @@ void settings_set_bg_gradient(bool enabled);
 void settings_set_wallpaper(bool on, const char *path);
 void settings_set_logo_path(const char *path);
 void settings_set_show_boot_info(bool enabled);
+void settings_set_sd_show_screen(bool show);
 void settings_set_wifi(const char *ssid, const char *password);
 void settings_set_hostname(const char *hostname);
 void settings_set_scrsaver_delay(int delay);

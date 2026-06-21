@@ -63,6 +63,7 @@ typedef struct {
     bool sd_paused;             // SD playback paused
     bool sd_shuffle;            // Shuffle mode
     int  sd_repeat;             // Repeat mode: 0=none, 1=all, 2=one
+    bool sd_show_screen;        // SD player show/hide screen in the nav ring
 } app_state_t;
 
 typedef struct {
@@ -164,6 +165,8 @@ typedef struct {
     bool sd_shuffle;
     bool has_sd_repeat;
     int  sd_repeat;
+    bool has_sd_show_screen;
+    bool sd_show_screen;
 } app_state_patch_t;
 
 typedef void (*app_state_cb_t)(void);

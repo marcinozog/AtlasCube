@@ -75,6 +75,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(display, "wallpaper_path", s->display.wallpaper_path);
     cJSON_AddStringToObject(display, "logo_path", s->display.logo_path);
     cJSON_AddBoolToObject(display, "show_boot_info", s->display.show_boot_info);
+    cJSON_AddBoolToObject(display, "sd_show_screen", s->display.sd_show_screen);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s->display.dim_schedule.enabled);
     cJSON_AddNumberToObject(dim, "dim_hour",       s->display.dim_schedule.dim_hour);
@@ -294,6 +295,11 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             ESP_LOGI("HTTP", "POST show_boot_info: %d", cJSON_IsTrue(sbi));
             settings_set_show_boot_info(cJSON_IsTrue(sbi));
         }
+        cJSON *sds = cJSON_GetObjectItem(display, "sd_show_screen");
+        if (cJSON_IsBool(sds)) {
+            ESP_LOGI("HTTP", "POST sd_show_screen: %d", cJSON_IsTrue(sds));
+            settings_set_sd_show_screen(cJSON_IsTrue(sds));
+        }
         cJSON *scr = cJSON_GetObjectItem(display, "screen");
         if (cJSON_IsString(scr)) {
             ESP_LOGI("HTTP", "POST screen: %s", scr->valuestring);
@@ -476,6 +482,7 @@ static esp_err_t api_state_get_handler(httpd_req_t *req)
     cJSON_AddBoolToObject  (json, "bt_enable",      s->bt_enable);
     cJSON_AddBoolToObject  (json, "bt_auto_switch", s->bt_auto_switch);
     cJSON_AddBoolToObject  (json, "bt_show_screen", s->bt_show_screen);
+    cJSON_AddBoolToObject  (json, "sd_show_screen", s->sd_show_screen);
     cJSON_AddBoolToObject  (json, "time_synced",    s->time_synced);
     // WiFi mode — useful for the settings page UI
     cJSON_AddStringToObject(json, "wifi_mode",

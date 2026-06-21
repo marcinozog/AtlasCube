@@ -353,6 +353,19 @@ function setDeviceBTScreen(t) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SD player screen (display)
+// ─────────────────────────────────────────────────────────────────────────────
+function setDeviceSDScreen(t) {
+    document.getElementById('settingsBtnSDshow')?.classList.toggle('active', t);
+    document.getElementById('settingsBtnSDhide')?.classList.toggle('active', !t);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { sd_show_screen: t } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Audio — DSP / EQ on/off
 // ─────────────────────────────────────────────────────────────────────────────
 function setDeviceEqEnabled(t) {
@@ -701,6 +714,10 @@ function populateForm(s) {
         const bootInfo = s.display.show_boot_info !== false;   // default on
         document.getElementById('settingsBtnBootInfoOn') ?.classList.toggle('active', bootInfo);
         document.getElementById('settingsBtnBootInfoOff')?.classList.toggle('active', !bootInfo);
+
+        const sdScr = s.display.sd_show_screen !== false;   // default on
+        document.getElementById('settingsBtnSDshow')?.classList.toggle('active', sdScr);
+        document.getElementById('settingsBtnSDhide')?.classList.toggle('active', !sdScr);
 
         const logoEl = document.getElementById('logoPath');
         if (logoEl) logoEl.textContent = s.display.logo_path || '(built-in)';
