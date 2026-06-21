@@ -93,11 +93,15 @@ const SD_MOUNT = '/sdcard';
 function setBackground(mode) {
     const grad = mode === 'gradient';
     const wall = mode === 'wallpaper';
+    const vu   = mode === 'vu';
     document.getElementById('settingsBtnBgGrad') ?.classList.toggle('active', grad);
     document.getElementById('settingsBtnBgSolid')?.classList.toggle('active', mode === 'solid');
     document.getElementById('settingsBtnBgWall') ?.classList.toggle('active', wall);
+    document.getElementById('settingsBtnBgVu')   ?.classList.toggle('active', vu);
     document.getElementById('wallpaperPicker').style.display = wall ? '' : 'none';
-    const body = wall ? { display: { wallpaper_on: true } }
+    // VU reuses the wallpaper toggle with a sentinel path the firmware recognises.
+    const body = vu   ? { display: { wallpaper_on: true, wallpaper_path: 'vu' } }
+               : wall ? { display: { wallpaper_on: true } }
                       : { display: { wallpaper_on: false, bg_gradient: grad } };
     fetch('/api/settings', {
         method: 'POST',
@@ -683,11 +687,14 @@ function populateForm(s) {
         document.getElementById('settingsBtnLight')?.classList.toggle('active', t === 'light');
 
         const wallOn = s.display.wallpaper_on === true;
+        const isVu   = wallOn && s.display.wallpaper_path === 'vu';
+        const isWall = wallOn && !isVu;
         const bgGrad = s.display.bg_gradient !== false;   // default on
-        document.getElementById('settingsBtnBgWall') ?.classList.toggle('active', wallOn);
+        document.getElementById('settingsBtnBgWall') ?.classList.toggle('active', isWall);
+        document.getElementById('settingsBtnBgVu')   ?.classList.toggle('active', isVu);
         document.getElementById('settingsBtnBgGrad') ?.classList.toggle('active', !wallOn && bgGrad);
         document.getElementById('settingsBtnBgSolid')?.classList.toggle('active', !wallOn && !bgGrad);
-        document.getElementById('wallpaperPicker').style.display = wallOn ? '' : 'none';
+        document.getElementById('wallpaperPicker').style.display = isWall ? '' : 'none';
         const wpEl = document.getElementById('wallpaperPath');
         if (wpEl) wpEl.textContent = s.display.wallpaper_path || '(none)';
 

@@ -147,6 +147,15 @@ static void on_state_change(void)
 // Navigation — executed ONLY inside ui_manager_run (lvgl_task)
 // --------------------------------------------------------------------------
 
+// Each screen's create() re-asserts an opaque background on lv_scr_act(), which
+// would hide an animated background living on lv_layer_bottom() (the VU meter).
+// Re-apply the shared background after every screen build so it survives nav.
+// For static gradient/wallpaper/solid modes this is a cheap no-op repaint.
+static void reassert_background(void)
+{
+    ui_background_apply(lv_scr_act());
+}
+
 // Rebuild the current screen — used after a ui_profile (layout) change from
 // the web. We keep s_active_id, but destroy and recreate the widgets, because
 // values from ui_profile_get() are copied during create().
@@ -167,6 +176,7 @@ static void do_rebuild_active(void)
         ESP_LOGI(TAG, "rebuild: %s", s_active->name ? s_active->name : "?");
         s_active->create(lv_scr_act());
     }
+    reassert_background();
 }
 
 // Tear down whichever widget tree is currently on screen (overlay or screen).
@@ -210,6 +220,7 @@ static void do_navigate(ui_screen_id_t id)
         ESP_LOGI(TAG, "create: %s", s_active->name ? s_active->name : "?");
         s_active->create(lv_scr_act());
     }
+    reassert_background();
 }
 
 // Click-catcher on top of the screensaver: LV_EVENT_PRESSED doesn't bubble by
@@ -290,6 +301,7 @@ static void dismiss_screensaver(void)
     lv_obj_clean(lv_scr_act());
 
     if (s_active && s_active->create) s_active->create(lv_scr_act());
+    reassert_background();
 }
 
 // --------------------------------------------------------------------------

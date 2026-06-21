@@ -4,6 +4,7 @@ idf_component_register(
         "ui_nav.c"
         "ui_profile.c"
         "ui_background.c"
+        "ui_anim_bg.c"
         "lv_bin_image.c"
         "ui_label.c"
         "screens/screen_splash.c"
