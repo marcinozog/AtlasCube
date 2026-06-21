@@ -36,10 +36,15 @@ CONFIG_MBEDTLS_SSL_IN_CONTENT_LEN=16384
 CONFIG_MBEDTLS_SSL_OUT_CONTENT_LEN=4096
 CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 # Threshold: allocations below this value stay in internal RAM, larger ones → PSRAM.
-# Lowered from 8192 → 4096 — internal RAM baseline is ~7-8KB largest block,
-# so with 8192 too many small mbedTLS/lwIP allocations stayed in internal RAM,
+# Lowered 8192 → 4096 — internal RAM baseline is ~7-8KB largest block, so with
+# 8192 too many small mbedTLS/lwIP allocations stayed in internal RAM,
 # fragmenting it and breaking TLS handshake.
-CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=4096
+# Lowered 4096 → 2048 — while the radio HTTPS stream runs, the internal largest
+# free block fell to ~2.3KB, too small for httpd to allocate a TCP TX pbuf
+# (~MSS 1440 B): serving a web asset failed with errno 11 / EWOULDBLOCK. Pushing
+# more sub-4KB mbedTLS/lwIP allocations to PSRAM frees the internal heap so the
+# pbuf fits and the web UI stays usable mid-stream.
+CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=2048
 
 CONFIG_MBEDTLS_HARDWARE_AES=n
 CONFIG_MBEDTLS_HARDWARE_SHA=n
@@ -81,6 +86,13 @@ CONFIG_ESP_WIFI_DYNAMIC_TX_BUFFER=y
 CONFIG_ESP_WIFI_DYNAMIC_TX_BUFFER_NUM=32
 CONFIG_ESP_WIFI_RX_BA_WIN=6
 CONFIG_LWIP_TCP_OOSEQ_MAX_PBUFS=4
+
+# NOTE: do NOT enable CONFIG_SPIRAM_TRY_ALLOCATE_WIFI_LWIP. It forces WiFi into
+# the *static* TX-buffer model (16 DMA-capable TX buffers + 32 tx-cache, all in
+# internal RAM), which consumed MORE internal DRAM than it freed: idle largest
+# free block dropped 14 KB → 3.5 KB and the audio dsp/i2s tasks failed to create
+# (audio_thread_create failed). DYNAMIC_TX_BUFFER above is the smaller-footprint
+# choice; the page-serve-under-stream RAM pressure must be solved elsewhere.
 
 CONFIG_LV_USE_FONT_PLACEHOLDER=n
 

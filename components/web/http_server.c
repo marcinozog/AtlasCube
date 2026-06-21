@@ -1,4 +1,5 @@
 #include "esp_log.h"
+#include "esp_heap_caps.h"
 #include "esp_http_server.h"
 #include "esp_system.h"
 #include "esp_app_desc.h"
@@ -2217,12 +2218,27 @@ static esp_err_t file_handler(httpd_req_t *req)
         return ESP_FAIL;
     }
 
+    // Path actually opened (gz wins when present) — used in diagnostics below.
+    const char *served = use_gz ? gz_filepath : filepath;
+
+    // DIAG: internal DRAM is where lwIP keeps TCP send buffers. Serving a large
+    // (gzipped) asset while the radio pipeline runs once stalled the socket send
+    // (errno 11 / EWOULDBLOCK) when the internal heap ran dry. Kept at LOGD to
+    // inspect headroom on demand without spamming the normal log.
+    ESP_LOGD("HTTP", "serve %s: int free=%u largest=%u",
+             served,
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
+
     size_t read_bytes;
     esp_err_t ret = ESP_OK;
 
     while ((read_bytes = fread(buffer, 1, 4096, f)) > 0) {
         if (httpd_resp_send_chunk(req, buffer, read_bytes) != ESP_OK) {
-            ESP_LOGW("HTTP", "Chunk send failed: %s", filepath);
+            ESP_LOGW("HTTP", "Chunk send failed: %s (int free=%u largest=%u)",
+                     served,
+                     (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+                     (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
             ret = ESP_FAIL;
             break;
         }
