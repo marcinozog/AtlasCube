@@ -125,7 +125,7 @@ function render() {
 function makeRow(st, idx) {
     const row = document.createElement('div');
     row.className = 'pl-row';
-    row.draggable = true;
+    row.draggable = false;   // enabled only while grabbing the grip
     row.dataset.idx = idx;
     const fav = !!st.favorite;
     row.dataset.fav = fav ? '1' : '0';
@@ -148,6 +148,13 @@ function makeRow(st, idx) {
     row.addEventListener('dragover',  onDragOver);
     row.addEventListener('dragleave', onDragLeave);
     row.addEventListener('drop',      onDrop);
+
+    // Make the row draggable only when grabbing the grip, so text
+    // selection inside the name/url inputs keeps working.
+    const grip = row.querySelector('.pl-grip');
+    grip.addEventListener('mousedown',  () => { row.draggable = true; });
+    grip.addEventListener('touchstart', () => { row.draggable = true; }, { passive: true });
+    row.addEventListener('mouseup',     () => { row.draggable = false; });
 
     return row;
 }
@@ -262,6 +269,7 @@ function onDragStart(e) {
 }
 
 function onDragEnd(e) {
+    e.currentTarget.draggable = false;
     e.currentTarget.classList.remove('dragging');
     clearDragHints();
     dragIdx = -1;
