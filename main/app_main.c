@@ -71,6 +71,9 @@ void app_main(void)
     // ── Services requiring internet ──────────────────────────────────────────
     if (wifi_get_run_mode() == WIFI_RUN_MODE_STA) {
         ntp_service_init();
+        // ntp_service_init() only applies hardcoded defaults; re-apply the saved
+        // servers + timezone so they survive a restart (see ntp_service.h tip).
+        ntp_service_reconfigure(s->ntp.server1, s->ntp.server2, s->ntp.tz);
         mdns_service_start();   // <hostname>.local — STA only (AP IP is fixed)
         // Other online services can be started here, e.g. weather
     } else {
