@@ -707,11 +707,11 @@ static char *_hls_next_segment(audio_element_handle_t self, icy_http_t *http)
         if (u) {
             return u;
         }
-        /* Caught up to the live edge — poll again after ~half a segment. */
-        int poll = http->hls_target_dur > 0 ? (int)http->hls_target_dur / 2 : 3;
-        if (poll < 1) {
-            poll = 1;
-        }
+        /* Caught up to the live edge — the publisher emits ~one segment per
+         * target_duration, so poll at that cadence (not faster) to avoid
+         * churning TLS connections / sockets while nothing new is available.
+         * The large out_rb (~tens of seconds) covers the wait. */
+        int poll = http->hls_target_dur > 0 ? (int)http->hls_target_dur : 6;
         if (!_hls_wait(self, poll)) {
             return NULL;
         }

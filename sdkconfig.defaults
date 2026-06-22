@@ -66,6 +66,13 @@ CONFIG_LV_FONT_MONTSERRAT_48=y
 
 CONFIG_LWIP_MAX_SOCKETS=16
 
+# Segmented HLS (.m3u8) radio opens a fresh TLS connection per .ts segment and
+# per playlist refresh — without connection reuse this is ~0.5 conn/s. With the
+# default 60 s TIME_WAIT (TCP_MSL) the closed sockets pile up past the 16-socket
+# pool and new connects start timing out. Shortening TIME_WAIT to 10 s frees
+# them ~6x faster so the pool never exhausts.
+CONFIG_LWIP_TCP_MSL=10000
+
 # TCP receive buffer and window — default 5760 B is too small for 256 kbps
 # audio streams. A small window forces frequent ACKs and limits throughput
 # due to the bandwidth-delay product, which results in stuttering at playback start
