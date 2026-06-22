@@ -52,6 +52,16 @@ void audio_dsp_set_sample_rate(audio_element_handle_t el, int sample_rate, int c
  */
 void audio_dsp_set_eq_enabled(audio_element_handle_t el, bool enabled);
 
+/**
+ * @brief  Octave-spaced centre frequencies of the EQ bands (31..16000 Hz).
+ *         Shared so the VU spectrum can lay its bars on the same bands as the
+ *         EQ — a single source of truth, so retuning the EQ retunes the meter.
+ *
+ * @param[out] freqs  Receives a pointer to the static centre-frequency array
+ * @return            Band count (DSP_BANDS)
+ */
+int audio_dsp_band_freqs(const float **freqs);
+
 #ifdef __cplusplus
 }
 #endif

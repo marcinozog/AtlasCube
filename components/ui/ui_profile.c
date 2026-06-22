@@ -589,6 +589,11 @@ static const ui_profile_t k_defaults = {
     .radio_clock_font          = &lv_font_montserrat_18_pl,
     .radio_event_indic_x       = 282,
     .radio_event_indic_y       = 2,
+    .radio_show_vu             = true,
+    .radio_vu_x                = 10,
+    .radio_vu_y                = 146,
+    .radio_vu_w                = 300,
+    .radio_vu_h                = 58,
 
     .sd_title_y                = 64,
     .sd_title_font             = &lv_font_montserrat_14_pl,
@@ -1050,6 +1055,11 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_font(obj, "radio_clock_font",           &p->radio_clock_font);
     load_i16 (obj, "radio_event_indic_x",        &p->radio_event_indic_x);
     load_i16 (obj, "radio_event_indic_y",        &p->radio_event_indic_y);
+    load_bool(obj, "radio_show_vu",              &p->radio_show_vu);
+    load_i16 (obj, "radio_vu_x",                 &p->radio_vu_x);
+    load_i16 (obj, "radio_vu_y",                 &p->radio_vu_y);
+    load_i16 (obj, "radio_vu_w",                 &p->radio_vu_w);
+    load_i16 (obj, "radio_vu_h",                 &p->radio_vu_h);
 }
 
 static cJSON *dump_radio(const ui_profile_t *p)
@@ -1074,6 +1084,11 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_font(o, "radio_clock_font",           p->radio_clock_font);
     add_i16 (o, "radio_event_indic_x",        p->radio_event_indic_x);
     add_i16 (o, "radio_event_indic_y",        p->radio_event_indic_y);
+    add_bool(o, "radio_show_vu",              p->radio_show_vu);
+    add_i16 (o, "radio_vu_x",                 p->radio_vu_x);
+    add_i16 (o, "radio_vu_y",                 p->radio_vu_y);
+    add_i16 (o, "radio_vu_w",                 p->radio_vu_w);
+    add_i16 (o, "radio_vu_h",                 p->radio_vu_h);
     return o;
 }
 

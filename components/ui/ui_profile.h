@@ -116,6 +116,12 @@ typedef struct {
     int16_t          radio_event_indic_x;
     int16_t          radio_event_indic_y;
 
+    bool             radio_show_vu;            // real-audio FFT spectrum widget
+    int16_t          radio_vu_x;               // container top-left + size (LCD px)
+    int16_t          radio_vu_y;
+    int16_t          radio_vu_w;
+    int16_t          radio_vu_h;
+
     // screen_sd_player — absolute LCD coordinates (top-left origin). The three
     // text rows are horizontally centered (Y only). Mirrors screen_radio.
     int16_t          sd_title_y;               // track title (ID3 / file name)

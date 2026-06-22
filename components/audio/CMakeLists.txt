@@ -4,6 +4,7 @@ idf_component_register(
         "audio_net_player.c"
         "audio_file_player.c"
         "audio_dsp.c"
+        "audio_levels.c"
         "id3.c"
     INCLUDE_DIRS "."
     REQUIRES

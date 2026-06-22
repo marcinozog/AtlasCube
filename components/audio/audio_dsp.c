@@ -1,5 +1,6 @@
 #include "audio_dsp.h"
 #include "audio_element.h"
+#include "audio_levels.h"   // VU spectrum tap (mono ring for the FFT widget)
 #include "esp_log.h"
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +18,12 @@ static const float CENTER_FREQ[DSP_BANDS] = {
     31.0f, 62.0f, 125.0f, 250.0f, 500.0f,
     1000.0f, 2000.0f, 4000.0f, 8000.0f, 16000.0f
 };
+
+int audio_dsp_band_freqs(const float **freqs)
+{
+    if (freqs) *freqs = CENTER_FREQ;
+    return DSP_BANDS;
+}
 
 /* ---------- biquad peaking filter ---------- */
 
@@ -137,6 +144,12 @@ static int dsp_process(audio_element_handle_t self, char *in_buffer, int in_len)
             samples[i] = (int16_t)y;
         }
     }
+
+    // Tap the post-EQ, PRE-volume PCM for the VU spectrum: the meter must reflect
+    // the music, not the listening level (at vol 30/100 the post-volume signal is
+    // ~-10 dB and the bars barely move). Cheap append-to-ring only — the FFT runs
+    // later on the LVGL task (see audio_levels.h).
+    audio_levels_push(samples, n_samples, ch);
 
     /* ---------------------------------------------------------------
        Pass 2: Volume — fixed-point int16, one multiplier per sample.

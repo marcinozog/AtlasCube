@@ -119,6 +119,12 @@ const RADIO_FIELDS = [
     { key: 'radio_show_event_indicator', label: 'Show event indic.', type: 'bool' },
     { key: 'radio_event_indic_x',        label: 'Event indic. X',    type: 'number' },
     { key: 'radio_event_indic_y',        label: 'Event indic. Y',    type: 'number' },
+
+    { key: 'radio_show_vu',              label: 'Show VU meter',     type: 'bool' },
+    { key: 'radio_vu_x',                 label: 'VU X',              type: 'number' },
+    { key: 'radio_vu_y',                 label: 'VU Y',              type: 'number' },
+    { key: 'radio_vu_w',                 label: 'VU W',              type: 'number' },
+    { key: 'radio_vu_h',                 label: 'VU H',              type: 'number' },
 ];
 
 const SD_FIELDS = [
@@ -496,6 +502,13 @@ function renderRadio(svg) {
             x: r.radio_event_indic_x, y: r.radio_event_indic_y, w: 16, h: 16,
             label: 'evt', cls: 'label-rect',
             fields: { x: 'radio_event_indic_x', y: 'radio_event_indic_y' },
+        });
+    }
+    if (r.radio_show_vu) {
+        drawFreeElement(svg, {
+            x: r.radio_vu_x, y: r.radio_vu_y, w: r.radio_vu_w, h: r.radio_vu_h,
+            label: 'VU', cls: 'label-rect',
+            fields: { x: 'radio_vu_x', y: 'radio_vu_y' },
         });
     }
 }

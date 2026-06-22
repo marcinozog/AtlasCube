@@ -40,6 +40,7 @@ idf_component_register(
         "widgets/event_indicator_widget.c"
         "widgets/controls_overlay_widget.c"
         "widgets/vol_overlay_widget.c"
+        "widgets/vu_widget.c"
         "fonts/lv_font_montserrat_8_pl.c"
         "fonts/lv_font_montserrat_10_pl.c"
         "fonts/lv_font_montserrat_12_pl.c"
@@ -73,4 +74,5 @@ idf_component_register(
         mqtt_svc                # screen_mqtt toggle widget
         sdcard                  # screensaver_photo reads slides from SD
         esp_app_format          # esp_app_get_description() — version on splash
+        espressif__esp-dsp      # FFT for the VU spectrum widget
 )
