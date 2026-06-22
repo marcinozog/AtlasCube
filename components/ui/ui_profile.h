@@ -142,6 +142,12 @@ typedef struct {
     int16_t          sd_event_indic_x;
     int16_t          sd_event_indic_y;
 
+    bool             sd_show_vu;                // real-audio FFT spectrum widget
+    int16_t          sd_vu_x;                   // container top-left + size (LCD px)
+    int16_t          sd_vu_y;
+    int16_t          sd_vu_w;
+    int16_t          sd_vu_h;
+
     // screen_playlist
     int16_t          playlist_header_h;
     int16_t          playlist_item_h;

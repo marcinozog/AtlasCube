@@ -147,6 +147,12 @@ const SD_FIELDS = [
     { key: 'sd_show_event_indicator', label: 'Show event indic.', type: 'bool' },
     { key: 'sd_event_indic_x',        label: 'Event indic. X',    type: 'number' },
     { key: 'sd_event_indic_y',        label: 'Event indic. Y',    type: 'number' },
+
+    { key: 'sd_show_vu',              label: 'Show VU meter',     type: 'bool' },
+    { key: 'sd_vu_x',                 label: 'VU X',              type: 'number' },
+    { key: 'sd_vu_y',                 label: 'VU Y',              type: 'number' },
+    { key: 'sd_vu_w',                 label: 'VU W',              type: 'number' },
+    { key: 'sd_vu_h',                 label: 'VU H',              type: 'number' },
 ];
 
 // ── Sections registry ──────────────────────────────────────────────────────
@@ -542,6 +548,13 @@ function renderSd(svg) {
             x: s.sd_event_indic_x, y: s.sd_event_indic_y, w: 16, h: 16,
             label: 'evt', cls: 'label-rect',
             fields: { x: 'sd_event_indic_x', y: 'sd_event_indic_y' },
+        });
+    }
+    if (s.sd_show_vu) {
+        drawFreeElement(svg, {
+            x: s.sd_vu_x, y: s.sd_vu_y, w: s.sd_vu_w, h: s.sd_vu_h,
+            label: 'VU', cls: 'label-rect',
+            fields: { x: 'sd_vu_x', y: 'sd_vu_y' },
         });
     }
 }

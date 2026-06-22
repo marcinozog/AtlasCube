@@ -9,6 +9,7 @@
 #include "clock_widget.h"
 #include "mode_indicator_widget.h"
 #include "event_indicator_widget.h"
+#include "vu_widget.h"
 #include "app_state.h"
 #include "settings.h"
 #include "sd_player.h"
@@ -117,6 +118,9 @@ static void sd_player_screen_create(lv_obj_t *parent)
     if (p->sd_show_event_indicator) {
         event_indicator_create(parent, p->sd_event_indic_x, p->sd_event_indic_y);
     }
+    if (p->sd_show_vu) {
+        vu_widget_create(parent, p->sd_vu_x, p->sd_vu_y, p->sd_vu_w, p->sd_vu_h);
+    }
 
     refresh_from_state();
 
@@ -129,6 +133,7 @@ static void sd_player_screen_destroy(void)
 {
     controls_overlay_destroy();
     vol_overlay_hide();
+    vu_widget_destroy();
     mode_indicator_destroy();
     event_indicator_destroy();
     clock_widget_destroy();
@@ -201,6 +206,7 @@ static void sd_player_apply_theme(void)
     clock_widget_apply_theme();
     mode_indicator_apply_theme();
     event_indicator_apply_theme();
+    vu_widget_apply_theme();
 
     lv_obj_invalidate(s_root);
 }

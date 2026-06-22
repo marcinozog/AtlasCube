@@ -13,8 +13,8 @@ extern "C" {
 // recomposite every frame. The FFT runs on the LVGL task (in the widget's own
 // timer), so the audio hot path stays a cheap ring append.
 //
-// One instance at a time (radio screen). create() spins up the refresh timer;
-// destroy() tears it and the bars down.
+// One instance at a time (radio or SD-player screen — only one is shown at once).
+// create() spins up the refresh timer; destroy() tears it and the bars down.
 void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h);
 void vu_widget_destroy(void);
 
