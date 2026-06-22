@@ -29,9 +29,12 @@ It also guards against a stale sdkconfig: ESP-IDF only applies sdkconfig.default
 (incl. the auto-generated sdkconfig.variant) when sdkconfig doesn't yet exist, so
 switching the HW variant in defines.h leaves the OLD CONFIG_DISPLAY_*/TOUCH_*
 baked into sdkconfig. The result is a half-switched binary (e.g. new UI_PROFILE
-header but old display driver). Before flashing we compare defines.h against
-sdkconfig and, on a mismatch, delete sdkconfig so the next reconfigure rebuilds
-it cleanly (prompted; auto when non-interactive; forced with --clean).
+header but old display driver). The same trap applies to editing sdkconfig.defaults
+itself — IDF won't re-apply it once sdkconfig exists. Before flashing we compare
+defines.h against sdkconfig, and sdkconfig.defaults against a hash recorded at the
+last build (sdkconfig.defaults.stamp); on a mismatch we delete sdkconfig so the
+next reconfigure rebuilds it cleanly (prompted; auto when non-interactive; forced
+with --clean).
 
 Run inside an ESP-IDF environment (the "ESP-IDF PowerShell", or after export.ps1):
     python scripts/build-flash.py                    # ask what to do, then build (+flash)
@@ -45,6 +48,7 @@ For CI / multi-variant release images, use ci/build.py instead.
 """
 
 import argparse
+import hashlib
 import re
 import subprocess
 import sys
@@ -63,6 +67,11 @@ DEFAULT_JOBS = 4
 
 DEFINES_H = REPO_ROOT / "main" / "include" / "defines.h"
 SDKCONFIG = REPO_ROOT / "sdkconfig"
+SDKCONFIG_DEFAULTS = REPO_ROOT / "sdkconfig.defaults"
+# Records the sdkconfig.defaults hash from the last successful build (gitignored,
+# kept outside build/ since that dir may get wiped). Used to notice edits to
+# sdkconfig.defaults, which ESP-IDF only applies when sdkconfig doesn't yet exist.
+DEFAULTS_STAMP = REPO_ROOT / "sdkconfig.defaults.stamp"
 WWW_IMAGE = REPO_ROOT / "build" / "www.bin"
 
 
@@ -97,20 +106,46 @@ def sdkconfig_is_stale():
     return any(tok not in sdk for tok in expected_sdkconfig_tokens())
 
 
+def _defaults_hash():
+    return hashlib.sha256(SDKCONFIG_DEFAULTS.read_bytes()).hexdigest()
+
+
+def sdkconfig_defaults_changed():
+    """True if sdkconfig.defaults was edited since the last build that recorded it.
+    Without this, edits to defaults are silently ignored: ESP-IDF only applies
+    sdkconfig.defaults when sdkconfig doesn't already exist."""
+    if not SDKCONFIG.is_file():
+        return False  # no sdkconfig -> reconfigure will apply defaults anyway
+    if not DEFAULTS_STAMP.is_file():
+        return True   # never recorded -> can't prove defaults were applied
+    return DEFAULTS_STAMP.read_text(encoding="utf-8").strip() != _defaults_hash()
+
+
+def write_defaults_stamp():
+    """Record the current sdkconfig.defaults hash after a successful reconfigure."""
+    DEFAULTS_STAMP.write_text(_defaults_hash(), encoding="utf-8")
+
+
 def ensure_fresh_sdkconfig(force):
-    """Delete sdkconfig when it's from another variant, so the next reconfigure
-    regenerates it cleanly. `force` (--clean) skips detection and the prompt."""
+    """Delete sdkconfig when it's from another variant or sdkconfig.defaults changed,
+    so the next reconfigure regenerates it cleanly. `force` (--clean) skips detection
+    and the prompt."""
     if force:
         if SDKCONFIG.is_file():
             print("--clean: removing sdkconfig to force a clean reconfigure.")
             SDKCONFIG.unlink()
         return
 
-    if not sdkconfig_is_stale():
+    if sdkconfig_is_stale():
+        reason = ("sdkconfig is from a different HW variant than defines.h "
+                  "(stale CONFIG_DISPLAY_*/TOUCH_* would build a half-switched binary).")
+    elif sdkconfig_defaults_changed():
+        reason = ("sdkconfig.defaults changed since the last build "
+                  "(ESP-IDF won't re-apply it to an existing sdkconfig).")
+    else:
         return
 
-    print("sdkconfig is from a different HW variant than defines.h "
-          "(stale CONFIG_DISPLAY_*/TOUCH_* would build a half-switched binary).")
+    print(reason)
     if sys.stdin.isatty():
         ans = input("Delete sdkconfig and build cleanly? [Y/n] ").strip().lower()
         if ans in ("n", "no"):
@@ -299,6 +334,9 @@ def main():
         run(["ninja", "-C", str(REPO_ROOT / "build"), f"-j{args.jobs}"])
     else:  # -j 0: let ninja use all cores (original idf.py build behaviour)
         run(idf("build"))
+
+    # Build succeeded -> the current sdkconfig.defaults is now baked into sdkconfig.
+    write_defaults_stamp()
 
     if action == "build":
         print("\nBuild only — not flashing. Compressed web UI is in spiffs_image/web/; "
