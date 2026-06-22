@@ -56,6 +56,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from env_setup import (REPO_ROOT, BOARD_NAME, die, warn, run,  # noqa: E402
                        resolve_idf, resolve_adf, patch_adf)
 
+# Cap parallel compile jobs by default: full parallelism occasionally trips an
+# xtensa-gcc "internal compiler error: Segmentation fault" under RAM pressure on
+# Windows. 4 builds reliably; override with -j N (use -j 0 for unlimited).
+DEFAULT_JOBS = 4
+
 DEFINES_H = REPO_ROOT / "main" / "include" / "defines.h"
 SDKCONFIG = REPO_ROOT / "sdkconfig"
 WWW_IMAGE = REPO_ROOT / "build" / "www.bin"
@@ -222,6 +227,11 @@ def main():
     ap.add_argument("--scope", choices=list(ACTIONS), help="what to do: flash all|fw|ui, or build (compile only); skips the prompt")
     ap.add_argument("--monitor", action="store_true", help="open the serial monitor after flashing")
     ap.add_argument("--clean", action="store_true", help="force a clean sdkconfig before building")
+    ap.add_argument("-j", "--jobs", type=int, metavar="N", default=DEFAULT_JOBS,
+                    help=f"parallel compile jobs (default {DEFAULT_JOBS}; use 0 for "
+                         "unlimited). Capped to avoid the sporadic GCC 'internal "
+                         "compiler error: Segmentation fault' from RAM pressure when "
+                         "many xtensa-gcc run at once")
     ap.add_argument("--setup", action="store_true", help="force re-running the ESP-ADF/IDF setup patches")
     ap.add_argument("--adf-path", help="path to an existing esp-adf checkout (default: $ADF_PATH or ./esp-adf, cloned if absent)")
     args = ap.parse_args()
@@ -279,7 +289,16 @@ def main():
     # everything (app + www.bin + config.bin) once; the action only changes which
     # parts get written to the device (if any).
     run([sys.executable, str(REPO_ROOT / "spiffs_image" / "tools" / "compress_web.py")])
-    run(idf("build"))
+    if args.jobs > 0:
+        # idf.py build runs `ninja all` directly and exposes no jobs flag, so we run the
+        # same two steps ourselves with a capped job count: configure (regenerates
+        # sdkconfig/partition table), then ninja -j. Fewer concurrent gcc processes lower
+        # peak RAM use, which avoids the intermittent ICE/segfault xtensa-gcc throws under
+        # memory pressure (rerunning the build usually "fixes" it for the same reason).
+        run(idf("reconfigure"))
+        run(["ninja", "-C", str(REPO_ROOT / "build"), f"-j{args.jobs}"])
+    else:  # -j 0: let ninja use all cores (original idf.py build behaviour)
+        run(idf("build"))
 
     if action == "build":
         print("\nBuild only — not flashing. Compressed web UI is in spiffs_image/web/; "
