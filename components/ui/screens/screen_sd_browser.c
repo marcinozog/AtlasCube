@@ -290,7 +290,7 @@ static void sd_browser_create(lv_obj_t *parent)
     lv_obj_align(s_header_label, LV_ALIGN_LEFT_MID, p->playlist_label_x, p->playlist_label_y);
 
     lv_obj_t *hint = lv_label_create(header);
-    lv_label_set_text(hint, "press - open   long - back");
+    lv_label_set_text(hint, "press - open   swipe<>/long - back");
     lv_obj_set_style_text_font(hint, p->playlist_row_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(hint, lv_color_hex(th->text_muted), LV_PART_MAIN);
     lv_obj_align(hint, LV_ALIGN_RIGHT_MID, p->playlist_hint_x, p->playlist_hint_y);
@@ -350,6 +350,8 @@ static void sd_browser_on_input(ui_input_t input)
             activate(s_selected);
             break;
         case UI_INPUT_ENCODER_LONG_PRESS:
+        case UI_INPUT_SWIPE_RIGHT:
+        case UI_INPUT_SWIPE_LEFT:
             ui_navigate(SCREEN_SD);
             break;
         default:

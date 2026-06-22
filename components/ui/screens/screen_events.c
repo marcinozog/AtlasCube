@@ -205,7 +205,6 @@ static void scr_on_input(ui_input_t input)
         }
 
         case UI_INPUT_ENCODER_PRESS:
-        case UI_INPUT_BTN_BACK:
         case UI_INPUT_ENCODER_LONG_PRESS:
             ui_navigate(SCREEN_SETTINGS);
             break;

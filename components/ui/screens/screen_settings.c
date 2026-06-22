@@ -648,7 +648,6 @@ static void settings_on_input(ui_input_t input)
             }
             break;
 
-        case UI_INPUT_BTN_BACK:
         case UI_INPUT_ENCODER_LONG_PRESS:
         case UI_INPUT_SWIPE_RIGHT:
         case UI_INPUT_SWIPE_LEFT:

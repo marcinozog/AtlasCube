@@ -69,10 +69,7 @@ typedef enum {
     UI_INPUT_ENCODER_CCW,   // counter-clockwise rotation
     UI_INPUT_ENCODER_PRESS, // encoder press
     UI_INPUT_ENCODER_LONG_PRESS,
-    UI_INPUT_BTN_PREV,
-    UI_INPUT_BTN_NEXT,
     UI_INPUT_BTN_OK,
-    UI_INPUT_BTN_BACK,
     UI_INPUT_SWIPE_LEFT,
     UI_INPUT_SWIPE_RIGHT,
     UI_INPUT_SWIPE_UP,

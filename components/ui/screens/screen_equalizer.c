@@ -196,7 +196,6 @@ static void eq_on_input(ui_input_t input)
             update_info_label();
             break;
 
-        case UI_INPUT_BTN_BACK:
         case UI_INPUT_ENCODER_LONG_PRESS:
             ui_navigate(SCREEN_SETTINGS);
             break;
