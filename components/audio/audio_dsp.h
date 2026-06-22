@@ -20,7 +20,7 @@ audio_element_handle_t audio_dsp_init(int sample_rate, int channels);
  *         Call from any task — no pipeline interruption.
  *
  * @param  el        DSP element handle
- * @param  gains_db  Array of 10 int values (dB), typical range −13..+13
+ * @param  gains_db  Array of 10 int values (dB), typical range −13..+6
  */
 void audio_dsp_set_gains(audio_element_handle_t el, int *gains_db);
 

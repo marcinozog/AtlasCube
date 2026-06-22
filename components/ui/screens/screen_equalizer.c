@@ -16,7 +16,7 @@ static const char *TAG = "SCR_EQ";
 
 #define EQ_BANDS     10
 #define EQ_GAIN_MIN  -13
-#define EQ_GAIN_MAX   13
+#define EQ_GAIN_MAX    6
 
 static const char *FREQ_LABELS[EQ_BANDS] = {
     "31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"

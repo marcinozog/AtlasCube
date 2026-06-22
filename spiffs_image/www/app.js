@@ -189,7 +189,7 @@ function renderEQ() {
         const el = document.createElement('div');
         el.innerHTML = `
             <label>${f}</label>
-            <input type="range" min="-13" max="13" value="0" id="eq_${i}" oninput="onEqBandChange()" />
+            <input type="range" min="-13" max="6" value="0" id="eq_${i}" oninput="onEqBandChange()" />
         `;
         container.appendChild(el);
     });
