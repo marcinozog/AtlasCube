@@ -46,6 +46,7 @@ For CI / multi-variant release images, use ci/build.py instead.
 
 import argparse
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -132,8 +133,9 @@ ACTIONS = {
     "all":   "Everything / factory          (bootloader + partitions + app + www + config; works on a blank chip; RESETS settings)",
     "fw":    "Firmware only                 (app slot only, over USB; keeps web UI and settings)",
     "ui":    "Firmware + Web UI             (app + www, over USB; keeps settings)",
-    "build": "Build only (e.g. OTA image)   (compile + compress web/*.gz; don't flash)",
-    "erase": "Erase all                     (wipe the WHOLE flash: app + web UI + settings + NVS)",
+    "build":  "Build only (e.g. OTA image)   (compile + compress web/*.gz; don't flash)",
+    "erase":  "Erase all                     (wipe the WHOLE flash: app + web UI + settings + NVS)",
+    "update": "Update from git              (git pull the repo incl. this script; then re-run the script)",
 }
 
 
@@ -188,6 +190,32 @@ def pick_port():
     return val or None
 
 
+def git_update():
+    """Pull the latest repo (this script included), then ask the user to re-run it.
+
+    defines.h (the user's HW pins/variant) is tracked by git, so a pull can clash
+    with local edits. We don't touch it automatically — we warn first so the user
+    backs it up, and re-running is left to the user so the *new* script version is
+    the one that actually runs."""
+    print("\nThis runs 'git pull --ff-only' in the repo to fetch the latest version.")
+    warn("Your hardware config in main/include/defines.h (pins/variant) is tracked "
+         "by git — BACK IT UP before continuing. The pull may overwrite it or "
+         "refuse to apply if you have local edits.")
+    if sys.stdin.isatty():
+        ans = input("Backed up defines.h? Continue with 'git pull'? [y/N] ").strip().lower()
+        if ans not in ("y", "yes"):
+            print("Aborted — nothing pulled.")
+            return
+    rc = subprocess.run(["git", "-C", str(REPO_ROOT), "pull", "--ff-only"]).returncode
+    if rc != 0:
+        warn("git pull failed (likely local changes, e.g. your defines.h). "
+             "Resolve them — 'git stash' or commit — then try again. "
+             "Your files were left untouched.")
+        return
+    print("\nRepo updated. RESTART this script to run the new version:")
+    print("    python scripts/build-flash.py")
+
+
 def main():
     ap = argparse.ArgumentParser(description="AtlasCube build & flash (end-user script).")
     ap.add_argument("-p", "--port", help="serial port (e.g. COM5 / /dev/ttyUSB0); auto-detected if omitted")
@@ -198,10 +226,16 @@ def main():
     ap.add_argument("--adf-path", help="path to an existing esp-adf checkout (default: $ADF_PATH or ./esp-adf, cloned if absent)")
     args = ap.parse_args()
 
-    idf_path, idf_py = resolve_idf()
-
     # Ask up front so the user isn't prompted after a long build/setup.
     action = args.scope or pick_action()
+
+    # Repo self-update needs neither ESP-IDF nor a serial port — handle it before
+    # requiring the toolchain environment, then stop (user re-runs the new script).
+    if action == "update":
+        git_update()
+        return
+
+    idf_path, idf_py = resolve_idf()
 
     # Serial port for flashing actions (build-only needs none). Ask when -p was
     # omitted rather than leaning on idf.py auto-detect, which finds nothing on
