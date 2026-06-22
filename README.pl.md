@@ -105,6 +105,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 
 **Audio**
 - Strumieniowe radio internetowe — MP3, AAC, FLAC (przez [esp-adf](https://github.com/espressif/esp-adf))
+- Strumienie HLS — gra segmentowane playlisty `.m3u8` obok zwykłych strumieni MP3/AAC/FLAC; segmenty MPEG-TS są w locie demuxowane do ADTS
 - Metadane ICY — nazwa stacji i aktualny utwór widoczne na ekranie oraz w web UI
 - 10-pasmowy EQ parametryczny + miękka regulacja głośności (własny element DSP, rdzeń 1)
 - Playlista — do 50 stacji, trzymana w SPIFFS
@@ -120,9 +121,13 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Nawigacja enkoderem (obrót + klik)
 - Dotyk pojemnościowy — CST816D (okrągły AMOLED) albo FT6336U (ST7796U), oba po I2C; działa równolegle z enkoderem
 - Gesty swipe — w poziomie przeskakują między zegar ↔ radio ↔ bt, w górę otwierają ustawienia (z zegara) albo playlistę (z radia); rozpoznawane przez LVGL na zwykłym indevie wskaźnika, bez kombinowania per kontroler
-- Nakładka sterująca — tap w ekran mediów otwiera krzyż 5 przycisków (play/pauza, vol±, prev/next), znika po chwili bezczynności
+- Nakładka sterująca — tap w ekran mediów albo zegara otwiera krzyż 5 przycisków (play/pauza, vol±, prev/next), znika po chwili bezczynności
+- Wskaźnik VU — opcjonalny widget na ekranie radia pokazujący spektrum FFT liczone na żywo z wyjścia audio; pozycję ustawiasz w edytorze layoutu
 - Konfigurowalny layout (pozycje widgetów w JSON-ie)
-- Wygaszacze — startują po zadanym czasie bezczynności; do wyboru wskazówki zegara, pole gwiazd, fajerwerki, plazma, gra w życie Conwaya, czarny ekran (przyjazny AMOLED-om), **Dashboard** albo **Fotoramka** (niżej)
+- Tło ekranu — do wyboru gradient, jednolity kolor, **tapeta z karty SD** (`.bin` RGB565 w rozmiarze panelu, wspólna dla wszystkich ekranów) albo animowane tło **Fake VU** (słupki), ustawiane w web UI
+- Własne logo splash — wrzuć na kartę SD plik `.bin` RGB565 w rozmiarze panelu, żeby podmienić wbudowane logo (auto-skalowanie; gdy brak pliku, wraca do wbudowanego)
+- Opcjonalny ekran odtwarzacza SD w pierścieniu głównym — pokazujesz albo chowasz go z web UI
+- Wygaszacze — startują po zadanym czasie bezczynności; do wyboru wskazówki zegara, pole gwiazd, fajerwerki, plazma, gra w życie Conwaya, czarny ekran (przyjazny AMOLED-om), **Dim** (tylko ściemnia podświetlenie, zostawia bieżący ekran), **Dashboard** albo **Fotoramka** (niżej)
 
 **Wygaszacz Dashboard**
 - Ambientowy ekran, który odpytuje dowolny endpoint JSON po HTTP/HTTPS i pokazuje jedną wartość
@@ -160,9 +165,9 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 
 **Pamięć**
 - Opcjonalna karta microSD po SDMMC (tryb 1-bit), podpięta do pinów SDMMC danego wariantu
-- Webowy **menedżer plików SD** (Ustawienia → Narzędzia) — przeglądanie folderów, tworzenie katalogów, upload, zmiana nazwy i usuwanie plików prosto z przeglądarki; pliki może wysyłać też aplikacja Android
+- Webowy **menedżer plików SD** (Ustawienia → Narzędzia) — przeglądanie folderów, tworzenie katalogów, upload, zmiana nazwy i usuwanie plików prosto z przeglądarki (obrazy LVGL `.bin` mają podgląd w miejscu); pliki może wysyłać też aplikacja Android
 - Webowy **backup/restore SPIFFS ⇄ SD** (Ustawienia → Narzędzia) — osobny dwupanelowy menedżer kopiujący pliki między SPIFFS urządzenia a kartą SD: kopia konfiguracji / web UI na kartę i przywrócenie później. Po stronie klienta, tylko kopiowanie
-- Obsługuje slajdy fotoramki, nagrania powiadomień głosowych oraz lokalną muzykę dla odtwarzacza SD; więcej zawartości z karty (np. logo stacji) jest na liście planów
+- Obsługuje slajdy fotoramki, nagrania powiadomień głosowych, lokalną muzykę dla odtwarzacza SD oraz opcjonalną tapetę ekranu i własne logo splash; więcej zawartości z karty (np. logo stacji) jest na liście planów
 
 **Aplikacja Android** *(beta)*
 - Pilot do odtwarzania, zmiany stacji i głośności
@@ -258,6 +263,8 @@ Przy **pierwszym uruchomieniu** sam konfiguruje ESP-ADF (clone + patche — bez 
 Na świeżym lub wymazanym chipie wybierz **Wszystko / factory** (`all`) — to jedyny zakres, który wgrywa też bootloader i tablicę partycji, więc chip wstanie. `Sam firmware` / `Firmware + Web UI` aktualizują tylko aplikację / web UI i wymagają już obecnego bootloadera (czysty chip wywali `invalid header`). `all` wgrywa pełne web UI i resetuje ustawienia do domyślnych; urządzenie startuje potem w trybie AP do konfiguracji Wi-Fi pod `192.168.4.1`.
 
 Układ flasha dzieli dawną partycję storage na `www` (edytowalne web UI) i `config` (JSON ustawień), więc ponowne wgranie kodu albo UI nigdy nie kasuje ustawień — dopiero pełny flash (factory) seeduje domyślne. Flaga `--scope all|fw|ui|build|erase` pomija pytanie, `--monitor` otwiera monitor szeregowy po wgraniu.
+
+Odpalenie `build-flash.py` bez `--scope` daje interaktywne menu; jeden wpis, **Update from git**, robi `git pull --ff-only` żeby ściągnąć najnowsze repo (razem z tym skryptem) i prosi o ponowne uruchomienie. Najpierw zrób backup `defines.h` — jest śledzony przez git, więc pull może wejść w konflikt z Twoimi lokalnymi zmianami pinów/wariantu.
 
 Żeby poprawić web UI bez flashowania, edytuj pliki na żywo w przeglądarce (edytor plików na urządzeniu albo wbudowana strona setupu) — zapisują się prosto na partycję `www` po HTTP.
 
@@ -504,7 +511,7 @@ mqtt:
 
 **Edytor plików**
 
-`/spiffs-editor.html` to edytor w przeglądarce do plików web UI — HTML/CSS/JS i innych tekstowych zasobów. Listuje pliki z partycji `www`, edytuje z podświetlaniem składni i zapisuje z powrotem przez HTTP — bez reflashowania (HTML/CSS/JS są ponownie gzipowane na urządzeniu). Przydatne do dłubania w layoucie albo web UI na urządzeniu, które już działa u kogoś. JSON-y ustawień leżą na osobnej partycji `config` i edytuje się je przez własne ekrany (Ustawienia, Wydarzenia, MQTT, …).
+`/spiffs-editor.html` to edytor w przeglądarce do plików web UI — HTML/CSS/JS i innych tekstowych zasobów. Listuje pliki z partycji `www`, edytuje z podświetlaniem składni i zapisuje z powrotem przez HTTP — bez reflashowania (HTML/CSS/JS są ponownie gzipowane na urządzeniu). Przydatne do dłubania w layoucie albo web UI na urządzeniu, które już działa u kogoś. Edytor potrafi też otworzyć osobną partycję `config` (JSON-y ustawień) do bezpośredniej edycji — przydatne przy debugowaniu — choć normalnie te pliki obsługuje się przez własne ekrany (Ustawienia, Wydarzenia, MQTT, …).
 
 ---
 

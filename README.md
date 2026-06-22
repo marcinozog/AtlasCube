@@ -85,7 +85,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
     <td align="center"><a href="https://atlascube.net/images/www_settings_theme.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_theme.png" width="400"></a><br><sub>Theme</sub></td>
   </tr>
   <tr>
-    <td align="center"><a href="https://atlascube.net/images/www_settings_sleep.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_sleep.png" width="400"></a><br><sub>Sleep & Wake</sub></td>
+    <td align="center"><a href="https://atlascube.net/images/www_settings_sleep.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_sleep.png" width="400"></a><br><sub>Dim & Wake</sub></td>
     <td align="center"><a href="https://atlascube.net/images/www_settings_tools.png" target="_blank" rel="noopener"><img src="https://atlascube.net/images/www_settings_tools.png" width="400"></a><br><sub>Tools</sub></td>
   </tr>
   <tr>
@@ -107,6 +107,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 
 **Audio**
 - Internet radio streaming — MP3, AAC, FLAC (via [esp-adf](https://github.com/espressif/esp-adf))
+- HLS live streams — plays segmented `.m3u8` playlists alongside plain MP3/AAC/FLAC streams; the MPEG-TS segments are demuxed to ADTS on the fly
 - ICY metadata — station name and now-playing track shown on screen and in the web UI
 - 10-band parametric EQ + soft volume (custom DSP element, core 1)
 - Playlist — up to 50 stations, stored in SPIFFS
@@ -122,9 +123,13 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Rotary encoder navigation (turn + press)
 - Capacitive touch — CST816D (CO5300 round AMOLED) or FT6336U (ST7796U 480×320), both on I2C; coexists with the rotary encoder, either input works at any time
 - Swipe gestures — horizontal swipes navigate between clock ↔ radio ↔ bt; swipe-up opens settings (clock) or playlist (radio); detection runs through LVGL on the existing pointer indev, no per-chip glue
-- On-screen controls overlay — tap a media screen to bring up a 5-button cross (play/pause, vol±, prev/next), auto-hides after a short timeout
+- On-screen controls overlay — tap a media or the clock screen to bring up a 5-button cross (play/pause, vol±, prev/next), auto-hides after a short timeout
+- Audio VU meter — an optional radio-screen widget showing a real-time FFT spectrum computed from the live audio output; position it via the layout editor
 - Configurable layout (widget positions editable via JSON)
-- Screensavers — kick in after a configurable idle timeout; choose from clock hands, starfield, fireworks, plasma, Conway's Game of Life, blank (AMOLED-friendly "off"), **Dashboard**, or **Photo frame** (see below)
+- Screen background — choose a gradient, a solid color, an **SD wallpaper image** (panel-sized RGB565 `.bin`, shared across all screens), or an animated **Fake VU** bars background, from the Settings web UI
+- Custom boot splash logo — drop a panel-sized RGB565 `.bin` on the SD card to replace the built-in logo (auto-fit; falls back to the built-in logo if missing)
+- Optional SD-player screen in the home ring — show or hide it from the Settings web UI
+- Screensavers — kick in after a configurable idle timeout; choose from clock hands, starfield, fireworks, plasma, Conway's Game of Life, blank (AMOLED-friendly "off"), **Dim** (just lowers the backlight, keeps the current screen), **Dashboard**, or **Photo frame** (see below)
 
 **Dashboard screensaver**
 - A user-configurable ambient display that polls any JSON HTTP/HTTPS endpoint and renders a single value
@@ -162,9 +167,9 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 
 **Storage**
 - Optional microSD card over SDMMC (1-bit mode), wired to the build's SDMMC pins
-- Web **SD file manager** (Settings → Tools) — browse folders, create directories, upload, rename, and delete files straight from the browser; the Android app can push files too
+- Web **SD file manager** (Settings → Tools) — browse folders, create directories, upload, rename, and delete files straight from the browser (LVGL `.bin` images preview inline); the Android app can push files too
 - Web **SPIFFS ⇄ SD backup/restore** (Settings → Tools) — a separate dual-pane manager that copies files between the device's SPIFFS and the SD card: back up configs / web UI to the card and restore them later. Client-side, copy-only
-- Backs the photo-frame slides, voice-notification clips, and local music for the SD player; more on-card content (e.g. station logos) is on the roadmap
+- Backs the photo-frame slides, voice-notification clips, local music for the SD player, plus the optional screen wallpaper and custom boot splash logo; more on-card content (e.g. station logos) is on the roadmap
 
 **Android app** *(beta)*
 - Remote control for playback, station switching, and volume
@@ -260,6 +265,8 @@ On the **first run** it sets up ESP-ADF for you (clone + patches — no separate
 On a fresh or erased chip use **Everything / factory** (`all`) — it's the only scope that also writes the bootloader and partition table, so the chip can boot. `Firmware only` / `Firmware + Web UI` only update the app / web UI and need a bootloader already present (a blank chip would fail with `invalid header`). `all` flashes the full web UI and resets settings to defaults; the device then boots into AP mode for Wi-Fi setup at `192.168.4.1`.
 
 The flash layout splits the old storage partition into `www` (the editable web UI) and `config` (user settings JSON), so reflashing code or the UI never wipes your settings — only a factory flash reseeds defaults. Pass `--scope all|fw|ui|build|erase` to skip the prompt, and `--monitor` to open the serial monitor afterwards.
+
+Run `build-flash.py` with no `--scope` to get an interactive menu; one entry, **Update from git**, runs `git pull --ff-only` to fetch the latest repo (this script included), then asks you to re-run it. Back up your `defines.h` first — it is tracked by git, so a pull can clash with your local HW/pin edits.
 
 To tweak the web UI without flashing at all, edit files live in the browser (the on-device file editor, or the built-in setup page upload) — they write straight to the `www` partition over HTTP.
 
@@ -506,7 +513,7 @@ mqtt:
 
 **File editor**
 
-`/spiffs-editor.html` is an in-browser editor for the web UI files — HTML/CSS/JS and other text assets. It lists files from the `www` partition, lets you edit them with syntax highlighting, and saves back over HTTP without reflashing (HTML/CSS/JS are re-gzipped on the device). Useful for tweaking layouts or the web UI on a deployed device. Settings JSON live on the separate `config` partition and are edited through their own screens (Settings, Events, MQTT, …).
+`/spiffs-editor.html` is an in-browser editor for the web UI files — HTML/CSS/JS and other text assets. It lists files from the `www` partition, lets you edit them with syntax highlighting, and saves back over HTTP without reflashing (HTML/CSS/JS are re-gzipped on the device). Useful for tweaking layouts or the web UI on a deployed device. The editor can also open the separate `config` partition (the settings JSON) for direct edits — handy for debugging — though normally those files are managed through their own screens (Settings, Events, MQTT, …).
 
 ---
 
