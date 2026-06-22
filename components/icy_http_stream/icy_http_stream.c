@@ -15,7 +15,10 @@
 #include <errno.h>
 #include <fcntl.h>
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_log.h"
+#include "esp_heap_caps.h"
 #include "esp_http_client.h"
 #include "lwip/sockets.h"
 #include "lwip/netdb.h"
@@ -25,11 +28,16 @@
 #include "audio_mem.h"
 
 #include "icy_http_stream.h"
+#include "ts_demux.h"
+#include "hls_playlist.h"
 
 static const char *TAG = "ICY_HTTP";
 
 #define ICY_META_BUF_SIZE 512
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+
+#define TS_PKT_SIZE       188
+#define HLS_PLAYLIST_MAX  (256 * 1024)   /* hard cap on a fetched .m3u8 body */
 
 typedef struct {
     esp_http_client_handle_t  client;
@@ -59,6 +67,26 @@ typedef struct {
     int                       meta_received;
     char                      meta_buf[ICY_META_BUF_SIZE];
     icy_http_metadata_cb_t    meta_cb;
+
+    /* HLS mode state (active when the URL is an .m3u8). In this mode the element
+     * fetches a media playlist, streams each .ts segment over http->client and
+     * demuxes MPEG-TS to ADTS so the downstream AAC decoder sees a normal stream.
+     * ICY parsing is inactive (icy_metaint stays 0). */
+    bool                      is_hls;
+    ts_demux_t               *demux;
+    uint8_t                  *ts_scratch;     /* recv buffer before demux (buffer_len) */
+    char                     *hls_media_url;  /* resolved media playlist URL (live refresh) */
+    char                    **hls_q;          /* pending segment URLs (owned) */
+    int                       hls_q_count;
+    int                       hls_q_pos;
+    int                       hls_q_cap;
+    char                    **hls_tmp;        /* scratch list filled by parse callback */
+    int                       hls_tmp_count;
+    int                       hls_tmp_cap;
+    uint64_t                  hls_next_seq;   /* next media-sequence number to enqueue */
+    uint32_t                  hls_target_dur; /* #EXT-X-TARGETDURATION, refresh pacing */
+    bool                      hls_is_live;    /* no #EXT-X-ENDLIST → keep refreshing */
+    bool                      hls_seg_open;   /* a segment connection is currently open */
 } icy_http_t;
 
 static esp_codec_type_t _content_type_to_codec(const char *ct)
@@ -345,6 +373,461 @@ cleanup:
     return ret;
 }
 
+/* ----------------------------------------------------------------------------
+ * HLS (.m3u8) support
+ *
+ * Single-variant / single audio rendition live + VOD HLS. The master playlist
+ * (if any) is resolved one level down to its preferred audio media playlist;
+ * the media playlist's .ts segments are streamed in order and demuxed to ADTS.
+ * For live streams the media playlist is re-fetched every TARGETDURATION and
+ * new segments (by media sequence number) are appended. AES, byte-range and
+ * I-frame playlists are not handled.
+ * ------------------------------------------------------------------------- */
+
+/* True if the URL path (ignoring any query string) ends in ".m3u8". */
+static bool _uri_is_hls(const char *uri)
+{
+    const char *q = strchr(uri, '?');
+    int len = q ? (int)(q - uri) : (int)strlen(uri);
+    const char *ext = ".m3u8";
+    int el = 5;
+    return len >= el && strncasecmp(uri + len - el, ext, el) == 0;
+}
+
+/* hls_playlist media-URI callback: collect segment URLs (already absolute) into
+ * the temp list. hls_playlist frees its copy after we return, so we strdup. */
+static int _hls_seg_cb(char *uri, void *ctx)
+{
+    icy_http_t *http = (icy_http_t *)ctx;
+    if (http->hls_tmp_count >= http->hls_tmp_cap) {
+        int ncap = http->hls_tmp_cap ? http->hls_tmp_cap * 2 : 16;
+        char **n = realloc(http->hls_tmp, ncap * sizeof(char *));
+        if (!n) {
+            return 0;
+        }
+        http->hls_tmp = n;
+        http->hls_tmp_cap = ncap;
+    }
+    char *dup = strdup(uri);
+    if (dup) {
+        http->hls_tmp[http->hls_tmp_count++] = dup;
+    }
+    return 0;
+}
+
+/* Append a segment URL to the play queue, taking ownership. */
+static void _hls_enqueue(icy_http_t *http, char *url)
+{
+    if (http->hls_q_count >= http->hls_q_cap) {
+        int ncap = http->hls_q_cap ? http->hls_q_cap * 2 : 16;
+        char **n = realloc(http->hls_q, ncap * sizeof(char *));
+        if (!n) {
+            free(url);
+            return;
+        }
+        http->hls_q = n;
+        http->hls_q_cap = ncap;
+    }
+    http->hls_q[http->hls_q_count++] = url;
+}
+
+/* Pop the next pending segment URL (caller takes ownership), or NULL if empty. */
+static char *_hls_dequeue(icy_http_t *http)
+{
+    if (http->hls_q_pos >= http->hls_q_count) {
+        return NULL;
+    }
+    char *u = http->hls_q[http->hls_q_pos];
+    http->hls_q[http->hls_q_pos++] = NULL;
+    if (http->hls_q_pos >= http->hls_q_count) {
+        http->hls_q_pos = http->hls_q_count = 0;   /* drained → reset */
+    }
+    return u;
+}
+
+/* Merge the freshly-parsed temp list into the play queue, keeping only segments
+ * with a media sequence number not seen before (dedup across live refreshes). */
+static void _hls_merge(icy_http_t *http, uint64_t base)
+{
+    for (int i = 0; i < http->hls_tmp_count; i++) {
+        uint64_t seq = base + i;
+        if (seq >= http->hls_next_seq) {
+            _hls_enqueue(http, http->hls_tmp[i]);   /* transfer ownership */
+            http->hls_next_seq = seq + 1;
+        } else {
+            free(http->hls_tmp[i]);
+        }
+        http->hls_tmp[i] = NULL;
+    }
+    http->hls_tmp_count = 0;
+}
+
+/* One persistent esp_http_client reused (keep-alive) for every HLS request —
+ * playlist fetches and .ts segment reads alike. Opening a fresh TLS connection
+ * per segment exhausts LwIP sockets and trips CDN connect timeouts; reusing the
+ * connection (same host) avoids the per-segment handshake. Handles redirects and
+ * checks for a 200/206 status. */
+static esp_err_t _hls_http_open(icy_http_t *http, const char *url)
+{
+    if (!http->client) {
+        esp_http_client_config_t cfg = {
+            .url               = url,
+            .timeout_ms        = http->timeout_ms,
+            .cert_pem          = http->cert_pem,
+            .crt_bundle_attach = http->crt_bundle_attach,
+            .user_agent        = http->user_agent,
+            .buffer_size       = http->buffer_len,
+            .keep_alive_enable = true,
+        };
+        http->client = esp_http_client_init(&cfg);
+        if (!http->client) {
+            return ESP_FAIL;
+        }
+    } else {
+        esp_http_client_set_url(http->client, url);
+    }
+
+    int status = 0, tries = 0;
+    for (;;) {
+        if (esp_http_client_open(http->client, 0) != ESP_OK) {
+            return ESP_FAIL;
+        }
+        esp_http_client_fetch_headers(http->client);
+        status = esp_http_client_get_status_code(http->client);
+        if ((status == 301 || status == 302 || status == 307 || status == 308) && tries++ < 5) {
+            esp_http_client_set_redirection(http->client);
+            esp_http_client_close(http->client);
+            continue;
+        }
+        break;
+    }
+    if (status != 200 && status != 206) {
+        ESP_LOGE(TAG, "HLS HTTP %d (%s)", status, url);
+        return ESP_FAIL;
+    }
+    return ESP_OK;
+}
+
+/* Close the current request but keep the client object so the next request can
+ * reuse the keep-alive connection. Use after a clean read or to reset on error. */
+static void _hls_conn_close(icy_http_t *http)
+{
+    if (http->client) {
+        esp_http_client_close(http->client);
+    }
+}
+
+/* Fully tear down the persistent client (stream end). */
+static void _hls_conn_destroy(icy_http_t *http)
+{
+    if (http->client) {
+        esp_http_client_close(http->client);
+        esp_http_client_cleanup(http->client);
+        http->client = NULL;
+    }
+}
+
+/* Fetch an entire (small) text resource into a PSRAM buffer. Caller frees.
+ * Reuses the persistent keep-alive client; does not tear it down. */
+static esp_err_t _hls_fetch(icy_http_t *http, const char *url, char **out, int *out_len)
+{
+    if (_hls_http_open(http, url) != ESP_OK) {
+        return ESP_FAIL;
+    }
+
+    char *buf = NULL;
+    int   cap = 4096, len = 0;
+    buf = heap_caps_malloc(cap, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (!buf) {
+        buf = malloc(cap);
+    }
+    if (!buf) {
+        return ESP_FAIL;
+    }
+    for (;;) {
+        if (len + 1024 + 1 > cap) {
+            if (cap >= HLS_PLAYLIST_MAX) {
+                ESP_LOGE(TAG, "playlist too large");
+                free(buf);
+                return ESP_FAIL;
+            }
+            int ncap = cap * 2;
+            char *nb = heap_caps_realloc(buf, ncap, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+            if (!nb) {
+                nb = realloc(buf, ncap);
+            }
+            if (!nb) {
+                free(buf);
+                return ESP_FAIL;
+            }
+            buf = nb;
+            cap = ncap;
+        }
+        int r = esp_http_client_read(http->client, buf + len, cap - len - 1);
+        if (r < 0) {
+            _hls_conn_close(http);   /* reset on error so the next open reconnects */
+            free(buf);
+            return ESP_FAIL;
+        }
+        if (r == 0) {
+            break;
+        }
+        len += r;
+    }
+    buf[len] = '\0';
+    *out = buf;
+    *out_len = len;
+    /* End the request; with keep-alive this keeps the socket for the next open. */
+    _hls_conn_close(http);
+    return ESP_OK;
+}
+
+/* Fetch + parse a playlist. If it is a master, follow its preferred audio media
+ * playlist (one level). On the media playlist, update sequence/duration/live
+ * metadata (when is_initial) and merge new segments into the queue. */
+static esp_err_t _hls_load_playlist(icy_http_t *http, const char *start_url, bool is_initial)
+{
+    char *url = strdup(start_url);
+    if (!url) {
+        return ESP_FAIL;
+    }
+
+    for (int depth = 0; depth < 3; depth++) {
+        char *body = NULL;
+        int   blen = 0;
+        if (_hls_fetch(http, url, &body, &blen) != ESP_OK) {
+            free(url);
+            return ESP_FAIL;
+        }
+
+        hls_playlist_cfg_t cfg = {
+            .prefer_bitrate = 0,           /* 0 → first listed variant */
+            .cb             = _hls_seg_cb,
+            .ctx            = http,
+            .uri            = url,
+        };
+        hls_handle_t h = hls_playlist_open(&cfg);
+        if (!h) {
+            free(body);
+            free(url);
+            return ESP_FAIL;
+        }
+        http->hls_tmp_count = 0;
+        hls_playlist_parse_data(h, (uint8_t *)body, blen, true);
+        free(body);
+
+        if (hls_playlist_is_master(h)) {
+            char *media = hls_playlist_get_prefer_url(h, HLS_STREAM_TYPE_AUDIO);
+            hls_playlist_close(h);
+            if (!media) {
+                ESP_LOGE(TAG, "master playlist has no usable audio variant");
+                free(url);
+                return ESP_FAIL;
+            }
+            free(url);
+            url = media;   /* join_url-allocated absolute URL; loop to fetch it */
+            continue;
+        }
+
+        uint64_t base = hls_playlist_get_sequence_no(h);
+        uint32_t td   = hls_playlist_get_target_duration(h);
+        bool     live = !hls_playlist_is_media_end(h);
+        hls_playlist_close(h);
+
+        if (is_initial) {
+            http->hls_next_seq = base;     /* start from the first listed segment */
+            free(http->hls_media_url);
+            http->hls_media_url = strdup(url);
+            http->hls_target_dur = td ? td : 6;
+        }
+        http->hls_is_live = live;
+
+        int before = http->hls_q_count - http->hls_q_pos;
+        _hls_merge(http, base);
+        int added = (http->hls_q_count - http->hls_q_pos) - before;
+        ESP_LOGI(TAG, "HLS %s: seq=%llu target=%us live=%d +%d seg",
+                 is_initial ? "media" : "refresh",
+                 (unsigned long long)base, (unsigned)http->hls_target_dur,
+                 live, added);
+
+        free(url);
+        return ESP_OK;
+    }
+
+    free(url);
+    ESP_LOGE(TAG, "too many nested playlists");
+    return ESP_FAIL;
+}
+
+/* Sleep up to `seconds`, returning false early if the element is stopping. */
+static bool _hls_wait(audio_element_handle_t self, int seconds)
+{
+    int waited = 0;
+    int total = seconds * 1000;
+    while (waited < total) {
+        if (audio_element_is_stopping(self)) {
+            return false;
+        }
+        vTaskDelay(pdMS_TO_TICKS(100));
+        waited += 100;
+    }
+    return true;
+}
+
+/* Next segment URL to play (caller owns), or NULL on end-of-stream / stop.
+ * For live streams, blocks across playlist refreshes until a new segment
+ * appears or the element is stopping. */
+static char *_hls_next_segment(audio_element_handle_t self, icy_http_t *http)
+{
+    char *u = _hls_dequeue(http);
+    if (u) {
+        return u;
+    }
+    /* Queue drained. For a live stream, re-fetch the media playlist to pick up
+     * newly published segments. Refresh immediately (the buffer is already
+     * running low), and only back off — at most target_duration between polls —
+     * when the publisher has nothing new yet. */
+    int fails = 0;
+    while (http->hls_is_live) {
+        if (audio_element_is_stopping(self)) {
+            return NULL;
+        }
+        if (_hls_load_playlist(http, http->hls_media_url, false) != ESP_OK) {
+            ESP_LOGW(TAG, "live playlist refresh failed (%d)", fails + 1);
+            if (++fails >= 5) {
+                return NULL;   /* give up → triggers the engine's retry path */
+            }
+            if (!_hls_wait(self, 2)) {
+                return NULL;
+            }
+            continue;
+        }
+        fails = 0;
+        u = _hls_dequeue(http);
+        if (u) {
+            return u;
+        }
+        /* Caught up to the live edge — poll again after ~half a segment. */
+        int poll = http->hls_target_dur > 0 ? (int)http->hls_target_dur / 2 : 3;
+        if (poll < 1) {
+            poll = 1;
+        }
+        if (!_hls_wait(self, poll)) {
+            return NULL;
+        }
+    }
+    return NULL;   /* VOD: list exhausted */
+}
+
+/* Read callback for HLS mode: serve demuxed ADTS bytes. */
+static int _hls_read(audio_element_handle_t self, icy_http_t *http, char *buffer, int len)
+{
+    /* Leave headroom so a packet completed from a previous call's carry-over
+     * (< 188 B) cannot push the demux output past `len`. Also never exceed the
+     * ts_scratch allocation (buffer_len). */
+    int want = len - 256;
+    if (want > http->buffer_len) {
+        want = http->buffer_len;
+    }
+    if (want < TS_PKT_SIZE) {
+        want = TS_PKT_SIZE;
+    }
+
+    for (;;) {
+        if (audio_element_is_stopping(self)) {
+            return ESP_OK;
+        }
+        if (!http->hls_seg_open) {
+            char *seg = _hls_next_segment(self, http);
+            if (!seg) {
+                if (_dispatch(self, ICY_HTTP_EVENT_FINISH_TRACK) != ESP_OK) {
+                    return ESP_FAIL;
+                }
+                return ESP_OK;   /* 0 → end of stream */
+            }
+            esp_err_t r = _hls_http_open(http, seg);
+            free(seg);
+            if (r != ESP_OK) {
+                _hls_conn_close(http);   /* reset; reconnect on next segment */
+                continue;                /* skip a bad segment */
+            }
+            ts_demux_reset_segment(http->demux);
+            http->hls_seg_open = true;
+        }
+
+        int n = esp_http_client_read(http->client, (char *)http->ts_scratch, want);
+        if (n <= 0) {
+            /* Segment finished (n==0) or error (n<0). End the request; keep-alive
+             * preserves the socket for the next segment's open. */
+            _hls_conn_close(http);
+            http->hls_seg_open = false;
+            continue;
+        }
+        int outn = ts_demux_process(http->demux, http->ts_scratch, n,
+                                    (uint8_t *)buffer, len);
+        if (outn > 0) {
+            audio_element_update_byte_pos(self, outn);
+            return outn;
+        }
+        /* outn == 0: only PAT/PMT so far — keep reading. */
+    }
+}
+
+static void _hls_cleanup(icy_http_t *http)
+{
+    _hls_conn_destroy(http);
+    http->hls_seg_open = false;
+    for (int i = http->hls_q_pos; i < http->hls_q_count; i++) {
+        free(http->hls_q[i]);
+    }
+    free(http->hls_q);
+    http->hls_q = NULL;
+    http->hls_q_count = http->hls_q_pos = http->hls_q_cap = 0;
+    for (int i = 0; i < http->hls_tmp_count; i++) {
+        free(http->hls_tmp[i]);
+    }
+    free(http->hls_tmp);
+    http->hls_tmp = NULL;
+    http->hls_tmp_count = http->hls_tmp_cap = 0;
+    free(http->hls_media_url);
+    http->hls_media_url = NULL;
+    http->hls_next_seq = 0;
+    http->hls_target_dur = 0;
+    http->hls_is_live = false;
+}
+
+static esp_err_t _hls_open(audio_element_handle_t self, icy_http_t *http, const char *uri)
+{
+    if (_dispatch(self, ICY_HTTP_EVENT_PRE_REQUEST) != ESP_OK) {
+        ESP_LOGE(TAG, "PRE_REQUEST callback failed");
+        return ESP_FAIL;
+    }
+    if (!http->demux) {
+        http->demux = ts_demux_create();
+    }
+    if (!http->ts_scratch) {
+        http->ts_scratch = audio_malloc(http->buffer_len);
+    }
+    if (!http->demux || !http->ts_scratch) {
+        ESP_LOGE(TAG, "hls: out of memory");
+        return ESP_FAIL;
+    }
+    if (_hls_load_playlist(http, uri, true) != ESP_OK) {
+        return ESP_FAIL;
+    }
+
+    http->detected_codec = ESP_CODEC_TYPE_AAC;
+    audio_element_set_codec_fmt(self, http->detected_codec);
+
+    if (_dispatch(self, ICY_HTTP_EVENT_POST_REQUEST) != ESP_OK) {
+        ESP_LOGE(TAG, "POST_REQUEST callback failed");
+        return ESP_FAIL;
+    }
+    audio_element_report_codec_fmt(self);
+    http->is_open = true;
+    return ESP_OK;
+}
+
 static esp_err_t _icy_open(audio_element_handle_t self)
 {
     icy_http_t *http = (icy_http_t *)audio_element_getdata(self);
@@ -366,6 +849,12 @@ static esp_err_t _icy_open(audio_element_handle_t self)
     http->_errno           = 0;
     http->raw_fd           = -1;
     http->detected_codec   = ESP_CODEC_TYPE_UNKNOW;
+
+    /* HLS (.m3u8) gets its own playlist + TS-demux path. */
+    http->is_hls = _uri_is_hls(uri);
+    if (http->is_hls) {
+        return _hls_open(self, http, uri);
+    }
 
     /* http:// → raw socket (esp_http_client can't talk to old SHOUTcast DNAS);
      * https:// → esp_http_client for TLS. */
@@ -470,6 +959,9 @@ static esp_err_t _icy_close(audio_element_handle_t self)
         audio_element_report_pos(self);
         audio_element_set_byte_pos(self, 0);
     }
+    if (http->is_hls) {
+        _hls_cleanup(http);   /* also closes http->client */
+    }
     if (http->raw_fd >= 0) {
         close(http->raw_fd);
         http->raw_fd = -1;
@@ -485,6 +977,15 @@ static esp_err_t _icy_close(audio_element_handle_t self)
 static esp_err_t _icy_destroy(audio_element_handle_t self)
 {
     icy_http_t *http = (icy_http_t *)audio_element_getdata(self);
+    _hls_cleanup(http);
+    if (http->demux) {
+        ts_demux_destroy(http->demux);
+        http->demux = NULL;
+    }
+    if (http->ts_scratch) {
+        audio_free(http->ts_scratch);
+        http->ts_scratch = NULL;
+    }
     audio_free(http);
     return ESP_OK;
 }
@@ -498,6 +999,10 @@ static int _icy_read(audio_element_handle_t self, char *buffer, int len,
                      TickType_t ticks_to_wait, void *context)
 {
     icy_http_t *http = (icy_http_t *)audio_element_getdata(self);
+
+    if (http->is_hls) {
+        return _hls_read(self, http, buffer, len);
+    }
 
     /* Loop so a read that turns out to be entirely ICY metadata does not
      * surface as a 0-length return — esp-adf treats read()==0 as EOF and

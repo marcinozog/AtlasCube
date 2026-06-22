@@ -40,6 +40,12 @@ static audio_codec_t detect_codec_from_url(const char *url)
         return AUDIO_CODEC_FLAC;
     }
 
+    // HLS (.m3u8): icy_http_stream demuxes the .ts segments to ADTS AAC, so the
+    // AAC decoder is the right link from the start (avoids a relink round-trip).
+    if (strcasestr(url, ".m3u8")) {
+        return AUDIO_CODEC_AAC;
+    }
+
     if (strcasestr(url, ".aac")  ||
         strcasestr(url, ".aacp") ||
         strcasestr(url, ".adts") ||

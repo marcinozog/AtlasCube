@@ -1,8 +1,16 @@
 idf_component_register(
     SRCS
         "icy_http_stream.c"
+        "ts_demux.c"
+        "hls/hls_parse.c"
+        "hls/hls_playlist.c"
+        "hls/line_reader.c"
+        "hls/join_path.c"
     INCLUDE_DIRS
         "include"
+    PRIV_INCLUDE_DIRS
+        "."
+        "hls"
     REQUIRES
         audio_pipeline
         esp_http_client
