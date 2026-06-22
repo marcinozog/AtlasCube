@@ -100,8 +100,13 @@ function setBackground(mode) {
     document.getElementById('settingsBtnBgVu')   ?.classList.toggle('active', vu);
     document.getElementById('wallpaperPicker').style.display = wall ? '' : 'none';
     // VU reuses the wallpaper toggle with a sentinel path the firmware recognises.
+    // Switching to wallpaper must clear that sentinel, else the firmware keeps
+    // drawing VU; preserve any real SD path already chosen.
+    const wpEl = document.getElementById('wallpaperPath');
+    const cur  = wpEl ? wpEl.textContent : '';
+    const realPath = (cur && cur !== 'vu' && cur !== '(none)') ? cur : '';
     const body = vu   ? { display: { wallpaper_on: true, wallpaper_path: 'vu' } }
-               : wall ? { display: { wallpaper_on: true } }
+               : wall ? { display: { wallpaper_on: true, wallpaper_path: realPath } }
                       : { display: { wallpaper_on: false, bg_gradient: grad } };
     fetch('/api/settings', {
         method: 'POST',
