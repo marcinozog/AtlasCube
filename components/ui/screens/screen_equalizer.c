@@ -52,6 +52,25 @@ static void update_slider_visual(int idx)
 
 static void slider_touch_cb(lv_event_t *e); /* fwd */
 
+/* The round knob (diameter ≈ slider width) overflows the track ends by its
+   radius at min/max. OVERFLOW_VISIBLE alone isn't enough: LVGL clips children
+   to the container bounds expanded only by the container's own ext_draw_size,
+   which defaults to 0. Reserve the knob radius here so the knob isn't cut. */
+static void band_cont_ext_draw_cb(lv_event_t *e)
+{
+    const ui_profile_t *p = ui_profile_get();
+    /* knob diameter = slider width + the theme's knob padding (the knob is much
+       wider than the thin track), so it overflows the track ends by half of
+       that. Pull the padding off a live slider rather than guessing. */
+    int32_t pad = 0;
+    if (s_sliders[0]) {
+        int32_t pt = lv_obj_get_style_pad_top(s_sliders[0], LV_PART_KNOB);
+        int32_t pb = lv_obj_get_style_pad_bottom(s_sliders[0], LV_PART_KNOB);
+        pad = LV_MAX(pt, pb);
+    }
+    lv_event_set_ext_draw_size(e, p->eq_slider_w / 2 + pad + 2);
+}
+
 static void update_focus_visuals(void)
 {
     const ui_theme_colors_t *th = theme_get();
@@ -109,6 +128,11 @@ static void eq_create(lv_obj_t *parent)
     lv_obj_set_style_border_width(s_band_cont, 0, LV_PART_MAIN);
     lv_obj_set_style_pad_all(s_band_cont, 0, LV_PART_MAIN);
     lv_obj_clear_flag(s_band_cont, LV_OBJ_FLAG_SCROLLABLE);
+    /* let the round knob overflow past the container edges at min/max,
+       otherwise its outer half gets clipped to the container bounds */
+    lv_obj_add_flag(s_band_cont, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
+    lv_obj_add_event_cb(s_band_cont, band_cont_ext_draw_cb,
+                        LV_EVENT_REFR_EXT_DRAW_SIZE, NULL);
 
     /* suwaki + etykiety frequency */
     for (int i = 0; i < EQ_BANDS; i++) {
@@ -143,6 +167,10 @@ static void eq_create(lv_obj_t *parent)
         lv_obj_set_pos(lbl, col_x, p->eq_slider_h + 2);
         s_freq_labels[i] = lbl;
     }
+
+    /* sliders now exist — recompute the container's reserved overflow room
+       (the ext_draw cb reads the knob padding off s_sliders[0]) */
+    lv_obj_refresh_ext_draw_size(s_band_cont);
 
     /* hint */
     s_hint = lv_label_create(parent);
