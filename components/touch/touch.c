@@ -19,6 +19,7 @@ static const char *TAG = "TOUCH";
 static i2c_master_bus_handle_t s_bus = NULL;
 static lv_indev_t *s_indev = NULL;
 static volatile bool s_int_flag = false;
+static bool s_pressed = false;
 
 static void IRAM_ATTR touch_isr(void *arg)
 {
@@ -43,7 +44,7 @@ static void touch_lvgl_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
     // We always poll on PRESSED so LVGL keeps receiving move events while
     // the finger is held — the chip only re-asserts INT on state changes.
     bool int_low = (CTP_INT >= 0) ? (gpio_get_level(CTP_INT) == 0) : true;
-    bool poll    = s_int_flag || int_low;
+    bool poll    = s_int_flag || int_low || s_pressed;
     s_int_flag = false;
 
     if (!poll) {
@@ -65,8 +66,10 @@ static void touch_lvgl_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
         data->point.x = x;
         data->point.y = y;
         data->state = LV_INDEV_STATE_PRESSED;
+        s_pressed = true;
     } else {
         data->state = LV_INDEV_STATE_RELEASED;
+        s_pressed = false;
     }
 }
 
