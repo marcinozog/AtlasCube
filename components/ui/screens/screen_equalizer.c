@@ -50,6 +50,8 @@ static void update_slider_visual(int idx)
     lv_slider_set_value(s_sliders[idx], s_gains[idx], LV_ANIM_OFF);
 }
 
+static void slider_touch_cb(lv_event_t *e); /* fwd */
+
 static void update_focus_visuals(void)
 {
     const ui_theme_colors_t *th = theme_get();
@@ -123,7 +125,13 @@ static void eq_create(lv_obj_t *parent)
         lv_obj_set_style_bg_color(sl, lv_color_hex(th->accent), LV_PART_INDICATOR);
         lv_obj_set_style_bg_opa(sl, LV_OPA_COVER, LV_PART_INDICATOR);
         lv_obj_set_style_bg_color(sl, lv_color_hex(th->accent), LV_PART_KNOB);
-        lv_obj_clear_flag(sl, LV_OBJ_FLAG_CLICKABLE);
+        /* touch: keep the slider interactive; PRESS_LOCK keeps the drag bound
+           to this slider even if the finger drifts off its (narrow) bounds */
+        lv_obj_add_flag(sl, LV_OBJ_FLAG_PRESS_LOCK);
+        lv_obj_add_event_cb(sl, slider_touch_cb, LV_EVENT_VALUE_CHANGED,
+                            (void *)(uintptr_t)i);
+        lv_obj_add_event_cb(sl, slider_touch_cb, LV_EVENT_RELEASED,
+                            (void *)(uintptr_t)i);
         s_sliders[i] = sl;
 
         lv_obj_t *lbl = lv_label_create(s_band_cont);
@@ -168,6 +176,27 @@ static void eq_on_event(const ui_event_t *ev)
         memcpy(s_gains, app_state_get()->eq, sizeof(s_gains));
         for (int i = 0; i < EQ_BANDS; i++) update_slider_visual(i);
         update_info_label();
+    }
+}
+
+/* touch: drag a band slider (live preview, commit on release) */
+static void slider_touch_cb(lv_event_t *e)
+{
+    int idx = (int)(uintptr_t)lv_event_get_user_data(e);
+    if (idx < 0 || idx >= EQ_BANDS) return;
+
+    lv_obj_t *sl = lv_event_get_target(e);
+    s_gains[idx] = (int)lv_slider_get_value(sl);
+
+    if (s_focus != idx) {
+        s_focus = idx;
+        update_focus_visuals();
+    }
+    update_info_label();
+
+    /* settings_set_eq_10() writes flash — only on release, not every frame */
+    if (lv_event_get_code(e) == LV_EVENT_RELEASED) {
+        settings_set_eq_10(s_gains);
     }
 }
 
