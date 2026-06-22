@@ -1,5 +1,6 @@
 #include "ui_anim_bg.h"
 #include "ui_profile.h"        // DISPLAY_WIDTH / DISPLAY_HEIGHT
+#include "theme.h"             // theme_get()->bg_primary
 
 #if !defined(UI_PROFILE_MONO_128X64) && !defined(UI_PROFILE_MONO_256X64)
 
@@ -9,9 +10,12 @@
 // ── Tunables ────────────────────────────────────────────────────────────────
 #define VU_PITCH_PX     12          // target horizontal slot per bar
 #define VU_BARS_MAX     64          // static ceiling (widest panel / pitch)
-#define VU_TICK_MS      60          // animation period (~16 fps)
-#define VU_EASE         0.18f       // fraction of the gap closed per tick
-#define VU_BACKDROP     0x07060A    // near-black behind the bars
+// Rendering on this panel is byte-swap + full-strip invalidation per moving bar,
+// all on CPU1 alongside the audio decoders — so the frame rate is the real cost
+// knob. Kept low: a background VU reads fine at a handful of fps and leaves CPU1
+// for the stream.
+#define VU_TICK_MS      160         // animation period (~6 fps)
+#define VU_EASE         0.30f       // fraction of the gap closed per tick
 
 // Horizontal colour gradient sampled per bar (left → right).
 #define VU_COL_L_R  0xFF  // orange  #FF7A18
@@ -68,7 +72,7 @@ void ui_anim_bg_start(void)
     lv_obj_remove_style_all(s_backdrop);
     lv_obj_set_size(s_backdrop, W, H);
     lv_obj_set_pos(s_backdrop, 0, 0);
-    lv_obj_set_style_bg_color(s_backdrop, lv_color_hex(VU_BACKDROP), 0);
+    lv_obj_set_style_bg_color(s_backdrop, lv_color_hex(theme_get()->bg_primary), 0);
     lv_obj_set_style_bg_opa(s_backdrop, LV_OPA_COVER, 0);
     lv_obj_clear_flag(s_backdrop, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
 
@@ -122,10 +126,18 @@ void ui_anim_bg_stop(void)
 
 bool ui_anim_bg_active(void) { return s_backdrop != NULL; }
 
+void ui_anim_bg_apply_theme(void)
+{
+    if (!s_backdrop) return;
+    lv_obj_set_style_bg_color(s_backdrop, lv_color_hex(theme_get()->bg_primary), 0);
+    lv_obj_invalidate(s_backdrop);
+}
+
 #else  // mono panel — no animated background
 
 void ui_anim_bg_start(void) { }
 void ui_anim_bg_stop(void)  { }
 bool ui_anim_bg_active(void) { return false; }
+void ui_anim_bg_apply_theme(void) { }
 
 #endif

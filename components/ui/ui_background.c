@@ -211,6 +211,7 @@ void ui_background_apply(lv_obj_t *obj)
     // itself goes transparent so they show through behind every screen's widgets.
     if (wallpaper_is_vu(st)) {
         ui_anim_bg_start();
+        ui_anim_bg_apply_theme();   // follow live dark/light switches
         lv_obj_set_style_bg_image_src(obj, NULL, LV_PART_MAIN);
         lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
         return;

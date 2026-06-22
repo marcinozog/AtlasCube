@@ -22,6 +22,11 @@ void ui_anim_bg_start(void);
 // Delete the bars/backdrop and stop the timer. Safe to call when not running.
 void ui_anim_bg_stop(void);
 
+// Recolour the backdrop from the active theme (bg_primary). Safe to call when
+// not running. Lets a live dark/light switch update the VU background without
+// restarting the animation.
+void ui_anim_bg_apply_theme(void);
+
 // True while the animation is live.
 bool ui_anim_bg_active(void);
 
