@@ -124,7 +124,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Nakładka sterująca — tap w ekran mediów albo zegara otwiera krzyż 5 przycisków (play/pauza, vol±, prev/next), znika po chwili bezczynności
 - Wskaźnik VU — opcjonalny widget na ekranie radia pokazujący spektrum FFT liczone na żywo z wyjścia audio; pozycję ustawiasz w edytorze layoutu
 - Konfigurowalny layout (pozycje widgetów w JSON-ie)
-- Tło ekranu — do wyboru gradient, jednolity kolor, **tapeta z karty SD** (`.bin` RGB565 w rozmiarze panelu, wspólna dla wszystkich ekranów) albo animowane tło **Fake VU** (słupki), ustawiane w web UI
+- Tło ekranu — do wyboru gradient, jednolity kolor lub **tapeta z karty SD** (`.bin` RGB565 w rozmiarze panelu, wspólna dla wszystkich ekranów), ustawiane w web UI
 - Własne logo splash — wrzuć na kartę SD plik `.bin` RGB565 w rozmiarze panelu, żeby podmienić wbudowane logo (auto-skalowanie; gdy brak pliku, wraca do wbudowanego)
 - Opcjonalny ekran odtwarzacza SD w pierścieniu głównym — pokazujesz albo chowasz go z web UI
 - Wygaszacze — startują po zadanym czasie bezczynności; do wyboru wskazówki zegara, pole gwiazd, fajerwerki, plazma, gra w życie Conwaya, czarny ekran (przyjazny AMOLED-om), **Dim** (tylko ściemnia podświetlenie, zostawia bieżący ekran), **Dashboard** albo **Fotoramka** (niżej)

@@ -1,5 +1,4 @@
 #include "ui_background.h"
-#include "ui_anim_bg.h"        // decorative animated VU background
 #include "ui_profile.h"        // DISPLAY_WIDTH / DISPLAY_HEIGHT
 #include "theme.h"             // ui_theme_t, theme_current(), theme_get()
 #include "settings.h"          // settings_get()->display.bg_gradient
@@ -9,7 +8,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
 
 static const char *TAG = "UI_BG";
 
@@ -194,29 +192,10 @@ static void build_bg_image(int idx, ui_theme_t t)
     s_built[idx]     = true;
 }
 
-// The animated VU background reuses the wallpaper toggle with a sentinel path
-// (no slash → never a real SD file), so it can be enabled from the existing web
-// field without new settings/state plumbing while it's still a test feature.
-static bool wallpaper_is_vu(const app_settings_t *st)
-{
-    return st->display.wallpaper_on && strcmp(st->display.wallpaper_path, "vu") == 0;
-}
-
 void ui_background_apply(lv_obj_t *obj)
 {
     const ui_theme_t t = theme_current();
     const app_settings_t *st = settings_get();
-
-    // Animated VU background (test): bars live on lv_layer_bottom(); the screen
-    // itself goes transparent so they show through behind every screen's widgets.
-    if (wallpaper_is_vu(st)) {
-        ui_anim_bg_start();
-        ui_anim_bg_apply_theme();   // follow live dark/light switches
-        lv_obj_set_style_bg_image_src(obj, NULL, LV_PART_MAIN);
-        lv_obj_set_style_bg_opa(obj, LV_OPA_TRANSP, LV_PART_MAIN);
-        return;
-    }
-    ui_anim_bg_stop();   // any other mode: tear the animation down
 
     // Wallpaper (test): if a valid full-screen .bin is on the SD card, it wins
     // over the gradient entirely.

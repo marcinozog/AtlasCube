@@ -126,7 +126,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - On-screen controls overlay — tap a media or the clock screen to bring up a 5-button cross (play/pause, vol±, prev/next), auto-hides after a short timeout
 - Audio VU meter — an optional radio-screen widget showing a real-time FFT spectrum computed from the live audio output; position it via the layout editor
 - Configurable layout (widget positions editable via JSON)
-- Screen background — choose a gradient, a solid color, an **SD wallpaper image** (panel-sized RGB565 `.bin`, shared across all screens), or an animated **Fake VU** bars background, from the Settings web UI
+- Screen background — choose a gradient, a solid color, or an **SD wallpaper image** (panel-sized RGB565 `.bin`, shared across all screens), from the Settings web UI
 - Custom boot splash logo — drop a panel-sized RGB565 `.bin` on the SD card to replace the built-in logo (auto-fit; falls back to the built-in logo if missing)
 - Optional SD-player screen in the home ring — show or hide it from the Settings web UI
 - Screensavers — kick in after a configurable idle timeout; choose from clock hands, starfield, fireworks, plasma, Conway's Game of Life, blank (AMOLED-friendly "off"), **Dim** (just lowers the backlight, keeps the current screen), **Dashboard**, or **Photo frame** (see below)

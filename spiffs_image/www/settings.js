@@ -93,20 +93,14 @@ const SD_MOUNT = '/sdcard';
 function setBackground(mode) {
     const grad = mode === 'gradient';
     const wall = mode === 'wallpaper';
-    const vu   = mode === 'vu';
     document.getElementById('settingsBtnBgGrad') ?.classList.toggle('active', grad);
     document.getElementById('settingsBtnBgSolid')?.classList.toggle('active', mode === 'solid');
     document.getElementById('settingsBtnBgWall') ?.classList.toggle('active', wall);
-    document.getElementById('settingsBtnBgVu')   ?.classList.toggle('active', vu);
     document.getElementById('wallpaperPicker').style.display = wall ? '' : 'none';
-    // VU reuses the wallpaper toggle with a sentinel path the firmware recognises.
-    // Switching to wallpaper must clear that sentinel, else the firmware keeps
-    // drawing VU; preserve any real SD path already chosen.
     const wpEl = document.getElementById('wallpaperPath');
     const cur  = wpEl ? wpEl.textContent : '';
-    const realPath = (cur && cur !== 'vu' && cur !== '(none)') ? cur : '';
-    const body = vu   ? { display: { wallpaper_on: true, wallpaper_path: 'vu' } }
-               : wall ? { display: { wallpaper_on: true, wallpaper_path: realPath } }
+    const realPath = (cur && cur !== '(none)') ? cur : '';
+    const body = wall ? { display: { wallpaper_on: true, wallpaper_path: realPath } }
                       : { display: { wallpaper_on: false, bg_gradient: grad } };
     fetch('/api/settings', {
         method: 'POST',
@@ -705,11 +699,9 @@ function populateForm(s) {
         document.getElementById('settingsBtnLight')?.classList.toggle('active', t === 'light');
 
         const wallOn = s.display.wallpaper_on === true;
-        const isVu   = wallOn && s.display.wallpaper_path === 'vu';
-        const isWall = wallOn && !isVu;
+        const isWall = wallOn;
         const bgGrad = s.display.bg_gradient !== false;   // default on
         document.getElementById('settingsBtnBgWall') ?.classList.toggle('active', isWall);
-        document.getElementById('settingsBtnBgVu')   ?.classList.toggle('active', isVu);
         document.getElementById('settingsBtnBgGrad') ?.classList.toggle('active', !wallOn && bgGrad);
         document.getElementById('settingsBtnBgSolid')?.classList.toggle('active', !wallOn && !bgGrad);
         document.getElementById('wallpaperPicker').style.display = isWall ? '' : 'none';
