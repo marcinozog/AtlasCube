@@ -146,7 +146,8 @@ static void eq_create(lv_obj_t *parent)
 
     /* hint */
     s_hint = lv_label_create(parent);
-    lv_label_set_text(s_hint, "press=next  long=back");
+    lv_label_set_text(s_hint, p->settings_show_slider ? "swipe = back"
+                                                      : "press=next  long=back");
     lv_obj_set_style_text_font(s_hint, p->eq_hint_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_hint, lv_color_hex(th->text_muted), LV_PART_MAIN);
     lv_obj_align(s_hint, LV_ALIGN_BOTTOM_MID, 0, p->eq_hint_y);
@@ -226,6 +227,9 @@ static void eq_on_input(ui_input_t input)
             break;
 
         case UI_INPUT_ENCODER_LONG_PRESS:
+        case UI_INPUT_SWIPE_LEFT:
+        case UI_INPUT_SWIPE_RIGHT:
+            /* horizontal only — vertical drags belong to the band sliders */
             ui_navigate(SCREEN_SETTINGS);
             break;
 
