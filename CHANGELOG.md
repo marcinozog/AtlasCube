@@ -9,6 +9,29 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-06-22
+
+### Added
+- **ui:** VU meter on SD player screen + per-screen toggle
+- **ui:** real-audio FFT spectrum VU meter on the radio screen
+- **audio:** play segmented HLS (.m3u8) radio streams
+- **scripts:** add "Update from git" menu option to build-flash.py
+- **ui:** toggle to show/hide SD player screen in nav ring
+- **ui:** decorative "Fake VU" animated background
+
+### Changed
+- **ui:** remove animated "Fake VU" background
+
+### Fixed
+- **eq:** narrow EQ slider range to -13..+6 dB
+- **mem:** reclaim ~84 KB internal DRAM to stabilize HTTPS radio
+- **ui:** VU background follows theme and costs less on CPU1
+- **web:** switch to wallpaper clears VU sentinel path
+- **audio:** stop socket exhaustion on live HLS streams
+- **web:** keep UI loadable while radio HTTPS stream runs
+- **web:** drag playlist rows only from the grip handle
+- **ntp:** apply saved timezone and servers on boot
+
 ## [0.24.0] - 2026-06-18
 
 ### Added
@@ -366,7 +389,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.24.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.25.0...HEAD
+[0.25.0]: https://github.com/marcinozog/AtlasCube/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/marcinozog/AtlasCube/compare/v0.23.0...v0.24.0
 [0.23.0]: https://github.com/marcinozog/AtlasCube/compare/v0.22.0...v0.23.0
 [0.22.0]: https://github.com/marcinozog/AtlasCube/compare/v0.21.2...v0.22.0
