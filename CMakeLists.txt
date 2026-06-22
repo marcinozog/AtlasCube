@@ -60,6 +60,19 @@ set(PROJECT_VER_FROM_GIT 1)
 
 project(atlascube)
 
+# ── LVGL heap pool → PSRAM ────────────────────────────────────────────────────
+# CONFIG_LV_CONF_SKIP=y, so LVGL is configured entirely from Kconfig (there is no
+# lv_conf.h) — and Kconfig exposes no knob for LV_ATTRIBUTE_LARGE_RAM_ARRAY.
+# That attribute marks LVGL's builtin TLSF pool (work_mem_int, = LV_MEM_SIZE,
+# 64 KB here); left empty it lands in the scarce internal DRAM. Force-include
+# esp_attr.h and point the attribute at EXT_RAM_BSS_ATTR so the whole pool moves
+# to PSRAM .bss (needs CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y). Only the
+# object/style/anim pool moves — the display flush buffer is allocated separately
+# in the drivers (DMA|INTERNAL), so render performance is unaffected.
+idf_component_get_property(_lvgl_lib lvgl__lvgl COMPONENT_LIB)
+target_compile_options(${_lvgl_lib} PRIVATE -include esp_attr.h)
+target_compile_definitions(${_lvgl_lib} PRIVATE LV_ATTRIBUTE_LARGE_RAM_ARRAY=EXT_RAM_BSS_ATTR)
+
 # Build both SPIFFS partition images so the merged release .bin (and a full
 # `idf.py flash`) ships a working device:
 #   www    — the compressed web UI. Run spiffs_image/tools/compress_web.py first;

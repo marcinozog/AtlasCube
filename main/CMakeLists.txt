@@ -18,5 +18,3 @@ idf_component_register(
         mqtt_svc
         sdcard
 )
-
-target_compile_definitions(${COMPONENT_LIB} PRIVATE LV_CONF_INCLUDE_SIMPLE)

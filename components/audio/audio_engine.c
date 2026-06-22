@@ -20,6 +20,7 @@
 #include "freertos/semphr.h"
 #include "esp_heap_caps.h"            // MALLOC_CAP_SPIRAM
 #include "esp_timer.h"
+#include "heap_report.h"              // internal-RAM diagnostic (temporary)
 #include <math.h>
 #include <string.h>
 
@@ -118,6 +119,7 @@ static int http_event_handler(icy_http_event_msg_t *msg)
 {
     if (msg->event_id == ICY_HTTP_EVENT_PRE_REQUEST) {
         ESP_LOGI(TAG, "HTTP request start");
+        heap_report("pre-connect");   // internal RAM right before TLS open
         return ESP_OK;
     }
 
@@ -289,9 +291,15 @@ void audio_engine_init(void)
     i2s_cfg.std_cfg.slot_cfg.ws_width = I2S_SLOT_BIT_WIDTH_16BIT;
     i2s_cfg.std_cfg.slot_cfg.bit_shift = true;
 
-    // DMA
-    i2s_cfg.chan_cfg.dma_desc_num = 6;
-    i2s_cfg.chan_cfg.dma_frame_num = 1023;
+    // DMA — these buffers live in internal DMA-capable RAM, the scarcest pool on
+    // this board (the same region WiFi RX and the LCD compete for). 6 x 1023
+    // frames x 4 B = ~24 KB ≈ 139 ms of I2S buffering — far more than needed
+    // given the 8 KB out ringbuffer here and the 256 KB HTTP buffer in PSRAM
+    // upstream. 4 x 256 = ~4 KB (~23 ms) frees ~20 KB internal DMA, directly
+    // raising the largest contiguous block that starves during an HTTPS connect.
+    // Bump frame_num back up if audio underruns appear under load.
+    i2s_cfg.chan_cfg.dma_desc_num = 4;
+    i2s_cfg.chan_cfg.dma_frame_num = 256;
 
     i2s_cfg.use_alc = false;
 
@@ -690,6 +698,8 @@ static void audio_event_task(void *param)
             // Decoder is producing output → playback is healthy. Let the net
             // layer cancel any scheduled retry.
             if (s_info_cb) s_info_cb();
+
+            heap_report("mid-stream");   // internal RAM once audio is flowing
 
             // I2S and DSP are on fixed 44100/16/2. rsp_filter receives the
             // source info and upsamples (or downsamples) to 44100. This

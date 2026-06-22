@@ -6,6 +6,7 @@ idf_component_register(
         "audio_dsp.c"
         "audio_levels.c"
         "id3.c"
+        "heap_report.c"
     INCLUDE_DIRS "."
     REQUIRES
         audio_pipeline

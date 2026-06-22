@@ -26,6 +26,7 @@
 #include "ui_profile.h"
 #include "mqtt_svc.h"
 #include "mqtt_config.h"
+#include "heap_report.h"
 
 static const char *TAG = "MAIN";
 
@@ -145,7 +146,9 @@ void app_main(void)
              wifi_get_run_mode() == WIFI_RUN_MODE_STA ? "STA" : "AP @ 192.168.4.1");
     ESP_LOGI(TAG, "app_main stack watermark: %u bytes",
              uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t));
-             
+
+    heap_report("boot-done");   // internal-RAM baseline before any stream
+
     // xTaskCreate(system_monitor_task, "sys_mon", 4096, NULL, 5, NULL);
 }
 
