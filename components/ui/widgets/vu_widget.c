@@ -4,42 +4,52 @@
 #include "esp_dsp.h"        // dsps_fft2r_*, dsps_wind_hann_f32
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/semphr.h"
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
-// Shared EQ band centres, defined in audio_dsp.c (declared in audio_dsp.h).
-// Forward-declared here to avoid pulling the esp-adf audio_element.h chain into
-// the UI for a single accessor.
-int audio_dsp_band_freqs(const float **freqs);
-
 static const char *TAG = "VU_WIDGET";
 
 // ── Tunables ────────────────────────────────────────────────────────────────
-// N=1024 → 43 Hz/bin at 44.1 kHz, window ~23 ms. A longer window resolves the
-// sub-60 Hz EQ octaves better but smears transients (time/frequency trade-off),
-// so 1024 is the sweet spot: snappy, and the ~125 Hz-and-up bands (the audible
-// ones on this hardware) still line up with the EQ. Bars sit on the EQ's own
-// band centres (2 per octave) so meter and equaliser describe the same bands.
+// N=2048 → 21.5 Hz/bin at 44.1 kHz, window ~46 ms. Shorter window = less visual
+// lag behind the audio (the bar reflects ~46 ms of past PCM, not ~93 ms as N=4096
+// did). Trade-off: the 31 & 62 Hz half-octave bars partly re-merge (bins 1-2),
+// but the bars above ~125 Hz still separate. Bars sit on the EQ's own band
+// centres (2 per octave) so meter and equaliser describe the same bands.
 #define VU_FFT_N      1024         // FFT window (power of two)
-#define VU_BARS_MAX   20           // static ceiling = 2 * DSP_BANDS (10)
-#define VU_TICK_MS    50           // refresh period (~20 fps; only this small rect redraws)
+#define VU_BARS_MAX   12           // bar count — bars are log-spaced across the
+                                   // spectrum (decoupled from the EQ band count),
+                                   // so this can be any value, not just 2*bands.
+#define VU_TICK_MS    33           // refresh period (~30 fps; only this small rect redraws)
 #define VU_SAMPLE_HZ  44100.0f     // PLAYBACK_SAMPLE_RATE (fixed post-rsp)
 #define VU_FREQ_TOP   17000.0f     // clamp the top band below Nyquist so the last
                                    // bar doesn't peak on >16 kHz codec noise
-#define VU_DB_FLOOR   (-18.0f)     // peak power(dB) mapped to bar = 0
-#define VU_DB_CEIL     44.0f       // peak power(dB) mapped to bar = full height
-#define VU_ATTACK      0.8f        // smoothing when a bar rises (fast)
-#define VU_DECAY       0.22f       // smoothing when a bar falls (slow → VU feel)
+#define VU_DB_FLOOR    0.0f        // peak power(dB) mapped to bar = 0
+#define VU_DB_CEIL     36.0f       // peak power(dB) mapped to bar = full height
+#define VU_ATTACK      0.95f       // smoothing when a bar rises (fast)
+#define VU_DECAY       0.50f       // smoothing when a bar falls (higher → snappier drop)
+#define VU_GAMMA       0.6f        // <1 boosts perceived motion at low levels
 
-#define VU_SQRT2       1.41421356f // octave half-width (centres are octave-spaced)
+// FFT runs on its own task pinned to core 0 so the heavy transform never
+// blocks the LVGL task's (blocking) display flush — see audio task notes.
+#define VU_FFT_CORE    0           // off the LVGL/display core
+#define VU_FFT_PRIO    3           // low: yields to audio (ADF) on core 0
+#define VU_FFT_STACK   4096        // internal-RAM stack (working buffers stay in PSRAM)
 
 // ── Display objects ──────────────────────────────────────────────────────────
 static lv_obj_t   *s_cont = NULL;
 static lv_obj_t   *s_bars[VU_BARS_MAX];
 static lv_timer_t *s_timer = NULL;
 static int         s_h      = 0;   // container inner height (bar baseline)
-static int         s_nbars  = 0;   // active bar count (2 per EQ band)
+static int         s_nbars  = 0;   // active bar count (= VU_BARS_MAX, log-spaced)
+
+// ── FFT task (core 0) ────────────────────────────────────────────────────────
+static TaskHandle_t      s_fft_task = NULL;
+static SemaphoreHandle_t s_fft_done = NULL;  // task → destroy() join handshake
+static volatile bool     s_fft_run  = false; // task loop condition
 
 // ── DSP working buffers (LVGL task only; PSRAM to spare internal RAM) ─────────
 static int16_t *s_raw = NULL;          // newest mono window (VU_FFT_N)
@@ -65,24 +75,26 @@ static void edge_to_bins(int bar, float f_lo, float f_hi)
     s_bin_hi[bar] = hi;
 }
 
-// Lay 2 bars on each EQ octave band: the lower and upper half-octave around the
-// band centre. Boundary between the two sub-bars sits exactly on the centre.
+// Lay VU_BARS_MAX bars log-spaced across the audible band (60 Hz … VU_FREQ_TOP),
+// decoupled from the EQ band count so the bar count is free. The low edge starts
+// at 60 Hz, not lower: at N=1024 (43 Hz/bin) anything below ~90 Hz collapses onto
+// FFT bin 1, so starting lower just made the bottom bars move identically. 60 Hz
+// keeps each low bar at least one bin wide; the small speaker can't reproduce
+// sub-60 Hz anyway. Top is clamped below the Nyquist noise. Each bar spans one
+// equal ratio step, so spacing is even on a log (musical) axis.
 static void build_bins(void)
 {
-    const float *fc = NULL;
-    int bands = audio_dsp_band_freqs(&fc);
-    int bars  = bands * 2;
-    if (bars > VU_BARS_MAX) bars = VU_BARS_MAX;
-    s_nbars = bars;
+    s_nbars = VU_BARS_MAX;
 
-    for (int b = 0; b < bands && (2 * b + 1) < VU_BARS_MAX; b++) {
-        float lo  = fc[b] / VU_SQRT2;
-        float mid = fc[b];
-        float hi  = fc[b] * VU_SQRT2;
-        if (mid > VU_FREQ_TOP) mid = VU_FREQ_TOP;   // keep the top bar narrow,
-        if (hi  > VU_FREQ_TOP) hi  = VU_FREQ_TOP;    // away from the Nyquist noise
-        edge_to_bins(2 * b,     lo,  mid);
-        edge_to_bins(2 * b + 1, mid, hi);
+    const float f_lo  = 60.0f;          // see note above (FFT bin resolution)
+    const float f_hi  = VU_FREQ_TOP;
+    const float ratio = powf(f_hi / f_lo, 1.0f / (float)s_nbars);
+
+    float edge = f_lo;
+    for (int b = 0; b < s_nbars; b++) {
+        float next = edge * ratio;
+        edge_to_bins(b, edge, next);
+        edge = next;
     }
 }
 
@@ -90,7 +102,7 @@ static void build_bins(void)
 static void render_bars(void)
 {
     for (int b = 0; b < s_nbars; b++) {
-        int hgt = (int)(s_lvl[b] * (float)s_h + 0.5f);
+        int hgt = (int)(powf(s_lvl[b], VU_GAMMA) * (float)s_h + 0.5f);
         if (hgt < 1) hgt = 1;
         if (hgt == lv_obj_get_height(s_bars[b])) continue;
         lv_obj_set_height(s_bars[b], hgt);
@@ -104,16 +116,17 @@ static void smooth_to(int b, float target)
     s_lvl[b] += (target - s_lvl[b]) * k;
 }
 
-static void tick_cb(lv_timer_t *t)
+// One FFT frame → smoothed s_lvl[]. Runs on the core-0 FFT task only: NO LVGL
+// calls here (LVGL is not thread-safe). The render timer turns s_lvl[] into bar
+// heights on the LVGL task.
+static void fft_compute(void)
 {
-    (void)t;
     if (!s_table_ready || !s_cf) return;
 
-    // No new audio since last tick (paused / stopped): decay to rest.
+    // No new audio since last frame (paused / stopped): decay to rest.
     uint32_t count = audio_levels_count();
     if (count == s_last_count || !audio_levels_snapshot(s_raw, VU_FFT_N)) {
         for (int b = 0; b < s_nbars; b++) smooth_to(b, 0.0f);
-        render_bars();
         return;
     }
     s_last_count = count;
@@ -142,6 +155,28 @@ static void tick_cb(lv_timer_t *t)
         if (lvl < 0.0f) lvl = 0.0f; else if (lvl > 1.0f) lvl = 1.0f;
         smooth_to(b, lvl);
     }
+}
+
+// Dedicated FFT task, pinned to core 0 so the 4096-pt transform never blocks the
+// LVGL task's blocking display flush. Working buffers live in PSRAM; only this
+// ~4 KB stack sits in internal RAM. Yields between frames at the VU refresh rate.
+static void fft_task(void *arg)
+{
+    (void)arg;
+    while (s_fft_run) {
+        fft_compute();
+        vTaskDelay(pdMS_TO_TICKS(VU_TICK_MS));
+    }
+    xSemaphoreGive(s_fft_done);   // let destroy() free the buffers
+    vTaskDelete(NULL);
+}
+
+// LVGL-task timer: render-only. Reads the latest s_lvl[] (written by fft_task)
+// into bar heights. Benign single-writer/single-reader float races at worst
+// flicker one bar by a pixel for one frame.
+static void tick_cb(lv_timer_t *t)
+{
+    (void)t;
     render_bars();
 }
 
@@ -206,12 +241,36 @@ void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h)
     }
 
     s_last_count = audio_levels_count();
+
+    // Spin up the FFT task before the render timer; if it fails to start the
+    // render timer still runs and bars simply stay at rest.
+    s_fft_done = xSemaphoreCreateBinary();
+    s_fft_run  = true;
+    if (!s_fft_done ||
+        xTaskCreatePinnedToCore(fft_task, "vu_fft", VU_FFT_STACK, NULL,
+                                VU_FFT_PRIO, &s_fft_task, VU_FFT_CORE) != pdPASS) {
+        ESP_LOGE(TAG, "fft task create failed");
+        s_fft_run  = false;
+        s_fft_task = NULL;
+        if (s_fft_done) { vSemaphoreDelete(s_fft_done); s_fft_done = NULL; }
+    }
+
     s_timer = lv_timer_create(tick_cb, VU_TICK_MS, NULL);
-    ESP_LOGI(TAG, "Created (%dx%d, %d bars, N=%d)", w, h, s_nbars, VU_FFT_N);
+    ESP_LOGI(TAG, "Created (%dx%d, %d bars, N=%d, core %d)",
+             w, h, s_nbars, VU_FFT_N, VU_FFT_CORE);
 }
 
 void vu_widget_destroy(void)
 {
+    // Stop the FFT task and wait for it to exit BEFORE freeing its buffers,
+    // otherwise the task could touch freed PSRAM mid-frame (use-after-free).
+    if (s_fft_task) {
+        s_fft_run = false;
+        xSemaphoreTake(s_fft_done, portMAX_DELAY);
+        s_fft_task = NULL;
+    }
+    if (s_fft_done) { vSemaphoreDelete(s_fft_done); s_fft_done = NULL; }
+
     if (s_timer) { lv_timer_delete(s_timer); s_timer = NULL; }
     if (s_cont)  { lv_obj_delete(s_cont);  s_cont  = NULL; }  // frees the bars too
     free(s_raw); free(s_win); free(s_cf);

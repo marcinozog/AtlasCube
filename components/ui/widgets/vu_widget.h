@@ -9,8 +9,9 @@ extern "C" {
 // Real-audio spectrum VU meter. A compact, OPAQUE bar display in its own small
 // container, fed by an FFT of the post-DSP PCM tapped in audio_levels. Because it
 // is contained and opaque, only its own rectangle redraws rather than forcing the
-// whole UI to recomposite. The FFT runs on the LVGL task (in the widget's own
-// timer), so the audio hot path stays a cheap ring append.
+// whole UI to recomposite. The FFT runs on its own task pinned to core 0 (off the
+// LVGL/display core); the widget's LVGL timer is render-only. The audio hot path
+// stays a cheap ring append.
 //
 // One instance at a time (radio or SD-player screen — only one is shown at once).
 // create() spins up the refresh timer; destroy() tears it and the bars down.
