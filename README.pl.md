@@ -19,7 +19,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
   </tr>
   <tr>
     <td>🔧 <b><a href="#build">Zbuduj ze źródeł</a></b></td>
-    <td>Inny wyświetlacz albo własny układ pinów? Zbuduj pod własny sprzęt jedną komendą</td>
+    <td>Inny wyświetlacz albo własny układ pinów? Wybierz wariant i ustaw każdy GPIO w <a href="main/include/defines.h"><code>main/include/defines.h</code></a>, a potem zbuduj jedną komendą</td>
   </tr>
   <tr>
     <td>📱 <b><a href="https://github.com/marcinozog/AtlasCube-Remote/">Aplikacja Android</a></b></td>
@@ -330,6 +330,22 @@ Jakbyś chciał zrobić to z palca (albo debugujesz setup):
 Aktywny wariant siedzi w [`main/include/defines.h`](main/include/defines.h) — trzy niezależne grupy `#define`: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. Odkomentuj dokładnie jeden wpis w każdej grupie; `build-flash.py` czyta je as-is. (`ci/build.py <wariant>` nadpisuje je za Ciebie — przydatne w CI.)
 
 Po ręcznej zmianie wariantu puść `idf.py fullclean`, żeby `sdkconfig` wygenerował się od nowa dla nowej kombinacji (`build-flash.py --clean` robi to za Ciebie).
+
+**Konfiguracja pinów**
+
+Każde przypisanie GPIO siedzi w tym samym pliku [`main/include/defines.h`](main/include/defines.h) — nie ma dla pinów `menuconfig`/Kconfig. Budowanie pod własną płytkę to edycja oznaczonych bloków w tym pliku, a potem przebudowanie:
+
+| Peryferium | Definicje | Uwagi |
+|---|---|---|
+| Wyświetlacz | `LCD_PIN_*` (SPI) / `DISPLAY_PIN_*` (QSPI) | w bloku `#if CONFIG_DISPLAY_*` danego drivera |
+| Dotyk | `CTP_SCL`, `CTP_SDA`, `CTP_INT`, `CTP_RST` | I2C; `-1` = nieużywany (`TOUCH_NONE` go pomija) |
+| Karta SD | `SD_PIN_CLK`, `SD_PIN_CMD`, `SD_PIN_D0`, `SD_PIN_CD` | SDMMC 1-bit; CMD/D0 wymagają pull-upów ~10k |
+| DAC I2S | `I2S_DATA`, `I2S_BCK`, `I2S_LCK` | jedno źródło prawdy, czyta je też ESP-ADF |
+| Bluetooth | `BT_MODULE_TX_PIN`, `BT_MODULE_RX_PIN`, `BT_MOULE_PIN` | UART do QCC5125 |
+| Enkoder | `ENC_CLK_PIN`, `ENC_DT_PIN`, `ENC_BTN_PIN` | obrót + klik |
+| Buzzer | `BUZZER_PIN` | `-1` wyłącza |
+
+Piny wyświetlacza są pogrupowane per driver, więc najpierw ustaw wariant (wyżej) — edytujesz tylko blok pasujący do aktywnego `DISPLAY_*`.
 
 **Build i flash ręcznie**
 

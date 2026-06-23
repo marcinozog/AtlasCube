@@ -19,7 +19,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
   </tr>
   <tr>
     <td>🔧 <b><a href="#build">Build from source</a></b></td>
-    <td>Different display or your own pin layout? Build for your own hardware with one command</td>
+    <td>Different display or your own pin layout? Pick the variant and set every GPIO in <a href="main/include/defines.h"><code>main/include/defines.h</code></a>, then build with one command</td>
   </tr>
   <tr>
     <td>📱 <b><a href="https://github.com/marcinozog/AtlasCube-Remote/">Android remote app</a></b></td>
@@ -332,6 +332,22 @@ If you'd rather do it by hand (or are debugging the setup):
 The active variant lives in [`main/include/defines.h`](main/include/defines.h) — three independent `#define` groups: `DISPLAY_*`, `UI_PROFILE_*`, `TOUCH_*`. Uncomment exactly one in each group; `build-flash.py` reads them as-is. (`ci/build.py <variant>` overwrites them for you — handy in CI.)
 
 After switching the variant by hand, run `idf.py fullclean` so `sdkconfig` is regenerated from the new combination (`build-flash.py --clean` does this for you).
+
+**Pin configuration**
+
+Every GPIO assignment lives in the same [`main/include/defines.h`](main/include/defines.h) — there is no `menuconfig`/Kconfig for pins. Building for your own board means editing the clearly-labelled blocks there, then rebuilding:
+
+| Peripheral | Defines | Notes |
+|---|---|---|
+| Display | `LCD_PIN_*` (SPI) / `DISPLAY_PIN_*` (QSPI) | inside the per-driver `#if CONFIG_DISPLAY_*` block |
+| Touch | `CTP_SCL`, `CTP_SDA`, `CTP_INT`, `CTP_RST` | I2C; `-1` = unused (`TOUCH_NONE` skips it) |
+| SD card | `SD_PIN_CLK`, `SD_PIN_CMD`, `SD_PIN_D0`, `SD_PIN_CD` | SDMMC 1-bit; CMD/D0 need ~10k pull-ups |
+| I2S DAC | `I2S_DATA`, `I2S_BCK`, `I2S_LCK` | single source of truth, also read by ESP-ADF |
+| Bluetooth | `BT_MODULE_TX_PIN`, `BT_MODULE_RX_PIN`, `BT_MOULE_PIN` | QCC5125 UART |
+| Encoder | `ENC_CLK_PIN`, `ENC_DT_PIN`, `ENC_BTN_PIN` | turn + press |
+| Buzzer | `BUZZER_PIN` | `-1` to disable |
+
+The display pins are grouped per driver, so set your variant first (above) — you only edit the block that matches the active `DISPLAY_*`.
 
 **Build and flash manually**
 
