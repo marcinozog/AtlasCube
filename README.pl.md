@@ -25,6 +25,10 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
     <td>📱 <b><a href="https://github.com/marcinozog/AtlasCube-Remote/">Aplikacja Android</a></b></td>
     <td>Pilot na telefon — odtwarzanie, EQ, wydarzenia, edytor layoutu (beta)</td>
   </tr>
+  <tr>
+    <td>📌 <b><a href="https://atlascube.net/pinconfig/">Konfigurator pinów</a></b></td>
+    <td><b>Eksperymentalny</b> — wygeneruj <a href="main/include/defines.h"><code>defines.h</code></a> w przeglądarce przypisując GPIO; profile płytek w planach</td>
+  </tr>
 </table>
 
 ---

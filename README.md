@@ -25,6 +25,10 @@ A hobby project — internet radio and smart clock running on a generic dev boar
     <td>📱 <b><a href="https://github.com/marcinozog/AtlasCube-Remote/">Android remote app</a></b></td>
     <td>Phone remote — playback, EQ, events, layout editor (beta)</td>
   </tr>
+  <tr>
+    <td>📌 <b><a href="https://atlascube.net/pinconfig/">Pin configurator</a></b></td>
+    <td><b>Experimental</b> — generate <a href="main/include/defines.h"><code>defines.h</code></a> in the browser by assigning GPIOs; board profiles coming later</td>
+  </tr>
 </table>
 
 ---
