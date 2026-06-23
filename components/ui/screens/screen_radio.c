@@ -55,6 +55,8 @@ static void refresh_from_state(void)
         snprintf(info, sizeof(info), "VOL: %d%%", s->volume);
     }
     lv_label_set_text(s_label_audio_info, info);
+
+    controls_overlay_refresh();   // keep center play/stop in sync with external changes
 }
 
 static void radio_create(lv_obj_t *parent)

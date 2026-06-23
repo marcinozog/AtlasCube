@@ -77,6 +77,8 @@ static void refresh_from_state(void)
     const char *r = repeat_str(s->sd_repeat);
     if (r[0])          n += snprintf(info + n, sizeof(info) - n, "   %s", r);
     lv_label_set_text(s_info, info);
+
+    controls_overlay_refresh();   // keep center play/stop in sync with external changes
 }
 
 static lv_obj_t *make_centered_label(lv_obj_t *parent, const lv_font_t *font,

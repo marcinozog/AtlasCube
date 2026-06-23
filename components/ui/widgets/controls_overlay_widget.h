@@ -28,6 +28,10 @@ void controls_overlay_destroy(void);
 // source can change while the overlay is alive. No-op if not created.
 void controls_overlay_set_mode(controls_overlay_mode_t mode);
 
+// Re-evaluate the center play/stop glyph from the current playback state.
+// Call when playback changes from outside the overlay (web, schedule, …). No-op if not created.
+void controls_overlay_refresh(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -309,7 +309,12 @@ void controls_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
 void controls_overlay_set_mode(controls_overlay_mode_t mode)
 {
     s_mode = mode;
-    if (s_play_lbl) lv_label_set_text(s_play_lbl, play_symbol_for_mode(mode));
+    controls_overlay_refresh();
+}
+
+void controls_overlay_refresh(void)
+{
+    if (s_play_lbl) lv_label_set_text(s_play_lbl, play_symbol_for_mode(s_mode));
 }
 
 void controls_overlay_destroy(void)
