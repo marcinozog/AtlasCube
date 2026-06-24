@@ -9,6 +9,11 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-06-24
+
+### Added
+- **setup:** group GPIO pins into labelled sections with descriptions
+
 ## [0.27.0] - 2026-06-24
 
 ### Added
@@ -413,7 +418,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.27.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.28.0...HEAD
+[0.28.0]: https://github.com/marcinozog/AtlasCube/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/marcinozog/AtlasCube/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/marcinozog/AtlasCube/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/marcinozog/AtlasCube/compare/v0.24.0...v0.25.0
