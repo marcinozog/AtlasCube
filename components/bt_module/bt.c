@@ -6,6 +6,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "defines.h"
+#include "board_pins.h"
 #include "ws_server.h"
 #include "app_state.h"
 #include <stdlib.h>
@@ -27,7 +28,7 @@ void bt_init(void)
     // esp_log_level_set(TAG, ESP_LOG_NONE);
     
     gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << BT_MOULE_PIN),
+        .pin_bit_mask = (1ULL << g_pins.bt_pin),
         .mode = GPIO_MODE_OUTPUT,
         .pull_up_en = GPIO_PULLUP_DISABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -37,7 +38,7 @@ void bt_init(void)
     gpio_config(&io_conf);
 
     // default LOW (ESP mode)
-    gpio_set_level(BT_MOULE_PIN, 0);
+    gpio_set_level(g_pins.bt_pin, 0);
     s_bt_enabled = false;
 
         uart_config_t uart_config = {
@@ -51,13 +52,13 @@ void bt_init(void)
 
     uart_driver_install(BT_UART_NUM, BT_UART_BUF_SIZE * 2, 0, 0, NULL, 0);
     uart_param_config(BT_UART_NUM, &uart_config);
-    uart_set_pin(BT_UART_NUM, BT_MODULE_TX_PIN, BT_MODULE_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    uart_set_pin(BT_UART_NUM, g_pins.bt_tx, g_pins.bt_rx, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 
     xTaskCreate(bt_uart_rx_task, "bt_uart_rx_task", 4096, NULL, 5, NULL);
 
-    ESP_LOGI(TAG, "UART initialized (TX=%d RX=%d)", BT_MODULE_TX_PIN, BT_MODULE_RX_PIN);
+    ESP_LOGI(TAG, "UART initialized (TX=%d RX=%d)", g_pins.bt_tx, g_pins.bt_rx);
 
-    ESP_LOGI(TAG, "BT MODULE initialized (GPIO %d) = LOW, dialect=%s", BT_MOULE_PIN, g_bt->name);
+    ESP_LOGI(TAG, "BT MODULE initialized (GPIO %d) = LOW, dialect=%s", g_pins.bt_pin, g_bt->name);
 
     // Enforce a fixed, fine-grained volume step so the 0–100% slider maps
     // smoothly onto SVOL. The module persists this and applies it on its next
@@ -72,7 +73,7 @@ void bt_set_enabled(bool enabled)
 {
     s_bt_enabled = enabled;
 
-    gpio_set_level(BT_MOULE_PIN, enabled ? 1 : 0);
+    gpio_set_level(g_pins.bt_pin, enabled ? 1 : 0);
 
     // uart_write_bytes(BT_UART_NUM, "AT+STATE\r\n", 10);
     // uart_write_bytes(BT_UART_NUM, "AT+GRBM\r\n", 9);

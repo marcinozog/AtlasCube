@@ -27,6 +27,7 @@
 #include "mqtt_svc.h"
 #include "mqtt_config.h"
 #include "heap_report.h"
+#include "board_pins.h"
 
 static const char *TAG = "MAIN";
 
@@ -40,6 +41,7 @@ void app_main(void)
              app_desc->version, app_desc->date, app_desc->time, app_desc->idf_ver);
 
     nvs_flash_init();
+    board_pins_load();   // resolve runtime pin map (defaults + NVS overrides) before any peripheral init
     init_fs();
     // SD is mounted lazily on first use (sdcard_init from the SD player / file
     // manager / photo screensaver / voice events), not at boot — a radio-only
@@ -54,7 +56,7 @@ void app_main(void)
     app_state_init();      // 1. initializes s_cbs[]
     bt_init();             // 2. no subscribe
     settings_init();       // 3. no subscribe
-    buzzer_init(BUZZER_PIN);
+    buzzer_init(g_pins.buzzer);
     events_service_init();
     ui_profile_load_from_file();   // layout overrides — must run before display_init()
     display_init();        // 4. ui_manager_init() → subscribe #1

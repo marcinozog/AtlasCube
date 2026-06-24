@@ -1,4 +1,5 @@
 #include "defines.h"
+#include "board_pins.h"
 #include "ui_profile.h"
 #include <string.h>
 #include "driver/spi_master.h"
@@ -34,8 +35,8 @@ static const char *TAG = "CO5300";
 #define CMD_SPIM            0xC4
 #define CMD_PGSW            0xFE
 
-#define CS_LOW()    gpio_set_level(DISPLAY_PIN_CS, 0)
-#define CS_HIGH()   gpio_set_level(DISPLAY_PIN_CS, 1)
+#define CS_LOW()    gpio_set_level(g_pins.qspi_cs, 0)
+#define CS_HIGH()   gpio_set_level(g_pins.qspi_cs, 1)
 
 #define LVGL_BUF_LINES 36
 
@@ -114,11 +115,11 @@ void write16(uint16_t d)
 
 void display_hw_reset(void)
 {
-    gpio_set_level(DISPLAY_PIN_RST, 1);
+    gpio_set_level(g_pins.qspi_rst, 1);
     vTaskDelay(pdMS_TO_TICKS(10));
-    gpio_set_level(DISPLAY_PIN_RST, 0);
+    gpio_set_level(g_pins.qspi_rst, 0);
     vTaskDelay(pdMS_TO_TICKS(20));
-    gpio_set_level(DISPLAY_PIN_RST, 1);
+    gpio_set_level(g_pins.qspi_rst, 1);
     vTaskDelay(pdMS_TO_TICKS(200));
 }
 
@@ -183,25 +184,25 @@ esp_err_t display_spi_init(void)
     esp_err_t ret;
 
     gpio_config_t cs_cfg = {
-        .pin_bit_mask = (1ULL << DISPLAY_PIN_CS),
+        .pin_bit_mask = (1ULL << g_pins.qspi_cs),
         .mode = GPIO_MODE_OUTPUT,
     };
     gpio_config(&cs_cfg);
     CS_HIGH();
 
     gpio_config_t rst_cfg = {
-        .pin_bit_mask = (1ULL << DISPLAY_PIN_RST),
+        .pin_bit_mask = (1ULL << g_pins.qspi_rst),
         .mode = GPIO_MODE_OUTPUT,
     };
     gpio_config(&rst_cfg);
-    gpio_set_level(DISPLAY_PIN_RST, 1);
+    gpio_set_level(g_pins.qspi_rst, 1);
 
     spi_bus_config_t buscfg = {
-        .mosi_io_num = DISPLAY_PIN_D0,
-        .miso_io_num = DISPLAY_PIN_D1,
-        .sclk_io_num = DISPLAY_PIN_CLK,
-        .quadwp_io_num = DISPLAY_PIN_D2,
-        .quadhd_io_num = DISPLAY_PIN_D3,
+        .mosi_io_num = g_pins.qspi_d0,
+        .miso_io_num = g_pins.qspi_d1,
+        .sclk_io_num = g_pins.qspi_clk,
+        .quadwp_io_num = g_pins.qspi_d2,
+        .quadhd_io_num = g_pins.qspi_d3,
         .data4_io_num = -1,
         .data5_io_num = -1,
         .data6_io_num = -1,

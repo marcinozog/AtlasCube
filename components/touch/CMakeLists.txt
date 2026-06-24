@@ -19,4 +19,5 @@ idf_component_register(
         driver
         lvgl
         ui
+        board_pins
 )

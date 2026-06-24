@@ -22,6 +22,7 @@
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "defines.h"
+#include "board_pins.h"
 #include "ui_profile.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -53,9 +54,9 @@ void display_set_backlight(uint8_t brightness);
 static void spi_init(void)
 {
     spi_bus_config_t buscfg = {
-        .mosi_io_num = LCD_PIN_MOSI,
+        .mosi_io_num = g_pins.lcd_mosi,
         .miso_io_num = -1,
-        .sclk_io_num = LCD_PIN_CLK,
+        .sclk_io_num = g_pins.lcd_clk,
         .max_transfer_sz = SSD1322_GRAM_BYTES + 8,
     };
     ESP_ERROR_CHECK(spi_bus_initialize(DISPLAY_HOST, &buscfg, SPI_DMA_CH_AUTO));
@@ -63,18 +64,18 @@ static void spi_init(void)
     spi_device_interface_config_t devcfg = {
         .clock_speed_hz = SSD1322_CLK_SPEED,
         .mode = 0,
-        .spics_io_num = LCD_PIN_CS,
+        .spics_io_num = g_pins.lcd_cs,
         .queue_size = 7,
     };
     ESP_ERROR_CHECK(spi_bus_add_device(DISPLAY_HOST, &devcfg, &spi));
 
-    gpio_set_direction(LCD_PIN_DC, GPIO_MODE_OUTPUT);
-    gpio_set_direction(LCD_PIN_RST, GPIO_MODE_OUTPUT);
+    gpio_set_direction(g_pins.lcd_dc, GPIO_MODE_OUTPUT);
+    gpio_set_direction(g_pins.lcd_rst, GPIO_MODE_OUTPUT);
 }
 
 static void ssd1322_cmd(uint8_t cmd)
 {
-    gpio_set_level(LCD_PIN_DC, 0);
+    gpio_set_level(g_pins.lcd_dc, 0);
     spi_transaction_t t = { .length = 8, .tx_buffer = &cmd };
     spi_device_transmit(spi, &t);
 }
@@ -82,7 +83,7 @@ static void ssd1322_cmd(uint8_t cmd)
 static void ssd1322_data(const uint8_t *data, int len)
 {
     if (len <= 0) return;
-    gpio_set_level(LCD_PIN_DC, 1);
+    gpio_set_level(g_pins.lcd_dc, 1);
     spi_transaction_t t = { .length = len * 8, .tx_buffer = data };
     spi_device_transmit(spi, &t);
 }
@@ -95,9 +96,9 @@ static void ssd1322_data1(uint8_t b) { ssd1322_data(&b, 1); }
 
 static void ssd1322_reset(void)
 {
-    gpio_set_level(LCD_PIN_RST, 0);
+    gpio_set_level(g_pins.lcd_rst, 0);
     vTaskDelay(pdMS_TO_TICKS(50));
-    gpio_set_level(LCD_PIN_RST, 1);
+    gpio_set_level(g_pins.lcd_rst, 1);
     vTaskDelay(pdMS_TO_TICKS(50));
 }
 

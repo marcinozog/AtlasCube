@@ -1,5 +1,6 @@
 #include "encoder.h"
 #include "defines.h"
+#include "board_pins.h"
 #include "ui_manager.h"
 #include "ui_events.h"
 
@@ -64,7 +65,7 @@ static void IRAM_ATTR isr_rot(void *arg)
     static uint8_t state = 0;
     static int8_t  accum = 0;   // step accumulator
 
-    uint8_t s = (gpio_get_level(ENC_CLK_PIN) << 1) | gpio_get_level(ENC_DT_PIN);
+    uint8_t s = (gpio_get_level(g_pins.enc_clk) << 1) | gpio_get_level(g_pins.enc_dt);
     uint8_t idx = (state << 2) | s;
     state = s;
 
@@ -88,7 +89,7 @@ static void IRAM_ATTR isr_rot(void *arg)
 
 static void IRAM_ATTR isr_btn(void *arg)
 {
-    enc_raw_evt_t evt = gpio_get_level(ENC_BTN_PIN) ? ENC_EVT_BTN_UP : ENC_EVT_BTN_DOWN;
+    enc_raw_evt_t evt = gpio_get_level(g_pins.enc_btn) ? ENC_EVT_BTN_UP : ENC_EVT_BTN_DOWN;
     BaseType_t woken = pdFALSE;
     xQueueSendFromISR(s_queue, &evt, &woken);
     portYIELD_FROM_ISR(woken);
@@ -173,7 +174,7 @@ void encoder_init(void)
 
     // ── CLK (ISR trigger on both edges) ─────────────────────────────────
     gpio_config_t io = {
-        .pin_bit_mask = (1ULL << ENC_CLK_PIN),
+        .pin_bit_mask = (1ULL << g_pins.enc_clk),
         .mode         = GPIO_MODE_INPUT,
         .pull_up_en   = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -182,12 +183,12 @@ void encoder_init(void)
     gpio_config(&io);
 
     // ── DT (ISR trigger on both edges) ──────────────────────────────────
-    io.pin_bit_mask = (1ULL << ENC_DT_PIN);
+    io.pin_bit_mask = (1ULL << g_pins.enc_dt);
     io.intr_type    = GPIO_INTR_ANYEDGE;
     gpio_config(&io);
 
     // ── BTN (ISR trigger on falling edge) ────────────────────────────────
-    io.pin_bit_mask = (1ULL << ENC_BTN_PIN);
+    io.pin_bit_mask = (1ULL << g_pins.enc_btn);
     io.intr_type    = GPIO_INTR_ANYEDGE;
     gpio_config(&io);
 
@@ -199,11 +200,11 @@ void encoder_init(void)
         ESP_LOGE(TAG, "gpio_install_isr_service failed: %s", esp_err_to_name(ret));
     }
 
-    gpio_isr_handler_add(ENC_CLK_PIN, isr_rot, NULL);
-    gpio_isr_handler_add(ENC_DT_PIN,  isr_rot, NULL);
-    gpio_isr_handler_add(ENC_BTN_PIN, isr_btn, NULL);
+    gpio_isr_handler_add(g_pins.enc_clk, isr_rot, NULL);
+    gpio_isr_handler_add(g_pins.enc_dt,  isr_rot, NULL);
+    gpio_isr_handler_add(g_pins.enc_btn, isr_btn, NULL);
 
     xTaskCreate(encoder_task, "encoder_task", ENC_TASK_STACK, NULL, ENC_TASK_PRIORITY, NULL);
 
-    ESP_LOGI(TAG, "Initialized — CLK=%d  DT=%d  BTN=%d", ENC_CLK_PIN, ENC_DT_PIN, ENC_BTN_PIN);
+    ESP_LOGI(TAG, "Initialized — CLK=%d  DT=%d  BTN=%d", g_pins.enc_clk, g_pins.enc_dt, g_pins.enc_btn);
 }

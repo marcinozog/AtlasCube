@@ -33,4 +33,5 @@ idf_component_register(
         audio_board
         esp_lcd
         ui
+        board_pins
 )

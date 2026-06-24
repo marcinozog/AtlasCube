@@ -20,4 +20,5 @@ idf_component_register(
         sdcard
         spiffs
         fatfs
+        board_pins
 )

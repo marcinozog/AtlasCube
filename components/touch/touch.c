@@ -1,5 +1,6 @@
 #include "touch.h"
 #include "defines.h"
+#include "board_pins.h"
 #include "ui_profile.h"
 
 #include "driver/gpio.h"
@@ -43,7 +44,7 @@ static void touch_lvgl_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
     // INT line idles high. When low (or recently fell), poll the controller.
     // We always poll on PRESSED so LVGL keeps receiving move events while
     // the finger is held — the chip only re-asserts INT on state changes.
-    bool int_low = (CTP_INT >= 0) ? (gpio_get_level(CTP_INT) == 0) : true;
+    bool int_low = (g_pins.ctp_int >= 0) ? (gpio_get_level(g_pins.ctp_int) == 0) : true;
     bool poll    = s_int_flag || int_low || s_pressed;
     s_int_flag = false;
 
@@ -78,30 +79,33 @@ void touch_init(void)
 #if CONFIG_TOUCH_NONE
     ESP_LOGI(TAG, "Touch disabled (TOUCH_NONE)");
     return;
-#elif (CTP_SCL < 0) || (CTP_SDA < 0)
-    ESP_LOGW(TAG, "Touch I2C pins not configured (SCL=%d SDA=%d) — skipped",
-             CTP_SCL, CTP_SDA);
-    return;
 #else
+    // Pins are runtime now (TOUCH_NONE stays compile-time — it's a driver choice).
+    if (g_pins.ctp_scl < 0 || g_pins.ctp_sda < 0) {
+        ESP_LOGW(TAG, "Touch I2C pins not configured (SCL=%d SDA=%d) — skipped",
+                 g_pins.ctp_scl, g_pins.ctp_sda);
+        return;
+    }
+
     // ── RST pin (optional) ───────────────────────────────────────────────
-    if (CTP_RST >= 0) {
+    if (g_pins.ctp_rst >= 0) {
         gpio_config_t io = {
-            .pin_bit_mask = (1ULL << CTP_RST),
+            .pin_bit_mask = (1ULL << g_pins.ctp_rst),
             .mode         = GPIO_MODE_OUTPUT,
             .pull_up_en   = GPIO_PULLUP_DISABLE,
             .pull_down_en = GPIO_PULLDOWN_DISABLE,
             .intr_type    = GPIO_INTR_DISABLE,
         };
         gpio_config(&io);
-        gpio_set_level(CTP_RST, 1);
+        gpio_set_level(g_pins.ctp_rst, 1);
     }
 
     // ── I2C master bus ───────────────────────────────────────────────────
     const i2c_master_bus_config_t bus_cfg = {
         .clk_source                   = I2C_CLK_SRC_DEFAULT,
         .i2c_port                     = I2C_NUM_0,
-        .scl_io_num                   = CTP_SCL,
-        .sda_io_num                   = CTP_SDA,
+        .scl_io_num                   = g_pins.ctp_scl,
+        .sda_io_num                   = g_pins.ctp_sda,
         .glitch_ignore_cnt            = 7,
         .flags.enable_internal_pullup = true,
     };
@@ -113,18 +117,18 @@ void touch_init(void)
 
     // ── Driver ───────────────────────────────────────────────────────────
 #if CONFIG_TOUCH_CST816D
-    cst816d_init(s_bus, CTP_RST);
+    cst816d_init(s_bus, g_pins.ctp_rst);
 #elif CONFIG_TOUCH_FT6336U
-    ft6336u_init(s_bus, CTP_RST);
+    ft6336u_init(s_bus, g_pins.ctp_rst);
 #else
     ESP_LOGE(TAG, "No touch driver selected in Kconfig");
     return;
 #endif
 
     // ── INT pin (optional, falling-edge wake-up for the LVGL read_cb) ────
-    if (CTP_INT >= 0) {
+    if (g_pins.ctp_int >= 0) {
         gpio_config_t io = {
-            .pin_bit_mask = (1ULL << CTP_INT),
+            .pin_bit_mask = (1ULL << g_pins.ctp_int),
             .mode         = GPIO_MODE_INPUT,
             .pull_up_en   = GPIO_PULLUP_ENABLE,
             .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -137,7 +141,7 @@ void touch_init(void)
         if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
             ESP_LOGE(TAG, "gpio_install_isr_service failed: %s", esp_err_to_name(ret));
         }
-        gpio_isr_handler_add(CTP_INT, touch_isr, NULL);
+        gpio_isr_handler_add(g_pins.ctp_int, touch_isr, NULL);
     }
 
     // ── LVGL pointer indev ───────────────────────────────────────────────
@@ -146,6 +150,6 @@ void touch_init(void)
     lv_indev_set_read_cb(s_indev, touch_lvgl_read_cb);
 
     ESP_LOGI(TAG, "Initialized — SCL=%d SDA=%d INT=%d RST=%d",
-             CTP_SCL, CTP_SDA, CTP_INT, CTP_RST);
+             g_pins.ctp_scl, g_pins.ctp_sda, g_pins.ctp_int, g_pins.ctp_rst);
 #endif
 }

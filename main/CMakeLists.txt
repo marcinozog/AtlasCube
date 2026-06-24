@@ -17,4 +17,5 @@ idf_component_register(
         touch
         mqtt_svc
         sdcard
+        board_pins
 )

@@ -5,6 +5,7 @@
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "defines.h"
+#include "board_pins.h"
 #include "ui_profile.h"
 #include "freertos/task.h"
 
@@ -29,9 +30,9 @@ static spi_device_handle_t spi;
 static void spi_init(void)
 {
     spi_bus_config_t buscfg = {
-        .mosi_io_num = LCD_PIN_MOSI,
+        .mosi_io_num = g_pins.lcd_mosi,
         .miso_io_num = -1,
-        .sclk_io_num = LCD_PIN_CLK,
+        .sclk_io_num = g_pins.lcd_clk,
         .max_transfer_sz = DISPLAY_WIDTH * DISPLAY_HEIGHT * 2 + 8
     };
 
@@ -40,14 +41,14 @@ static void spi_init(void)
     spi_device_interface_config_t devcfg = {
         .clock_speed_hz = DISPLAY_CLK_SPEED,
         .mode = 0,
-        .spics_io_num = LCD_PIN_CS,
+        .spics_io_num = g_pins.lcd_cs,
         .queue_size = 7,
     };
 
     ESP_ERROR_CHECK(spi_bus_add_device(DISPLAY_HOST, &devcfg, &spi));
 
-    gpio_set_direction(LCD_PIN_DC, GPIO_MODE_OUTPUT);
-    gpio_set_direction(LCD_PIN_RST, GPIO_MODE_OUTPUT);
+    gpio_set_direction(g_pins.lcd_dc, GPIO_MODE_OUTPUT);
+    gpio_set_direction(g_pins.lcd_rst, GPIO_MODE_OUTPUT);
 }
 
 /* =========================
@@ -56,7 +57,7 @@ static void spi_init(void)
 
 static void lcd_cmd(uint8_t cmd)
 {
-    gpio_set_level(LCD_PIN_DC, 0);
+    gpio_set_level(g_pins.lcd_dc, 0);
 
     spi_transaction_t t = {
         .length = 8,
@@ -68,7 +69,7 @@ static void lcd_cmd(uint8_t cmd)
 
 static void lcd_data(const uint8_t *data, int len)
 {
-    gpio_set_level(LCD_PIN_DC, 1);
+    gpio_set_level(g_pins.lcd_dc, 1);
 
     spi_transaction_t t = {
         .length = len * 8,
@@ -84,9 +85,9 @@ static void lcd_data(const uint8_t *data, int len)
 
 static void st7796_reset(void)
 {
-    gpio_set_level(LCD_PIN_RST, 0);
+    gpio_set_level(g_pins.lcd_rst, 0);
     vTaskDelay(pdMS_TO_TICKS(100));
-    gpio_set_level(LCD_PIN_RST, 1);
+    gpio_set_level(g_pins.lcd_rst, 1);
     vTaskDelay(pdMS_TO_TICKS(100));
 }
 
@@ -270,7 +271,7 @@ static void backlight_init(void)
         .speed_mode = LEDC_LOW_SPEED_MODE,
         .channel    = LCD_BL_LEDC_CHANNEL,
         .timer_sel  = LCD_BL_LEDC_TIMER,
-        .gpio_num   = LCD_LED,
+        .gpio_num   = g_pins.lcd_led,
         .duty       = 255,   // full brightness on start
         .hpoint     = 0,
     };

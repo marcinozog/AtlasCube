@@ -7,4 +7,5 @@ idf_component_register(
         freertos
         ui
         app_state
+        board_pins
 )

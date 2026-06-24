@@ -7,4 +7,5 @@ idf_component_register(
         driver
         audio_board
         ws
+        board_pins
 )

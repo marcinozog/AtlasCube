@@ -40,8 +40,25 @@
 #include <errno.h>
 #include "zlib.h"
 #include "defines.h"
+#include "board_pins.h"
 
 extern void ws_set_server(httpd_handle_t server);
+
+// Compile-time display driver label — lets the setup page warn if the wrong
+// binary was flashed (driver is fixed in the image; pins are not).
+#if defined(CONFIG_DISPLAY_ILI9341)
+  #define DISPLAY_DRIVER_NAME "ILI9341"
+#elif defined(CONFIG_DISPLAY_ST7796)
+  #define DISPLAY_DRIVER_NAME "ST7796"
+#elif defined(CONFIG_DISPLAY_ILI9488)
+  #define DISPLAY_DRIVER_NAME "ILI9488"
+#elif defined(CONFIG_DISPLAY_CO5300)
+  #define DISPLAY_DRIVER_NAME "CO5300"
+#elif defined(CONFIG_DISPLAY_SSD1322)
+  #define DISPLAY_DRIVER_NAME "SSD1322"
+#else
+  #define DISPLAY_DRIVER_NAME "unknown"
+#endif
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/settings  — returns full JSON with current settings state
@@ -2474,6 +2491,105 @@ static esp_err_t api_restart_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/pins — current runtime pin map + the binary's display driver.
+// Returns { "driver": "ST7796", "pins": { "lcd_mosi": 39, ... } }. Built from
+// board_pins' own key list, so it auto-tracks new pins without edits here.
+// ─────────────────────────────────────────────────────────────────────────────
+static esp_err_t api_pins_get_handler(httpd_req_t *req)
+{
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "driver", DISPLAY_DRIVER_NAME);
+    cJSON *pins = cJSON_AddObjectToObject(root, "pins");
+    for (size_t i = 0; i < board_pins_count(); i++) {
+        cJSON_AddNumberToObject(pins, board_pins_key(i), board_pins_get(i));
+    }
+
+    char *out = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    if (!out) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OOM");
+        return ESP_FAIL;
+    }
+
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, out);
+    free(out);
+    return ESP_OK;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/pins — { "lcd_mosi": 39, "ctp_int": -1, ... }. Each known numeric
+// key is persisted to the NVS pinmap; unknown/out-of-range keys are skipped.
+// Takes effect on next boot (the setup page POSTs /api/restart afterwards).
+// ─────────────────────────────────────────────────────────────────────────────
+static esp_err_t api_pins_post_handler(httpd_req_t *req)
+{
+    int total = req->content_len;
+    if (total <= 0 || total > 4096) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad content length");
+        return ESP_FAIL;
+    }
+
+    char *buf = malloc(total + 1);
+    if (!buf) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OOM");
+        return ESP_FAIL;
+    }
+
+    int received = 0;
+    while (received < total) {
+        int ret = httpd_req_recv(req, buf + received, total - received);
+        if (ret <= 0) {
+            free(buf);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Recv error");
+            return ESP_FAIL;
+        }
+        received += ret;
+    }
+    buf[received] = 0;
+
+    cJSON *json = cJSON_Parse(buf);
+    free(buf);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    int saved = 0, skipped = 0;
+    for (cJSON *it = json->child; it; it = it->next) {
+        if (!cJSON_IsNumber(it) || !it->string) { skipped++; continue; }
+        if (board_pins_set(it->string, it->valueint) == ESP_OK) saved++;
+        else skipped++;
+    }
+    cJSON_Delete(json);
+
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_type(req, "application/json");
+    char resp[64];
+    snprintf(resp, sizeof(resp), "{\"ok\":true,\"saved\":%d,\"skipped\":%d}", saved, skipped);
+    httpd_resp_sendstr(req, resp);
+    return ESP_OK;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/pins/reset — wipe the NVS pinmap so the next boot uses compiled
+// defaults. Undoes experiments without erasing the rest of NVS (Wi-Fi etc.).
+// ─────────────────────────────────────────────────────────────────────────────
+static esp_err_t api_pins_reset_handler(httpd_req_t *req)
+{
+    esp_err_t err = board_pins_reset();
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    if (err != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "pinmap reset failed");
+        return ESP_FAIL;
+    }
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true}");
+    return ESP_OK;
+}
+
 void http_server_start(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -2532,6 +2648,36 @@ void http_server_start(void)
         .handler = api_restart_handler,
     };
     httpd_register_uri_handler(server, &api_restart);
+
+    httpd_uri_t api_pins_get = {
+        .uri     = "/api/pins",
+        .method  = HTTP_GET,
+        .handler = api_pins_get_handler,
+    };
+    httpd_register_uri_handler(server, &api_pins_get);
+
+    httpd_uri_t api_pins_post = {
+        .uri     = "/api/pins",
+        .method  = HTTP_POST,
+        .handler = api_pins_post_handler,
+    };
+    httpd_register_uri_handler(server, &api_pins_post);
+
+    httpd_uri_t api_pins_reset = {
+        .uri     = "/api/pins/reset",
+        .method  = HTTP_POST,
+        .handler = api_pins_reset_handler,
+    };
+    httpd_register_uri_handler(server, &api_pins_reset);
+
+    // Always-available built-in setup page (Wi-Fi + UI upload + hardware pins),
+    // independent of the www partition contents.
+    httpd_uri_t setup_uri = {
+        .uri     = "/setup",
+        .method  = HTTP_GET,
+        .handler = serve_embedded_setup,
+    };
+    httpd_register_uri_handler(server, &setup_uri);
 
     httpd_uri_t api_ota = {
         .uri     = "/api/ota",

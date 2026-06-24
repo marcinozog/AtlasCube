@@ -1,5 +1,6 @@
 #include "sdcard.h"
 #include "defines.h"
+#include "board_pins.h"
 #include "esp_log.h"
 
 #ifdef HAS_SD_CARD
@@ -38,10 +39,10 @@ static esp_err_t do_mount(void)
 
     sdmmc_slot_config_t slot_config = SDMMC_SLOT_CONFIG_DEFAULT();
     slot_config.width = 1;
-    slot_config.clk = SD_PIN_CLK;
-    slot_config.cmd = SD_PIN_CMD;
-    slot_config.d0  = SD_PIN_D0;
-    slot_config.cd  = SD_PIN_CD; // GPIO_NUM_NC (-1) when no card-detect line
+    slot_config.clk = g_pins.sd_clk;
+    slot_config.cmd = g_pins.sd_cmd;
+    slot_config.d0  = g_pins.sd_d0;
+    slot_config.cd  = g_pins.sd_cd; // GPIO_NUM_NC (-1) when no card-detect line
     // Enable the weak internal pull-ups as a fallback. CMD and D0 should still
     // carry ~10k external pull-ups on the PCB for reliable 1-bit operation.
     slot_config.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
