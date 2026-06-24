@@ -114,6 +114,9 @@
   <div class="conflicts" id="pinsConflicts"></div>
   <button type="button" id="pinsBtn" disabled>Save pins &amp; restart</button>
   <button type="button" id="pinsResetBtn" class="ghost">Reset pins to defaults</button>
+  <button type="button" id="pinsExportBtn" class="ghost">Export pins to file</button>
+  <button type="button" id="pinsImportBtn" class="ghost">Import pins from file</button>
+  <input type="file" id="pinsImportFile" accept=".json" style="display:none">
   <div class="status" id="pinsStatus"></div>
   <p class="hint">GPIO number per signal, or <code>-1</code> to disable. The display
      driver is fixed in this firmware — only the wiring is configurable here.
@@ -127,6 +130,10 @@
 <script>
 (function () {
   'use strict';
+
+  // Filled from /api/state and /api/pins; embedded into the export file so an
+  // import can warn when the saved map was made for a different driver/build.
+  var g_driver = '', g_version = '';
 
   function show(id, msg, isError) {
     var el = document.getElementById(id);
@@ -142,7 +149,10 @@
   fetch('/api/state', { cache: 'no-store' })
     .then(function (r) { return r.json(); })
     .then(function (s) {
-      if (s && s.version) document.getElementById('fwVersion').textContent = 'Firmware ' + s.version;
+      if (s && s.version) {
+        g_version = s.version;
+        document.getElementById('fwVersion').textContent = 'Firmware ' + s.version;
+      }
     })
     .catch(function () {});
 
@@ -326,6 +336,7 @@
   fetch('/api/pins', { cache: 'no-store' })
     .then(function (r) { return r.json(); })
     .then(function (d) {
+      g_driver = d.driver || '';
       document.getElementById('pinsDriver').textContent =
         'Display driver in this firmware: ' + (d.driver || '?');
       var grid = document.getElementById('pinsGrid');
@@ -417,6 +428,75 @@
       btn.disabled = false;
       show('pinsStatus', 'Error: ' + err.message, true);
     }
+  });
+
+  // ── Export / import pin map (client-side only, no firmware round-trip) ───────
+  // Export: snapshot the current inputs plus a _meta block (driver + firmware),
+  // so an import can flag a map that was saved for a different board.
+  document.getElementById('pinsExportBtn').addEventListener('click', function () {
+    if (!pinKeys.length) { show('pinsStatus', 'No pins loaded to export.', true); return; }
+    var pins = {};
+    pinKeys.forEach(function (k) {
+      var v = parseInt(document.getElementById('pin_' + k).value, 10);
+      if (!isNaN(v)) pins[k] = v;
+    });
+    var data = {
+      _meta: {
+        app: 'AtlasCube', kind: 'pinmap',
+        driver: g_driver, firmware: g_version,
+        exported: new Date().toISOString()
+      },
+      pins: pins
+    };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var url  = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'atlascube-pins.json';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    show('pinsStatus', 'Pins exported to atlascube-pins.json.', false);
+  });
+
+  // Import: only fills the inputs — the user still clicks "Save pins & restart".
+  document.getElementById('pinsImportBtn').addEventListener('click', function () {
+    document.getElementById('pinsImportFile').click();
+  });
+  document.getElementById('pinsImportFile').addEventListener('change', function () {
+    var input = this;
+    var file  = input.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      input.value = '';   // allow re-selecting the same file later
+      var data;
+      try { data = JSON.parse(reader.result); }
+      catch (e) { show('pinsStatus', 'Import failed: not valid JSON.', true); return; }
+
+      // Accept both our wrapped format and a bare { key: gpio } object.
+      var pins = (data && typeof data.pins === 'object') ? data.pins : data;
+      if (!pins || typeof pins !== 'object') {
+        show('pinsStatus', 'Import failed: no pin map found in the file.', true); return;
+      }
+      var meta = data && data._meta;
+      if (meta && meta.driver && g_driver && meta.driver !== g_driver &&
+          !confirm('This file was exported for driver "' + meta.driver +
+                   '", but this firmware uses "' + g_driver + '".\n\nImport anyway?')) {
+        return;
+      }
+
+      var applied = 0, skipped = 0;
+      pinKeys.forEach(function (k) {
+        if (!(k in pins)) return;
+        var v = parseInt(pins[k], 10);
+        if (!isNaN(v)) { document.getElementById('pin_' + k).value = v; applied++; }
+      });
+      Object.keys(pins).forEach(function (k) { if (pinKeys.indexOf(k) === -1) skipped++; });
+      validatePins();
+      show('pinsStatus', 'Imported ' + applied + ' pin' + (applied === 1 ? '' : 's') +
+           (skipped ? ', ' + skipped + ' unknown key' + (skipped === 1 ? '' : 's') + ' ignored' : '') +
+           '. Review the values, then "Save pins & restart".', false);
+    };
+    reader.readAsText(file);
   });
 }());
 </script>
