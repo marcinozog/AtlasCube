@@ -6,6 +6,14 @@
 
 static const char *TAG = "BOARD_PINS";
 
+// I2S pins are runtime-configurable (NVS "pinmap", see components/board_pins).
+// This file compiles inside the ESP-ADF audio_board component, which can't
+// REQUIRE the app's board_pins component, so forward-declare its accessors;
+// g_pins is resolved at link time (board_pins.o is always linked via main).
+extern int board_pins_i2s_bck(void);
+extern int board_pins_i2s_lck(void);
+extern int board_pins_i2s_data(void);
+
 esp_err_t get_i2c_pins(i2c_port_t port, i2c_config_t *i2c_config)
 {
     if (!i2c_config) return ESP_FAIL;
@@ -20,9 +28,9 @@ esp_err_t get_i2s_pins(int port, board_i2s_pin_t *i2s_config)
 {
     if (!i2s_config) return ESP_FAIL;
 
-    i2s_config->bck_io_num   = I2S_BCK;
-    i2s_config->ws_io_num    = I2S_LCK;
-    i2s_config->data_out_num = I2S_DATA;
+    i2s_config->bck_io_num   = board_pins_i2s_bck();
+    i2s_config->ws_io_num    = board_pins_i2s_lck();
+    i2s_config->data_out_num = board_pins_i2s_data();
     i2s_config->data_in_num  = -1;
     i2s_config->mck_io_num   = -1;
 

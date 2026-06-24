@@ -95,3 +95,9 @@ esp_err_t board_pins_reset(void);
 size_t      board_pins_count(void);
 const char *board_pins_key(size_t i);   // NULL if out of range
 int         board_pins_get(size_t i);   // current value, -1 if out of range
+
+// I2S pin accessors for the ESP-ADF audio_board (board_pins_config.c), which
+// can't include this header — it forward-declares these (see board_pins.c).
+int board_pins_i2s_bck(void);
+int board_pins_i2s_lck(void);
+int board_pins_i2s_data(void);

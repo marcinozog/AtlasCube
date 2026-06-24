@@ -25,10 +25,6 @@ A hobby project — internet radio and smart clock running on a generic dev boar
     <td>📱 <b><a href="https://github.com/marcinozog/AtlasCube-Remote/">Android remote app</a></b></td>
     <td>Phone remote — playback, EQ, events, layout editor (beta)</td>
   </tr>
-  <tr>
-    <td>📌 <b><a href="https://atlascube.net/pinconfig/">Pin configurator</a></b></td>
-    <td><b>Experimental</b> — generate <a href="main/include/defines.h"><code>defines.h</code></a> in the browser by assigning GPIOs; board profiles coming later</td>
-  </tr>
 </table>
 
 ---
@@ -339,14 +335,14 @@ After switching the variant by hand, run `idf.py fullclean` so `sdkconfig` is re
 
 **Pin configuration**
 
-Every GPIO has a compile-time default in [`main/include/defines.h`](main/include/defines.h) (there is no `menuconfig`/Kconfig for pins). For most peripherals you can also remap pins **at runtime — no rebuild** — from the built-in setup page; `defines.h` then just provides the defaults. Edit `defines.h` (and rebuild) when you want to bake new defaults into a binary, or for I2S, which is the one exception below.
+Every GPIO has a compile-time default in [`main/include/defines.h`](main/include/defines.h) (there is no `menuconfig`/Kconfig for pins). You can also remap pins **at runtime — no rebuild** — from the built-in setup page; `defines.h` then just provides the defaults. Edit `defines.h` (and rebuild) when you want to bake new defaults into a binary.
 
 | Peripheral | Defines | Notes |
 |---|---|---|
 | Display | `LCD_PIN_*` (SPI) / `DISPLAY_PIN_*` (QSPI) | inside the per-driver `#if CONFIG_DISPLAY_*` block |
 | Touch | `CTP_SCL`, `CTP_SDA`, `CTP_INT`, `CTP_RST` | I2C; `-1` = unused (`TOUCH_NONE` skips it) |
 | SD card | `SD_PIN_CLK`, `SD_PIN_CMD`, `SD_PIN_D0`, `SD_PIN_CD` | SDMMC 1-bit; CMD/D0 need ~10k pull-ups |
-| I2S DAC | `I2S_DATA`, `I2S_BCK`, `I2S_LCK` | **compile-time only** (read by ESP-ADF); not runtime-configurable yet |
+| I2S DAC | `I2S_DATA`, `I2S_BCK`, `I2S_LCK` | also read by ESP-ADF (via the board's `get_i2s_pins`) |
 | Bluetooth | `BT_MODULE_TX_PIN`, `BT_MODULE_RX_PIN`, `BT_MOULE_PIN` | QCC5125 UART |
 | Encoder | `ENC_CLK_PIN`, `ENC_DT_PIN`, `ENC_BTN_PIN` | turn + press |
 | Buzzer | `BUZZER_PIN` | `-1` to disable |
@@ -355,7 +351,7 @@ The display pins are grouped per driver, so set your variant first (above) — y
 
 **Runtime pin setup (no rebuild)**
 
-Open `http://<device-ip>/setup` (or `192.168.4.1/setup` in AP mode; also linked from Settings → Tools). The page lets you remap display / touch / SD / encoder / buzzer / Bluetooth GPIOs and stores them in NVS, overriding the `defines.h` defaults — so one binary fits boards with different wiring. It flags reserved (26–37), strapping (0/3/45/46) and duplicate pins, and blocks saving on hard conflicts. **Power-cycle** the device after saving (a soft restart does not reliably remap GPIO pads). "Reset pins to defaults" clears the overrides. The display *driver* itself is still fixed at build time — pins are configurable, the driver is not.
+Open `http://<device-ip>/setup` (or `192.168.4.1/setup` in AP mode; also linked from Settings → Tools). The page lets you remap display / touch / SD / I2S / encoder / buzzer / Bluetooth GPIOs and stores them in NVS, overriding the `defines.h` defaults — so one binary fits boards with different wiring. It flags reserved (26–37), strapping (0/3/45/46) and duplicate pins, and blocks saving on hard conflicts. **Power-cycle** the device after saving (a soft restart does not reliably remap GPIO pads). "Reset pins to defaults" clears the overrides. The display *driver* itself is still fixed at build time — pins are configurable, the driver is not.
 
 **Build and flash manually**
 

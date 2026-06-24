@@ -163,6 +163,15 @@ esp_err_t board_pins_reset(void)
     return err;
 }
 
+// I2S pin accessors. The ESP-ADF audio_board's board_pins_config.c (get_i2s_pins)
+// reads pins through these — it lives inside the ADF audio_board component and
+// can't include this header or REQUIRE this component, so it forward-declares
+// these functions and they resolve at link time (board_pins.o is always linked,
+// main depends on it). g_pins is loaded long before audio init, so it's valid.
+int board_pins_i2s_bck(void)  { return g_pins.i2s_bck;  }
+int board_pins_i2s_lck(void)  { return g_pins.i2s_lck;  }
+int board_pins_i2s_data(void) { return g_pins.i2s_data; }
+
 size_t board_pins_count(void) { return PIN_COUNT; }
 
 const char *board_pins_key(size_t i) { return i < PIN_COUNT ? k_map[i].key : NULL; }
