@@ -26,19 +26,26 @@ static bt_play_event_cb_t s_play_event_cb = NULL;
 void bt_init(void)
 {
     // esp_log_level_set(TAG, ESP_LOG_NONE);
-    
-    gpio_config_t io_conf = {
-        .pin_bit_mask = (1ULL << g_pins.bt_pin),
-        .mode = GPIO_MODE_OUTPUT,
-        .pull_up_en = GPIO_PULLUP_DISABLE,
-        .pull_down_en = GPIO_PULLDOWN_DISABLE,
-        .intr_type = GPIO_INTR_DISABLE
-    };
 
-    gpio_config(&io_conf);
+    // No UART pins = no BT module on this board → skip init (also avoids UB
+    // from `1ULL << -1`). The module can't work without TX/RX.
+    if (g_pins.bt_tx < 0 || g_pins.bt_rx < 0) {
+        ESP_LOGI(TAG, "BT module disabled (UART TX/RX pin < 0)");
+        return;
+    }
 
-    // default LOW (ESP mode)
-    gpio_set_level(g_pins.bt_pin, 0);
+    // Enable pin is optional (-1 = no enable line / always-on module).
+    if (g_pins.bt_pin >= 0) {
+        gpio_config_t io_conf = {
+            .pin_bit_mask = (1ULL << g_pins.bt_pin),
+            .mode = GPIO_MODE_OUTPUT,
+            .pull_up_en = GPIO_PULLUP_DISABLE,
+            .pull_down_en = GPIO_PULLDOWN_DISABLE,
+            .intr_type = GPIO_INTR_DISABLE
+        };
+        gpio_config(&io_conf);
+        gpio_set_level(g_pins.bt_pin, 0);   // default LOW (ESP mode)
+    }
     s_bt_enabled = false;
 
         uart_config_t uart_config = {
@@ -73,7 +80,8 @@ void bt_set_enabled(bool enabled)
 {
     s_bt_enabled = enabled;
 
-    gpio_set_level(g_pins.bt_pin, enabled ? 1 : 0);
+    if (g_pins.bt_pin >= 0)
+        gpio_set_level(g_pins.bt_pin, enabled ? 1 : 0);
 
     // uart_write_bytes(BT_UART_NUM, "AT+STATE\r\n", 10);
     // uart_write_bytes(BT_UART_NUM, "AT+GRBM\r\n", 9);

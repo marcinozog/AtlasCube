@@ -271,6 +271,10 @@ void ili9341_init(void)
 
 static void backlight_init(void)
 {
+    if (g_pins.lcd_led < 0) {
+        ESP_LOGI(TAG, "Backlight pin disabled (lcd_led < 0) — no PWM");
+        return;
+    }
     ledc_timer_config_t timer = {
         .speed_mode      = LEDC_LOW_SPEED_MODE,
         .timer_num       = LCD_BL_LEDC_TIMER,
@@ -297,6 +301,7 @@ static void backlight_init(void)
  */
 void display_set_backlight(uint8_t brightness)
 {
+    if (g_pins.lcd_led < 0) return;
     if (brightness > 100) brightness = 100;
     uint32_t duty = (brightness * 255) / 100;
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LCD_BL_LEDC_CHANNEL, duty);

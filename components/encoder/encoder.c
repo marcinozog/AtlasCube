@@ -169,10 +169,17 @@ static void encoder_task(void *arg)
 
 void encoder_init(void)
 {
+    // CLK + DT are mandatory for a rotary; -1 on either = no encoder on this
+    // board → skip init entirely (also avoids UB from `1ULL << -1`).
+    if (g_pins.enc_clk < 0 || g_pins.enc_dt < 0) {
+        ESP_LOGI(TAG, "Encoder disabled (CLK/DT pin < 0)");
+        return;
+    }
+
     s_queue = xQueueCreate(ENC_QUEUE_SIZE, sizeof(enc_raw_evt_t));
     configASSERT(s_queue);
 
-    // ── CLK (ISR trigger on both edges) ─────────────────────────────────
+    // ── CLK + DT (ISR on both edges) ────────────────────────────────────
     gpio_config_t io = {
         .pin_bit_mask = (1ULL << g_pins.enc_clk),
         .mode         = GPIO_MODE_INPUT,
@@ -182,15 +189,14 @@ void encoder_init(void)
     };
     gpio_config(&io);
 
-    // ── DT (ISR trigger on both edges) ──────────────────────────────────
     io.pin_bit_mask = (1ULL << g_pins.enc_dt);
-    io.intr_type    = GPIO_INTR_ANYEDGE;
     gpio_config(&io);
 
-    // ── BTN (ISR trigger on falling edge) ────────────────────────────────
-    io.pin_bit_mask = (1ULL << g_pins.enc_btn);
-    io.intr_type    = GPIO_INTR_ANYEDGE;
-    gpio_config(&io);
+    // ── BTN (optional — -1 = rotary without a push button) ──────────────
+    if (g_pins.enc_btn >= 0) {
+        io.pin_bit_mask = (1ULL << g_pins.enc_btn);
+        gpio_config(&io);
+    }
 
     // ── ISR service ──────────────────────────────────────────────────────
     // gpio_install_isr_service can be called only once — ignore the error
@@ -202,7 +208,8 @@ void encoder_init(void)
 
     gpio_isr_handler_add(g_pins.enc_clk, isr_rot, NULL);
     gpio_isr_handler_add(g_pins.enc_dt,  isr_rot, NULL);
-    gpio_isr_handler_add(g_pins.enc_btn, isr_btn, NULL);
+    if (g_pins.enc_btn >= 0)
+        gpio_isr_handler_add(g_pins.enc_btn, isr_btn, NULL);
 
     xTaskCreate(encoder_task, "encoder_task", ENC_TASK_STACK, NULL, ENC_TASK_PRIORITY, NULL);
 
