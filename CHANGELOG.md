@@ -9,6 +9,14 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-06-24
+
+### Added
+- **pins:** make I2S pins runtime-configurable too
+
+### Fixed
+- **pins:** handle -1 (absent peripheral) without crashing
+
 ## [0.26.0] - 2026-06-24
 
 ### Added
@@ -405,7 +413,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.26.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.27.0...HEAD
+[0.27.0]: https://github.com/marcinozog/AtlasCube/compare/v0.26.0...v0.27.0
 [0.26.0]: https://github.com/marcinozog/AtlasCube/compare/v0.25.0...v0.26.0
 [0.25.0]: https://github.com/marcinozog/AtlasCube/compare/v0.24.0...v0.25.0
 [0.24.0]: https://github.com/marcinozog/AtlasCube/compare/v0.23.0...v0.24.0
