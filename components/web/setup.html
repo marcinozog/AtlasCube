@@ -60,8 +60,14 @@
   .pin-row input:focus { border-color: #4fc3f7; }
   .pin-row input.bad  { border-color: #f48fb1; background: #2a1718; }
   .pin-row input.warn { border-color: #ffb454; background: #2a2316; }
-  .pin-note { flex: 1; font-size: 11px; min-height: 13px; color: #f48fb1; }
+  .pin-note { flex: 1; font-size: 11px; min-height: 13px; color: #f48fb1;
+              line-height: 1.3; }
   .pin-note.w { color: #ffb454; }
+  .pin-note.d { color: #777; }              /* signal description (no issue) */
+  .pin-section { font-size: 14px; font-weight: 700; color: #4fc3f7;
+                 letter-spacing: 0.5px; margin: 22px 0 10px; padding-bottom: 6px;
+                 border-bottom: 1px solid #2a4a7f; }
+  .pin-section:first-child { margin-top: 8px; }
   .conflicts { display: none; margin: 4px 0 12px; padding: 10px 14px; border-radius: 8px;
                background: #2a1718; border: 1px solid #6b2a2a; color: #ffc4c4;
                font-size: 12.5px; line-height: 1.5; }
@@ -235,13 +241,16 @@
       if (dup) {
         note.textContent = 'shared with: ' +
           owners[n].filter(function (o) { return o !== k; }).join(', ');
-        note.classList.remove('w');
+        note.classList.remove('w', 'd');
       } else if (v.msg) {
         note.textContent = v.msg;
         note.classList.toggle('w', v.level === 'warn');
+        note.classList.remove('d');
       } else {
-        note.textContent = '';
+        // No issue → fall back to the signal description (muted).
+        note.textContent = PIN_INFO[k] || '';
         note.classList.remove('w');
+        note.classList.add('d');
       }
     });
 
@@ -265,13 +274,63 @@
     document.getElementById('pinsBtn').disabled = hardBad.length > 0;
   }
 
+  // Per-pin one-liners — what each signal does, shown under its input.
+  var PIN_INFO = {
+    lcd_mosi: 'SPI data to panel (MOSI / SDA)',
+    lcd_clk:  'SPI clock (SCK)',
+    lcd_cs:   'Chip-select',
+    lcd_dc:   'Data / command select',
+    lcd_rst:  'Panel reset',
+    lcd_led:  'Backlight enable (-1 = none)',
+    qspi_cs:  'QSPI chip-select',
+    qspi_clk: 'QSPI clock',
+    qspi_d0:  'QSPI data line 0',
+    qspi_d1:  'QSPI data line 1',
+    qspi_d2:  'QSPI data line 2',
+    qspi_d3:  'QSPI data line 3',
+    qspi_rst: 'Panel reset',
+    ctp_scl:  'I2C clock to touch controller',
+    ctp_sda:  'I2C data to touch controller',
+    ctp_int:  'Touch interrupt (-1 = polled)',
+    ctp_rst:  'Touch reset (-1 = none)',
+    sd_clk:   'SDMMC clock',
+    sd_cmd:   'SDMMC command',
+    sd_d0:    'SDMMC data 0 (1-bit mode)',
+    sd_cd:    'Card-detect (-1 = none)',
+    i2s_data: 'Audio data to DAC (DIN)',
+    i2s_bck:  'Bit clock (BCK)',
+    i2s_lck:  'Word / LR clock (LRCK)',
+    enc_clk:  'Rotary phase A (CLK)',
+    enc_dt:   'Rotary phase B (DT)',
+    enc_btn:  'Push-button',
+    buzzer:   'Piezo buzzer (-1 = disabled)',
+    bt_pin:   'Power / enable to BT module',
+    bt_tx:    'UART TX -> module RX',
+    bt_rx:    'UART RX <- module TX'
+  };
+
+  // Display order + grouping. Only keys actually returned by /api/pins are shown,
+  // so an SPI build skips the qspi_* group and vice-versa. Unknown (future) keys
+  // fall through to an "Other" section so nothing ever goes missing.
+  var PIN_SECTIONS = [
+    { title: 'SPI LCD',          keys: ['lcd_mosi','lcd_clk','lcd_cs','lcd_dc','lcd_rst','lcd_led'] },
+    { title: 'QSPI LCD',         keys: ['qspi_cs','qspi_clk','qspi_d0','qspi_d1','qspi_d2','qspi_d3','qspi_rst'] },
+    { title: 'Touch (I2C)',      keys: ['ctp_scl','ctp_sda','ctp_int','ctp_rst'] },
+    { title: 'SD card (SDMMC)',  keys: ['sd_clk','sd_cmd','sd_d0','sd_cd'] },
+    { title: 'Audio (I2S DAC)',  keys: ['i2s_data','i2s_bck','i2s_lck'] },
+    { title: 'Rotary encoder',   keys: ['enc_clk','enc_dt','enc_btn'] },
+    { title: 'Buzzer',           keys: ['buzzer'] },
+    { title: 'Bluetooth module', keys: ['bt_pin','bt_tx','bt_rx'] }
+  ];
+
   fetch('/api/pins', { cache: 'no-store' })
     .then(function (r) { return r.json(); })
     .then(function (d) {
       document.getElementById('pinsDriver').textContent =
         'Display driver in this firmware: ' + (d.driver || '?');
       var grid = document.getElementById('pinsGrid');
-      Object.keys(d.pins).forEach(function (k) {
+
+      function addRow(k) {
         pinKeys.push(k);
         var row = document.createElement('div');
         row.className = 'pin-row';
@@ -286,7 +345,27 @@
         note.className = 'pin-note'; note.id = 'note_' + k;
         row.appendChild(lab); row.appendChild(inp); row.appendChild(note);
         grid.appendChild(row);
+      }
+
+      function addSection(title, keys) {
+        var present = keys.filter(function (k) { return k in d.pins; });
+        if (!present.length) return;
+        var h = document.createElement('div');
+        h.className = 'pin-section';
+        h.textContent = title;
+        grid.appendChild(h);
+        present.forEach(addRow);
+      }
+
+      var placed = {};
+      PIN_SECTIONS.forEach(function (s) {
+        s.keys.forEach(function (k) { placed[k] = 1; });
+        addSection(s.title, s.keys);
       });
+      // Any key the firmware exposes that we don't know about yet.
+      var leftover = Object.keys(d.pins).filter(function (k) { return !placed[k]; });
+      addSection('Other', leftover);
+
       validatePins();   // also enables the button when the loaded map is clean
     })
     .catch(function () {
