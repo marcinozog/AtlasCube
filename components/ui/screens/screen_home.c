@@ -113,10 +113,21 @@ static void strip_update(void)
 {
     if (!s_strip_station) return;
     app_state_t *s = app_state_get();
-    const char *station = s->sd_active ? "SD Player"
-                        : (s->station_name[0] ? s->station_name : "Atlas Radio");
+
+    const char *station, *title;
+    if (s->bt_enable) {
+        // BT: top line = artist (fallback "Bluetooth"), bottom = track title
+        station = s->bt_artist[0] ? s->bt_artist : "Bluetooth";
+        title   = s->bt_title;
+    } else if (s->sd_active) {
+        station = "SD Player";
+        title   = s->title;
+    } else {
+        station = s->station_name[0] ? s->station_name : "Atlas Radio";
+        title   = s->title;
+    }
     lv_label_set_text(s_strip_station, station);
-    lv_label_set_text(s_strip_title, s->title[0] ? s->title : "");
+    lv_label_set_text(s_strip_title, title[0] ? title : "");
 }
 
 // ── network info (IP + "<hostname>.local") ──────────────────────────────────
