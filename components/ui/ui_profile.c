@@ -488,12 +488,12 @@ static const ui_profile_t k_defaults = {
     // Settings
     .settings_title_y          = 10,
     .settings_row_w            = 220,
-    .settings_row_h            = 60,
-    .settings_row_pad          = 10,
+    .settings_row_h            = 52,
+    .settings_row_pad          = 8,
     .settings_title_in_list    = false,
     .settings_row1_y           = 45,
-    .settings_row2_y           = 115,
-    .settings_row3_y           = 185,
+    .settings_row2_y           = 105,   // skok 60 → gap 8 nad row_h 52
+    .settings_row3_y           = 165,   // = row1 + 2*skok
     .settings_slider_w         = 140,
     .settings_slider_h         = 8,
     .settings_show_slider      = true,
@@ -671,12 +671,12 @@ static const ui_profile_t k_defaults = {
 
     .settings_title_y          = 6,
     .settings_row_w            = 288,
-    .settings_row_h            = 68,
-    .settings_row_pad          = 10,
+    .settings_row_h            = 52,
+    .settings_row_pad          = 8,
     .settings_title_in_list    = false,
     .settings_row1_y           = 32,
-    .settings_row2_y           = 112,
-    .settings_row3_y           = 192,
+    .settings_row2_y           = 92,    // skok 60 → gap 8 nad row_h 52
+    .settings_row3_y           = 152,   // = row1 + 2*skok
     .settings_slider_w         = 170,
     .settings_slider_h         = 6,
     .settings_show_slider      = true,
@@ -853,12 +853,12 @@ static const ui_profile_t k_defaults = {
 
     .settings_title_y          = 8,
     .settings_row_w            = 432,
-    .settings_row_h            = 90,
-    .settings_row_pad          = 10,
+    .settings_row_h            = 70,
+    .settings_row_pad          = 8,
     .settings_title_in_list    = false,
     .settings_row1_y           = 42,
-    .settings_row2_y           = 150,
-    .settings_row3_y           = 258,
+    .settings_row2_y           = 122,   // skok 80 → gap 10 nad row_h 70
+    .settings_row3_y           = 202,   // = row1 + 2*skok
     .settings_slider_w         = 255,
     .settings_slider_h         = 8,
     .settings_show_slider      = true,
