@@ -25,6 +25,7 @@ typedef struct {
 } nav_ring_entry_t;
 
 static const nav_ring_entry_t s_ring[] = {
+    { SCREEN_HOME,  NULL              },
     { SCREEN_BT,    cond_bt_screen    },
     { SCREEN_RADIO, NULL              },
     { SCREEN_SD,    cond_sd_screen    },

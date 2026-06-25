@@ -19,6 +19,10 @@
 
 static const char *TAG = "SCR_SETTINGS";
 
+static ui_screen_id_t s_return = SCREEN_CLOCK;   // where to go when settings is exited
+
+void screen_settings_set_return(ui_screen_id_t scr) { s_return = scr; }
+
 typedef enum {
     FOCUS_BRIGHTNESS = 0,
     FOCUS_THEME,
@@ -651,7 +655,7 @@ static void settings_on_input(ui_input_t input)
         case UI_INPUT_ENCODER_LONG_PRESS:
         case UI_INPUT_SWIPE_RIGHT:
         case UI_INPUT_SWIPE_LEFT:
-            ui_navigate(SCREEN_CLOCK);
+            ui_navigate(s_return);
             break;
 
         default:

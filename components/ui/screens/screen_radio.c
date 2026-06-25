@@ -1,5 +1,6 @@
 #include "defines.h"
 #include "screen_radio.h"
+#include "screen_playlist.h"
 #include "ui_events.h"
 #include "ui_screen.h"
 #include "ui_manager.h"
@@ -167,12 +168,14 @@ static void radio_on_input(ui_input_t input)
             ui_nav_ring_next(SCREEN_RADIO);
             break;
         case UI_INPUT_ENCODER_LONG_PRESS:
+            screen_playlist_set_return(SCREEN_RADIO);
             ui_navigate(SCREEN_PLAYLIST);
             break;
         case UI_INPUT_SWIPE_LEFT:
             ui_nav_ring_prev(SCREEN_RADIO);
             break;
         case UI_INPUT_SWIPE_UP:
+            screen_playlist_set_return(SCREEN_RADIO);
             ui_navigate(SCREEN_PLAYLIST);
             break;
 

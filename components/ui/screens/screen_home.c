@@ -1,8 +1,8 @@
 #include "defines.h"
-#include "screen_clock.h"
+#include "screen_home.h"
 #include "mode_indicator_widget.h"
 #include "event_indicator_widget.h"
-#include "controls_overlay_widget.h"
+#include "hub_overlay_widget.h"
 #include "vol_overlay_widget.h"
 #include "app_state.h"
 #include "sd_player.h"
@@ -25,7 +25,12 @@
 #include <stdio.h>
 #include <time.h>
 
-static const char *TAG = "SCR_CLOCK";
+// The hub mirrors screen_clock's layout (reusing the clock_* ui_profile fields)
+// but swaps the radio-only controls overlay for hub_overlay, which can reach all
+// three sources. Kept as a separate screen so the plain clock stays a minimal
+// screensaver-style face.
+
+static const char *TAG = "SCR_HOME";
 
 static lv_obj_t  *s_root          = NULL;
 static lv_obj_t  *s_strip         = NULL;
@@ -38,11 +43,10 @@ static lv_timer_t *s_clock_timer  = NULL;
 
 static void netinfo_update(void);
 
-// Active audio source → which set of buttons the controls overlay drives.
-// Priority: BT, then actively-playing radio, then SD if it's playing OR has a
-// resumable queue (stop-keep "limbo" — so an on-screen Stop doesn't drop us back
-// to radio and make the next Play start the radio), else radio as the default.
-static controls_overlay_mode_t clock_ctrl_mode(void)
+// Active audio source → which buttons the hub overlay drives. Same priority as
+// screen_clock: BT, then actively-playing radio, then SD if it's playing OR has a
+// resumable queue (stop-keep "limbo"), else radio as the default.
+static controls_overlay_mode_t home_ctrl_mode(void)
 {
     app_state_t *s = app_state_get();
     if (s->bt_enable) return CTRL_OVL_MODE_BT;
@@ -72,7 +76,6 @@ static bool clock_is_large_font(void)
 {
     const ui_profile_t *p = ui_profile_get();
     if (!p->clock_time_font) return false;
-    // Heuristic for vol_overlay: anything ≥ 48 px counts as "big clock"
     return lv_font_get_line_height(p->clock_time_font) >= 48;
 }
 
@@ -111,20 +114,14 @@ static void strip_update(void)
 {
     if (!s_strip_station) return;
     app_state_t *s = app_state_get();
-    // Source-aware top line: SD shows its own label (station_name stays the
-    // radio station, so it isn't stale over an mp3 and doesn't leak onto the
-    // radio screen); radio/idle shows the station with a friendly fallback.
     const char *station = s->sd_active ? "SD Player"
                         : (s->station_name[0] ? s->station_name : "Atlas Radio");
     lv_label_set_text(s_strip_station, station);
-    lv_label_set_text(s_strip_title,
-        s->title[0] ? s->title : "");
+    lv_label_set_text(s_strip_title, s->title[0] ? s->title : "");
 }
 
 // ── network info (IP + "<hostname>.local") ──────────────────────────────────
 
-// Creates, refreshes, or removes the network-info label to match the profile:
-// shown when clock_show_netinfo is on. Safe to call repeatedly.
 static void netinfo_update(void)
 {
     const ui_profile_t *p = ui_profile_get();
@@ -137,8 +134,6 @@ static void netinfo_update(void)
 
     if (!s_netinfo_label) {
         const ui_theme_colors_t *th = theme_get();
-        // Center-anchored on clock_netinfo_x so the IP/host line stays centered
-        // on that point as its width changes.
         s_netinfo_label = ui_anchored_label(s_root, p->clock_netinfo_x,
                                             p->clock_netinfo_y, UI_ALIGN_CENTER);
         lv_obj_set_style_text_font(s_netinfo_label,
@@ -160,17 +155,13 @@ static void netinfo_update(void)
 
 // ── create / destroy ────────────────────────────────────────────────────────
 
-static void clock_create(lv_obj_t *parent)
+static void home_create(lv_obj_t *parent)
 {
     s_root = parent;
     const ui_theme_colors_t *th = theme_get();
     const ui_profile_t      *p  = ui_profile_get();
 
-    // Time label — placed directly on the screen (parent), not inside the panel,
-    // so the profile coordinates stay absolute.
     if (p->clock_show_time) {
-        // Center-anchored on clock_time_x: the time block stays centered on that
-        // point as proportional digits change width, instead of wandering.
         s_time_label = ui_anchored_label(parent, p->clock_time_x, p->clock_time_y,
                                          UI_ALIGN_CENTER);
         lv_label_set_text(s_time_label, "--:--");
@@ -182,8 +173,6 @@ static void clock_create(lv_obj_t *parent)
     }
 
     if (p->clock_show_date) {
-        // Center-anchored on clock_date_x so the date stays centered on that
-        // point as its width changes.
         s_date_label = ui_anchored_label(parent, p->clock_date_x, p->clock_date_y,
                                          UI_ALIGN_CENTER);
         lv_label_set_text(s_date_label, "");
@@ -230,15 +219,15 @@ static void clock_create(lv_obj_t *parent)
 
     netinfo_update();
 
-    controls_overlay_create(parent, clock_ctrl_mode());
+    hub_overlay_create(parent, home_ctrl_mode());
 
     ESP_LOGI(TAG, "Created (theme=%d)", theme_current());
 }
 
-static void clock_destroy(void)
+static void home_destroy(void)
 {
     if (s_clock_timer) { lv_timer_del(s_clock_timer); s_clock_timer = NULL; }
-    controls_overlay_destroy();
+    hub_overlay_destroy();
     vol_overlay_hide();
 
     event_indicator_destroy();
@@ -251,7 +240,7 @@ static void clock_destroy(void)
     ESP_LOGI(TAG, "Destroyed");
 }
 
-static void clock_on_event(const ui_event_t *ev)
+static void home_on_event(const ui_event_t *ev)
 {
     switch (ev->type) {
         case UI_EVT_STATE_CHANGED:
@@ -260,7 +249,7 @@ static void clock_on_event(const ui_event_t *ev)
             netinfo_update();
             mode_indicator_update();
             event_indicator_update();
-            controls_overlay_set_mode(clock_ctrl_mode());
+            hub_overlay_set_mode(home_ctrl_mode());
             break;
         case UI_EVT_TITLE_CHANGED:
             strip_update();
@@ -270,28 +259,24 @@ static void clock_on_event(const ui_event_t *ev)
     }
 }
 
-static void clock_on_input(ui_input_t input)
+static void home_on_input(ui_input_t input)
 {
     switch (input) {
         case UI_INPUT_ENCODER_CW:
         case UI_INPUT_ENCODER_CCW: {
             app_state_t *s = app_state_get();
-
-            if(s->bt_enable != true) {
+            if (s->bt_enable != true) {
                 int vol = s->volume;
                 vol += (input == UI_INPUT_ENCODER_CW) ? RADIO_VOL_STEP : -RADIO_VOL_STEP;
                 if (vol < 0)   vol = 0;
                 if (vol > 100) vol = 100;
-
                 settings_set_volume(vol);
                 vol_overlay_show(s_root, vol, clock_is_large_font());
-            }
-            else {
+            } else {
                 int vol = s->bt_volume;
                 vol += (input == UI_INPUT_ENCODER_CW) ? BT_VOL_STEP : -BT_VOL_STEP;
-                if (vol < 0)  vol = 0;
+                if (vol < 0)   vol = 0;
                 if (vol > 100) vol = 100;
-
                 settings_set_bt_volume(vol);
                 vol_overlay_show(s_root, vol, clock_is_large_font());
             }
@@ -299,17 +284,14 @@ static void clock_on_input(ui_input_t input)
         }
         case UI_INPUT_ENCODER_PRESS:
         case UI_INPUT_SWIPE_RIGHT:
-            ui_nav_ring_next(SCREEN_CLOCK);
-            break;
-        case UI_INPUT_ENCODER_LONG_PRESS:
-            screen_settings_set_return(SCREEN_CLOCK);
-            ui_navigate(SCREEN_SETTINGS);
+            ui_nav_ring_next(SCREEN_HOME);
             break;
         case UI_INPUT_SWIPE_LEFT:
-            ui_nav_ring_prev(SCREEN_CLOCK);
+            ui_nav_ring_prev(SCREEN_HOME);
             break;
+        case UI_INPUT_ENCODER_LONG_PRESS:
         case UI_INPUT_SWIPE_UP:
-            screen_settings_set_return(SCREEN_CLOCK);
+            screen_settings_set_return(SCREEN_HOME);
             ui_navigate(SCREEN_SETTINGS);
             break;
         default:
@@ -317,7 +299,7 @@ static void clock_on_input(ui_input_t input)
     }
 }
 
-static void clock_apply_theme(void)
+static void home_apply_theme(void)
 {
     if (!s_root) return;
     const ui_theme_colors_t *th = theme_get();
@@ -345,11 +327,11 @@ static void clock_apply_theme(void)
     lv_obj_invalidate(s_root);
 }
 
-const ui_screen_t screen_clock = {
-    .create         = clock_create,
-    .destroy        = clock_destroy,
-    .apply_theme    = clock_apply_theme,
-    .on_event       = clock_on_event,
-    .on_input       = clock_on_input,
-    .name           = "clock",
+const ui_screen_t screen_home = {
+    .create         = home_create,
+    .destroy        = home_destroy,
+    .apply_theme    = home_apply_theme,
+    .on_event       = home_on_event,
+    .on_input       = home_on_input,
+    .name           = "home",
 };

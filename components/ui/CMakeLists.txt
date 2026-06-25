@@ -13,6 +13,7 @@ idf_component_register(
         "screens/screen_sd_player.c"
         "screens/screen_sd_browser.c"
         "screens/screen_clock.c"
+        "screens/screen_home.c"
         # "screen_weather.c"
         "screens/screen_bt.c"
         "screens/screen_wifi_ap.c"
@@ -38,6 +39,7 @@ idf_component_register(
         "widgets/mode_indicator_widget.c"
         "widgets/event_indicator_widget.c"
         "widgets/controls_overlay_widget.c"
+        "widgets/hub_overlay_widget.c"
         "widgets/vol_overlay_widget.c"
         "widgets/vu_widget.c"
         "fonts/lv_font_montserrat_8_pl.c"
@@ -72,6 +74,7 @@ idf_component_register(
         buzzer                  # screensaver_dashboard notifications via melodies.h
         mqtt_svc                # screen_mqtt toggle widget
         sdcard                  # screensaver_photo reads slides from SD
+        bt_module               # hub_overlay BT source toggle + bt_play/bt_pause
         esp_app_format          # esp_app_get_description() — version on splash
         espressif__esp-dsp      # FFT for the VU spectrum widget
 )

@@ -20,6 +20,9 @@ static lv_obj_t *s_header_label = NULL;
 static int       s_selected = 0;       // kursor enkodera (display index)
 static int       s_playing  = -1;      // aktualnie odtwarzana stacja (display index)
 static int       s_count    = 0;
+static ui_screen_id_t s_return = SCREEN_RADIO;   // where to go after pick/exit
+
+void screen_playlist_set_return(ui_screen_id_t scr) { s_return = scr; }
 // Maps display position → real playlist index. Favorites first, original order
 // preserved within each group. Real indices stay stable so app_state.curr_index
 // and radio_play_index() can keep operating on the underlying playlist.
@@ -111,7 +114,7 @@ static void play_display_index(int disp_idx)
     if (s->bt_enable)
         settings_set_bt_enable(false);
 
-    ui_navigate(SCREEN_RADIO);
+    ui_navigate(s_return);
 }
 
 static void row_click_cb(lv_event_t *e)
@@ -257,7 +260,7 @@ static void playlist_on_input(ui_input_t input)
         case UI_INPUT_SWIPE_RIGHT:
         case UI_INPUT_SWIPE_LEFT:
             // Exit without changing the station
-            ui_navigate(SCREEN_RADIO);
+            ui_navigate(s_return);
             break;
 
         default:

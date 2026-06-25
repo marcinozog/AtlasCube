@@ -1,5 +1,6 @@
 #include "defines.h"
 #include "screen_sd_player.h"
+#include "screen_sd_browser.h"
 #include "ui_events.h"
 #include "ui_screen.h"
 #include "ui_manager.h"
@@ -187,6 +188,7 @@ static void sd_player_on_input(ui_input_t input)
 
         case UI_INPUT_ENCODER_LONG_PRESS:
         case UI_INPUT_SWIPE_UP:
+            screen_sd_browser_set_return(SCREEN_SD);
             ui_navigate(SCREEN_SD_BROWSER);
             break;
 

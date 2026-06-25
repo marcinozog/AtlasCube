@@ -30,6 +30,9 @@ static lv_obj_t *s_header_label = NULL;
 static char      s_dir[SD_BR_DIR_MAX];   // current browse dir (persists between visits)
 static int       s_selected     = 0;
 static int       s_count        = 0;     // number of rows
+static ui_screen_id_t s_return  = SCREEN_SD;   // where to go after pick/exit
+
+void screen_sd_browser_set_return(ui_screen_id_t scr) { s_return = scr; }
 
 // Snapshot of the folder content, copied out of the sd_player scan buffers right
 // after scanning. Owning a copy keeps the list stable even if a background
@@ -246,7 +249,7 @@ static void activate(int idx)
             char path[SD_BR_DIR_MAX + SD_BR_NAME_MAX];
             snprintf(path, sizeof(path), "%s/%s", s_dir, e->name);
             sd_player_play_path(path);
-            ui_navigate(SCREEN_SD);
+            ui_navigate(s_return);
             break;
         }
     }
@@ -352,7 +355,7 @@ static void sd_browser_on_input(ui_input_t input)
         case UI_INPUT_ENCODER_LONG_PRESS:
         case UI_INPUT_SWIPE_RIGHT:
         case UI_INPUT_SWIPE_LEFT:
-            ui_navigate(SCREEN_SD);
+            ui_navigate(s_return);
             break;
         default:
             break;
