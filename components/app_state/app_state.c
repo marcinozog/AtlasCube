@@ -59,6 +59,10 @@ void app_state_update(const app_state_patch_t *patch)
         s_state.bt_state = patch->bt_state;
     }
 
+    if (patch->has_bt_playing) {
+        s_state.bt_playing = patch->bt_playing;
+    }
+
     if (patch->has_bt_volume) {
         s_state.bt_volume = patch->bt_volume;
     }

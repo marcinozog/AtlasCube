@@ -5,6 +5,7 @@
 #include "settings.h"
 #include "app_state.h"
 #include "sd_player.h"
+#include "bt.h"
 #include "esp_log.h"
 
 static const char *TAG = "CTRL_OVL";
@@ -32,6 +33,7 @@ static const char *play_symbol_for_mode(controls_overlay_mode_t mode)
     if (mode == CTRL_OVL_MODE_SD) {
         return sd_player_is_active() ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY;
     }
+    if (mode == CTRL_OVL_MODE_BT) return app_state_get()->bt_playing ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY;
     bool playing = (app_state_get()->radio_state == RADIO_STATE_PLAYING);
     return playing ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY;
 }
@@ -119,7 +121,15 @@ static void btn_clicked_cb(lv_event_t *e)
                 settings_set_bt_volume(vol);   // → audio_engine + app_state + save
                 break;
             }
+            case CTRL_PREV: bt_prev(); break;
+            case CTRL_NEXT: bt_next(); break;
             case CTRL_PLAY: {
+                // AVRCP play/pause toggle. The glyph follows the real state via
+                // app_state->bt_playing (STATE_CHANGED → controls_overlay_refresh);
+                // set it optimistically here for instant feedback.
+                bool want_play = !app_state_get()->bt_playing;
+                want_play ? bt_play() : bt_pause();
+                lv_label_set_text(s_play_lbl, want_play ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY);
                 break;
             }
             default: break;

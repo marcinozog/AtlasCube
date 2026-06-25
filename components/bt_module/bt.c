@@ -193,7 +193,9 @@ void bt_parse_cmd(const char *cmd) {
     else if (strstr(cmd, g_bt->evt_disconnected)) {
         app_state_update(&(app_state_patch_t){
             .has_bt_state   = true,
-            .bt_state       = BT_DISCONNECTED
+            .bt_state       = BT_DISCONNECTED,
+            .has_bt_playing = true,
+            .bt_playing     = false
         });
         if (s_play_event_cb) s_play_event_cb(false);   // link gone → not playing
     }
@@ -213,6 +215,7 @@ void bt_parse_cmd(const char *cmd) {
             .has_bt_codec       = true, .bt_codec       = "",
             .has_bt_sample_rate = true, .bt_sample_rate = 0,
             .has_bt_bits        = true, .bt_bits        = 0,
+            .has_bt_playing     = true, .bt_playing     = false,
         });
         if (s_play_event_cb) s_play_event_cb(false);   // playback stopped
     }
@@ -226,6 +229,11 @@ void bt_parse_cmd(const char *cmd) {
         bt_send_raw(g_bt->cmd_get_codec);
         vTaskDelay(pdMS_TO_TICKS(100));
         bt_send_raw(g_bt->cmd_get_arate);
+
+        app_state_update(&(app_state_patch_t){
+            .has_bt_playing = true,
+            .bt_playing     = true
+        });
 
         // Phone started playing — let the source coordinator react (stop radio,
         // switch source to BT) when exclusive auto-switch is enabled.

@@ -26,10 +26,6 @@ static lv_timer_t *s_timer    = NULL;
 static lv_obj_t   *s_play_lbl   = NULL;
 static lv_obj_t   *s_source_lbl = NULL;   // glyph mirrors the active source (mode_indicator)
 static controls_overlay_mode_t s_mode = CTRL_OVL_MODE_RADIO;
-// Best-effort BT play/pause state for the center glyph: the module doesn't expose
-// a play-state getter (the single play-event cb is owned by radio_service), so we
-// track it locally — assume "playing" whenever BT is (re)selected as the source.
-static bool        s_bt_playing = true;
 
 // Button identifiers — transport (cross-equivalent) + action row.
 typedef enum {
@@ -49,7 +45,7 @@ static const char *play_symbol_for_mode(controls_overlay_mode_t mode)
     if (mode == CTRL_OVL_MODE_SD) {
         return sd_player_is_active() ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY;
     }
-    if (mode == CTRL_OVL_MODE_BT) return s_bt_playing ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY;
+    if (mode == CTRL_OVL_MODE_BT) return app_state_get()->bt_playing ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY;
     bool playing = (app_state_get()->radio_state == RADIO_STATE_PLAYING);
     return playing ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY;
 }
@@ -151,10 +147,11 @@ static void btn_clicked_cb(lv_event_t *e)
                     lv_label_set_text(s_play_lbl, LV_SYMBOL_STOP);
                 }
             } else if (s_mode == CTRL_OVL_MODE_BT) {
-                // Tell the phone to resume/pause over AVRCP (best-effort state).
-                s_bt_playing = !s_bt_playing;
-                s_bt_playing ? bt_play() : bt_pause();
-                lv_label_set_text(s_play_lbl, s_bt_playing ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY);
+                // Tell the phone to resume/pause over AVRCP. The glyph follows the
+                // real state via app_state->bt_playing; set it optimistically here.
+                bool want_play = !app_state_get()->bt_playing;
+                want_play ? bt_play() : bt_pause();
+                lv_label_set_text(s_play_lbl, want_play ? LV_SYMBOL_STOP : LV_SYMBOL_PLAY);
             }
             break;
 
@@ -166,8 +163,7 @@ static void btn_clicked_cb(lv_event_t *e)
                 settings_set_bt_enable(false);
             } else {
                 settings_set_bt_enable(true);
-                bt_play();
-                s_bt_playing = true;
+                bt_play();   // bt_playing updates via the module's play event
             }
             break;
         }

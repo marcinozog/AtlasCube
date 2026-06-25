@@ -193,6 +193,7 @@ static void bt_on_event(const ui_event_t *ev)
     switch (ev->type) {
         case UI_EVT_STATE_CHANGED:
             refresh_from_state();
+            controls_overlay_refresh();   // center glyph follows bt_playing
             mode_indicator_update();
             clock_widget_tick();
             break;

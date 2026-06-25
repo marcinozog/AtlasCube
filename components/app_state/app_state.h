@@ -38,6 +38,7 @@ typedef struct {
     bool bt_show_screen;        // Bluetooth show/hide screen
     bool bt_auto_switch;        // Exclusive source: BT play stops radio & vice versa
     bt_state_t bt_state;        // Bluetooth connected
+    bool bt_playing;            // Phone AVRCP playback active (true on play, false on pause/stop)
     int bt_volume;              // Bluetooth volume
     bool bt_vol_sync;           // Sync module volume with the phone
     char bt_title[128];         // BT track title
@@ -107,6 +108,8 @@ typedef struct {
     bool bt_auto_switch;
     bool has_bt_state;
     bt_state_t bt_state;
+    bool has_bt_playing;
+    bool bt_playing;
     bool has_bt_volume;
     int bt_volume;
     bool has_bt_vol_sync;
