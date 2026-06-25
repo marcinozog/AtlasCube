@@ -18,6 +18,8 @@ static const ui_theme_colors_t k_dark_defaults = {
     .status_ok      = 0x00C853,
     .bg_grad_top    = 0x1E3A8A,
     .bg_grad_bottom = 0x000000,
+    .vu_bg          = 0x0D0D1A,   // = bg_primary (preserves prior look)
+    .vu_bar         = 0xE94560,   // = accent
 };
 
 static const ui_theme_colors_t k_light_defaults = {
@@ -31,6 +33,8 @@ static const ui_theme_colors_t k_light_defaults = {
     .status_ok      = 0x1B8E3A,
     .bg_grad_top    = 0xF4F4F8,
     .bg_grad_bottom = 0x6FA0E0,
+    .vu_bg          = 0xF4F4F8,   // = bg_primary
+    .vu_bar         = 0xC4243E,   // = accent
 };
 
 // Mutable palettes - defaults at startup, overwritten from theme.json
@@ -45,6 +49,8 @@ static ui_theme_colors_t s_dark = {
     .status_ok      = 0x00C853,
     .bg_grad_top    = 0x1E3A8A,
     .bg_grad_bottom = 0x000000,
+    .vu_bg          = 0x0D0D1A,
+    .vu_bar         = 0xE94560,
 };
 static ui_theme_colors_t s_light = {
     .bg_primary     = 0xF4F4F8,
@@ -57,6 +63,8 @@ static ui_theme_colors_t s_light = {
     .status_ok      = 0x1B8E3A,
     .bg_grad_top    = 0xF4F4F8,
     .bg_grad_bottom = 0x6FA0E0,
+    .vu_bg          = 0xF4F4F8,
+    .vu_bar         = 0xC4243E,
 };
 
 static const ui_theme_colors_t *s_current = &s_dark;
@@ -122,6 +130,8 @@ static void load_palette(cJSON *obj, ui_theme_colors_t *dst, const ui_theme_colo
     LOAD(status_ok);
     LOAD(bg_grad_top);
     LOAD(bg_grad_bottom);
+    LOAD(vu_bg);
+    LOAD(vu_bar);
     #undef LOAD
 }
 
@@ -146,6 +156,8 @@ static void add_palette(cJSON *parent, const char *name, const ui_theme_colors_t
     ADD(status_ok);
     ADD(bg_grad_top);
     ADD(bg_grad_bottom);
+    ADD(vu_bg);
+    ADD(vu_bar);
     #undef ADD
 
     cJSON_AddItemToObject(parent, name, o);

@@ -18,6 +18,8 @@ typedef struct {
     uint32_t status_ok;      // Connected/Playing status etc. (semantic green)
     uint32_t bg_grad_top;    // gradient background — top colour
     uint32_t bg_grad_bottom; // gradient background — bottom colour
+    uint32_t vu_bg;          // VU meter background (defaults to bg_primary)
+    uint32_t vu_bar;         // VU meter bars       (defaults to accent)
 } ui_theme_colors_t;
 
 const ui_theme_colors_t *theme_get(void);

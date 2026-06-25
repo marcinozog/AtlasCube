@@ -540,6 +540,8 @@ static void add_palette_json(cJSON *parent, const char *name,
     F(status_ok);
     F(bg_grad_top);
     F(bg_grad_bottom);
+    F(vu_bg);
+    F(vu_bar);
     #undef F
     cJSON_AddItemToObject(parent, name, o);
 }
@@ -594,6 +596,8 @@ static void patch_palette_from_json(cJSON *obj, ui_theme_t t)
     PATCH(status_ok);
     PATCH(bg_grad_top);
     PATCH(bg_grad_bottom);
+    PATCH(vu_bg);
+    PATCH(vu_bar);
     #undef PATCH
 
     theme_palette_set(t, &c);

@@ -217,7 +217,7 @@ void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h)
     lv_obj_remove_style_all(s_cont);
     lv_obj_set_size(s_cont, w, h);
     lv_obj_set_pos(s_cont, x, y);
-    lv_obj_set_style_bg_color(s_cont, lv_color_hex(th->bg_primary), 0);
+    lv_obj_set_style_bg_color(s_cont, lv_color_hex(th->vu_bg), 0);
     lv_obj_set_style_bg_opa(s_cont, LV_OPA_COVER, 0);   // opaque → no full-screen recomposite
     lv_obj_clear_flag(s_cont, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
     s_h = h;
@@ -232,7 +232,7 @@ void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h)
         lv_obj_set_width(bar, bar_w);
         lv_obj_set_height(bar, 1);
         lv_obj_set_style_radius(bar, 2, 0);
-        lv_obj_set_style_bg_color(bar, lv_color_hex(th->accent), 0);
+        lv_obj_set_style_bg_color(bar, lv_color_hex(th->vu_bar), 0);
         lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);
         lv_obj_clear_flag(bar, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
         lv_obj_set_pos(bar, pad + b * slot, s_h - 1);
@@ -282,7 +282,7 @@ void vu_widget_apply_theme(void)
 {
     if (!s_cont) return;
     const ui_theme_colors_t *th = theme_get();
-    lv_obj_set_style_bg_color(s_cont, lv_color_hex(th->bg_primary), 0);
+    lv_obj_set_style_bg_color(s_cont, lv_color_hex(th->vu_bg), 0);
     for (int b = 0; b < s_nbars; b++)
-        lv_obj_set_style_bg_color(s_bars[b], lv_color_hex(th->accent), 0);
+        lv_obj_set_style_bg_color(s_bars[b], lv_color_hex(th->vu_bar), 0);
 }

@@ -982,6 +982,8 @@ const COLOR_FIELDS = [
     ['status_ok',      'Status OK',           'Connected / Playing (semantic green)'],
     ['bg_grad_top',    'Gradient top',        'Top colour of the background gradient'],
     ['bg_grad_bottom', 'Gradient bottom',     'Bottom colour of the background gradient'],
+    ['vu_bg',          'VU meter background',  'Spectrum/VU meter panel background'],
+    ['vu_bar',         'VU meter bars',        'Spectrum/VU meter bar colour'],
 ];
 
 let colorData     = { dark: {}, light: {} };
