@@ -117,16 +117,17 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 
 **UI**
 - GUI na LVGL — obsługuje ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), ILI9488 480×320 (SPI, 18-bit), CO5300 240×296 (okrągły AMOLED, QSPI) i SSD1322 256×64 (mono OLED, SPI); wybór jednym `#define`
-- Ekrany: zegar, playlista, korektor, ustawienia, Bluetooth, wydarzenia, WiFi AP
+- Ekrany: hub główny (zegar + adaptacyjne sterowanie), radio, odtwarzacz SD, playlista, korektor, ustawienia, Bluetooth, wydarzenia, WiFi AP
+- Hub główny — domyślny ekran: zegar, który dostosowuje się do aktywnego źródła (radio / SD / BT), z nakładką (tap) do sterowania odtwarzaniem i wejścia w playlistę / przeglądarkę SD / BT / ustawienia. Obsługuje wszystkie źródła z jednego ekranu; ekrany per źródło są opcjonalne (chowasz je w Ustawienia → Ekran)
 - Nawigacja enkoderem (obrót + klik)
 - Dotyk pojemnościowy — CST816D (okrągły AMOLED) albo FT6336U (ST7796U), oba po I2C; działa równolegle z enkoderem
-- Gesty swipe — w poziomie przeskakują między zegar ↔ radio ↔ bt, w górę otwierają ustawienia (z zegara) albo playlistę (z radia); rozpoznawane przez LVGL na zwykłym indevie wskaźnika, bez kombinowania per kontroler
-- Nakładka sterująca — tap w ekran mediów albo zegara otwiera krzyż 5 przycisków (play/pauza, vol±, prev/next), znika po chwili bezczynności
+- Gesty swipe — w poziomie krążą po pierścieniu głównym (hub ↔ bt ↔ radio ↔ sd ↔ mqtt, pomijając ukryte ekrany), w górę otwierają ustawienia (hub) albo listę źródła (radio→playlista, SD→przeglądarka); rozpoznawane przez LVGL na zwykłym indevie wskaźnika, bez kombinowania per kontroler
+- Nakładka sterująca — tap w ekran otwiera sterowanie odtwarzaniem (play/stop, vol±, prev/next), znika po chwili bezczynności; nakładka huba dokłada przyciski źródło/playlista/sd/ustawienia
 - Wskaźnik VU — opcjonalny widget na ekranie radia pokazujący spektrum FFT liczone na żywo z wyjścia audio; pozycję ustawiasz w edytorze layoutu
 - Konfigurowalny layout (pozycje widgetów w JSON-ie)
 - Tło ekranu — do wyboru gradient, jednolity kolor lub **tapeta z karty SD** (`.bin` RGB565 w rozmiarze panelu, wspólna dla wszystkich ekranów), ustawiane w web UI
 - Własne logo splash — wrzuć na kartę SD plik `.bin` RGB565 w rozmiarze panelu, żeby podmienić wbudowane logo (auto-skalowanie; gdy brak pliku, wraca do wbudowanego)
-- Opcjonalny ekran odtwarzacza SD w pierścieniu głównym — pokazujesz albo chowasz go z web UI
+- Opcjonalne ekrany per źródło w pierścieniu głównym — pokazujesz albo chowasz ekrany Radio, odtwarzacza SD i Bluetooth z web UI (hub główny zostaje, więc pierścień nigdy nie jest pusty)
 - Wygaszacze — startują po zadanym czasie bezczynności; do wyboru wskazówki zegara, pole gwiazd, fajerwerki, plazma, gra w życie Conwaya, czarny ekran (przyjazny AMOLED-om), **Dim** (tylko ściemnia podświetlenie, zostawia bieżący ekran), **Dashboard** albo **Fotoramka** (niżej)
 
 **Wygaszacz Dashboard**
@@ -471,7 +472,7 @@ Wszystkie topice radia mają prefix `<base_topic>/` (domyślnie `atlascube/`). `
 
 ### Ekran widgetów
 
-Osobny ekran (swipe w prawo z zegara) mieści **do 6 widgetów** w siatce. Każde gniazdo konfigurujesz niezależnie z `/mqtt.html` (link z Ustawienia → MQTT). Ustaw *Type* na `None` żeby wyłączyć dany slot.
+Osobny ekran (wpis MQTT w pierścieniu głównym) mieści **do 6 widgetów** w siatce. Każde gniazdo konfigurujesz niezależnie z `/mqtt.html` (link z Ustawienia → MQTT). Ustaw *Type* na `None` żeby wyłączyć dany slot.
 
 **Typy widgetów**
 

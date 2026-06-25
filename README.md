@@ -119,16 +119,17 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 
 **UI**
 - LVGL-based GUI — supports ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), ILI9488 480×320 (SPI, 18-bit), CO5300 240×296 round AMOLED (QSPI), and SSD1322 256×64 mono OLED (SPI), switched via a single compile-time define
-- Screens: clock, playlist, equalizer, settings, Bluetooth, events, WiFi AP
+- Screens: home hub (clock face + adaptive controls), radio, SD player, playlist, equalizer, settings, Bluetooth, events, WiFi AP
+- Home hub — the default screen: a clock face that adapts to the active source (radio / SD / BT), with a tap overlay to control playback and jump to the playlist / SD browser / BT / settings. It covers all sources from one screen; the per-source screens are optional (hide them from Settings → Display)
 - Rotary encoder navigation (turn + press)
 - Capacitive touch — CST816D (CO5300 round AMOLED) or FT6336U (ST7796U 480×320), both on I2C; coexists with the rotary encoder, either input works at any time
-- Swipe gestures — horizontal swipes navigate between clock ↔ radio ↔ bt; swipe-up opens settings (clock) or playlist (radio); detection runs through LVGL on the existing pointer indev, no per-chip glue
-- On-screen controls overlay — tap a media or the clock screen to bring up a 5-button cross (play/pause, vol±, prev/next), auto-hides after a short timeout
+- Swipe gestures — horizontal swipes cycle the home ring (home ↔ bt ↔ radio ↔ sd ↔ mqtt, skipping hidden screens); swipe-up opens settings (home) or the source list (radio→playlist, SD→browser); detection runs through LVGL on the existing pointer indev, no per-chip glue
+- On-screen controls overlay — tap a screen to bring up the playback controls (play/stop, vol±, prev/next), auto-hides after a short timeout; the home hub's overlay adds source/playlist/sd/settings buttons
 - Audio VU meter — an optional radio-screen widget showing a real-time FFT spectrum computed from the live audio output; position it via the layout editor
 - Configurable layout (widget positions editable via JSON)
 - Screen background — choose a gradient, a solid color, or an **SD wallpaper image** (panel-sized RGB565 `.bin`, shared across all screens), from the Settings web UI
 - Custom boot splash logo — drop a panel-sized RGB565 `.bin` on the SD card to replace the built-in logo (auto-fit; falls back to the built-in logo if missing)
-- Optional SD-player screen in the home ring — show or hide it from the Settings web UI
+- Optional per-source screens in the home ring — show or hide the Radio, SD player and Bluetooth screens from the Settings web UI (the home hub stays, so the ring is never empty)
 - Screensavers — kick in after a configurable idle timeout; choose from clock hands, starfield, fireworks, plasma, Conway's Game of Life, blank (AMOLED-friendly "off"), **Dim** (just lowers the backlight, keeps the current screen), **Dashboard**, or **Photo frame** (see below)
 
 **Dashboard screensaver**
@@ -473,7 +474,7 @@ All radio topics use the prefix `<base_topic>/` (default: `atlascube/`). The MQT
 
 ### Widgets screen
 
-A dedicated on-device screen (swipe right from the clock) hosts **up to 6 user-defined widgets** in a grid. Each slot is configured independently from `/mqtt.html` (linked from Settings → MQTT). Set a slot's *Type* to `None` to disable it.
+A dedicated on-device screen (the MQTT entry in the home ring) hosts **up to 6 user-defined widgets** in a grid. Each slot is configured independently from `/mqtt.html` (linked from Settings → MQTT). Set a slot's *Type* to `None` to disable it.
 
 **Widget types**
 
