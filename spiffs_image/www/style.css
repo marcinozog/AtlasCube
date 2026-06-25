@@ -979,6 +979,18 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
 .pw-eye:hover { opacity: 1; }
 
 /* ─── Colors section ──────────────────────────────────────────────── */
+.color-section {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--text-label);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+    margin: 18px 0 12px;
+}
+.color-section:first-child { margin-top: 4px; }
+
 .color-row {
     display: grid;
     grid-template-columns: 1fr 48px 110px;

@@ -971,19 +971,20 @@ function showStatus(msg, type) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Colors (custom palettes) — /api/theme
 // ─────────────────────────────────────────────────────────────────────────────
+// [key, label, hint, section]
 const COLOR_FIELDS = [
-    ['bg_primary',     'Screen background',   'Main background of all screens'],
-    ['bg_secondary',   'Panels & cards',      'Strips, cards, sliders track'],
-    ['text_primary',   'Main text',           'Clock digits, titles, main labels'],
-    ['text_secondary', 'Secondary text',      'Date, station name in strip, volume %'],
-    ['text_muted',     'Subtle text',         'Audio info, ICY title, "Syncing…"'],
-    ['accent',         'Accent / highlight',  'Radio station name, slider fill'],
-    ['bt_brand',       'Bluetooth',           'BT icon, "Bluetooth Audio", BT slider'],
-    ['status_ok',      'Status OK',           'Connected / Playing (semantic green)'],
-    ['bg_grad_top',    'Gradient top',        'Top colour of the background gradient'],
-    ['bg_grad_bottom', 'Gradient bottom',     'Bottom colour of the background gradient'],
-    ['vu_bg',          'VU meter background',  'Spectrum/VU meter panel background'],
-    ['vu_bar',         'VU meter bars',        'Spectrum/VU meter bar colour'],
+    ['bg_primary',     'Screen background',   'Main background of all screens',                 'Background'],
+    ['bg_secondary',   'Panels & cards',      'Strips, cards, sliders track',                   'Background'],
+    ['bg_grad_top',    'Gradient top',        'Top colour of the background gradient',          'Background'],
+    ['bg_grad_bottom', 'Gradient bottom',     'Bottom colour of the background gradient',       'Background'],
+    ['text_primary',   'Main text',           'Clock digits, titles, main labels',              'Text'],
+    ['text_secondary', 'Secondary text',      'Date, station name in strip, volume %',          'Text'],
+    ['text_muted',     'Subtle text',         'Audio info, ICY title, "Syncing…"',              'Text'],
+    ['accent',         'Accent / highlight',  'Radio station name, slider fill',                'Accents'],
+    ['bt_brand',       'Bluetooth',           'BT icon, "Bluetooth Audio", BT slider',          'Accents'],
+    ['status_ok',      'Status OK',           'Connected / Playing (semantic green)',           'Accents'],
+    ['vu_bg',          'VU meter background', 'Spectrum/VU meter panel background',              'VU / spectrum'],
+    ['vu_bar',         'VU meter bars',       'Spectrum/VU meter bar colour',                   'VU / spectrum'],
 ];
 
 let colorData     = { dark: {}, light: {} };
@@ -1015,9 +1016,13 @@ function renderColorGrid() {
     const grid = document.getElementById('colorGrid');
     if (!grid) return;
     const pal = colorData[activePalette] || {};
-    grid.innerHTML = COLOR_FIELDS.map(([key, label, hint]) => {
+    let lastSection = null;
+    grid.innerHTML = COLOR_FIELDS.map(([key, label, hint, section]) => {
         const v = (pal[key] || '#000000').toUpperCase();
-        return `
+        const header = section && section !== lastSection
+            ? `<div class="color-section">${section}</div>` : '';
+        lastSection = section;
+        return header + `
         <div class="color-row">
             <div class="color-label-wrap">
                 <label class="color-label">${label}</label>
