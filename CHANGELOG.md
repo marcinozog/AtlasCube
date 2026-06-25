@@ -9,6 +9,23 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-06-25
+
+### Added
+- **display:** add 180° screen flip option
+- **ui:** wire BT transport in controls overlay + faithful play state
+- **ui:** add Clock/Radio nav-ring show/hide toggles
+- **ui:** add unified Home hub screen with source-aware overlay
+- **settings:** group colour palette into labelled sections
+- **theme:** per-theme VU meter colours (vu_bg/vu_bar)
+
+### Changed
+- **ui:** tighten settings row height across graphical profiles
+- **ui:** remove standalone clock screen, superseded by Home hub
+
+### Fixed
+- **ui:** show BT artist/title in Home strip instead of radio station
+
 ## [0.29.0] - 2026-06-24
 
 ### Added
@@ -423,7 +440,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.29.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.30.0...HEAD
+[0.30.0]: https://github.com/marcinozog/AtlasCube/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/marcinozog/AtlasCube/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/marcinozog/AtlasCube/compare/v0.27.0...v0.28.0
 [0.27.0]: https://github.com/marcinozog/AtlasCube/compare/v0.26.0...v0.27.0
