@@ -2,6 +2,7 @@
 #include "defines.h"
 #include "board_pins.h"
 #include "ui_profile.h"
+#include "settings.h"
 
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
@@ -64,6 +65,12 @@ static void touch_lvgl_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 #if TOUCH_MIRROR_Y
         y = DISPLAY_HEIGHT - 1 - y;
 #endif
+        // Runtime 180° flip (settings.display.flip). Mirroring both axes matches
+        // the panel's MADCTL flip regardless of the per-profile baseline above.
+        if (settings_get()->display.flip) {
+            x = DISPLAY_WIDTH  - 1 - x;
+            y = DISPLAY_HEIGHT - 1 - y;
+        }
         data->point.x = x;
         data->point.y = y;
         data->state = LV_INDEV_STATE_PRESSED;

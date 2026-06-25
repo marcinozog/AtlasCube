@@ -7,6 +7,7 @@
 #include "defines.h"
 #include "board_pins.h"
 #include "ui_profile.h"
+#include "settings.h"
 #include "freertos/task.h"
 
 static const char *TAG = "ILI9488";
@@ -124,7 +125,8 @@ static void ili9488_init_cmds(void)
     // 0xE8 = MY + MX + MV (row/col exchange) + BGR, mirroring the ST7796 profile.
     // UNTESTED on real hardware — flip the BGR bit (0x08) if red/blue are swapped,
     // or toggle MX/MY (0x40/0x80) if the image is mirrored/upside-down.
-    uint8_t d6[] = {0xE8};
+    // Flip 180° toggles MY+MX (0xC0) → 0x28.
+    uint8_t d6[] = {settings_get()->display.flip ? (uint8_t)0x28 : (uint8_t)0xE8};
     lcd_data(d6, 1);
 
     lcd_cmd(0x3A); // Pixel format

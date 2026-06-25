@@ -1,6 +1,7 @@
 #include "defines.h"
 #include "board_pins.h"
 #include "ui_profile.h"
+#include "settings.h"
 #include <string.h>
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
@@ -274,7 +275,9 @@ esp_err_t display_panel_init(void)
     writeC8D8(CMD_WRDISBV,     0xE0);   // 0x51 - display brightness
     writeC8D8(CMD_WRHBMDISBV,  0xE0);   // 0x63 - HBM brightness
 
-    writeC8D8(CMD_MADCTL,      0xC0);   // 0x36 - Orientation
+    // 0xC0 = MY|MX (portrait). Flip 180° toggles both bits → 0x00.
+    uint8_t madctl = settings_get()->display.flip ? 0x00 : 0xC0;
+    writeC8D8(CMD_MADCTL,      madctl);   // 0x36 - Orientation
 
     writeCommand(CMD_SLPOUT);
     vTaskDelay(pdMS_TO_TICKS(80));

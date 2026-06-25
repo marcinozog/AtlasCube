@@ -208,3 +208,33 @@ render buffer stays plain RGB565 at `LVGL_BUF_LINES = 20` like ST7796.
 > adjust the MX/MY/MV bits — the value mirrors ST7796's `0xE8`.
 
 Reference implementation: [components/display/drivers/ili9488.c](../components/display/drivers/ili9488.c).
+
+## 6. 180° screen flip (`display.flip`)
+
+A single orientation option — **rotate the whole screen 180°** — is exposed
+in the web UI (Display → *Flip display 180°*) and stored in
+`settings.display.flip`. Full landscape↔portrait swapping is intentionally
+**not** offered: the UI layout is sized from the fixed `DISPLAY_WIDTH/HEIGHT`
+of the active `ui_profile`, the CO5300 rounder forces full-width X bands
+(§1a), and the SSD1322's 256×64 geometry has no meaningful portrait mode.
+
+The flip is latched into the panel's address-mapping register at init, so it
+**takes effect only after a restart** (`settings_set_flip()` just persists the
+flag). Each driver reads `settings_get()->display.flip` in its init sequence
+and toggles the mirror bits:
+
+| Driver | normal | flipped | bits toggled |
+|---|---|---|---|
+| CO5300 | `MADCTL 0xC0` | `0x00` | MY+MX (`0xC0`) |
+| ST7796 / ILI9341 / ILI9488 | `MADCTL 0xE8` | `0x28` | MY+MX (`0xC0`) |
+| SSD1322 | remap `0xA0`→`0x14` | `0x06` | column-remap (`0x02`) + COM-scan (`0x10`) |
+
+Because the controller remaps the entire GRAM uniformly, the flip is
+transparent to the partial flush logic — no CASET/RASET changes are needed.
+Touch is mirrored to match at runtime in `touch_lvgl_read_cb` (both axes,
+which equals a 180° rotation regardless of the per-profile baseline), so no
+reboot is needed on the touch side.
+
+> On panels whose visible window is offset inside a larger GRAM, a flip can
+> shift the image by a few pixels; if that shows up on hardware, add a
+> per-orientation column/row start offset in the affected driver.

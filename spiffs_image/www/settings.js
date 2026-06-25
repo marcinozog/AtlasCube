@@ -237,6 +237,19 @@ function setShowBootInfo(on) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Flip display 180° (latched into the panel at boot — needs a restart)
+// ─────────────────────────────────────────────────────────────────────────────
+function setFlip(on) {
+    document.getElementById('settingsBtnFlipOn') ?.classList.toggle('active', on);
+    document.getElementById('settingsBtnFlipOff')?.classList.toggle('active', !on);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { flip: on } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Brightness (display)
 // ─────────────────────────────────────────────────────────────────────────────
 function setDisplayBrightness(t) {
@@ -720,6 +733,10 @@ function populateForm(s) {
         document.getElementById('wallpaperPicker').style.display = isWall ? '' : 'none';
         const wpEl = document.getElementById('wallpaperPath');
         if (wpEl) wpEl.textContent = s.display.wallpaper_path || '(none)';
+
+        const flip = s.display.flip === true;
+        document.getElementById('settingsBtnFlipOn') ?.classList.toggle('active', flip);
+        document.getElementById('settingsBtnFlipOff')?.classList.toggle('active', !flip);
 
         const bootInfo = s.display.show_boot_info !== false;   // default on
         document.getElementById('settingsBtnBootInfoOn') ?.classList.toggle('active', bootInfo);

@@ -24,6 +24,7 @@
 #include "defines.h"
 #include "board_pins.h"
 #include "ui_profile.h"
+#include "settings.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <string.h>
@@ -113,8 +114,11 @@ static void ssd1322_init_cmds(void)
     ssd1322_cmd(0xA1); ssd1322_data1(0x00);                       // start line
 
     // Re-map: horizontal address increment, dual COM, nibble re-map.
-    // Toggle bit 4 (0x10) of byte 0 to flip the image horizontally if mirrored.
-    ssd1322_cmd(0xA0); ssd1322_data1(0x14); ssd1322_data1(0x11);
+    // 0x14 baseline. A 180° flip toggles column-address remap (bit1, 0x02)
+    // and COM scan direction (bit4, 0x10) together → 0x06. Portrait is not
+    // possible on this 256x64 panel, so flip is the only orientation option.
+    uint8_t remap0 = settings_get()->display.flip ? 0x06 : 0x14;
+    ssd1322_cmd(0xA0); ssd1322_data1(remap0); ssd1322_data1(0x11);
 
     ssd1322_cmd(0xB5); ssd1322_data1(0x00);                       // GPIO disabled
     ssd1322_cmd(0xAB); ssd1322_data1(0x01);                       // enable internal VDD regulator

@@ -45,6 +45,7 @@ esp_err_t settings_init(void)
         s_settings.display.brightness       = 80;
         s_settings.display.screen           = SCREEN_HOME;
         s_settings.display.theme            = THEME_DARK;
+        s_settings.display.flip             = false;
         s_settings.display.bg_gradient      = true;
         s_settings.display.wallpaper_on     = false;
         s_settings.display.wallpaper_path[0] = '\0';
@@ -218,6 +219,8 @@ static esp_err_t load_from_file(void)
             s_settings.display.theme =
                 (strcmp(th->valuestring, "light") == 0) ? THEME_LIGHT : THEME_DARK;
         }
+        cJSON *fl = cJSON_GetObjectItem(display, "flip");
+        s_settings.display.flip = cJSON_IsBool(fl) ? cJSON_IsTrue(fl) : false;
         cJSON *bg = cJSON_GetObjectItem(display, "bg_gradient");
         s_settings.display.bg_gradient = cJSON_IsBool(bg) ? cJSON_IsTrue(bg) : true;
         cJSON *wp = cJSON_GetObjectItem(display, "wallpaper_on");
@@ -491,6 +494,7 @@ static esp_err_t save_to_file(void)
     cJSON_AddNumberToObject(display, "brightness", s_settings.display.brightness);
     cJSON_AddStringToObject(display, "theme",
         s_settings.display.theme == THEME_LIGHT ? "light" : "dark");
+    cJSON_AddBoolToObject(display, "flip", s_settings.display.flip);
     cJSON_AddBoolToObject(display, "bg_gradient", s_settings.display.bg_gradient);
     cJSON_AddBoolToObject(display, "wallpaper_on", s_settings.display.wallpaper_on);
     cJSON_AddStringToObject(display, "wallpaper_path", s_settings.display.wallpaper_path);
@@ -859,6 +863,15 @@ void settings_set_theme(ui_theme_t t)
     s_settings.display.theme = t;
     theme_set(t);   // natychmiastowa zmiana palety
     app_state_update(&(app_state_patch_t){ .has_theme = true, .theme = t });
+    save_to_file();
+}
+
+void settings_set_flip(bool enabled)
+{
+    // Orientation is latched into MADCTL at panel init, so the change only
+    // takes effect after a restart. Persist it and let the web UI prompt.
+    if (s_settings.display.flip == enabled) return;
+    s_settings.display.flip = enabled;
     save_to_file();
 }
 

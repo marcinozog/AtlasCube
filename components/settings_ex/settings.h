@@ -36,6 +36,7 @@ typedef struct {
     ui_screen_id_t  screen;
     int             brightness;
     ui_theme_t      theme;
+    bool            flip;            // rotate the whole screen 180° (applied at panel init — needs restart)
     bool            bg_gradient;     // dithered gradient background on/off
     bool            wallpaper_on;       // SD wallpaper background on/off (wins over gradient)
     char            wallpaper_path[64]; // full path to a panel-sized RGB565 .bin on SD
@@ -152,6 +153,7 @@ void settings_set_bt_auto_switch(bool enable);
 void settings_set_bt_vol_sync(bool on);
 void settings_set_ntp(const char *server1, const char *server2, const char *tz);
 void settings_set_theme(ui_theme_t theme);
+void settings_set_flip(bool enabled);
 void settings_set_bg_gradient(bool enabled);
 void settings_set_wallpaper(bool on, const char *path);
 void settings_set_logo_path(const char *path);

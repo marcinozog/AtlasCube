@@ -87,6 +87,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(display, "brightness", s->display.brightness);
     cJSON_AddStringToObject(display, "theme",
         s->display.theme == THEME_LIGHT ? "light" : "dark");
+    cJSON_AddBoolToObject(display, "flip", s->display.flip);
     cJSON_AddBoolToObject(display, "bg_gradient", s->display.bg_gradient);
     cJSON_AddBoolToObject(display, "wallpaper_on", s->display.wallpaper_on);
     cJSON_AddStringToObject(display, "wallpaper_path", s->display.wallpaper_path);
@@ -287,6 +288,11 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
                            ? THEME_LIGHT : THEME_DARK;
             ESP_LOGI("HTTP", "POST theme: string='%s' → enum=%d", th->valuestring, (int)t);
             settings_set_theme(t);
+        }
+        cJSON *fl = cJSON_GetObjectItem(display, "flip");
+        if (cJSON_IsBool(fl)) {
+            ESP_LOGI("HTTP", "POST flip: %d (takes effect after restart)", cJSON_IsTrue(fl));
+            settings_set_flip(cJSON_IsTrue(fl));
         }
         cJSON *bg = cJSON_GetObjectItem(display, "bg_gradient");
         if (cJSON_IsBool(bg)) {

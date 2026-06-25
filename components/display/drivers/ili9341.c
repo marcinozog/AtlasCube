@@ -7,6 +7,7 @@
 #include "defines.h"
 #include "board_pins.h"
 #include "ui_profile.h"
+#include "settings.h"
 #include "freertos/task.h"
 
 static const char *TAG = "ILI9341";
@@ -140,7 +141,8 @@ static void ili9341_init_cmds(void)
     lcd_data(d10, 1);
 
     lcd_cmd(0x36); // MADCTL
-    uint8_t d11[] = {0xE8}; //0x20, 0x40, 0x80, 0xE0 | 0x08
+    // 0xE8 baseline; flip 180° toggles MY+MX (0xC0) → 0x28.
+    uint8_t d11[] = {settings_get()->display.flip ? (uint8_t)0x28 : (uint8_t)0xE8}; //0x20, 0x40, 0x80, 0xE0 | 0x08
     lcd_data(d11, 1);
 
     lcd_cmd(0x3A); // Pixel format

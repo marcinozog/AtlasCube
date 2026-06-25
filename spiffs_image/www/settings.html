@@ -54,6 +54,15 @@
         </div>
 
         <div class="panel">
+            <label class="field-label">Flip display 180°</label>
+            <div class="field-hint">Rotate the whole screen upside-down (for inverted mounting). Takes effect after a restart.</div>
+            <div class="theme-toggle" id="flipToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnFlipOn"  onclick="setFlip(true)">🔄 Flipped</button>
+                <button class="theme-btn" id="settingsBtnFlipOff" onclick="setFlip(false)">⬆️ Normal</button>
+            </div>
+        </div>
+
+        <div class="panel">
             <label class="field-label">Show/hide Bluetooth screen</label>
             <div class="theme-toggle" id="btScreenToggle" style="width:fit-content">
                 <button class="theme-btn" id="settingsBtnBTshow" onclick="setDeviceBTScreen(true)">✅ Show</button>

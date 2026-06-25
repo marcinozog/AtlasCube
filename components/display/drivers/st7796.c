@@ -7,6 +7,7 @@
 #include "defines.h"
 #include "board_pins.h"
 #include "ui_profile.h"
+#include "settings.h"
 #include "freertos/task.h"
 
 static const char *TAG = "ST7796";
@@ -110,7 +111,8 @@ static void st7796_init_cmds(void)
     lcd_cmd(0x36); // MADCTL — landscape 480x320
     // 0xE8 = MY + MX + MV (row/col exchange) + BGR — verified on the panel.
     // Toggle the BGR bit (0x08) if red/blue come out swapped.
-    uint8_t d3[] = {0xE8};
+    // Flip 180° toggles MY+MX (0xC0) → 0x28.
+    uint8_t d3[] = {settings_get()->display.flip ? (uint8_t)0x28 : (uint8_t)0xE8};
     lcd_data(d3, 1);
 
     lcd_cmd(0x3A); // Pixel format
