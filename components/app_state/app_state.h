@@ -64,7 +64,6 @@ typedef struct {
     bool sd_shuffle;            // Shuffle mode
     int  sd_repeat;             // Repeat mode: 0=none, 1=all, 2=one
     bool sd_show_screen;        // SD player show/hide screen in the nav ring
-    bool clock_show_screen;     // clock show/hide screen in the nav ring
     bool radio_show_screen;     // radio show/hide screen in the nav ring
 } app_state_t;
 
@@ -169,8 +168,6 @@ typedef struct {
     int  sd_repeat;
     bool has_sd_show_screen;
     bool sd_show_screen;
-    bool has_clock_show_screen;
-    bool clock_show_screen;
     bool has_radio_show_screen;
     bool radio_show_screen;
 } app_state_patch_t;

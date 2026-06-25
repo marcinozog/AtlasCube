@@ -93,7 +93,6 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(display, "logo_path", s->display.logo_path);
     cJSON_AddBoolToObject(display, "show_boot_info", s->display.show_boot_info);
     cJSON_AddBoolToObject(display, "sd_show_screen", s->display.sd_show_screen);
-    cJSON_AddBoolToObject(display, "clock_show_screen", s->display.clock_show_screen);
     cJSON_AddBoolToObject(display, "radio_show_screen", s->display.radio_show_screen);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s->display.dim_schedule.enabled);
@@ -319,11 +318,6 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             ESP_LOGI("HTTP", "POST sd_show_screen: %d", cJSON_IsTrue(sds));
             settings_set_sd_show_screen(cJSON_IsTrue(sds));
         }
-        cJSON *clks = cJSON_GetObjectItem(display, "clock_show_screen");
-        if (cJSON_IsBool(clks)) {
-            ESP_LOGI("HTTP", "POST clock_show_screen: %d", cJSON_IsTrue(clks));
-            settings_set_clock_show_screen(cJSON_IsTrue(clks));
-        }
         cJSON *rds = cJSON_GetObjectItem(display, "radio_show_screen");
         if (cJSON_IsBool(rds)) {
             ESP_LOGI("HTTP", "POST radio_show_screen: %d", cJSON_IsTrue(rds));
@@ -333,7 +327,9 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         if (cJSON_IsString(scr)) {
             ESP_LOGI("HTTP", "POST screen: %s", scr->valuestring);
             if      (strcmp(scr->valuestring, "radio") == 0) settings_set_screen(SCREEN_RADIO);
-            else if (strcmp(scr->valuestring, "clock") == 0) settings_set_screen(SCREEN_CLOCK);
+            // "clock" kept for older clients — the clock screen is now the Home hub.
+            else if (strcmp(scr->valuestring, "home")  == 0) settings_set_screen(SCREEN_HOME);
+            else if (strcmp(scr->valuestring, "clock") == 0) settings_set_screen(SCREEN_HOME);
             else if (strcmp(scr->valuestring, "bt")    == 0) settings_set_screen(SCREEN_BT);
             else ESP_LOGW("HTTP", "POST screen: unknown '%s'", scr->valuestring);
         }
@@ -512,7 +508,6 @@ static esp_err_t api_state_get_handler(httpd_req_t *req)
     cJSON_AddBoolToObject  (json, "bt_auto_switch", s->bt_auto_switch);
     cJSON_AddBoolToObject  (json, "bt_show_screen", s->bt_show_screen);
     cJSON_AddBoolToObject  (json, "sd_show_screen", s->sd_show_screen);
-    cJSON_AddBoolToObject  (json, "clock_show_screen", s->clock_show_screen);
     cJSON_AddBoolToObject  (json, "radio_show_screen", s->radio_show_screen);
     cJSON_AddBoolToObject  (json, "time_synced",    s->time_synced);
     // WiFi mode — useful for the settings page UI

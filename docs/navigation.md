@@ -79,9 +79,10 @@ To add, remove, or reorder a home screen, edit only the table in
 
 ```c
 static const nav_ring_entry_t s_ring[] = {
+    { SCREEN_HOME,  NULL              },   // always visible — the unified hub
     { SCREEN_BT,    cond_bt_screen    },   // visible only if bt_show_screen
-    { SCREEN_RADIO, NULL              },   // always visible
-    { SCREEN_CLOCK, NULL              },   // always visible
+    { SCREEN_RADIO, cond_radio_screen },   // visible only if radio_show_screen
+    { SCREEN_SD,    cond_sd_screen    },   // visible only if sd_show_screen
     { SCREEN_MQTT,  cond_mqtt_enabled },   // visible only if mqtt enabled
 };
 ```

@@ -18,7 +18,7 @@ top of the layout page.
 | [components/ui/ui_profile.h](../components/ui/ui_profile.h) + [ui_profile.c](../components/ui/ui_profile.c) | `ui_profile_t` (layout struct), const defaults, mutable runtime, JSON I/O |
 | [components/ui/fonts/ui_fonts.h](../components/ui/fonts/ui_fonts.h) + [ui_fonts.c](../components/ui/fonts/ui_fonts.c) | Registry id ↔ `lv_font_t*` (font serialization) |
 | [components/ui/ui_manager.c](../components/ui/ui_manager.c) | `do_rebuild_active()` — handles `UI_EVT_PROFILE_CHANGED` |
-| [components/ui/screens/screen_clock.c](../components/ui/screens/screen_clock.c) | Reads `ui_profile_get()` in `create()` |
+| [components/ui/screens/screen_home.c](../components/ui/screens/screen_home.c) | Reads `ui_profile_get()` in `create()` |
 | [components/web/http_server.c](../components/web/http_server.c) | `/api/ui/profile/*` endpoints |
 | [spiffs_image/www/layout.html](../spiffs_image/www/layout.html) + [layout.js](../spiffs_image/www/layout.js) | SVG canvas + form page |
 | `/spiffs/ui_profile.json` | Persisted overrides — created on first Apply |

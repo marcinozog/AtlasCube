@@ -19,7 +19,7 @@
 
 static const char *TAG = "SCR_SETTINGS";
 
-static ui_screen_id_t s_return = SCREEN_CLOCK;   // where to go when settings is exited
+static ui_screen_id_t s_return = SCREEN_HOME;   // where to go when settings is exited
 
 void screen_settings_set_return(ui_screen_id_t scr) { s_return = scr; }
 

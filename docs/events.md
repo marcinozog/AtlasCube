@@ -199,7 +199,7 @@ screen.
 
 [components/ui/widgets/event_indicator_widget.c](../components/ui/widgets/event_indicator_widget.c)
 — small label placed manually on selected screens (e.g.
-[screen_clock.c](../components/ui/screens/screen_clock.c)) next to
+[screen_home.c](../components/ui/screens/screen_home.c)) next to
 `mode_indicator_widget`.
 
 Display:

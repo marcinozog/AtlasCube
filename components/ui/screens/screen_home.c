@@ -25,10 +25,9 @@
 #include <stdio.h>
 #include <time.h>
 
-// The hub mirrors screen_clock's layout (reusing the clock_* ui_profile fields)
-// but swaps the radio-only controls overlay for hub_overlay, which can reach all
-// three sources. Kept as a separate screen so the plain clock stays a minimal
-// screensaver-style face.
+// The hub uses the clock_* ui_profile fields (it replaced the standalone clock
+// screen, which the Home hub fully supersedes) and adds hub_overlay, which can
+// reach all three sources plus the playlist / SD browser / settings.
 
 static const char *TAG = "SCR_HOME";
 
@@ -43,9 +42,9 @@ static lv_timer_t *s_clock_timer  = NULL;
 
 static void netinfo_update(void);
 
-// Active audio source → which buttons the hub overlay drives. Same priority as
-// screen_clock: BT, then actively-playing radio, then SD if it's playing OR has a
-// resumable queue (stop-keep "limbo"), else radio as the default.
+// Active audio source → which buttons the hub overlay drives. Priority: BT, then
+// actively-playing radio, then SD if it's playing OR has a resumable queue
+// (stop-keep "limbo"), else radio as the default.
 static controls_overlay_mode_t home_ctrl_mode(void)
 {
     app_state_t *s = app_state_get();

@@ -356,7 +356,9 @@ static esp_err_t ws_handler(httpd_req_t *req)
             if (v && cJSON_IsString(v)) {
                 const char *scr = v->valuestring;
                 if      (strcmp(scr, "radio") == 0) settings_set_screen(SCREEN_RADIO);
-                else if (strcmp(scr, "clock") == 0) settings_set_screen(SCREEN_CLOCK);
+                // "clock" kept for older clients — the clock screen is now the Home hub.
+                else if (strcmp(scr, "home")  == 0) settings_set_screen(SCREEN_HOME);
+                else if (strcmp(scr, "clock") == 0) settings_set_screen(SCREEN_HOME);
                 else if (strcmp(scr, "bt")    == 0) settings_set_screen(SCREEN_BT);
                 else ESP_LOGW(TAG, "set_screen: unknown screen '%s'", scr);
             }

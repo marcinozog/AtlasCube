@@ -51,7 +51,7 @@ extern "C" {
 // UI code for different displays (color/mono, various resolutions)
 // without a runtime JSON parser.
 typedef struct {
-    // screen_clock — absolute LCD coordinates (top-left origin)
+    // clock face (screen_home) — absolute LCD coordinates (top-left origin)
     int16_t          clock_panel_x;
     int16_t          clock_panel_y;
     int16_t          clock_panel_w;

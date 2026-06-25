@@ -24,7 +24,6 @@
 extern const ui_screen_t screen_splash;
 extern const ui_screen_t screen_radio;
 extern const ui_screen_t screen_playlist;
-extern const ui_screen_t screen_clock;
 extern const ui_screen_t screen_home;
 // extern const ui_screen_t screen_weather;
 extern const ui_screen_t screen_bt;
@@ -46,7 +45,7 @@ static const ui_screen_t *s_screens[SCREEN_COUNT] = {
     [SCREEN_SPLASH]             = &screen_splash,
     [SCREEN_RADIO]              = &screen_radio,
     [SCREEN_PLAYLIST]           = &screen_playlist,
-    [SCREEN_CLOCK]              = &screen_clock,
+    [SCREEN_CLOCK]              = NULL,   // removed — superseded by SCREEN_HOME
     [SCREEN_HOME]               = &screen_home,
     [SCREEN_WEATHER]            = NULL,
     [SCREEN_BT]                 = &screen_bt,

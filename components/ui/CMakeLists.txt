@@ -12,7 +12,6 @@ idf_component_register(
         "screens/screen_playlist.c"
         "screens/screen_sd_player.c"
         "screens/screen_sd_browser.c"
-        "screens/screen_clock.c"
         "screens/screen_home.c"
         # "screen_weather.c"
         "screens/screen_bt.c"

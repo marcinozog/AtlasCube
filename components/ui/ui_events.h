@@ -12,7 +12,9 @@ typedef enum {
     SCREEN_SPLASH = 0,
     SCREEN_RADIO,
     SCREEN_PLAYLIST,
-    SCREEN_CLOCK,
+    SCREEN_CLOCK,         // REMOVED — superseded by SCREEN_HOME. Kept as a tombstone
+                         // so persisted display.screen ids don't renumber; never
+                         // registered, migrated to SCREEN_HOME on settings load.
     SCREEN_WEATHER,
     SCREEN_BT,
     SCREEN_WIFI,
