@@ -251,7 +251,7 @@ void hub_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
     // Geometry: size both rows to the wider (5-button) transport row so the whole
     // grid stays inside the shorter screen side.
     int side = (DISPLAY_WIDTH < DISPLAY_HEIGHT) ? DISPLAY_WIDTH : DISPLAY_HEIGHT;
-    int sz   = side / 6;
+    int sz   = side / 5;
     if (sz < 40) sz = 40;
     if (sz > 72) sz = 72;
     int step  = sz + sz / 6;                 // center-to-center within a row
