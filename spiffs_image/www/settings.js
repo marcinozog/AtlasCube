@@ -365,6 +365,32 @@ function setDeviceSDScreen(t) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Clock screen (display)
+// ─────────────────────────────────────────────────────────────────────────────
+function setDeviceClockScreen(t) {
+    document.getElementById('settingsBtnClockShow')?.classList.toggle('active', t);
+    document.getElementById('settingsBtnClockHide')?.classList.toggle('active', !t);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { clock_show_screen: t } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Radio screen (display)
+// ─────────────────────────────────────────────────────────────────────────────
+function setDeviceRadioScreen(t) {
+    document.getElementById('settingsBtnRadioShow')?.classList.toggle('active', t);
+    document.getElementById('settingsBtnRadioHide')?.classList.toggle('active', !t);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { radio_show_screen: t } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Audio — DSP / EQ on/off
 // ─────────────────────────────────────────────────────────────────────────────
 function setDeviceEqEnabled(t) {
@@ -715,6 +741,14 @@ function populateForm(s) {
         const sdScr = s.display.sd_show_screen !== false;   // default on
         document.getElementById('settingsBtnSDshow')?.classList.toggle('active', sdScr);
         document.getElementById('settingsBtnSDhide')?.classList.toggle('active', !sdScr);
+
+        const clockScr = s.display.clock_show_screen !== false;   // default on
+        document.getElementById('settingsBtnClockShow')?.classList.toggle('active', clockScr);
+        document.getElementById('settingsBtnClockHide')?.classList.toggle('active', !clockScr);
+
+        const radioScr = s.display.radio_show_screen !== false;   // default on
+        document.getElementById('settingsBtnRadioShow')?.classList.toggle('active', radioScr);
+        document.getElementById('settingsBtnRadioHide')?.classList.toggle('active', !radioScr);
 
         const logoEl = document.getElementById('logoPath');
         if (logoEl) logoEl.textContent = s.display.logo_path || '(built-in)';

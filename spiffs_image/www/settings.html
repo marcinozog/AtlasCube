@@ -70,6 +70,22 @@
         </div>
 
         <div class="panel">
+            <label class="field-label">Show/hide Radio screen</label>
+            <div class="theme-toggle" id="radioScreenToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnRadioShow" onclick="setDeviceRadioScreen(true)">✅ Show</button>
+                <button class="theme-btn" id="settingsBtnRadioHide" onclick="setDeviceRadioScreen(false)">❌ Hide</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <label class="field-label">Show/hide Clock screen</label>
+            <div class="theme-toggle" id="clockScreenToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnClockShow" onclick="setDeviceClockScreen(true)">✅ Show</button>
+                <button class="theme-btn" id="settingsBtnClockHide" onclick="setDeviceClockScreen(false)">❌ Hide</button>
+            </div>
+        </div>
+
+        <div class="panel">
             <label class="field-label">Boot info on splash (version + IP, STA only)</label>
             <div class="theme-toggle" id="bootInfoToggle" style="width:fit-content">
                 <button class="theme-btn" id="settingsBtnBootInfoOn"  onclick="setShowBootInfo(true)">✅ On</button>

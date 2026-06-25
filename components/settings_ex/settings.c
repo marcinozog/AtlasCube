@@ -51,6 +51,8 @@ esp_err_t settings_init(void)
         s_settings.display.logo_path[0]     = '\0';
         s_settings.display.show_boot_info   = true;
         s_settings.display.sd_show_screen   = true;
+        s_settings.display.clock_show_screen = true;
+        s_settings.display.radio_show_screen = true;
         s_settings.display.dim_schedule.enabled        = false;
         s_settings.display.dim_schedule.dim_hour       = 22;
         s_settings.display.dim_schedule.dim_minute     = 0;
@@ -231,6 +233,10 @@ static esp_err_t load_from_file(void)
         s_settings.display.show_boot_info = cJSON_IsBool(sbi) ? cJSON_IsTrue(sbi) : true;
         cJSON *sds = cJSON_GetObjectItem(display, "sd_show_screen");
         s_settings.display.sd_show_screen = cJSON_IsBool(sds) ? cJSON_IsTrue(sds) : true;
+        cJSON *clks = cJSON_GetObjectItem(display, "clock_show_screen");
+        s_settings.display.clock_show_screen = cJSON_IsBool(clks) ? cJSON_IsTrue(clks) : true;
+        cJSON *rds = cJSON_GetObjectItem(display, "radio_show_screen");
+        s_settings.display.radio_show_screen = cJSON_IsBool(rds) ? cJSON_IsTrue(rds) : true;
 
         // dim schedule defaults (used if section is missing or partial)
         s_settings.display.dim_schedule.enabled        = false;
@@ -490,6 +496,8 @@ static esp_err_t save_to_file(void)
     cJSON_AddStringToObject(display, "logo_path", s_settings.display.logo_path);
     cJSON_AddBoolToObject(display, "show_boot_info", s_settings.display.show_boot_info);
     cJSON_AddBoolToObject(display, "sd_show_screen", s_settings.display.sd_show_screen);
+    cJSON_AddBoolToObject(display, "clock_show_screen", s_settings.display.clock_show_screen);
+    cJSON_AddBoolToObject(display, "radio_show_screen", s_settings.display.radio_show_screen);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s_settings.display.dim_schedule.enabled);
     cJSON_AddNumberToObject(dim, "dim_hour",       s_settings.display.dim_schedule.dim_hour);
@@ -637,6 +645,8 @@ void settings_apply(void)
         .has_bg_gradient        = true, .bg_gradient = s_settings.display.bg_gradient,
         .has_wallpaper_on       = true, .wallpaper_on = s_settings.display.wallpaper_on,
         .has_sd_show_screen     = true, .sd_show_screen = s_settings.display.sd_show_screen,
+        .has_clock_show_screen  = true, .clock_show_screen = s_settings.display.clock_show_screen,
+        .has_radio_show_screen  = true, .radio_show_screen = s_settings.display.radio_show_screen,
         .has_scrsaver_delay     = true, .scrsaver_delay  = s_settings.scrsaver.delay,
         .has_scrsaver_id        = true, .scrsaver_id     = s_settings.scrsaver.screensaver_id,
     };
@@ -791,6 +801,24 @@ void settings_set_sd_show_screen(bool show)
     if(s_settings.display.sd_show_screen != show) {
         s_settings.display.sd_show_screen = show;
         app_state_update(&(app_state_patch_t){ .has_sd_show_screen = true, .sd_show_screen = show });
+        save_to_file();
+    }
+}
+
+void settings_set_clock_show_screen(bool show)
+{
+    if(s_settings.display.clock_show_screen != show) {
+        s_settings.display.clock_show_screen = show;
+        app_state_update(&(app_state_patch_t){ .has_clock_show_screen = true, .clock_show_screen = show });
+        save_to_file();
+    }
+}
+
+void settings_set_radio_show_screen(bool show)
+{
+    if(s_settings.display.radio_show_screen != show) {
+        s_settings.display.radio_show_screen = show;
+        app_state_update(&(app_state_patch_t){ .has_radio_show_screen = true, .radio_show_screen = show });
         save_to_file();
     }
 }

@@ -169,6 +169,8 @@ void app_state_update(const app_state_patch_t *patch)
     if (patch->has_sd_shuffle) s_state.sd_shuffle = patch->sd_shuffle;
     if (patch->has_sd_repeat)  s_state.sd_repeat  = patch->sd_repeat;
     if (patch->has_sd_show_screen) s_state.sd_show_screen = patch->sd_show_screen;
+    if (patch->has_clock_show_screen) s_state.clock_show_screen = patch->clock_show_screen;
+    if (patch->has_radio_show_screen) s_state.radio_show_screen = patch->radio_show_screen;
 
     notify();
 

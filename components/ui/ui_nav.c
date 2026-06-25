@@ -10,6 +10,8 @@
 
 static bool cond_bt_screen(void)    { return app_state_get()->bt_show_screen; }
 static bool cond_sd_screen(void)    { return app_state_get()->sd_show_screen; }
+static bool cond_clock_screen(void) { return app_state_get()->clock_show_screen; }
+static bool cond_radio_screen(void) { return app_state_get()->radio_show_screen; }
 static bool cond_mqtt_enabled(void) { return mqtt_config_get()->enabled; }
 
 // --------------------------------------------------------------------------
@@ -25,11 +27,11 @@ typedef struct {
 } nav_ring_entry_t;
 
 static const nav_ring_entry_t s_ring[] = {
-    { SCREEN_HOME,  NULL              },
+    { SCREEN_HOME,  NULL              },   // always visible — the unified hub
     { SCREEN_BT,    cond_bt_screen    },
-    { SCREEN_RADIO, NULL              },
+    { SCREEN_RADIO, cond_radio_screen },
     { SCREEN_SD,    cond_sd_screen    },
-    { SCREEN_CLOCK, NULL              },
+    { SCREEN_CLOCK, cond_clock_screen },
     { SCREEN_MQTT,  cond_mqtt_enabled },
 };
 
