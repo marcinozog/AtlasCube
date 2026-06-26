@@ -350,7 +350,7 @@ Piny wyświetlacza są pogrupowane per driver, więc najpierw ustaw wariant (wy�
 
 **Konfiguracja pinów w runtime (bez przebudowy)**
 
-Wejdź na `http://<ip-urządzenia>/setup` (albo `192.168.4.1/setup` w trybie AP; jest też link z Ustawienia → Tools). Strona pozwala przemapować GPIO wyświetlacza / dotyku / SD / I2S / enkodera / buzzera / Bluetootha i zapisuje je w NVS, nadpisując domyślne z `defines.h` — dzięki temu jedna binarka pasuje do płytek o różnym układzie pinów. Oznacza piny zarezerwowane (26–37), strapping (0/3/45/46) i duplikaty, oraz blokuje zapis przy twardych konfliktach. Po zapisie **odłącz i podłącz zasilanie** (miękki restart nie przemapowuje wiarygodnie padów GPIO). „Reset pins to defaults" czyści nadpisania. Sam *sterownik* wyświetlacza jest dalej ustalony w build-time — piny są konfigurowalne, sterownik nie.
+Wejdź na `http://<ip-urządzenia>/setup` (albo `192.168.4.1/setup` w trybie AP; jest też link z Ustawienia → Tools). Strona pozwala przemapować GPIO wyświetlacza / dotyku / SD / I2S / enkodera / buzzera / Bluetootha i zapisuje je w NVS, nadpisując domyślne z `defines.h` — dzięki temu jedna binarka pasuje do płytek o różnym układzie pinów. Oznacza piny zarezerwowane (26–37), strapping (0/3/45/46) i duplikaty, oraz blokuje zapis przy twardych konfliktach. Lista dozwolonych GPIO jest oznaczona kolorami **zajęte (czerwone) / wolne (zielone)**, więc wolny pin widać od razu, a całą mapę można **wyeksportować/zaimportować do pliku JSON** (plik zapisuje sterownik i wersję firmware, więc import ostrzeże, jeśli powstał dla innego buildu). Po zapisie **odłącz i podłącz zasilanie** (miękki restart nie przemapowuje wiarygodnie padów GPIO). „Reset pins to defaults" czyści nadpisania. Sam *sterownik* wyświetlacza jest dalej ustalony w build-time — piny są konfigurowalne, sterownik nie.
 
 **Build i flash ręcznie**
 
@@ -560,7 +560,7 @@ Aktualizacja firmware przez Wi-Fi z **Ustawienia → Tools** — bez kabla USB, 
 - Urządzenie zatrzymuje odtwarzanie na czas zapisu, żeby zwolnić RAM i uniknąć kontencji na flash/SPI.
 - **Najpierw backup:** przycisk *Export running firmware* (`GET /api/ota/backup`) pobiera aktywny slot jako `atlascube-<wersja>.bin` — re-flashowalny snapshot, który można wgrać z powrotem, żeby ręcznie cofnąć aktualizację.
 
-Gdy nowy firmware niesie też nowe web UI, zaktualizuj je osobno: edytorem plików w przeglądarce (`/spiffs-editor.html`) albo wbudowaną stroną setupu, ewentualnie pełnym reflashem od `0x0`.
+Gdy nowy firmware niesie też nowe web UI, OTA zostawia partycję `www` bez zmian — urządzenie sygnalizuje to na **stronie setupu** (`/setup`), która pokazuje baner *web UI out of date* z linkiem jednym kliknięciem do pasującego `AtlasCube-www.zip` z najnowszego release. Rozpakuj i wgraj tam pliki (dołącz `www_version.txt`, żeby skasować ostrzeżenie). Ewentualnie edytuj/wgraj edytorem plików w przeglądarce (`/spiffs-editor.html`) albo zrób pełny reflash od `0x0`.
 
 ---
 

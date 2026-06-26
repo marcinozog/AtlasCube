@@ -352,7 +352,7 @@ The display pins are grouped per driver, so set your variant first (above) — y
 
 **Runtime pin setup (no rebuild)**
 
-Open `http://<device-ip>/setup` (or `192.168.4.1/setup` in AP mode; also linked from Settings → Tools). The page lets you remap display / touch / SD / I2S / encoder / buzzer / Bluetooth GPIOs and stores them in NVS, overriding the `defines.h` defaults — so one binary fits boards with different wiring. It flags reserved (26–37), strapping (0/3/45/46) and duplicate pins, and blocks saving on hard conflicts. **Power-cycle** the device after saving (a soft restart does not reliably remap GPIO pads). "Reset pins to defaults" clears the overrides. The display *driver* itself is still fixed at build time — pins are configurable, the driver is not.
+Open `http://<device-ip>/setup` (or `192.168.4.1/setup` in AP mode; also linked from Settings → Tools). The page lets you remap display / touch / SD / I2S / encoder / buzzer / Bluetooth GPIOs and stores them in NVS, overriding the `defines.h` defaults — so one binary fits boards with different wiring. It flags reserved (26–37), strapping (0/3/45/46) and duplicate pins, and blocks saving on hard conflicts. The allowed-GPIO list is colour-coded **in use (red) / free (green)** so a spare pin is obvious at a glance, and the whole map can be **exported/imported as a JSON file** (the file records the driver and firmware version, so an import warns if it was made for a different build). **Power-cycle** the device after saving (a soft restart does not reliably remap GPIO pads). "Reset pins to defaults" clears the overrides. The display *driver* itself is still fixed at build time — pins are configurable, the driver is not.
 
 **Build and flash manually**
 
@@ -562,7 +562,7 @@ Update the firmware over Wi-Fi from **Settings → Tools** — no USB cable, no 
 - The device stops playback during the write to free RAM and avoid flash/SPI contention.
 - **Backup first:** the *Export running firmware* button (`GET /api/ota/backup`) downloads the active slot as `atlascube-<version>.bin` — a re-flashable snapshot you can upload again to roll back manually.
 
-When a firmware update also ships new web UI, update it separately: edit/upload via the in-browser file editor (`/spiffs-editor.html`) or the built-in setup page, or do a full `0x0` reflash.
+When a firmware update also ships new web UI, OTA leaves the `www` partition as-is — the device flags this on the **setup page** (`/setup`), which shows a *web UI out of date* banner with a one-click link to the matching `AtlasCube-www.zip` from the latest release. Extract it and upload the files there (include `www_version.txt` to clear the warning). Alternatively, edit/upload via the in-browser file editor (`/spiffs-editor.html`) or do a full `0x0` reflash.
 
 ---
 
