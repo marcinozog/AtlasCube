@@ -30,6 +30,22 @@ void hub_overlay_set_mode(controls_overlay_mode_t mode);
 // …). No-op if not created.
 void hub_overlay_refresh(void);
 
+// Show the overlay (e.g. from an encoder long-press), mirroring a screen tap.
+// No-op if not created; resets the auto-hide timer.
+void hub_overlay_show(void);
+
+// True while the overlay is on screen (created and not hidden). The owning
+// screen uses this to route the encoder to button focus instead of volume.
+bool hub_overlay_is_visible(void);
+
+// Move the focus ring to the next / previous button (wraps around). Resets the
+// auto-hide timer. No-op unless the overlay is visible.
+void hub_overlay_focus_next(void);
+void hub_overlay_focus_prev(void);
+
+// Trigger the focused button's action (same as a tap). No-op unless visible.
+void hub_overlay_activate(void);
+
 #ifdef __cplusplus
 }
 #endif

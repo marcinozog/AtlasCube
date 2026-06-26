@@ -20,11 +20,18 @@ static const char *TAG = "HUB_OVL";
 
 #define AUTOHIDE_MS 2500          // a touch longer than controls_overlay: more buttons to read
 
+// Buttons in creation = encoder-navigation order:
+//   vol-  prev  play  next  vol+   source  playlist  sd  settings
+#define HUB_BTN_COUNT 9
+#define HUB_FOCUS_DEFAULT 2          // play (center) — first focus when shown
+
 static lv_obj_t   *s_parent   = NULL;
 static lv_obj_t   *s_overlay  = NULL;   // dim layer + buttons
 static lv_timer_t *s_timer    = NULL;
 static lv_obj_t   *s_play_lbl   = NULL;
 static lv_obj_t   *s_source_lbl = NULL;   // glyph mirrors the active source (mode_indicator)
+static lv_obj_t   *s_btns[HUB_BTN_COUNT] = {0};  // focusable buttons, in nav order
+static int         s_focus    = -1;       // index into s_btns, -1 = none
 static controls_overlay_mode_t s_mode = CTRL_OVL_MODE_RADIO;
 
 // Button identifiers — transport (cross-equivalent) + action row.
@@ -68,6 +75,27 @@ static void source_update(void)
 
 static void autohide_cb(lv_timer_t *t) { (void)t; overlay_hide(); }
 
+// White ring around the encoder-focused button (the buttons carry no border of
+// their own, so this is the only border style in play).
+static void focus_highlight(lv_obj_t *btn, bool on)
+{
+    if (!btn) return;
+    lv_obj_set_style_border_color(btn, lv_color_white(), LV_PART_MAIN);
+    lv_obj_set_style_border_opa(btn, on ? LV_OPA_COVER : LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_border_width(btn, on ? 3 : 0, LV_PART_MAIN);
+}
+
+// Move focus to button `idx` (wraps), repaint the ring and reset the auto-hide.
+static void focus_set(int idx)
+{
+    if (idx < 0)               idx = HUB_BTN_COUNT - 1;
+    if (idx >= HUB_BTN_COUNT)  idx = 0;
+    if (s_focus >= 0) focus_highlight(s_btns[s_focus], false);
+    s_focus = idx;
+    focus_highlight(s_btns[s_focus], true);
+    if (s_timer) lv_timer_reset(s_timer);
+}
+
 static void overlay_show(void)
 {
     if (!s_overlay) return;
@@ -79,6 +107,7 @@ static void overlay_show(void)
         s_timer = lv_timer_create(autohide_cb, AUTOHIDE_MS, NULL);
         lv_timer_set_repeat_count(s_timer, 1);
     }
+    focus_set(HUB_FOCUS_DEFAULT);   // start on the center play button
 }
 
 static void overlay_hide(void)
@@ -264,32 +293,53 @@ void hub_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
     lv_color_t act_bg    = lv_color_hex(th->bg_secondary);
 
     // Row 1 — transport: vol-  prev  play  next  vol+
-    make_btn(s_overlay, LV_SYMBOL_MINUS, BTN_VOL_DN, -2 * step, -row_y, sz, btn_bg, gscale,
+    // Collect every button into s_btns in this exact order so encoder focus
+    // walks left-to-right across row 1 then row 2 (see HUB_BTN_COUNT).
+    s_btns[0] = make_btn(s_overlay, LV_SYMBOL_MINUS, BTN_VOL_DN, -2 * step, -row_y, sz, btn_bg, gscale,
         BTN_EVT_SHORT | BTN_EVT_REPEAT);
-    make_btn(s_overlay, LV_SYMBOL_PREV,  BTN_PREV,   -1 * step, -row_y, sz, btn_bg, gscale,
+    s_btns[1] = make_btn(s_overlay, LV_SYMBOL_PREV,  BTN_PREV,   -1 * step, -row_y, sz, btn_bg, gscale,
         BTN_EVT_SHORT);
     lv_obj_t *play_btn = make_btn(s_overlay, play_symbol_for_mode(s_mode), BTN_PLAY,
         0, -row_y, sz, play_bg, gscale, BTN_EVT_SHORT);
+    s_btns[2]  = play_btn;
     s_play_lbl = lv_obj_get_child(play_btn, 0);
-    make_btn(s_overlay, LV_SYMBOL_NEXT,  BTN_NEXT,    1 * step, -row_y, sz, btn_bg, gscale,
+    s_btns[3] = make_btn(s_overlay, LV_SYMBOL_NEXT,  BTN_NEXT,    1 * step, -row_y, sz, btn_bg, gscale,
         BTN_EVT_SHORT);
-    make_btn(s_overlay, LV_SYMBOL_PLUS,  BTN_VOL_UP,  2 * step, -row_y, sz, btn_bg, gscale,
+    s_btns[4] = make_btn(s_overlay, LV_SYMBOL_PLUS,  BTN_VOL_UP,  2 * step, -row_y, sz, btn_bg, gscale,
         BTN_EVT_SHORT | BTN_EVT_REPEAT);
 
     // Row 2 — actions: source  playlist  sd  settings (4 buttons, centered).
     // The source button's glyph tracks the active source (see source_update).
     lv_obj_t *src_btn = make_btn(s_overlay, LV_SYMBOL_AUDIO, BTN_SOURCE, -3 * step / 2, row_y,
         sz, act_bg, gscale, BTN_EVT_SHORT);
+    s_btns[5]    = src_btn;
     s_source_lbl = lv_obj_get_child(src_btn, 0);
     source_update();
-    make_btn(s_overlay, LV_SYMBOL_LIST,      BTN_PLAYLIST, -1 * step / 2, row_y, sz, act_bg, gscale,
+    s_btns[6] = make_btn(s_overlay, LV_SYMBOL_LIST,      BTN_PLAYLIST, -1 * step / 2, row_y, sz, act_bg, gscale,
         BTN_EVT_SHORT);
-    make_btn(s_overlay, LV_SYMBOL_SD_CARD,   BTN_SD,        1 * step / 2, row_y, sz, act_bg, gscale,
+    s_btns[7] = make_btn(s_overlay, LV_SYMBOL_SD_CARD,   BTN_SD,        1 * step / 2, row_y, sz, act_bg, gscale,
         BTN_EVT_SHORT);
-    make_btn(s_overlay, LV_SYMBOL_SETTINGS,  BTN_SETTINGS,  3 * step / 2, row_y, sz, act_bg, gscale,
+    s_btns[8] = make_btn(s_overlay, LV_SYMBOL_SETTINGS,  BTN_SETTINGS,  3 * step / 2, row_y, sz, act_bg, gscale,
         BTN_EVT_SHORT);
 
     ESP_LOGI(TAG, "Created (btn=%dpx, step=%dpx)", sz, step);
+}
+
+void hub_overlay_show(void) { overlay_show(); }
+
+bool hub_overlay_is_visible(void)
+{
+    return s_overlay && !lv_obj_has_flag(s_overlay, LV_OBJ_FLAG_HIDDEN);
+}
+
+void hub_overlay_focus_next(void) { if (hub_overlay_is_visible()) focus_set(s_focus + 1); }
+void hub_overlay_focus_prev(void) { if (hub_overlay_is_visible()) focus_set(s_focus - 1); }
+
+void hub_overlay_activate(void)
+{
+    if (!hub_overlay_is_visible() || s_focus < 0) return;
+    // Same path as a touch tap — the button's own SHORT_CLICKED handler runs.
+    lv_obj_send_event(s_btns[s_focus], LV_EVENT_SHORT_CLICKED, NULL);
 }
 
 void hub_overlay_set_mode(controls_overlay_mode_t mode)
@@ -312,4 +362,6 @@ void hub_overlay_destroy(void)
     s_source_lbl = NULL;
     s_overlay    = NULL;
     s_parent     = NULL;
+    for (int i = 0; i < HUB_BTN_COUNT; i++) s_btns[i] = NULL;
+    s_focus      = -1;
 }

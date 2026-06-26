@@ -15,7 +15,6 @@
 #include "ui_events.h"
 #include "ui_manager.h"
 #include "ui_nav.h"
-#include "screen_settings.h"
 #include "ntp_service.h"
 #include "wifi_manager.h"
 #include "mdns_service.h"
@@ -274,6 +273,13 @@ static void home_on_input(ui_input_t input)
     switch (input) {
         case UI_INPUT_ENCODER_CW:
         case UI_INPUT_ENCODER_CCW: {
+            // While the hub overlay is up, the encoder walks the buttons instead
+            // of changing volume (volume is still reachable via the vol +/- ones).
+            if (hub_overlay_is_visible()) {
+                (input == UI_INPUT_ENCODER_CW) ? hub_overlay_focus_next()
+                                               : hub_overlay_focus_prev();
+                break;
+            }
             app_state_t *s = app_state_get();
             if (s->bt_enable != true) {
                 int vol = s->volume;
@@ -293,6 +299,14 @@ static void home_on_input(ui_input_t input)
             break;
         }
         case UI_INPUT_ENCODER_PRESS:
+            // With the overlay open, a press fires the focused button; otherwise
+            // it advances the screen ring as before.
+            if (hub_overlay_is_visible()) {
+                hub_overlay_activate();
+                break;
+            }
+            ui_nav_ring_next(SCREEN_HOME);
+            break;
         case UI_INPUT_SWIPE_RIGHT:
             ui_nav_ring_next(SCREEN_HOME);
             break;
@@ -300,9 +314,7 @@ static void home_on_input(ui_input_t input)
             ui_nav_ring_prev(SCREEN_HOME);
             break;
         case UI_INPUT_ENCODER_LONG_PRESS:
-        case UI_INPUT_SWIPE_UP:
-            screen_settings_set_return(SCREEN_HOME);
-            ui_navigate(SCREEN_SETTINGS);
+            hub_overlay_show();
             break;
         default:
             break;
