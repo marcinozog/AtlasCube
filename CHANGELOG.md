@@ -9,6 +9,14 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.31.1] - 2026-06-26
+
+### Fixed
+- **web:** track www_version.txt so it ships in release zip
+- **ui:** lighten hub overlay button fill so circles stand out from dim layer
+- **web:** add "Back to AtlasCube" link to setup.html (top + bottom)
+- **web:** make GitHub link readable in setup.html + point straight to www.zip
+
 ## [0.31.0] - 2026-06-26
 
 ### Added
@@ -454,7 +462,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.31.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.31.1...HEAD
+[0.31.1]: https://github.com/marcinozog/AtlasCube/compare/v0.31.0...v0.31.1
 [0.31.0]: https://github.com/marcinozog/AtlasCube/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/marcinozog/AtlasCube/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/marcinozog/AtlasCube/compare/v0.28.0...v0.29.0
