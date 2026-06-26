@@ -13,7 +13,18 @@
 #define THEME_FILE "/config/theme.json"
 #define EVENTS_FILE "/config/events.json"
 
-// WTD pin 37 and PSRAM 33, 34, 35, 36, 37
+// ===== GPIO MAP (ESP32-S3) =====
+// In-package / reserved — never route to a peripheral:
+//   0          BOOT strapping
+//   19, 20     USB D-/D+ (native USB-CDC console)
+//   26–32      SPI flash (in-package)
+//   33–37      Octal PSRAM (in-package)
+//   43, 44     UART0 console TX/RX (idf.py monitor)
+//   45, 46     strapping pins (VDD_SPI / boot mode)
+//
+// Allowed pins (broken out on the PCB) — assign freely per variant:
+//   1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18
+//   38  39  40  41  42  47  48
 
 // ===== USER CONFIG =====
 // Three independent hardware choices below — uncomment exactly one in each group.

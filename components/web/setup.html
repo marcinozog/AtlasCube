@@ -49,6 +49,10 @@
   .status.error { background: rgba(244,143,177,0.12); color: #f48fb1; }
   .status.visible { display: block; }
   .hint { font-size: 12px; color: #666; margin-top: 10px; line-height: 1.5; }
+  .pins-allowed { font-size: 12px; color: #9fcaff; margin: 6px 0 4px; line-height: 1.9; }
+  .pins-allowed .ap { display: inline-block; min-width: 22px; text-align: center;
+                      font-family: monospace; color: #6ee7a0; }
+  .pins-allowed .ap.used { color: #ff7a7a; font-weight: 700; }
   .fw-version { text-align: center; font-size: 11px; color: #555; margin-top: 20px;
                 letter-spacing: 0.5px; }
   .pin-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
@@ -99,6 +103,9 @@
   <div class="status" id="wifiStatus"></div>
 
   <h2>Web UI files</h2>
+  <p class="hint">Optional / recovery only — the web UI ships inside the firmware,
+     so a normal flash already includes it. Use this just to patch or restore
+     individual files without reflashing.</p>
   <div class="form-group">
     <input type="file" id="files" multiple
            accept=".html,.css,.js,.json,.csv,.svg">
@@ -110,6 +117,14 @@
 
   <h2>Hardware pins</h2>
   <p class="hint" id="pinsDriver">Loading…</p>
+  <p class="pins-allowed">Allowed pins (<span style="color:#ff7a7a;font-weight:700">in use</span>
+     / <span style="color:#6ee7a0">free</span>): <span id="allowedPins"></span></p>
+  <p class="hint">GPIO number per signal, or <code>-1</code> to disable. The display
+     driver is fixed in this firmware — only the wiring is configurable here.
+     Reserved 26–37 (flash/PSRAM) and duplicates are blocked; strapping (0/3/45/46)
+     and native-USB (19/20) pins are flagged but allowed; 43/44 are the UART0
+     console (avoid unless you don't need serial logging). Saved values take effect
+     after the restart.</p>
   <div id="pinsGrid"></div>
   <div class="conflicts" id="pinsConflicts"></div>
   <button type="button" id="pinsBtn" disabled>Save pins &amp; restart</button>
@@ -118,11 +133,6 @@
   <button type="button" id="pinsImportBtn" class="ghost">Import pins from file</button>
   <input type="file" id="pinsImportFile" accept=".json" style="display:none">
   <div class="status" id="pinsStatus"></div>
-  <p class="hint">GPIO number per signal, or <code>-1</code> to disable. The display
-     driver is fixed in this firmware — only the wiring is configurable here.
-     Reserved 26–37 (flash/PSRAM) and duplicates are blocked; strapping (0/3/45/46)
-     and native-USB (19/20) pins are flagged but allowed. Saved values take effect
-     after the restart.</p>
 
   <div class="fw-version" id="fwVersion"></div>
 </div>
@@ -226,6 +236,20 @@
 
   var pinKeys = [];
 
+  // Pins physically broken out on the PCB — rendered as a live map: a number
+  // lights up (.used) as soon as any input claims it, otherwise it stays muted.
+  var ALLOWED = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,
+                 38,39,40,41,42,47,48];
+  (function renderAllowed() {
+    var box = document.getElementById('allowedPins');
+    if (!box) return;
+    ALLOWED.forEach(function (n) {
+      var s = document.createElement('span');
+      s.className = 'ap'; s.id = 'ap_' + n; s.textContent = n;
+      box.appendChild(s);
+    });
+  }());
+
   // Recompute validity + duplicates across all inputs, paint them, fill notes,
   // refresh the conflict banner and gate the Save button on hard issues.
   function validatePins() {
@@ -235,6 +259,12 @@
       var n = parseInt(document.getElementById('pin_' + k).value, 10);
       if (isNaN(n) || n < 0) return;
       (owners[n] = owners[n] || []).push(k);
+    });
+
+    // Live "allowed pins" map: highlight every broken-out pin that's now in use.
+    ALLOWED.forEach(function (n) {
+      var el = document.getElementById('ap_' + n);
+      if (el) el.classList.toggle('used', !!owners[n]);
     });
 
     var hardBad = [];
