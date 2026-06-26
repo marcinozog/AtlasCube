@@ -69,6 +69,15 @@ jobs:
         with:
           path: artifacts
 
+      - name: Package web UI files
+        run: |
+          # Variant-independent: the web UI is identical across builds. Ship the
+          # raw www/ tree (incl. www_version.txt) so a user can recover the web UI
+          # after an app-only OTA via the /setup uploader. Files sit at the zip
+          # root so they can be selected directly after extracting.
+          ( cd spiffs_image/www && zip -r "$GITHUB_WORKSPACE/AtlasCube-www.zip" . )
+          ls -la "$GITHUB_WORKSPACE/AtlasCube-www.zip"
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -76,4 +85,5 @@ jobs:
           gh release create "${{ github.ref_name }}" \
             --title "${{ github.ref_name }}" \
             --generate-notes \
-            artifacts/*/AtlasCube-*.bin
+            artifacts/*/AtlasCube-*.bin \
+            AtlasCube-www.zip
