@@ -542,18 +542,27 @@ mqtt:
 
 Update the firmware over Wi-Fi from **Settings → Tools** — no USB cable, no esptool. The page shows the running version, takes a firmware image, streams it to the device, and reboots into it. Progress is mirrored on the device screen.
 
-**Dual-slot layout.** OTA uses the two app partitions (`ota_0` / `ota_1`, see [`partitions16MB.csv`](partitions16MB.csv)) so the new image can be written to the inactive slot and the bootloader switched over with rollback. If no inactive slot is present the endpoint returns `501`.
+**What it touches:**
+
+| Partition | OTA touches it? | Notes |
+|---|---|---|
+| app (`ota_0` / `ota_1`) | ✅ writes the **inactive** slot, then switches boot | the only thing OTA writes |
+| `www` (web UI) | ❌ untouched | update separately (file editor / setup page / full reflash) |
+| `config` (settings) | ❌ untouched | your settings survive |
+| bootloader + partition table | ❌ untouched | can't be changed over OTA |
+| NVS | ❌ untouched | pin map (GPIO config) survives |
+
+**How it flows:** `0xE9` magic check → `esp_ota_begin` erases the inactive slot → stream + `esp_ota_write` → `esp_ota_end` validates the checksum → `esp_ota_set_boot_partition` → reboot (bootloader rolls back if the new image won't start). The two app partitions live in [`partitions16MB.csv`](partitions16MB.csv); if no inactive slot is present the endpoint returns `501`.
 
 **Which file:** upload the **app-only** `build/atlascube.bin` (~2.3 MB) — *not* the merged `AtlasCube-<variant>.bin`, which also contains the bootloader, partition table and the `www`/`config` partitions and is meant for a full `0x0` USB flash. Make sure the image matches your display variant; flashing a different variant's binary will break the UI.
 
 **Adopting the layout:** switching an existing 16 MB device to the OTA partition layout is a one-time full USB reflash (a partition-table change can't go through OTA itself). After that, every further update is web-only.
 
 **Safety:**
-- The first byte is checked for the ESP image magic (`0xE9`) before anything is written, and `esp_ota_end` validates the full image (checksum) before the boot partition is switched.
 - The device stops playback during the write to free RAM and avoid flash/SPI contention.
 - **Backup first:** the *Export running firmware* button (`GET /api/ota/backup`) downloads the active slot as `atlascube-<version>.bin` — a re-flashable snapshot you can upload again to roll back manually.
 
-> OTA carries the **app only** — it never touches the `www` (web UI) or `config` (settings) partitions, so your UI and settings survive an update. When a firmware update also ships new web UI, update it separately: edit/upload via the in-browser file editor (`/spiffs-editor.html`) or the built-in setup page, or do a full `0x0` reflash.
+When a firmware update also ships new web UI, update it separately: edit/upload via the in-browser file editor (`/spiffs-editor.html`) or the built-in setup page, or do a full `0x0` reflash.
 
 ---
 
