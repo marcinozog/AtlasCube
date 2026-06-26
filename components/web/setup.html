@@ -48,6 +48,9 @@
   }
   .status.error { background: rgba(244,143,177,0.12); color: #f48fb1; }
   .status.visible { display: block; }
+  .wifi-ok { text-align: center; margin: 4px 0 10px; padding: 12px 16px;
+             border-radius: 8px; background: rgba(110,231,160,0.12);
+             color: #6ee7a0; font-size: 13px; line-height: 1.5; }
   .hint { font-size: 12px; color: #666; margin-top: 10px; line-height: 1.5; }
   .pins-allowed { font-size: 12px; color: #9fcaff; margin: 6px 0 4px; line-height: 1.9; }
   .pins-allowed .ap { display: inline-block; min-width: 22px; text-align: center;
@@ -87,7 +90,8 @@
   </div>
 
   <h2>Wi-Fi</h2>
-  <form id="wifiForm" novalidate>
+  <div id="wifiNote" style="display:none"></div>
+  <form id="wifiForm" novalidate style="display:none">
     <div class="form-group">
       <label for="ssid">Network SSID</label>
       <input type="text" id="ssid" placeholder="Your Wi-Fi network name"
@@ -100,6 +104,7 @@
     </div>
     <button type="submit" id="wifiBtn">Save &amp; Connect</button>
   </form>
+  <button type="button" id="wifiChangeBtn" class="ghost" style="display:none">Change Wi-Fi network</button>
   <div class="status" id="wifiStatus"></div>
 
   <h2>Web UI files</h2>
@@ -155,7 +160,44 @@
     document.getElementById('pass').type = this.checked ? 'text' : 'password';
   });
 
-  // Firmware version — confirms what is flashed.
+  // Wi-Fi section adapts to the connection mode: in STA the device is already
+  // online, so the form is collapsed behind a "Change network" button to stop
+  // non-technical users from needlessly re-entering credentials. In AP (setup)
+  // mode — or if state is unavailable — the form is shown outright.
+  function applyWifiMode(mode) {
+    var form = document.getElementById('wifiForm');
+    var note = document.getElementById('wifiNote');
+    var chg  = document.getElementById('wifiChangeBtn');
+    if (mode === 'sta') {
+      form.style.display = 'none';
+      chg.style.display  = '';
+      note.textContent = '✓ Connected to Wi-Fi — nothing to do here. ' +
+                         'Use this only to switch to a different network.';
+      note.className = 'wifi-ok';
+      note.style.display = '';
+    } else {
+      form.style.display = '';
+      chg.style.display  = 'none';
+      if (mode === 'ap') {
+        note.textContent = 'Setup mode — enter your home Wi-Fi to connect the device.';
+        note.className = 'hint';
+        note.style.display = '';
+      } else {
+        note.style.display = 'none';   // unknown/offline: just show the form
+      }
+    }
+  }
+
+  document.getElementById('wifiChangeBtn').addEventListener('click', function () {
+    document.getElementById('wifiForm').style.display = '';
+    this.style.display = 'none';
+    var note = document.getElementById('wifiNote');
+    note.textContent = 'Switching network — enter the new Wi-Fi below; ' +
+                       'the device will leave the current one.';
+    note.className = 'hint';
+  });
+
+  // Firmware version — confirms what is flashed; also drives the Wi-Fi mode UI.
   fetch('/api/state', { cache: 'no-store' })
     .then(function (r) { return r.json(); })
     .then(function (s) {
@@ -163,8 +205,9 @@
         g_version = s.version;
         document.getElementById('fwVersion').textContent = 'Firmware ' + s.version;
       }
+      applyWifiMode(s && s.wifi_mode);
     })
-    .catch(function () {});
+    .catch(function () { applyWifiMode(null); });
 
   // ── Wi-Fi ──────────────────────────────────────────────────────────────────
   document.getElementById('wifiForm').addEventListener('submit', async function (e) {
