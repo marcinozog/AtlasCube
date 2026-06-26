@@ -264,6 +264,28 @@ function onModalBgClick(e, id) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Welcome / first-run help — flag stored in localStorage (per browser, no firmware)
+// ─────────────────────────────────────────────────────────────────────────────
+const HELP_SEEN_KEY = 'ac_help_seen';
+
+function openWelcome() {
+    document.getElementById('welcome_modal').classList.remove('hidden');
+}
+
+function closeWelcome() {
+    if (document.getElementById('welcome_dontshow')?.checked) {
+        localStorage.setItem(HELP_SEEN_KEY, '1');
+    } else {
+        localStorage.removeItem(HELP_SEEN_KEY);
+    }
+    document.getElementById('welcome_modal').classList.add('hidden');
+}
+
+function maybeShowWelcome() {
+    if (!localStorage.getItem(HELP_SEEN_KEY)) openWelcome();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Firmware version — lets users confirm what was flashed
 // ─────────────────────────────────────────────────────────────────────────────
 async function loadVersion() {
@@ -285,3 +307,4 @@ connect();
 loadPlaylist();
 renderEQ();
 loadVersion();
+maybeShowWelcome();

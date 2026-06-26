@@ -16,7 +16,10 @@
         <span class="logo-icon">◈</span>
         <span class="logo-text">ATLAS <span class="logo-accent">CUBE</span></span>
     </div>
-    <span class="fw-version" id="fwVersion"></span>
+    <div class="header-right">
+        <button class="help-btn" onclick="openWelcome()" title="Help" aria-label="Help">?</button>
+        <span class="fw-version" id="fwVersion"></span>
+    </div>
 </header>
 
 <!-- ═══════════════════════ CARD ═══════════════════════ -->
@@ -91,6 +94,32 @@
         <div class="eq-footer">
             <button class="btn-secondary" onclick="resetEQ()">↺ Reset</button>
             <button class="btn-secondary" onclick="closeEq()">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════ MODAL: WELCOME ═══════════════════════ -->
+<div id="welcome_modal" class="modal hidden" onclick="onModalBgClick(event,'welcome_modal')">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span class="modal-title">👋 Welcome to AtlasCube</span>
+            <button class="modal-close" onclick="closeWelcome()">✕</button>
+        </div>
+        <div class="field-hint" style="font-size:12px;line-height:1.6">
+            Your Wi-Fi internet radio. A few quick steps to get started:
+            <ul style="margin:8px 0 0;padding-left:18px">
+                <li>Connect to Wi-Fi &amp; set the clock</li>
+                <li>Pick a station and press Play</li>
+                <li>Or stream via Bluetooth / play from SD</li>
+            </ul>
+        </div>
+        <a href="help.html" class="tool-btn tool-link" style="width:fit-content;padding:8px 14px;margin-top:4px">📖 Full guide</a>
+        <label class="welcome-dontshow">
+            <input type="checkbox" id="welcome_dontshow" checked />
+            <span>Don't show this again</span>
+        </label>
+        <div class="eq-footer">
+            <button class="btn-secondary" onclick="closeWelcome()">Let's go →</button>
         </div>
     </div>
 </div>

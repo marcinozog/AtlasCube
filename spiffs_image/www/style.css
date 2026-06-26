@@ -84,6 +84,40 @@ body {
     white-space: nowrap;
 }
 
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.help-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    background: rgba(0,170,255,.08);
+    color: var(--accent);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+
+.help-btn:hover { background: var(--accent); color: #fff; }
+
+.welcome-dontshow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+    cursor: pointer;
+}
+
+.welcome-dontshow input { accent-color: var(--accent); }
+
 /* ── Theme toggle ── */
 .theme-toggle {
     display: flex;
