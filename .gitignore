@@ -1,5 +1,4 @@
 spiffs_image/web
-spiffs_image/www/www_version.txt
 components/web/web_assets_version.h
 TMP
 
