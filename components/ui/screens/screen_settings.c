@@ -23,151 +23,156 @@ static ui_screen_id_t s_return = SCREEN_HOME;   // where to go when settings is 
 
 void screen_settings_set_return(ui_screen_id_t scr) { s_return = scr; }
 
+/* ── data-driven model ──────────────────────────────────────────────────────
+   The screen is two levels deep: a top-level MENU of categories, each entry
+   opening a sub-section with its own short list of rows. Both the menu and the
+   sections are described by the same row-descriptor table, so adding an option
+   is a single entry — no new focus enum, no new if/else branch. */
+
 typedef enum {
-    FOCUS_BRIGHTNESS = 0,
-    FOCUS_THEME,
-    FOCUS_MODE,
-    FOCUS_BT_SCREEN,
-    FOCUS_BT_AUTO,
-    FOCUS_DSP,
-    FOCUS_EQ,
-    FOCUS_SS,
-    FOCUS_EVENTS,
-    FOCUS_COUNT
-} settings_focus_t;
+    SECTION_MENU = 0,   // category list (Display / Audio / …)
+    SECTION_DISPLAY,
+    SECTION_AUDIO,
+    SECTION_SCREENS,
+    SECTION_SYSTEM,
+    SECTION_COUNT
+} settings_section_t;
 
-static lv_obj_t *s_root              = NULL;
-static lv_obj_t *s_title             = NULL;
-static lv_obj_t *s_rows_cont         = NULL;
-static lv_obj_t *s_row_bright        = NULL;
-static lv_obj_t *s_row_theme         = NULL;
-static lv_obj_t *s_row_mode          = NULL;
-static lv_obj_t *s_row_bt_screen     = NULL;
-static lv_obj_t *s_row_bt_auto       = NULL;
-static lv_obj_t *s_row_dsp           = NULL;
-static lv_obj_t *s_row_eq            = NULL;
-static lv_obj_t *s_row_ss            = NULL;
-static lv_obj_t *s_row_events        = NULL;
-static lv_obj_t *s_slider_bright     = NULL;
-static lv_obj_t *s_slider_ss         = NULL;
-static lv_obj_t *s_label_bright_val  = NULL;
-static lv_obj_t *s_label_theme_val   = NULL;
-static lv_obj_t *s_label_mode_val    = NULL;
-static lv_obj_t *s_label_bt_screen_val = NULL;
-static lv_obj_t *s_label_bt_auto_val = NULL;
-static lv_obj_t *s_label_dsp_val     = NULL;
-static lv_obj_t *s_label_eq_val      = NULL;
-static lv_obj_t *s_label_ss_val      = NULL;
-static lv_obj_t *s_label_events_val  = NULL;
-static lv_obj_t *s_mem_bar           = NULL;
-static lv_timer_t *s_mem_timer       = NULL;
-static lv_obj_t *s_hint              = NULL;
+typedef enum {
+    RK_TOGGLE,    // press flips a bool; label shows on/off text
+    RK_SLIDER,    // edit mode + encoder (and an optional touch slider) change a value
+    RK_SCREEN,    // press navigates to another UI screen
+    RK_SECTION,   // press enters a sub-section
+    RK_ACTION,    // press fires a one-shot action
+} row_kind_t;
 
-static settings_focus_t s_focus = FOCUS_BRIGHTNESS;
-static bool s_editing = false;
+typedef struct {
+    const char    *title;
+    row_kind_t     kind;
+    /* RK_TOGGLE */
+    bool          (*tget)(void);
+    void          (*tset)(bool);
+    const char    *on_txt;
+    const char    *off_txt;
+    /* RK_SLIDER */
+    int           (*sget)(void);
+    void          (*sset)(int);
+    int            vmin, vmax, vstep;
+    void          (*sfmt)(char *buf, size_t n, int v);
+    /* RK_SCREEN / RK_SECTION / RK_ACTION */
+    ui_screen_id_t      screen;
+    settings_section_t  section;
+    void               (*action)(void);
+} row_desc_t;
 
-/* ── helpers ────────────────────────────────────────────────────────────── */
+#define MAX_ROWS 8
+#define N_ROWS(a) ((int)(sizeof(a) / sizeof((a)[0])))
 
-static bool focus_opens_screen(settings_focus_t f)
-{
-    return f == FOCUS_EQ || f == FOCUS_EVENTS;
-}
+/* ── widgets ────────────────────────────────────────────────────────────── */
 
-static void update_focus_visuals(void)
-{
-    const ui_theme_colors_t *th = theme_get();
-    lv_obj_t *rows[FOCUS_COUNT] = {
-        s_row_bright, s_row_theme, s_row_mode, s_row_bt_screen, s_row_bt_auto, s_row_dsp, s_row_eq, s_row_ss, s_row_events
-    };
-    for (int i = 0; i < FOCUS_COUNT; i++) {
-        if (!rows[i]) continue;
-        bool focused = (i == (int)s_focus);
-        uint32_t c = focused ? th->accent : th->text_muted;
-        int w = (focused && s_editing) ? 4 : 2;
-        lv_obj_set_style_border_color(rows[i], lv_color_hex(c), LV_PART_MAIN);
-        lv_obj_set_style_border_width(rows[i], w, LV_PART_MAIN);
-    }
-    if (rows[s_focus]) {
-        // On the first row, snap fully to the top so the scrollable header
-        // (title / memory bar) comes back into view; scroll_to_view alone
-        // never returns past the focused row.
-        if (s_focus == 0) {
-            lv_obj_scroll_to_y(s_rows_cont, 0, LV_ANIM_ON);
-        } else {
-            lv_obj_scroll_to_view(rows[s_focus], LV_ANIM_ON);
-        }
-    }
-}
+static lv_obj_t *s_root      = NULL;
+static lv_obj_t *s_title     = NULL;
+static lv_obj_t *s_rows_cont = NULL;
+static lv_obj_t *s_hint      = NULL;
+static lv_obj_t *s_mem_bar   = NULL;   // only built in SECTION_SYSTEM
+static lv_timer_t *s_mem_timer = NULL;
 
-static void update_hint(void)
-{
-    if (!s_hint) return;
-    if (s_editing) {
-        lv_label_set_text(s_hint, "turn=change  press=done  swipe>=back");
-    } else if (focus_opens_screen(s_focus)) {
-        lv_label_set_text(s_hint, "turn=nav  press=open  swipe<>/long=back");
-    } else {
-        lv_label_set_text(s_hint, "turn=nav  press=edit  swipe<>/long=back");
-    }
-}
+static lv_obj_t *s_row_obj[MAX_ROWS];
+static lv_obj_t *s_row_val[MAX_ROWS];
+static lv_obj_t *s_row_slider[MAX_ROWS];
 
-static void update_brightness_label(void)
-{
-    if (!s_label_bright_val) return;
-    int br = app_state_get()->brightness;
-    char buf[16];
-    snprintf(buf, sizeof(buf), "%d%%", br);
-    lv_label_set_text(s_label_bright_val, buf);
-    if (s_slider_bright) lv_slider_set_value(s_slider_bright, br, LV_ANIM_OFF);
-}
+/* ── navigation state ───────────────────────────────────────────────────── */
 
-static void update_theme_label(void)
-{
-    if (!s_label_theme_val) return;
-    lv_label_set_text(s_label_theme_val,
-        theme_current() == THEME_LIGHT ? "<    Light    >" : "<    Dark    >");
-}
+static settings_section_t s_section = SECTION_MENU;
+static const row_desc_t  *s_rows    = NULL;   // rows of the current section
+static int                s_count   = 0;
+static int                s_focus   = 0;
+static bool               s_editing = false;  // slider edit mode
 
-static void update_mode_label(void)
-{
-    if (!s_label_mode_val) return;
-    lv_label_set_text(s_label_mode_val,
-        app_state_get()->bt_enable == true ? "<    Bluetooth    >" : "<    Radio    >");
-}
+/* ── value formatters ───────────────────────────────────────────────────── */
 
-static void update_bt_screen_label(void)
-{
-    if (!s_label_bt_screen_val) return;
-    lv_label_set_text(s_label_bt_screen_val,
-        app_state_get()->bt_show_screen == true ? "<    Show    >" : "<    Hide    >");
-}
+static void fmt_pct(char *b, size_t n, int v)  { snprintf(b, n, "%d%%", v); }
+static void fmt_secs(char *b, size_t n, int v) { if (v == 0) snprintf(b, n, "OFF"); else snprintf(b, n, "%ds", v); }
 
-static void update_bt_auto_label(void)
-{
-    if (!s_label_bt_auto_val) return;
-    lv_label_set_text(s_label_bt_auto_val,
-        app_state_get()->bt_auto_switch == true ? "<    On    >" : "<    Off    >");
-}
+/* ── getters / setters (field access can't be taken as a function pointer) ── */
 
-static void update_dsp_label(void)
-{
-    if (!s_label_dsp_val) return;
-    lv_label_set_text(s_label_dsp_val,
-        app_state_get()->eq_enabled == true ? "<    On    >" : "<    Off    >");
-}
+static int  get_brightness(void) { return app_state_get()->brightness; }
+static int  get_scrsaver(void)   { return app_state_get()->scrsaver_delay; }
+static bool get_theme_light(void){ return theme_current() == THEME_LIGHT; }
+static void set_theme_light(bool v) { settings_set_theme(v ? THEME_LIGHT : THEME_DARK); }
+static bool get_bt_enable(void)  { return app_state_get()->bt_enable; }
+static bool get_bt_show(void)    { return app_state_get()->bt_show_screen; }
+static bool get_sd_show(void)    { return app_state_get()->sd_show_screen; }
+static bool get_radio_show(void) { return app_state_get()->radio_show_screen; }
+static bool get_bt_auto(void)    { return app_state_get()->bt_auto_switch; }
+static bool get_eq(void)         { return app_state_get()->eq_enabled; }
+static void act_restart(void)    { esp_restart(); }
 
-static void update_ss_label(void)
-{
-    if (!s_label_ss_val) return;
-    int ss = app_state_get()->scrsaver_delay;
-    char buf[16];
-    if (ss == 0)
-        snprintf(buf, sizeof(buf), "%s", "OFF");
-    else
-        snprintf(buf, sizeof(buf), "%ds", ss);
-    lv_label_set_text(s_label_ss_val, buf);
-    if (s_slider_ss) lv_slider_set_value(s_slider_ss, ss, LV_ANIM_OFF);
-}
+/* ── row tables ─────────────────────────────────────────────────────────── */
+
+static const row_desc_t SEC_MENU[] = {
+    { .title = "Display", .kind = RK_SECTION, .section = SECTION_DISPLAY },
+    { .title = "Audio",   .kind = RK_SECTION, .section = SECTION_AUDIO   },
+    { .title = "Screens", .kind = RK_SECTION, .section = SECTION_SCREENS },
+    { .title = "Events",  .kind = RK_SCREEN,  .screen  = SCREEN_EVENTS   },
+    { .title = "System",  .kind = RK_SECTION, .section = SECTION_SYSTEM  },
+};
+
+static const row_desc_t SEC_DISPLAY[] = {
+    { .title = "Brightness",  .kind = RK_SLIDER, .sget = get_brightness, .sset = settings_set_brightness,
+      .vmin = 10, .vmax = 100, .vstep = 5, .sfmt = fmt_pct },
+    { .title = "Theme",       .kind = RK_TOGGLE, .tget = get_theme_light, .tset = set_theme_light,
+      .on_txt = "<    Light    >", .off_txt = "<    Dark    >" },
+    { .title = "Screensaver", .kind = RK_SLIDER, .sget = get_scrsaver, .sset = settings_set_scrsaver_delay,
+      .vmin = 0, .vmax = 600, .vstep = 5, .sfmt = fmt_secs },
+};
+
+static const row_desc_t SEC_AUDIO[] = {
+    { .title = "Mode", .kind = RK_TOGGLE, .tget = get_bt_enable, .tset = settings_set_bt_enable,
+      .on_txt = "<    Bluetooth    >", .off_txt = "<    Radio    >" },
+    { .title = "Auto-switch audio source", .kind = RK_TOGGLE, .tget = get_bt_auto, .tset = settings_set_bt_auto_switch,
+      .on_txt = "<    On    >", .off_txt = "<    Off    >" },
+    { .title = "DSP", .kind = RK_TOGGLE, .tget = get_eq, .tset = settings_set_eq_enabled,
+      .on_txt = "<    On    >", .off_txt = "<    Off    >" },
+    { .title = "Equalizer", .kind = RK_SCREEN, .screen = SCREEN_EQ },
+};
+
+static const row_desc_t SEC_SCREENS[] = {
+    { .title = "BT Screen",    .kind = RK_TOGGLE, .tget = get_bt_show,    .tset = settings_set_bt_show_screen,
+      .on_txt = "<    Show    >", .off_txt = "<    Hide    >" },
+    { .title = "SD Screen",    .kind = RK_TOGGLE, .tget = get_sd_show,    .tset = settings_set_sd_show_screen,
+      .on_txt = "<    Show    >", .off_txt = "<    Hide    >" },
+    { .title = "Radio Screen", .kind = RK_TOGGLE, .tget = get_radio_show, .tset = settings_set_radio_show_screen,
+      .on_txt = "<    Show    >", .off_txt = "<    Hide    >" },
+};
+
+static const row_desc_t SEC_SYSTEM[] = {
+    { .title = "Restart", .kind = RK_ACTION, .action = act_restart, .on_txt = "Press >" },
+};
+
+typedef struct {
+    const char       *title;
+    const row_desc_t *rows;
+    int               n_rows;
+} section_def_t;
+
+static const section_def_t SECTIONS[SECTION_COUNT] = {
+    [SECTION_MENU]    = { "Settings", SEC_MENU,    N_ROWS(SEC_MENU)    },
+    [SECTION_DISPLAY] = { "Display",  SEC_DISPLAY, N_ROWS(SEC_DISPLAY) },
+    [SECTION_AUDIO]   = { "Audio",    SEC_AUDIO,   N_ROWS(SEC_AUDIO)   },
+    [SECTION_SCREENS] = { "Screens",  SEC_SCREENS, N_ROWS(SEC_SCREENS) },
+    [SECTION_SYSTEM]  = { "System",   SEC_SYSTEM,  N_ROWS(SEC_SYSTEM)  },
+};
+
+/* ── forward declarations (mutually-recursive UI helpers) ───────────────── */
+
+static void rebuild_section(void);
+static void update_focus_visuals(void);
+static void update_hint(void);
+static void refresh_row_label(int i);
+static void refresh_all_labels(void);
+static void row_click_cb(lv_event_t *e);
+static void slider_released_cb(lv_event_t *e);
 
 /* ── CPU usage (per core, %) ────────────────────────────────────────────────
    Measures delta idle-task runtime per core relative to the last call.
@@ -249,35 +254,113 @@ static void mem_timer_cb(lv_timer_t *t)
     update_mem_bar();
 }
 
-/* ── touch: brightness slider ───────────────────────────────────────────── */
+/* ── focus / hint / labels ──────────────────────────────────────────────── */
 
-static void slider_bright_released_cb(lv_event_t *e)
+static void update_focus_visuals(void)
 {
-    lv_obj_t *sld = lv_event_get_target(e);
-    int br = (int)lv_slider_get_value(sld);
-    settings_set_brightness(br);
-    update_brightness_label();
-    if (s_focus != FOCUS_BRIGHTNESS) {
-        s_focus = FOCUS_BRIGHTNESS;
-        s_editing = false;
-        update_focus_visuals();
-        update_hint();
+    const ui_theme_colors_t *th = theme_get();
+    for (int i = 0; i < s_count; i++) {
+        if (!s_row_obj[i]) continue;
+        bool focused = (i == s_focus);
+        uint32_t c = focused ? th->accent : th->text_muted;
+        int w = (focused && s_editing) ? 4 : 2;
+        lv_obj_set_style_border_color(s_row_obj[i], lv_color_hex(c), LV_PART_MAIN);
+        lv_obj_set_style_border_width(s_row_obj[i], w, LV_PART_MAIN);
+    }
+    if (s_focus >= 0 && s_focus < s_count && s_row_obj[s_focus]) {
+        // On the first row, snap fully to the top so the scrollable header
+        // (title / memory bar) comes back into view; scroll_to_view alone
+        // never returns past the focused row.
+        if (s_focus == 0) {
+            lv_obj_scroll_to_y(s_rows_cont, 0, LV_ANIM_ON);
+        } else {
+            lv_obj_scroll_to_view(s_row_obj[s_focus], LV_ANIM_ON);
+        }
     }
 }
 
-static void slider_ss_released_cb(lv_event_t *e)
+static void update_hint(void)
 {
-    lv_obj_t *sld = lv_event_get_target(e);
-    int ss = (int)lv_slider_get_value(sld);
-    /* quantize to 5s steps (matches encoder behaviour) */
-    ss = (ss + 2) / 5 * 5;
-    settings_set_scrsaver_delay(ss);
-    update_ss_label();
-    if (s_focus != FOCUS_SS) {
-        s_focus = FOCUS_SS;
-        s_editing = false;
-        update_focus_visuals();
-        update_hint();
+    if (!s_hint) return;
+    row_kind_t k = (s_focus >= 0 && s_focus < s_count) ? s_rows[s_focus].kind : RK_TOGGLE;
+    if (s_editing) {
+        lv_label_set_text(s_hint, "turn=change  press=done  swipe>=back");
+    } else if (k == RK_SCREEN || k == RK_SECTION) {
+        lv_label_set_text(s_hint, "turn=nav  press=open  swipe<>/long=back");
+    } else {
+        lv_label_set_text(s_hint, "turn=nav  press=edit  swipe<>/long=back");
+    }
+}
+
+static void refresh_row_label(int i)
+{
+    if (i < 0 || i >= s_count || !s_row_val[i]) return;
+    const row_desc_t *d = &s_rows[i];
+    char buf[24];
+    switch (d->kind) {
+        case RK_TOGGLE:
+            lv_label_set_text(s_row_val[i], d->tget() ? d->on_txt : d->off_txt);
+            break;
+        case RK_SLIDER: {
+            int v = d->sget();
+            d->sfmt(buf, sizeof(buf), v);
+            lv_label_set_text(s_row_val[i], buf);
+            if (s_row_slider[i]) lv_slider_set_value(s_row_slider[i], v, LV_ANIM_OFF);
+            break;
+        }
+        case RK_SCREEN:  lv_label_set_text(s_row_val[i], "Open >"); break;
+        case RK_SECTION: lv_label_set_text(s_row_val[i], ">");      break;
+        case RK_ACTION:  lv_label_set_text(s_row_val[i], d->on_txt ? d->on_txt : ">"); break;
+    }
+}
+
+static void refresh_all_labels(void)
+{
+    for (int i = 0; i < s_count; i++) refresh_row_label(i);
+}
+
+/* ── actions ────────────────────────────────────────────────────────────── */
+
+static void rebuild_async_cb(void *p)
+{
+    (void)p;
+    rebuild_section();
+}
+
+static void enter_section(settings_section_t sec)
+{
+    s_section = sec;
+    s_focus   = 0;
+    s_editing = false;
+    /* Deferred: entering a section may be triggered from a row's own LVGL
+       click callback, and rebuild_section() deletes that very row. Running it
+       after the event finishes avoids freeing the object mid-dispatch. */
+    lv_async_call(rebuild_async_cb, NULL);
+}
+
+static void row_activate(int i)
+{
+    if (i < 0 || i >= s_count) return;
+    const row_desc_t *d = &s_rows[i];
+    switch (d->kind) {
+        case RK_SECTION:
+            enter_section(d->section);
+            break;
+        case RK_SCREEN:
+            ui_navigate(d->screen);
+            break;
+        case RK_TOGGLE:
+            d->tset(!d->tget());
+            refresh_row_label(i);
+            break;
+        case RK_ACTION:
+            if (d->action) d->action();
+            break;
+        case RK_SLIDER:
+            s_editing = !s_editing;
+            update_focus_visuals();
+            update_hint();
+            break;
     }
 }
 
@@ -285,41 +368,37 @@ static void slider_ss_released_cb(lv_event_t *e)
 
 static void row_click_cb(lv_event_t *e)
 {
-    settings_focus_t idx = (settings_focus_t)(uintptr_t)lv_event_get_user_data(e);
+    int i = (int)(intptr_t)lv_event_get_user_data(e);
 
     /* tap on a non-focused row → just focus it (and leave edit mode) */
-    if (idx != s_focus) {
-        s_focus = idx;
+    if (i != s_focus) {
+        s_focus = i;
         s_editing = false;
         update_focus_visuals();
         update_hint();
         return;
     }
-
     /* tap on the already focused row → action */
-    if (idx == FOCUS_EQ) {
-        ui_navigate(SCREEN_EQ);
-    } else if (idx == FOCUS_EVENTS) {
-        ui_navigate(SCREEN_EVENTS);
-    } else if (idx == FOCUS_THEME) {
-        ui_theme_t next = (theme_current() == THEME_DARK) ? THEME_LIGHT : THEME_DARK;
-        settings_set_theme(next);
-        update_theme_label();
-    } else if (idx == FOCUS_MODE) {
-        settings_set_bt_enable(!app_state_get()->bt_enable);
-        update_mode_label();
-    } else if (idx == FOCUS_BT_SCREEN) {
-        settings_set_bt_show_screen(!app_state_get()->bt_show_screen);
-        update_bt_screen_label();
-    } else if (idx == FOCUS_BT_AUTO) {
-        settings_set_bt_auto_switch(!app_state_get()->bt_auto_switch);
-        update_bt_auto_label();
-    } else if (idx == FOCUS_DSP) {
-        settings_set_eq_enabled(!app_state_get()->eq_enabled);
-        update_dsp_label();
-    } else {
-        /* BRIGHTNESS / SS → toggle edit mode, encoder changes the value */
-        s_editing = !s_editing;
+    row_activate(i);
+}
+
+/* ── touch: slider release ──────────────────────────────────────────────── */
+
+static void slider_released_cb(lv_event_t *e)
+{
+    lv_obj_t *sld = lv_event_get_target(e);
+    int i = (int)(intptr_t)lv_event_get_user_data(e);
+    if (i < 0 || i >= s_count || s_rows[i].kind != RK_SLIDER) return;
+
+    const row_desc_t *d = &s_rows[i];
+    int v = (int)lv_slider_get_value(sld);
+    /* quantize to the encoder step so touch and rotation agree */
+    v = (v + d->vstep / 2) / d->vstep * d->vstep;
+    d->sset(v);
+    refresh_row_label(i);
+    if (s_focus != i) {
+        s_focus = i;
+        s_editing = false;
         update_focus_visuals();
         update_hint();
     }
@@ -354,6 +433,107 @@ static lv_obj_t *make_row(lv_obj_t *parent, int y_ofs, const char *title)
     return row;
 }
 
+/* y of the i-th row, relative to the first row. Reproduces the original spacing:
+   row0/1 use the row1→row2 gap, row2 the row1→row3 gap, the rest step uniformly. */
+static int row_y_offset(const ui_profile_t *p, int idx)
+{
+    int step = p->settings_row2_y - p->settings_row1_y;
+    if (idx == 0) return 0;
+    if (idx == 1) return step;
+    return (p->settings_row3_y - p->settings_row1_y) + (idx - 2) * step;
+}
+
+static void build_row(int i, const ui_profile_t *p, const ui_theme_colors_t *th, int y)
+{
+    const row_desc_t *d = &s_rows[i];
+
+    lv_obj_t *row = make_row(s_rows_cont, y, d->title);
+    lv_obj_add_event_cb(row, row_click_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i);
+    s_row_obj[i] = row;
+
+    if (d->kind == RK_SLIDER && p->settings_show_slider) {
+        lv_obj_t *sld = lv_slider_create(row);
+        lv_obj_set_size(sld, p->settings_slider_w, p->settings_slider_h);
+        lv_obj_align(sld, LV_ALIGN_BOTTOM_LEFT, 0, -2);
+        lv_slider_set_range(sld, d->vmin, d->vmax);
+        lv_obj_set_style_bg_color(sld, lv_color_hex(th->accent),     LV_PART_INDICATOR);
+        lv_obj_set_style_bg_color(sld, lv_color_hex(th->text_muted), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(sld, LV_OPA_COVER, LV_PART_MAIN);
+        /* Keep press ownership on the slider even if the finger drifts outside
+           its bounds during drag — otherwise LV_EVENT_RELEASED is routed to
+           whichever widget happens to be under the finger on release. */
+        lv_obj_add_flag(sld, LV_OBJ_FLAG_PRESS_LOCK);
+        lv_obj_add_event_cb(sld, slider_released_cb, LV_EVENT_RELEASED, (void *)(intptr_t)i);
+        s_row_slider[i] = sld;
+    }
+
+    lv_obj_t *val = lv_label_create(row);
+    lv_obj_set_style_text_font(val, p->settings_value_font, LV_PART_MAIN);
+    lv_obj_set_style_text_color(val, lv_color_hex(th->text_primary), LV_PART_MAIN);
+    lv_obj_align(val, (d->kind == RK_SLIDER) ? LV_ALIGN_BOTTOM_RIGHT : LV_ALIGN_BOTTOM_MID, 0, 0);
+    s_row_val[i] = val;
+}
+
+/* Rebuild the row list for the current section. Clears the scroll container
+   (which destroys the in-list title / memory bar) and recreates the header +
+   rows from the section's descriptor table. */
+static void rebuild_section(void)
+{
+    if (!s_rows_cont) return;   // screen was destroyed before a deferred rebuild ran
+    const ui_theme_colors_t *th = theme_get();
+    const ui_profile_t      *p  = ui_profile_get();
+
+    lv_obj_clean(s_rows_cont);
+    memset(s_row_obj,    0, sizeof(s_row_obj));
+    memset(s_row_val,    0, sizeof(s_row_val));
+    memset(s_row_slider, 0, sizeof(s_row_slider));
+    s_mem_bar = NULL;
+
+    const section_def_t *def = &SECTIONS[s_section];
+    s_rows  = def->rows;
+    s_count = def->n_rows;
+    if (s_count > MAX_ROWS) s_count = MAX_ROWS;
+
+    bool title_in_list = p->settings_title_in_list;
+    int  title_h   = lv_font_get_line_height(p->settings_title_font);
+    int  mem_bar_h = lv_font_get_line_height(p->settings_hint_font);
+    int  header_y  = 0;
+
+    /* title — when it scrolls with the list it is recreated each rebuild; the
+       fixed variant lives in the parent (see settings_create) and only its
+       text changes here. */
+    if (title_in_list) {
+        s_title = lv_label_create(s_rows_cont);
+        lv_obj_set_style_text_font(s_title, p->settings_title_font, LV_PART_MAIN);
+        lv_obj_set_style_text_color(s_title, lv_color_hex(th->accent), LV_PART_MAIN);
+        lv_obj_align(s_title, LV_ALIGN_TOP_MID, 0, header_y);
+        header_y += title_h + 1;
+    }
+    if (s_title) lv_label_set_text(s_title, def->title);
+
+    /* System section carries the read-only memory/CPU/RSSI bar in its header. */
+    if (s_section == SECTION_SYSTEM) {
+        s_mem_bar = lv_label_create(s_rows_cont);
+        lv_obj_set_style_text_font(s_mem_bar, p->settings_hint_font, LV_PART_MAIN);
+        lv_obj_set_style_text_color(s_mem_bar, lv_color_hex(th->text_muted), LV_PART_MAIN);
+        lv_obj_align(s_mem_bar, LV_ALIGN_TOP_MID, 0, header_y);
+        update_mem_bar();
+        header_y += mem_bar_h + 2;
+    }
+
+    int row_base = header_y;
+    for (int i = 0; i < s_count; i++) {
+        build_row(i, p, th, row_base + row_y_offset(p, i));
+    }
+
+    if (s_focus >= s_count) s_focus = s_count - 1;
+    if (s_focus < 0)        s_focus = 0;
+
+    refresh_all_labels();
+    update_focus_visuals();
+    update_hint();
+}
+
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
 static void settings_create(lv_obj_t *parent)
@@ -365,9 +545,8 @@ static void settings_create(lv_obj_t *parent)
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
 
-    int title_h   = lv_font_get_line_height(p->settings_title_font);
-    int hint_h    = lv_font_get_line_height(p->settings_hint_font);
-    int mem_bar_h = lv_font_get_line_height(p->settings_hint_font);
+    int title_h = lv_font_get_line_height(p->settings_title_font);
+    int hint_h  = lv_font_get_line_height(p->settings_hint_font);
     bool title_in_list = p->settings_title_in_list;
 
     /* When the title scrolls with the list (small panels) the container fills
@@ -385,153 +564,16 @@ static void settings_create(lv_obj_t *parent)
     lv_obj_set_scroll_dir(s_rows_cont, LV_DIR_VER);
     lv_obj_set_scrollbar_mode(s_rows_cont, LV_SCROLLBAR_MODE_AUTO);
 
-    /* Running y for stacked header items that live inside the scroll list. */
-    int header_y = 0;
-
-    /* title — fixed on the screen, or the first scrollable item in the list */
-    s_title = lv_label_create(title_in_list ? s_rows_cont : parent);
-    lv_label_set_text(s_title, "Settings");
-    lv_obj_set_style_text_font(s_title, p->settings_title_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_title, lv_color_hex(th->accent), LV_PART_MAIN);
-    if (title_in_list) {
-        lv_obj_align(s_title, LV_ALIGN_TOP_MID, 0, header_y);
-        header_y += title_h + 1;
-    } else {
+    /* fixed title lives in the parent and survives section rebuilds; the
+       in-list title is created per rebuild inside rebuild_section(). */
+    if (!title_in_list) {
+        s_title = lv_label_create(parent);
+        lv_obj_set_style_text_font(s_title, p->settings_title_font, LV_PART_MAIN);
+        lv_obj_set_style_text_color(s_title, lv_color_hex(th->accent), LV_PART_MAIN);
         lv_obj_align(s_title, LV_ALIGN_TOP_MID, 0, p->settings_title_y);
+    } else {
+        s_title = NULL;
     }
-
-    /* ── read-only memory bar — scrolls with the list ── */
-    s_mem_bar = lv_label_create(s_rows_cont);
-    lv_obj_set_style_text_font(s_mem_bar, p->settings_hint_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_mem_bar, lv_color_hex(th->text_muted), LV_PART_MAIN);
-    lv_obj_align(s_mem_bar, LV_ALIGN_TOP_MID, 0, header_y);
-    update_mem_bar();
-    header_y += mem_bar_h + 2;
-
-    /* All interactive rows are pushed below the header items. */
-    int row_base = header_y;
-
-    /* ── row: Brightness ── */
-    s_row_bright = make_row(s_rows_cont, row_base, "Brightness");
-    lv_obj_add_event_cb(s_row_bright, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_BRIGHTNESS);
-
-    if (p->settings_show_slider) {
-        s_slider_bright = lv_slider_create(s_row_bright);
-        lv_obj_set_size(s_slider_bright, p->settings_slider_w, p->settings_slider_h);
-        lv_obj_align(s_slider_bright, LV_ALIGN_BOTTOM_LEFT, 0, -2);
-        lv_slider_set_range(s_slider_bright, 10, 100);
-        lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->accent),     LV_PART_INDICATOR);
-        lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->text_muted), LV_PART_MAIN);
-        lv_obj_set_style_bg_opa(s_slider_bright, LV_OPA_COVER, LV_PART_MAIN);
-        /* Keep press ownership on the slider even if the finger drifts outside
-           its bounds during drag — otherwise LV_EVENT_RELEASED is routed to
-           whichever widget happens to be under the finger on release. */
-        lv_obj_add_flag(s_slider_bright, LV_OBJ_FLAG_PRESS_LOCK);
-        lv_obj_add_event_cb(s_slider_bright, slider_bright_released_cb, LV_EVENT_RELEASED, NULL);
-    }
-
-    s_label_bright_val = lv_label_create(s_row_bright);
-    lv_obj_set_style_text_font(s_label_bright_val, p->settings_value_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_label_bright_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_align(s_label_bright_val, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
-
-    /* ── row: Theme ── */
-    s_row_theme = make_row(s_rows_cont, row_base + (p->settings_row2_y - p->settings_row1_y), "Theme");
-    lv_obj_add_event_cb(s_row_theme, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_THEME);
-
-    s_label_theme_val = lv_label_create(s_row_theme);
-    lv_obj_set_style_text_font(s_label_theme_val, p->settings_value_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_label_theme_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_align(s_label_theme_val, LV_ALIGN_BOTTOM_MID, 0, 0);
-
-    /* ── row: Mode ── */
-    s_row_mode = make_row(s_rows_cont, row_base + (p->settings_row3_y - p->settings_row1_y), "Mode");
-    lv_obj_add_event_cb(s_row_mode, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_MODE);
-
-    s_label_mode_val = lv_label_create(s_row_mode);
-    lv_obj_set_style_text_font(s_label_mode_val, p->settings_value_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_label_mode_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_align(s_label_mode_val, LV_ALIGN_BOTTOM_MID, 0, 0);
-
-    /* ── row: BT Screen ── */
-    int row4_y_ofs = (p->settings_row3_y - p->settings_row1_y)
-                   + (p->settings_row2_y - p->settings_row1_y);
-    s_row_bt_screen = make_row(s_rows_cont, row_base + row4_y_ofs, "BT Screen");
-    lv_obj_add_event_cb(s_row_bt_screen, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_BT_SCREEN);
-
-    s_label_bt_screen_val = lv_label_create(s_row_bt_screen);
-    lv_obj_set_style_text_font(s_label_bt_screen_val, p->settings_value_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_label_bt_screen_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_align(s_label_bt_screen_val, LV_ALIGN_BOTTOM_MID, 0, 0);
-
-    /* ── row: Auto-switch (exclusive Radio ⇄ BT) ── */
-    int row5_y_ofs = (p->settings_row3_y - p->settings_row1_y)
-                   + 2 * (p->settings_row2_y - p->settings_row1_y);
-    s_row_bt_auto = make_row(s_rows_cont, row_base + row5_y_ofs, "Auto-switch");
-    lv_obj_add_event_cb(s_row_bt_auto, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_BT_AUTO);
-
-    s_label_bt_auto_val = lv_label_create(s_row_bt_auto);
-    lv_obj_set_style_text_font(s_label_bt_auto_val, p->settings_value_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_label_bt_auto_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_align(s_label_bt_auto_val, LV_ALIGN_BOTTOM_MID, 0, 0);
-
-    /* ── row: DSP (EQ on/off) ── */
-    int row6_y_ofs = (p->settings_row3_y - p->settings_row1_y)
-                   + 3 * (p->settings_row2_y - p->settings_row1_y);
-    s_row_dsp = make_row(s_rows_cont, row_base + row6_y_ofs, "DSP");
-    lv_obj_add_event_cb(s_row_dsp, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_DSP);
-
-    s_label_dsp_val = lv_label_create(s_row_dsp);
-    lv_obj_set_style_text_font(s_label_dsp_val, p->settings_value_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_label_dsp_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_align(s_label_dsp_val, LV_ALIGN_BOTTOM_MID, 0, 0);
-
-    /* ── row: Equalizer ── */
-    int row7_y_ofs = (p->settings_row3_y - p->settings_row1_y)
-                   + 4 * (p->settings_row2_y - p->settings_row1_y);
-    s_row_eq = make_row(s_rows_cont, row_base + row7_y_ofs, "Equalizer");
-    lv_obj_add_event_cb(s_row_eq, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_EQ);
-
-    s_label_eq_val = lv_label_create(s_row_eq);
-    lv_obj_set_style_text_font(s_label_eq_val, p->settings_value_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_label_eq_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_label_set_text(s_label_eq_val, "Open >");
-    lv_obj_align(s_label_eq_val, LV_ALIGN_BOTTOM_MID, 0, 0);
-
-    /* ── row: Screensaver ── */
-    int row8_y_ofs = (p->settings_row3_y - p->settings_row1_y)
-                   + 5 * (p->settings_row2_y - p->settings_row1_y);
-    s_row_ss = make_row(s_rows_cont, row_base + row8_y_ofs, "Screensaver");
-    lv_obj_add_event_cb(s_row_ss, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_SS);
-
-    if (p->settings_show_slider) {
-        s_slider_ss = lv_slider_create(s_row_ss);
-        lv_obj_set_size(s_slider_ss, p->settings_slider_w, p->settings_slider_h);
-        lv_obj_align(s_slider_ss, LV_ALIGN_BOTTOM_LEFT, 0, -2);
-        lv_slider_set_range(s_slider_ss, 0, 600);
-        lv_obj_set_style_bg_color(s_slider_ss, lv_color_hex(th->accent),     LV_PART_INDICATOR);
-        lv_obj_set_style_bg_color(s_slider_ss, lv_color_hex(th->text_muted), LV_PART_MAIN);
-        lv_obj_set_style_bg_opa(s_slider_ss, LV_OPA_COVER, LV_PART_MAIN);
-        lv_obj_add_flag(s_slider_ss, LV_OBJ_FLAG_PRESS_LOCK);
-        lv_obj_add_event_cb(s_slider_ss, slider_ss_released_cb, LV_EVENT_RELEASED, NULL);
-    }
-
-    s_label_ss_val = lv_label_create(s_row_ss);
-    lv_obj_set_style_text_font(s_label_ss_val, p->settings_value_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_label_ss_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_align(s_label_ss_val, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
-
-    /* ── row: Events ── */
-    int row9_y_ofs = (p->settings_row3_y - p->settings_row1_y)
-                   + 6 * (p->settings_row2_y - p->settings_row1_y);
-    s_row_events = make_row(s_rows_cont, row_base + row9_y_ofs, "Events");
-    lv_obj_add_event_cb(s_row_events, row_click_cb, LV_EVENT_CLICKED, (void *)(uintptr_t)FOCUS_EVENTS);
-
-    s_label_events_val = lv_label_create(s_row_events);
-    lv_obj_set_style_text_font(s_label_events_val, p->settings_value_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_label_events_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_label_set_text(s_label_events_val, "Open >");
-    lv_obj_align(s_label_events_val, LV_ALIGN_BOTTOM_MID, 0, 0);
 
     /* hint */
     s_hint = lv_label_create(parent);
@@ -542,17 +584,10 @@ static void settings_create(lv_obj_t *parent)
     lv_obj_set_style_pad_hor(s_hint, 4, LV_PART_MAIN);
     lv_obj_align(s_hint, LV_ALIGN_BOTTOM_MID, 0, p->settings_hint_y);
 
-    s_focus = FOCUS_BRIGHTNESS;
+    s_section = SECTION_MENU;
+    s_focus   = 0;
     s_editing = false;
-    update_brightness_label();
-    update_theme_label();
-    update_mode_label();
-    update_bt_screen_label();
-    update_bt_auto_label();
-    update_dsp_label();
-    update_ss_label();
-    update_focus_visuals();
-    update_hint();
+    rebuild_section();
 
     s_mem_timer = lv_timer_create(mem_timer_cb, 1000, NULL);
 
@@ -562,11 +597,12 @@ static void settings_create(lv_obj_t *parent)
 static void settings_destroy(void)
 {
     if (s_mem_timer) { lv_timer_delete(s_mem_timer); s_mem_timer = NULL; }
-    s_root = s_title = s_rows_cont = NULL;
-    s_row_bright = s_row_theme = s_row_mode = s_row_bt_screen = s_row_bt_auto = s_row_dsp = s_row_eq = s_row_ss = s_row_events = NULL;
-    s_slider_bright = s_slider_ss = s_label_bright_val = NULL;
-    s_label_theme_val = s_label_mode_val = s_label_bt_screen_val = s_label_bt_auto_val = s_label_dsp_val = s_label_eq_val = s_label_events_val = NULL;
-    s_mem_bar = s_hint = NULL;
+    s_root = s_title = s_rows_cont = s_hint = s_mem_bar = NULL;
+    s_rows = NULL;
+    s_count = 0;
+    memset(s_row_obj,    0, sizeof(s_row_obj));
+    memset(s_row_val,    0, sizeof(s_row_val));
+    memset(s_row_slider, 0, sizeof(s_row_slider));
     ESP_LOGI(TAG, "Destroyed");
 }
 
@@ -575,11 +611,7 @@ static void settings_destroy(void)
 static void settings_on_event(const ui_event_t *ev)
 {
     if (ev->type == UI_EVT_STATE_CHANGED) {
-        update_brightness_label();
-        update_theme_label();
-        update_mode_label();
-        update_bt_screen_label();
-        update_dsp_label();
+        refresh_all_labels();
     }
 }
 
@@ -591,48 +623,19 @@ static void settings_on_input(ui_input_t input)
         case UI_INPUT_ENCODER_CCW: {
             int delta = (input == UI_INPUT_ENCODER_CW) ? 1 : -1;
 
-            if (s_editing) {
-                if (s_focus == FOCUS_BRIGHTNESS) {
-                    int br = app_state_get()->brightness + delta * 5;
-                    if (br < 10)  br = 10;
-                    if (br > 100) br = 100;
-                    settings_set_brightness(br);
-                    update_brightness_label();
-                } else if (s_focus == FOCUS_THEME) {
-                    /* binary — both directions toggle */
-                    ui_theme_t next = (theme_current() == THEME_DARK) ? THEME_LIGHT : THEME_DARK;
-                    settings_set_theme(next);
-                    update_theme_label();
-                } else if (s_focus == FOCUS_MODE) {
-                    bool mode = !app_state_get()->bt_enable;
-                    settings_set_bt_enable(mode);
-                    update_mode_label();
-                } else if (s_focus == FOCUS_BT_SCREEN) {
-                    bool show = !app_state_get()->bt_show_screen;
-                    settings_set_bt_show_screen(show);
-                    update_bt_screen_label();
-                } else if (s_focus == FOCUS_BT_AUTO) {
-                    bool on = !app_state_get()->bt_auto_switch;
-                    settings_set_bt_auto_switch(on);
-                    update_bt_auto_label();
-                } else if (s_focus == FOCUS_DSP) {
-                    bool eq_en = !app_state_get()->eq_enabled;
-                    settings_set_eq_enabled(eq_en);
-                    update_dsp_label();
-                }
-                else if (s_focus == FOCUS_SS) {
-                    int ss = app_state_get()->scrsaver_delay + delta * 5;
-                    if (ss < 0) ss = 0;
-                    if (ss > 600) ss = 600;
-                    settings_set_scrsaver_delay(ss);
-                    update_ss_label();
-                }
+            if (s_editing && s_focus < s_count && s_rows[s_focus].kind == RK_SLIDER) {
+                const row_desc_t *d = &s_rows[s_focus];
+                int v = d->sget() + delta * d->vstep;
+                if (v < d->vmin) v = d->vmin;
+                if (v > d->vmax) v = d->vmax;
+                d->sset(v);
+                refresh_row_label(s_focus);
             } else {
-                int next = (int)s_focus + delta;
-                if (next < 0) next = 0;
-                if (next >= FOCUS_COUNT) next = FOCUS_COUNT - 1;
-                if (next != (int)s_focus) {
-                    s_focus = (settings_focus_t)next;
+                int next = s_focus + delta;
+                if (next < 0)        next = 0;
+                if (next >= s_count) next = s_count - 1;
+                if (next != s_focus) {
+                    s_focus = next;
                     update_focus_visuals();
                     update_hint();
                 }
@@ -641,21 +644,18 @@ static void settings_on_input(ui_input_t input)
         }
 
         case UI_INPUT_ENCODER_PRESS:
-            if (s_focus == FOCUS_EQ) {
-                ui_navigate(SCREEN_EQ);
-            } else if (s_focus == FOCUS_EVENTS) {
-                ui_navigate(SCREEN_EVENTS);
-            } else {
-                s_editing = !s_editing;
-                update_focus_visuals();
-                update_hint();
-            }
+            row_activate(s_focus);
             break;
 
         case UI_INPUT_ENCODER_LONG_PRESS:
         case UI_INPUT_SWIPE_RIGHT:
         case UI_INPUT_SWIPE_LEFT:
-            ui_navigate(s_return);
+            /* one level back: section → menu, menu → leave settings */
+            if (s_section != SECTION_MENU) {
+                enter_section(SECTION_MENU);
+            } else {
+                ui_navigate(s_return);
+            }
             break;
 
         default:
@@ -671,45 +671,31 @@ static void settings_apply_theme(void)
     const ui_theme_colors_t *th = theme_get();
 
     lv_obj_set_style_bg_color(s_root, lv_color_hex(th->bg_primary), LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_title, lv_color_hex(th->accent), LV_PART_MAIN);
+    if (s_title) lv_obj_set_style_text_color(s_title, lv_color_hex(th->accent), LV_PART_MAIN);
 
-    lv_obj_t *rows[FOCUS_COUNT] = { s_row_bright, s_row_theme, s_row_mode, s_row_bt_screen, s_row_bt_auto, s_row_dsp, s_row_eq, s_row_ss, s_row_events };
-    for (int i = 0; i < FOCUS_COUNT; i++) {
-        if (!rows[i]) continue;
-        lv_obj_set_style_bg_color(rows[i], lv_color_hex(th->bg_secondary), LV_PART_MAIN);
-        /* child[0] = title label added in make_row */
-        lv_obj_t *lbl = lv_obj_get_child(rows[i], 0);
-        if (lbl) lv_obj_set_style_text_color(lbl, lv_color_hex(th->text_secondary), LV_PART_MAIN);
+    for (int i = 0; i < s_count; i++) {
+        if (s_row_obj[i]) {
+            lv_obj_set_style_bg_color(s_row_obj[i], lv_color_hex(th->bg_secondary), LV_PART_MAIN);
+            /* child[0] = title label added in make_row */
+            lv_obj_t *lbl = lv_obj_get_child(s_row_obj[i], 0);
+            if (lbl) lv_obj_set_style_text_color(lbl, lv_color_hex(th->text_secondary), LV_PART_MAIN);
+        }
+        if (s_row_val[i])
+            lv_obj_set_style_text_color(s_row_val[i], lv_color_hex(th->text_primary), LV_PART_MAIN);
+        if (s_row_slider[i]) {
+            lv_obj_set_style_bg_color(s_row_slider[i], lv_color_hex(th->accent),     LV_PART_INDICATOR);
+            lv_obj_set_style_bg_color(s_row_slider[i], lv_color_hex(th->text_muted), LV_PART_MAIN);
+        }
     }
 
-    if (s_slider_bright) {
-        lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->accent),    LV_PART_INDICATOR);
-        lv_obj_set_style_bg_color(s_slider_bright, lv_color_hex(th->text_muted), LV_PART_MAIN);
+    if (s_mem_bar) lv_obj_set_style_text_color(s_mem_bar, lv_color_hex(th->text_muted), LV_PART_MAIN);
+    if (s_hint) {
+        lv_obj_set_style_text_color(s_hint, lv_color_hex(th->text_muted), LV_PART_MAIN);
+        lv_obj_set_style_bg_color(s_hint, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     }
-    if (s_slider_ss) {
-        lv_obj_set_style_bg_color(s_slider_ss, lv_color_hex(th->accent),    LV_PART_INDICATOR);
-        lv_obj_set_style_bg_color(s_slider_ss, lv_color_hex(th->text_muted), LV_PART_MAIN);
-    }
-    lv_obj_set_style_text_color(s_label_bright_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_label_theme_val,  lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_label_mode_val,   lv_color_hex(th->text_primary), LV_PART_MAIN);
-    if (s_label_bt_screen_val) lv_obj_set_style_text_color(s_label_bt_screen_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    if (s_label_bt_auto_val) lv_obj_set_style_text_color(s_label_bt_auto_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    if (s_label_dsp_val)    lv_obj_set_style_text_color(s_label_dsp_val,    lv_color_hex(th->text_primary), LV_PART_MAIN);
-    if (s_label_eq_val)     lv_obj_set_style_text_color(s_label_eq_val,     lv_color_hex(th->text_primary), LV_PART_MAIN);
-    if (s_label_ss_val)     lv_obj_set_style_text_color(s_label_ss_val,     lv_color_hex(th->text_primary), LV_PART_MAIN);
-    if (s_label_events_val) lv_obj_set_style_text_color(s_label_events_val, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    if (s_mem_bar)          lv_obj_set_style_text_color(s_mem_bar,          lv_color_hex(th->text_muted),   LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_hint,             lv_color_hex(th->text_muted),   LV_PART_MAIN);
-    lv_obj_set_style_bg_color(s_hint,               lv_color_hex(th->bg_primary),   LV_PART_MAIN);
 
     update_focus_visuals();   /* updates border accent/text_muted */
-    update_theme_label();     /* refreshes text after theme change */
-    update_mode_label();
-    update_bt_screen_label();
-    update_bt_auto_label();
-    update_dsp_label();
-    update_ss_label();
+    refresh_all_labels();     /* refreshes text after theme change */
     lv_obj_invalidate(s_root);
 }
 
