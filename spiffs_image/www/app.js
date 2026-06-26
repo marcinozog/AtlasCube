@@ -295,6 +295,8 @@ async function loadVersion() {
         if (s && s.version) {
             document.getElementById('fwVersion').textContent = s.version;
         }
+        const bar = document.getElementById('wwwOutdatedBar');
+        if (bar && s) bar.style.display = s.www_outdated ? '' : 'none';
     } catch (_) {
         /* ignore — version is non-critical */
     }

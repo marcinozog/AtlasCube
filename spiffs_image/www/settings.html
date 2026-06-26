@@ -639,6 +639,13 @@
                 <span>Current version</span>
                 <code id="ota_version">…</code>
             </div>
+            <div id="www_outdated_warn" class="www-outdated-warn" style="display:none">
+                ⚠️ The web UI files don't match the firmware (left behind by an
+                app-only OTA update). Re-flash the <code>www</code> partition over USB,
+                or re-upload the new web UI files on the
+                <a href="/setup">setup page</a> — include <code>www_version.txt</code>
+                in the upload to clear this warning.
+            </div>
             <div class="field-hint ota-warn">
                 Upload an application image (<code>atlascube.bin</code>). The device writes it
                 to the inactive slot and reboots into the new firmware.

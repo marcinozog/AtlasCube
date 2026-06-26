@@ -668,6 +668,8 @@ async function loadSettings() {
             showApBanner(isApMode);
             const verEl = document.getElementById('ota_version');
             if (verEl) verEl.textContent = state.version || 'unknown';
+            const warnEl = document.getElementById('www_outdated_warn');
+            if (warnEl) warnEl.style.display = state.www_outdated ? '' : 'none';
         }
 
         // Load settings

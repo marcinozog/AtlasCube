@@ -84,6 +84,21 @@ body {
     white-space: nowrap;
 }
 
+.www-outdated-bar {
+    display: block;
+    text-align: center;
+    background: #3a2810;
+    color: #d4a85a;
+    border-bottom: 1px solid #5a3e18;
+    padding: 8px 14px;
+    font-size: 12px;
+    text-decoration: none;
+}
+.www-outdated-bar:hover {
+    background: #4a3414;
+    color: #f0c878;
+}
+
 .header-right {
     display: flex;
     align-items: center;
@@ -831,6 +846,19 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
 
 .ota-warn { margin-bottom: 12px; }
 .ota-warn strong { color: var(--red); font-weight: 600; }
+
+.www-outdated-warn {
+    background: rgba(255,170,0,.10);
+    border: 1px solid var(--orange);
+    border-radius: var(--radius-sm);
+    color: var(--orange);
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+.www-outdated-warn code { color: var(--orange); }
+.www-outdated-warn a { color: var(--orange); font-weight: 600; }
 
 .ota-file {
     width: 100%;

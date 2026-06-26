@@ -51,6 +51,13 @@
   .wifi-ok { text-align: center; margin: 4px 0 10px; padding: 12px 16px;
              border-radius: 8px; background: rgba(110,231,160,0.12);
              color: #6ee7a0; font-size: 13px; line-height: 1.5; }
+  .www-warn { display: none; margin: 4px 0 14px; padding: 12px 16px;
+              border-radius: 8px; background: rgba(255,180,84,0.12);
+              border: 1px solid #ffb454; color: #ffb454; font-size: 13px;
+              line-height: 1.5; }
+  .www-warn.visible { display: block; }
+  .www-warn code { background: rgba(0,0,0,0.25); padding: 1px 5px;
+                   border-radius: 4px; color: #ffd9a0; }
   .hint { font-size: 12px; color: #666; margin-top: 10px; line-height: 1.5; }
   .pins-allowed { font-size: 12px; color: #9fcaff; margin: 6px 0 4px; line-height: 1.9; }
   .pins-allowed .ap { display: inline-block; min-width: 22px; text-align: center;
@@ -108,17 +115,23 @@
   <div class="status" id="wifiStatus"></div>
 
   <h2>Web UI files</h2>
+  <div class="www-warn" id="wwwWarn">
+    ⚠️ The web UI files don't match the firmware — left behind by an app-only OTA
+    update. Re-upload the new web UI files below, and include
+    <code>www_version.txt</code> in the selection to clear this warning.
+  </div>
   <p class="hint">Optional / recovery only — the web UI ships inside the firmware,
      so a normal flash already includes it. Use this just to patch or restore
      individual files without reflashing.</p>
   <div class="form-group">
     <input type="file" id="files" multiple
-           accept=".html,.css,.js,.json,.csv,.svg">
+           accept=".html,.css,.js,.json,.csv,.svg,.txt">
   </div>
   <button type="button" id="uploadBtn">Upload selected files</button>
   <div class="status" id="uploadStatus"></div>
   <p class="hint">Pick the files from <code>spiffs_image/www/</code> (raw, uncompressed).
-     The device gzips HTML/CSS/JS on upload. Icons (.ico) are not supported here.</p>
+     The device gzips HTML/CSS/JS on upload. Icons (.ico) are not supported here.
+     Include <code>www_version.txt</code> to clear the "web UI out of date" warning.</p>
 
   <h2>Hardware pins</h2>
   <p class="hint" id="pinsDriver">Loading…</p>
@@ -205,6 +218,7 @@
         g_version = s.version;
         document.getElementById('fwVersion').textContent = 'Firmware ' + s.version;
       }
+      document.getElementById('wwwWarn').classList.toggle('visible', !!(s && s.www_outdated));
       applyWifiMode(s && s.wifi_mode);
     })
     .catch(function () { applyWifiMode(null); });
@@ -256,6 +270,12 @@
     btn.disabled = false;
     show('uploadStatus', 'Done: ' + ok + ' uploaded' + (fail ? ', ' + fail + ' failed' : '') +
          '. Reload the page to use the new UI.', fail > 0);
+    // Re-check whether the web UI now matches the firmware (the upload may have
+    // refreshed www_version.txt), so the warning clears without a manual reload.
+    try {
+      var st = await (await fetch('/api/state', { cache: 'no-store' })).json();
+      document.getElementById('wwwWarn').classList.toggle('visible', !!(st && st.www_outdated));
+    } catch (_) { /* leave the banner as-is on error */ }
   });
 
   // ── Hardware pins ──────────────────────────────────────────────────────────
