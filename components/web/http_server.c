@@ -2177,17 +2177,21 @@ static esp_err_t file_handler(httpd_req_t *req)
     // Resolve the request to a path relative to the filesystem roots.
     bool is_entry = false;
     if (strcmp(req->uri, "/") == 0) {
+        // In AP mode the entry point is the provisioning page — serve the
+        // embedded setup.html directly (Wi-Fi + pin map), so it works even on a
+        // wiped www partition and always matches the /setup route.
+        if (wifi_get_run_mode() == WIFI_RUN_MODE_AP) {
+            return serve_embedded_setup(req);
+        }
         is_entry = true;
-        strcpy(relpath, wifi_get_run_mode() == WIFI_RUN_MODE_AP
-                            ? "/wifi_setup.html" : "/index.html");
+        strcpy(relpath, "/index.html");
     } else {
         if (strlen(req->uri) >= sizeof(relpath)) {
             httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Path too long");
             return ESP_FAIL;
         }
         strcpy(relpath, req->uri);
-        is_entry = (strcmp(req->uri, "/index.html") == 0) ||
-                   (strcmp(req->uri, "/wifi_setup.html") == 0);
+        is_entry = (strcmp(req->uri, "/index.html") == 0);
     }
 
     // Strip query string — static-file paths must not include "?..." parts,
