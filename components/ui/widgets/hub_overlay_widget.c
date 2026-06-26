@@ -288,9 +288,11 @@ void hub_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
     int gscale = (int)((sz * 0.55f / 48.0f) * 256.0f);   // shrink 48px glyph to ~0.55*sz
     if (gscale > 256) gscale = 256;
 
-    lv_color_t btn_bg    = lv_color_hex(th->bg_secondary);
+    // Lighten the resting button fill toward white so the circles stand out from
+    // the dim overlay (raw bg_secondary is near-black on dark themes → blends in).
+    lv_color_t btn_bg    = lv_color_mix(lv_color_white(), lv_color_hex(th->bg_secondary), 0x60);
     lv_color_t play_bg   = lv_color_hex(th->accent);
-    lv_color_t act_bg    = lv_color_hex(th->bg_secondary);
+    lv_color_t act_bg    = btn_bg;
 
     // Row 1 — transport: vol-  prev  play  next  vol+
     // Collect every button into s_btns in this exact order so encoder focus
