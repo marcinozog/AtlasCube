@@ -69,6 +69,13 @@ jobs:
         with:
           path: artifacts
 
+      - name: Stamp www version
+        # Recompute www_version.txt from the current sources so the recovery zip
+        # always matches the hash baked into the firmware (the build job computes
+        # it the same way). This makes the committed value irrelevant to CI: a
+        # stale checked-in stamp can't desync the /setup re-upload path.
+        run: python3 spiffs_image/tools/compress_web.py
+
       - name: Package web UI files
         run: |
           # Variant-independent: the web UI is identical across builds. Ship the
