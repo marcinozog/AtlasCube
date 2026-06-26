@@ -36,12 +36,18 @@ jobs:
             python ci/build.py ${{ matrix.variant }} --adf-path "$PWD/esp-adf" --no-clean
             echo "--- Looking for merged binary ---"
             ls -la "build/AtlasCube-${{ matrix.variant }}.bin"
+            # App-only image for web-push OTA (Settings -> Tools): the same app
+            # partition the merged .bin carries, without bootloader/parttable/www/config.
+            cp "build/atlascube.bin" "build/AtlasCube-${{ matrix.variant }}-ota.bin"
+            ls -la "build/AtlasCube-${{ matrix.variant }}-ota.bin"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: AtlasCube-${{ matrix.variant }}
-          path: build/AtlasCube-${{ matrix.variant }}.bin
+          path: |
+            build/AtlasCube-${{ matrix.variant }}.bin
+            build/AtlasCube-${{ matrix.variant }}-ota.bin
           retention-days: 30
           if-no-files-found: error
 

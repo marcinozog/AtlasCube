@@ -552,7 +552,7 @@ Aktualizacja firmware przez Wi-Fi z **Ustawienia → Tools** — bez kabla USB, 
 
 **Jak to śmiga:** sprawdzenie magic `0xE9` → `esp_ota_begin` kasuje nieaktywny slot → stream + `esp_ota_write` → `esp_ota_end` waliduje sumę kontrolną → `esp_ota_set_boot_partition` → restart (bootloader robi rollback, jeśli nowy obraz nie wstanie). Obie partycje aplikacji są w [`partitions16MB.csv`](partitions16MB.csv); gdy nie ma nieaktywnego slotu, endpoint zwraca `501`.
 
-**Który plik:** wgrywasz **samą aplikację** `build/atlascube.bin` (~2,3 MB) — *nie* scalony `AtlasCube-<wariant>.bin`, który zawiera też bootloader, tablicę partycji oraz partycje `www`/`config` i służy do pełnego wgrania przez USB od `0x0`. Upewnij się, że obraz pasuje do Twojego wariantu wyświetlacza — wgranie binarki innego wariantu zepsuje UI.
+**Który plik:** wgrywasz **samą aplikację** — albo `AtlasCube-<wariant>-ota.bin` z [najnowszego Release](https://github.com/marcinozog/AtlasCube/releases/latest) (linkowany też z [atlascube.net/flash](https://atlascube.net/flash)), albo własny `build/atlascube.bin` (~2,3 MB). *Nie* scalony `AtlasCube-<wariant>.bin`, który zawiera też bootloader, tablicę partycji oraz partycje `www`/`config` i służy do pełnego wgrania przez USB od `0x0`. Upewnij się, że obraz pasuje do Twojego wariantu wyświetlacza — wgranie binarki innego wariantu zepsuje UI.
 
 **Przejście na layout OTA:** przestawienie istniejącego urządzenia 16 MB na układ partycji OTA to jednorazowy pełny reflash przez USB (zmiana tablicy partycji nie przejdzie przez samo OTA). Potem każda kolejna aktualizacja idzie już przez web.
 

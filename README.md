@@ -554,7 +554,7 @@ Update the firmware over Wi-Fi from **Settings → Tools** — no USB cable, no 
 
 **How it flows:** `0xE9` magic check → `esp_ota_begin` erases the inactive slot → stream + `esp_ota_write` → `esp_ota_end` validates the checksum → `esp_ota_set_boot_partition` → reboot (bootloader rolls back if the new image won't start). The two app partitions live in [`partitions16MB.csv`](partitions16MB.csv); if no inactive slot is present the endpoint returns `501`.
 
-**Which file:** upload the **app-only** `build/atlascube.bin` (~2.3 MB) — *not* the merged `AtlasCube-<variant>.bin`, which also contains the bootloader, partition table and the `www`/`config` partitions and is meant for a full `0x0` USB flash. Make sure the image matches your display variant; flashing a different variant's binary will break the UI.
+**Which file:** upload the **app-only** image — either `AtlasCube-<variant>-ota.bin` from the [latest Release](https://github.com/marcinozog/AtlasCube/releases/latest) (also linked from [atlascube.net/flash](https://atlascube.net/flash)) or your own `build/atlascube.bin` (~2.3 MB). *Not* the merged `AtlasCube-<variant>.bin`, which also contains the bootloader, partition table and the `www`/`config` partitions and is meant for a full `0x0` USB flash. Make sure the image matches your display variant; flashing a different variant's binary will break the UI.
 
 **Adopting the layout:** switching an existing 16 MB device to the OTA partition layout is a one-time full USB reflash (a partition-table change can't go through OTA itself). After that, every further update is web-only.
 
