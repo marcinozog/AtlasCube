@@ -9,6 +9,20 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-06-26
+
+### Added
+- **web:** publish www.zip in release + link from stale-UI warning
+- **web:** detect stale web UI after app-only OTA
+- **web:** add first-run welcome modal + help page
+- **setup:** collapse Wi-Fi form when already connected (STA)
+- **ui:** encoder-driven hub overlay on Home
+- **ui:** hub overlay widget buttons adjusted
+
+### Changed
+- **settings:** data-driven sections for on-device settings screen
+- **setup:** serve unified setup.html in AP mode, drop wifi_setup.html
+
 ## [0.30.0] - 2026-06-25
 
 ### Added
@@ -440,7 +454,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.30.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.31.0...HEAD
+[0.31.0]: https://github.com/marcinozog/AtlasCube/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/marcinozog/AtlasCube/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/marcinozog/AtlasCube/compare/v0.28.0...v0.29.0
 [0.28.0]: https://github.com/marcinozog/AtlasCube/compare/v0.27.0...v0.28.0
