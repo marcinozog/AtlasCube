@@ -779,6 +779,7 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
     color: var(--text-label);
     margin-top: 4px;
 }
+.field-hint a { color: var(--green); font-weight: 600; text-decoration: underline; }
 
 #dim_sched_save_btn,
 #save_btn,
@@ -859,6 +860,9 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
 }
 .www-outdated-warn code { color: var(--orange); }
 .www-outdated-warn a { color: var(--orange); font-weight: 600; }
+.www-hashes { margin-top: 8px; font-family: monospace; font-size: 12px;
+              word-break: break-all; }
+.www-hashes:empty { display: none; }
 
 .ota-file {
     width: 100%;

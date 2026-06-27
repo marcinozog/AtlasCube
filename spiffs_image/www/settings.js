@@ -668,8 +668,7 @@ async function loadSettings() {
             showApBanner(isApMode);
             const verEl = document.getElementById('ota_version');
             if (verEl) verEl.textContent = state.version || 'unknown';
-            const warnEl = document.getElementById('www_outdated_warn');
-            if (warnEl) warnEl.style.display = state.www_outdated ? '' : 'none';
+            showWwwState(state);
         }
 
         // Load settings
@@ -1207,6 +1206,59 @@ function uploadFirmware() {
     };
 
     xhr.send(file);
+}
+
+// Toggle the "web UI out of date" warning and show both hashes so a mismatch is
+// visible: www_version is what sits on the www partition, www_expected is what
+// this firmware was built against. They differ after an app-only OTA.
+function showWwwState(state) {
+    const warnEl = document.getElementById('www_outdated_warn');
+    if (warnEl) warnEl.style.display = state && state.www_outdated ? '' : 'none';
+    const box = document.getElementById('www_hashes');
+    if (box) {
+        box.textContent = state && state.www_outdated
+            ? 'On device: ' + (state.www_version || '(none)') +
+              '  •  Firmware expects: ' + (state.www_expected || '(unknown)')
+            : '';
+    }
+}
+
+// Re-upload the raw web UI files to the www partition via /api/files (the device
+// gzips HTML/CSS/JS). Sequential — the endpoint takes one file per request. After
+// the batch, re-read /api/state so the "out of date" warning clears once the new
+// www_version.txt has landed.
+async function uploadWebUi() {
+    const fileEl = document.getElementById('www_files');
+    const btn    = document.getElementById('www_btn');
+    const list   = fileEl.files;
+    if (!list.length) { showStatusEl('www_status', '❌ Select one or more files first', 'error'); return; }
+
+    btn.disabled = true;
+    let ok = 0, fail = 0;
+    for (let i = 0; i < list.length; i++) {
+        const file = list[i];
+        showStatusEl('www_status', 'Uploading ' + file.name + ' (' + (i + 1) + '/' + list.length + ')…', '');
+        try {
+            const r = await fetch('/api/files/' + encodeURIComponent(file.name),
+                                  { method: 'POST', body: file });
+            if (r.ok) ok++; else fail++;
+        } catch (_) { fail++; }
+    }
+    btn.disabled = false;
+    showStatusEl('www_status', 'Done: ' + ok + ' uploaded' + (fail ? ', ' + fail + ' failed' : '') +
+                 '. Reload the page to use the new UI.', fail > 0 ? 'error' : 'ok');
+    try {
+        const st = await (await fetch('/api/state', { cache: 'no-store' })).json();
+        showWwwState(st);
+    } catch (_) { /* leave the warning as-is on error */ }
+}
+
+// Set text + state class on an arbitrary status element (mirrors showOtaStatus).
+function showStatusEl(id, msg, kind) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = msg;
+    el.className = 'save-status' + (kind ? ' ' + kind : '');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

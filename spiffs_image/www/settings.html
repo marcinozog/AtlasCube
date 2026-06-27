@@ -641,17 +641,19 @@
             </div>
             <div id="www_outdated_warn" class="www-outdated-warn" style="display:none">
                 ⚠️ The web UI files don't match the firmware (left behind by an
-                app-only OTA update). Re-flash the <code>www</code> partition over USB,
-                or re-upload the new web UI files on the
-                <a href="/setup">setup page</a> — include <code>www_version.txt</code>
-                in the upload to clear this warning. Get the matching files
-                (<code>AtlasCube-www.zip</code>) from the
+                app-only OTA update). Re-upload the new web UI files in the
+                <strong>Web UI files</strong> section below — include
+                <code>www_version.txt</code> in the selection to clear this warning.
+                Get the matching files (<code>AtlasCube-www.zip</code>) from the
                 <a href="https://github.com/marcinozog/AtlasCube/releases/latest"
                    target="_blank" rel="noopener">latest GitHub release</a>.
+                <div id="www_hashes" class="www-hashes"></div>
             </div>
             <div class="field-hint ota-warn">
-                Upload an application image (<code>atlascube.bin</code>). The device writes it
-                to the inactive slot and reboots into the new firmware.
+                Upload an application image — <code>atlascube.bin</code>, or
+                <code>AtlasCube-&lt;display&gt;-ota.bin</code> for your display from
+                <a href="https://atlascube.net/flash/" target="_blank" rel="noopener">atlascube.net/flash</a>.
+                The device writes it to the inactive slot and reboots into the new firmware.
                 <strong>Do not power off during the upload.</strong>
             </div>
             <input type="file" id="ota_file" accept=".bin" class="ota-file" />
@@ -669,6 +671,23 @@
                 slot) — a re-flashable snapshot to keep before updating.
             </div>
             <a href="/api/ota/backup" class="tool-btn tool-link ota-backup-btn" download>⬇️ Export running firmware</a>
+        </div>
+
+        <div class="panel">
+            <label class="field-label">🌐 Web UI files</label>
+            <div class="field-hint">
+                Re-upload the web UI after an app-only OTA left it behind (the warning
+                above). Pick the raw files from <code>spiffs_image/www/</code> — get the
+                matching set (<code>AtlasCube-www.zip</code>) from the
+                <a href="https://github.com/marcinozog/AtlasCube/releases/latest/download/AtlasCube-www.zip"
+                   target="_blank" rel="noopener">latest release</a>. Include
+                <code>www_version.txt</code> in the selection to clear the warning.
+                HTML/CSS/JS are gzipped on the device; <code>.ico</code> isn't supported here.
+            </div>
+            <input type="file" id="www_files" class="ota-file" multiple
+                   accept=".html,.css,.js,.json,.csv,.svg,.txt" />
+            <button id="www_btn" onclick="uploadWebUi()">⬆️ Upload web UI files</button>
+            <div id="www_status" class="save-status"></div>
         </div>
     </section>
 

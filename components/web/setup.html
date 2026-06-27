@@ -67,6 +67,7 @@
                 color: #ffd9a0; word-break: break-all; }
   .www-hashes:empty { display: none; }
   .hint { font-size: 12px; color: #666; margin-top: 10px; line-height: 1.5; }
+  .hint a { color: #6ee7a0; font-weight: 600; text-decoration: underline; }
   .pins-allowed { font-size: 12px; color: #9fcaff; margin: 6px 0 4px; line-height: 1.9; }
   .pins-allowed .ap { display: inline-block; min-width: 22px; text-align: center;
                       font-family: monospace; color: #6ee7a0; }
@@ -144,9 +145,27 @@
   </div>
   <button type="button" id="uploadBtn">Upload selected files</button>
   <div class="status" id="uploadStatus"></div>
-  <p class="hint">Pick the files from <code>spiffs_image/www/</code> (raw, uncompressed).
+  <p class="hint">Pick the files from <code>spiffs_image/www/</code> (raw, uncompressed) —
+     get the matching set (<code>AtlasCube-www.zip</code>) from the
+     <a href="https://github.com/marcinozog/AtlasCube/releases/latest/download/AtlasCube-www.zip"
+        target="_blank" rel="noopener">latest release</a>.
      The device gzips HTML/CSS/JS on upload. Icons (.ico) are not supported here.
      Include <code>www_version.txt</code> to clear the "web UI out of date" warning.</p>
+
+  <h2>Firmware update (OTA)</h2>
+  <p class="hint">Upload an application image — <code>atlascube.bin</code>, or
+     <code>AtlasCube-&lt;display&gt;-ota.bin</code> for your display from
+     <a href="https://atlascube.net/flash/" target="_blank" rel="noopener">atlascube.net/flash</a>.
+     It is written to the inactive slot and the device reboots into it; settings and
+     pin map are kept. Works from this built-in page even if the web UI partition is wiped.
+     <strong>Don't power off during the upload.</strong></p>
+  <div class="form-group">
+    <input type="file" id="otaFile" accept=".bin">
+  </div>
+  <button type="button" id="otaBtn">Upload &amp; install firmware</button>
+  <progress id="otaProgress" value="0" max="100"
+            style="display:none;width:100%;margin-top:10px"></progress>
+  <div class="status" id="otaStatus"></div>
 
   <h2>Hardware pins</h2>
   <p class="hint" id="pinsDriver">Loading…</p>
@@ -307,6 +326,48 @@
       var st = await (await fetch('/api/state', { cache: 'no-store' })).json();
       showWwwState(st);
     } catch (_) { /* leave the banner as-is on error */ }
+  });
+
+  // ── Firmware OTA ─────────────────────────────────────────────────────────--
+  // Recovery-friendly: this page is baked into the app, so OTA works even with a
+  // wiped www partition. Mirrors Settings → Tools — streams the .bin to /api/ota,
+  // which writes the inactive slot and reboots. /api/ota returns 501 on 8MB
+  // single-slot builds, surfaced here via the plain-text error body.
+  document.getElementById('otaBtn').addEventListener('click', function () {
+    var btn  = document.getElementById('otaBtn');
+    var prog = document.getElementById('otaProgress');
+    var file = document.getElementById('otaFile').files[0];
+    if (!file) { show('otaStatus', 'Pick a .bin firmware image first.', true); return; }
+    if (!/\.bin$/i.test(file.name)) { show('otaStatus', 'Expected a .bin image.', true); return; }
+    if (!confirm('Flash "' + file.name + '" (' + (file.size / 1048576).toFixed(2) +
+                 ' MB)? The device will reboot when done.')) return;
+
+    btn.disabled = true;
+    prog.style.display = '';
+    prog.value = 0;
+    show('otaStatus', 'Uploading…', false);
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/api/ota', true);
+    xhr.setRequestHeader('Content-Type', 'application/octet-stream');
+    xhr.upload.onprogress = function (e) {
+      if (e.lengthComputable) prog.value = Math.round((e.loaded / e.total) * 100);
+    };
+    xhr.onload = function () {
+      if (xhr.status === 200) {
+        prog.value = 100;
+        show('otaStatus', '✓ Installed. Device is rebooting into the new firmware…', false);
+      } else {
+        show('otaStatus', xhr.responseText || ('HTTP ' + xhr.status), true);
+        btn.disabled = false;
+      }
+    };
+    xhr.onerror = function () {
+      // A connection drop right after the response is the expected reboot.
+      if (prog.value >= 100) show('otaStatus', '✓ Uploaded. Device is rebooting…', false);
+      else { show('otaStatus', 'Upload failed (connection lost).', true); btn.disabled = false; }
+    };
+    xhr.send(file);
   });
 
   // ── Hardware pins ──────────────────────────────────────────────────────────
