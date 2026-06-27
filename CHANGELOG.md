@@ -9,6 +9,11 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.34.2] - 2026-06-27
+
+### Fixed
+- **web:** make www version hash line-ending independent
+
 ## [0.34.1] - 2026-06-27
 
 ### Changed
@@ -494,7 +499,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.34.1...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.34.2...HEAD
+[0.34.2]: https://github.com/marcinozog/AtlasCube/compare/v0.34.1...v0.34.2
 [0.34.1]: https://github.com/marcinozog/AtlasCube/compare/v0.34.0...v0.34.1
 [0.34.0]: https://github.com/marcinozog/AtlasCube/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/marcinozog/AtlasCube/compare/v0.32.0...v0.33.0
