@@ -1232,6 +1232,13 @@ async function uploadWebUi() {
     const btn    = document.getElementById('www_btn');
     const list   = fileEl.files;
     if (!list.length) { showStatusEl('www_status', '❌ Select one or more files first', 'error'); return; }
+    for (let j = 0; j < list.length; j++) {
+        if (/\.bin$/i.test(list[j].name)) {
+            showStatusEl('www_status', '❌ ' + list[j].name + ' looks like firmware (.bin). ' +
+                         'Use the “Firmware update (OTA)” section above.', 'error');
+            return;
+        }
+    }
 
     btn.disabled = true;
     let ok = 0, fail = 0;
@@ -1240,7 +1247,7 @@ async function uploadWebUi() {
         showStatusEl('www_status', 'Uploading ' + file.name + ' (' + (i + 1) + '/' + list.length + ')…', '');
         try {
             const r = await fetch('/api/files/' + encodeURIComponent(file.name),
-                                  { method: 'POST', body: file });
+                                  { method: 'PUT', body: file });
             if (r.ok) ok++; else fail++;
         } catch (_) { fail++; }
     }

@@ -300,6 +300,13 @@
     var btn   = document.getElementById('uploadBtn');
     var list  = input.files;
     if (!list.length) { show('uploadStatus', 'Select one or more files first.', true); return; }
+    for (var j = 0; j < list.length; j++) {
+      if (/\.bin$/i.test(list[j].name)) {
+        show('uploadStatus', list[j].name + ' looks like firmware (.bin). ' +
+             'Use the “Firmware update (OTA)” section below.', true);
+        return;
+      }
+    }
     btn.disabled = true;
     var ok = 0, fail = 0;
     for (var i = 0; i < list.length; i++) {

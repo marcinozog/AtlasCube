@@ -885,7 +885,7 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
 }
 .ota-file::file-selector-button:hover { background: var(--accent); color: #fff; }
 
-#ota_btn {
+#ota_btn, #www_btn {
     width: 100%;
     margin-top: 14px;
     background: var(--accent);
@@ -901,8 +901,8 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
     box-shadow: 0 0 14px var(--accent-glow);
     transition: background .15s;
 }
-#ota_btn:hover:not(:disabled) { background: var(--accent-dim); }
-#ota_btn:disabled { background: var(--border); cursor: not-allowed; box-shadow: none; }
+#ota_btn:hover:not(:disabled), #www_btn:hover:not(:disabled) { background: var(--accent-dim); }
+#ota_btn:disabled, #www_btn:disabled { background: var(--border); cursor: not-allowed; box-shadow: none; }
 
 .ota-progress-wrap {
     display: flex;
