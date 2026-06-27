@@ -534,10 +534,12 @@ static esp_err_t api_state_get_handler(httpd_req_t *req)
     // Firmware version (git describe) — lets the web UI confirm what was flashed
     cJSON_AddStringToObject(json, "version", esp_app_get_description()->version);
 
-    // www version — the hash stamped on the www partition (/spiffs/www_version.txt)
-    // vs. the one this app was built with. They differ when an app-only OTA left
-    // the web UI behind; the settings page surfaces a warning when www_outdated.
-    char www_ver[24] = "";
+    // www version — the stamp on the www partition (/spiffs/www_version.txt) vs.
+    // the one this app was built with. Format is "<hash> <fw-version> <date>";
+    // only the leading hash token decides staleness (the metadata changes across
+    // builds even for identical UI), the rest is shown so the UI can tell which
+    // side is older. They differ when an app-only OTA left the web UI behind.
+    char www_ver[64] = "";
     FILE *vf = fopen(WEB_ROOT "/www_version.txt", "r");
     if (vf) {
         if (fgets(www_ver, sizeof(www_ver), vf)) {
@@ -545,11 +547,15 @@ static esp_err_t api_state_get_handler(httpd_req_t *req)
         }
         fclose(vf);
     }
+    // Compare hash tokens only (up to the first space) on both sides.
+    size_t dev_hash = strcspn(www_ver, " \t");
+    size_t exp_hash = strcspn(WEB_ASSETS_VERSION, " \t");
+    bool   www_match = dev_hash == exp_hash &&
+                       strncmp(www_ver, WEB_ASSETS_VERSION, dev_hash) == 0;
     cJSON_AddStringToObject(json, "www_version",  www_ver);
     cJSON_AddStringToObject(json, "www_expected", WEB_ASSETS_VERSION);
     cJSON_AddBoolToObject(json, "www_outdated",
-        strcmp(WEB_ASSETS_VERSION, "unknown") != 0 &&
-        strcmp(www_ver, WEB_ASSETS_VERSION) != 0);
+        strcmp(WEB_ASSETS_VERSION, "unknown") != 0 && !www_match);
 
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
