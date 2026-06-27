@@ -93,7 +93,10 @@ def compute_version() -> str:
             continue
         h.update(path.relative_to(SRC_DIR).as_posix().encode())
         h.update(b"\0")
-        h.update(path.read_bytes())
+        # Normalise CRLF -> LF so the hash matches on Windows (autocrlf checkout)
+        # and Linux/CI, which would otherwise hash different bytes for the same
+        # source and flag a spurious www mismatch after an OTA.
+        h.update(path.read_bytes().replace(b"\r\n", b"\n"))
     return h.hexdigest()[:12]
 
 
