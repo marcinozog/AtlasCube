@@ -63,6 +63,9 @@
                    border-radius: 4px; color: #ffd9a0; }
   .www-warn a { color: #ffd9a0; text-decoration: underline; }
   .www-warn a:hover { color: #fff; }
+  .www-hashes { margin-top: 10px; font-family: monospace; font-size: 12px;
+                color: #ffd9a0; word-break: break-all; }
+  .www-hashes:empty { display: none; }
   .hint { font-size: 12px; color: #666; margin-top: 10px; line-height: 1.5; }
   .pins-allowed { font-size: 12px; color: #9fcaff; margin: 6px 0 4px; line-height: 1.9; }
   .pins-allowed .ap { display: inline-block; min-width: 22px; text-align: center;
@@ -130,6 +133,7 @@
     <a href="https://github.com/marcinozog/AtlasCube/releases/latest/download/AtlasCube-www.zip"
        target="_blank" rel="noopener">latest GitHub release</a>, then extract and
     upload them below.
+    <div class="www-hashes" id="wwwHashes"></div>
   </div>
   <p class="hint">Optional / recovery only — the web UI ships inside the firmware,
      so a normal flash already includes it. Use this just to patch or restore
@@ -231,10 +235,24 @@
         g_version = s.version;
         document.getElementById('fwVersion').textContent = 'Firmware ' + s.version;
       }
-      document.getElementById('wwwWarn').classList.toggle('visible', !!(s && s.www_outdated));
+      showWwwState(s);
       applyWifiMode(s && s.wifi_mode);
     })
     .catch(function () { applyWifiMode(null); });
+
+  // Toggle the "out of date" warning and show both hashes so a mismatch is
+  // visible: www_version is what sits on the www partition, www_expected is what
+  // this firmware was built against. They differ after an app-only OTA.
+  function showWwwState(s) {
+    document.getElementById('wwwWarn').classList.toggle('visible', !!(s && s.www_outdated));
+    var box = document.getElementById('wwwHashes');
+    if (s && s.www_outdated) {
+      box.textContent = 'On device: ' + (s.www_version || '(none)') +
+                        '  •  Firmware expects: ' + (s.www_expected || '(unknown)');
+    } else {
+      box.textContent = '';
+    }
+  }
 
   // ── Wi-Fi ──────────────────────────────────────────────────────────────────
   document.getElementById('wifiForm').addEventListener('submit', async function (e) {
@@ -287,7 +305,7 @@
     // refreshed www_version.txt), so the warning clears without a manual reload.
     try {
       var st = await (await fetch('/api/state', { cache: 'no-store' })).json();
-      document.getElementById('wwwWarn').classList.toggle('visible', !!(st && st.www_outdated));
+      showWwwState(st);
     } catch (_) { /* leave the banner as-is on error */ }
   });
 

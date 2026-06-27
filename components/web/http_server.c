@@ -545,7 +545,8 @@ static esp_err_t api_state_get_handler(httpd_req_t *req)
         }
         fclose(vf);
     }
-    cJSON_AddStringToObject(json, "www_version", www_ver);
+    cJSON_AddStringToObject(json, "www_version",  www_ver);
+    cJSON_AddStringToObject(json, "www_expected", WEB_ASSETS_VERSION);
     cJSON_AddBoolToObject(json, "www_outdated",
         strcmp(WEB_ASSETS_VERSION, "unknown") != 0 &&
         strcmp(www_ver, WEB_ASSETS_VERSION) != 0);
