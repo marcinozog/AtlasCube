@@ -301,6 +301,12 @@ def main():
             cmd += ["--port", port]
         return cmd + ["write_partition", "--partition-name", partition, "--input", str(image)]
 
+    def parttool_erase(partition):
+        cmd = [sys.executable, str(idf_path / "components" / "partition_table" / "parttool.py")]
+        if port:
+            cmd += ["--port", port]
+        return cmd + ["erase_partition", "--partition-name", partition]
+
     # First run clones + patches ESP-ADF (and exports ADF_PATH for the build);
     # later runs detect it's done and skip straight through.
     ensure_setup(idf_path, args.adf_path, args.setup)
@@ -344,10 +350,16 @@ def main():
               "for a distributable image).")
         return
 
+    # app-flash always writes ota_0 (the table has no `factory` slot), but it never
+    # touches otadata. After a prior web-push OTA, otadata points at ota_1, so the
+    # bootloader keeps booting the *old* app and the USB flash appears to do nothing.
+    # Erase otadata so the bootloader falls back to the slot we just wrote (ota_0).
     if action == "fw":
         run(idf("app-flash"))
+        run(parttool_erase("otadata"))
     elif action == "ui":
         run(idf("app-flash"))
+        run(parttool_erase("otadata"))
         if not WWW_IMAGE.is_file():
             die(f"{WWW_IMAGE} not found — build did not produce the www image.")
         run(parttool_write("www", WWW_IMAGE))
