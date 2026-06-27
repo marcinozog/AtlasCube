@@ -125,7 +125,24 @@
   <button type="button" id="wifiChangeBtn" class="ghost" style="display:none">Change Wi-Fi network</button>
   <div class="status" id="wifiStatus"></div>
 
+  <h2>Firmware update (OTA)</h2>
+  <p class="fw-version" id="otaVer" style="text-align:left;margin:0 0 10px"></p>
+  <p class="hint">Upload an application image — <code>atlascube.bin</code>, or
+     <code>AtlasCube-&lt;display&gt;-ota.bin</code> for your display from
+     <a href="https://atlascube.net/flash/" target="_blank" rel="noopener">atlascube.net/flash</a>.
+     It is written to the inactive slot and the device reboots into it; settings and
+     pin map are kept. Works from this built-in page even if the web UI partition is wiped.
+     <strong>Don't power off during the upload.</strong></p>
+  <div class="form-group">
+    <input type="file" id="otaFile" accept=".bin">
+  </div>
+  <button type="button" id="otaBtn">Upload &amp; install firmware</button>
+  <progress id="otaProgress" value="0" max="100"
+            style="display:none;width:100%;margin-top:10px"></progress>
+  <div class="status" id="otaStatus"></div>
+
   <h2>Web UI files</h2>
+  <p class="fw-version" id="wwwVer" style="text-align:left;margin:0 0 10px"></p>
   <div class="www-warn" id="wwwWarn">
     ⚠️ The web UI files don't match the firmware — left behind by an app-only OTA
     update. Re-upload the new web UI files below, and include
@@ -152,21 +169,6 @@
      The device gzips HTML/CSS/JS on upload. Icons (.ico) are not supported here.
      Include <code>www_version.txt</code> to clear the "web UI out of date" warning.</p>
 
-  <h2>Firmware update (OTA)</h2>
-  <p class="hint">Upload an application image — <code>atlascube.bin</code>, or
-     <code>AtlasCube-&lt;display&gt;-ota.bin</code> for your display from
-     <a href="https://atlascube.net/flash/" target="_blank" rel="noopener">atlascube.net/flash</a>.
-     It is written to the inactive slot and the device reboots into it; settings and
-     pin map are kept. Works from this built-in page even if the web UI partition is wiped.
-     <strong>Don't power off during the upload.</strong></p>
-  <div class="form-group">
-    <input type="file" id="otaFile" accept=".bin">
-  </div>
-  <button type="button" id="otaBtn">Upload &amp; install firmware</button>
-  <progress id="otaProgress" value="0" max="100"
-            style="display:none;width:100%;margin-top:10px"></progress>
-  <div class="status" id="otaStatus"></div>
-
   <h2>Hardware pins</h2>
   <p class="hint" id="pinsDriver">Loading…</p>
   <p class="pins-allowed">Allowed pins (<span style="color:#ff7a7a;font-weight:700">in use</span>
@@ -187,8 +189,6 @@
   <div class="status" id="pinsStatus"></div>
 
   <a href="/" class="home-link">← Back to AtlasCube</a>
-
-  <div class="fw-version" id="fwVersion"></div>
 </div>
 
 <script>
@@ -252,7 +252,7 @@
     .then(function (s) {
       if (s && s.version) {
         g_version = s.version;
-        document.getElementById('fwVersion').textContent = 'Firmware ' + s.version;
+        document.getElementById('otaVer').textContent = 'Firmware ' + s.version;
       }
       showWwwState(s);
       applyWifiMode(s && s.wifi_mode);
@@ -263,6 +263,8 @@
   // visible: www_version is what sits on the www partition, www_expected is what
   // this firmware was built against. They differ after an app-only OTA.
   function showWwwState(s) {
+    var verEl = document.getElementById('wwwVer');
+    if (verEl) verEl.textContent = 'Web UI ' + ((s && s.www_version) || 'unknown');
     document.getElementById('wwwWarn').classList.toggle('visible', !!(s && s.www_outdated));
     var box = document.getElementById('wwwHashes');
     if (s && s.www_outdated) {

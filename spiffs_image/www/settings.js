@@ -1212,6 +1212,8 @@ function uploadFirmware() {
 // visible: www_version is what sits on the www partition, www_expected is what
 // this firmware was built against. They differ after an app-only OTA.
 function showWwwState(state) {
+    const verEl = document.getElementById('www_ver');
+    if (verEl) verEl.textContent = (state && state.www_version) || 'unknown';
     const warnEl = document.getElementById('www_outdated_warn');
     if (warnEl) warnEl.style.display = state && state.www_outdated ? '' : 'none';
     const box = document.getElementById('www_hashes');
