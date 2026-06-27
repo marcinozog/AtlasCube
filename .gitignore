@@ -79,6 +79,8 @@ downloads/
 *.o
 *.a
 *.so
+# Exception: prebuilt closed-source libraries (lib/) are committed deliberately.
+!/lib/*.a
 
 # ===== Optional: local secrets =====
 # (jeśli będziesz trzymał WiFi itp.)
