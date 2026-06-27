@@ -171,8 +171,8 @@ def ensure_setup(idf_path, adf_arg, force):
 
 ACTIONS = {
     "all":   "Everything / factory          (bootloader + partitions + app + www + config; works on a blank chip; RESETS settings)",
-    "fw":    "Firmware only                 (app slot only, over USB; keeps web UI and settings)",
-    "ui":    "Firmware + Web UI             (app + www, over USB; keeps settings)",
+    "fw":    "Firmware only                 (app slot only, over USB; resets OTA boot slot; keeps web UI and settings)",
+    "ui":    "Firmware + Web UI             (app + www, over USB; resets OTA boot slot; keeps settings)",
     "build":  "Build only (e.g. OTA image)   (compile + compress web/*.gz; don't flash)",
     "erase":  "Erase all                     (wipe the WHOLE flash: app + web UI + settings + NVS)",
     "update": "Update from git              (git pull the repo incl. this script; then re-run the script)",
