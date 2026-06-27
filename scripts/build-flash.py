@@ -164,7 +164,9 @@ def ensure_setup(idf_path, adf_arg, force):
     adf = resolve_adf(adf_arg)  # clones ./esp-adf only if missing; sets ADF_PATH
     board = adf / "components" / "audio_board" / BOARD_NAME
     if force or not board.exists():
-        patch_adf(adf, idf_path)
+        # link=True: install the board sources as a live junction into the repo, so
+        # editing board_pins_config.c here never leaves a stale copy in the ADF clone.
+        patch_adf(adf, idf_path, link=True)
     else:
         print(f"ESP-ADF already set up at {adf} — skipping patch (use --setup to re-run).")
 

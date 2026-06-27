@@ -59,6 +59,27 @@ def git_ok(args):
                           stderr=subprocess.DEVNULL).returncode == 0
 
 
+def is_link(path):
+    """True if `path` is a symlink or (Windows) a directory junction."""
+    return path.is_symlink() or getattr(os.path, "isjunction", lambda _: False)(str(path))
+
+
+def link_dir(dest, src):
+    """Make `dest` a live link to `src` (junction on Windows, symlink elsewhere).
+    Returns True on success; False lets the caller fall back to a plain copy."""
+    try:
+        if os.name == "nt":
+            # mklink is a cmd builtin, not an exe — must go through cmd /c. /J makes a
+            # directory junction, which (unlike symlinks) needs no admin rights.
+            run(["cmd", "/c", "mklink", "/J", str(dest), str(src)])
+        else:
+            os.symlink(src, dest, target_is_directory=True)
+        return True
+    except (OSError, subprocess.CalledProcessError) as e:
+        warn(f"could not link {dest} -> {src} ({e}); falling back to a copy")
+        return False
+
+
 # ── 1. environment ──────────────────────────────────────────────────────────--
 
 def resolve_idf():
@@ -117,7 +138,7 @@ def insert_before(text, marker_re, lines, sentinel):
     return "".join(out), done
 
 
-def patch_adf(adf, idf):
+def patch_adf(adf, idf, link=False):
     audio_board = adf / "components" / "audio_board"
     board_src = REPO_ROOT / "components" / "audio_board" / BOARD_NAME
     if not board_src.is_dir():
@@ -128,16 +149,27 @@ def patch_adf(adf, idf):
          "components/esp-adf-libs", "components/esp-sr"])
 
     dest = audio_board / BOARD_NAME
-    # A symlink/junction into the repo (preferred dev setup) stays live for both
-    # ci/build.py and the VSCode ESP-IDF extension (idf.py build) — don't clobber it.
-    # Otherwise install a fresh copy (fresh ADF clone / CI).
-    if dest.is_symlink() or getattr(os.path, "isjunction", lambda _: False)(str(dest)):
+    # A symlink/junction into the repo stays live for both ci/build.py and the VSCode
+    # ESP-IDF extension (idf.py build), so master edits to board_pins_config.c never
+    # go stale — don't clobber an existing one.
+    #
+    # link=True (dev, build-flash.py): install a junction. A plain copy gets stale the
+    # moment the repo master changes, AND re-copying carries the master's old mtime,
+    # so ninja sees source-older-than-.obj and skips recompiling (the I2S-pin bug).
+    # link=False (CI, ci/build.py): plain copy — the ADF clone is fresh each run, so
+    # there's nothing to go stale, and a copy avoids symlink surprises on the runner.
+    if is_link(dest):
         step(f"Board sources linked at {dest} — leaving live link in place")
     else:
-        step(f"Installing board sources into {dest}")
         if dest.exists():
             shutil.rmtree(dest)
-        shutil.copytree(board_src, dest)
+        if link:
+            step(f"Linking board sources {dest} -> {board_src}")
+            if not link_dir(dest, board_src):
+                shutil.copytree(board_src, dest)
+        else:
+            step(f"Installing board sources into {dest}")
+            shutil.copytree(board_src, dest)
 
     step("Patching Kconfig.projbuild")
     kconfig = audio_board / "Kconfig.projbuild"
