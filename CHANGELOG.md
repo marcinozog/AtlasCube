@@ -9,6 +9,13 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-06-27
+
+### Added
+- **web:** surface web-UI build stamp + expected hash in settings/setup
+- **web:** show web-UI version in settings + reorder setup OTA/web-UI
+- **web:** label the www stamp time as UTC
+
 ## [0.33.0] - 2026-06-27
 
 ### Added
@@ -481,7 +488,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.33.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.34.0...HEAD
+[0.34.0]: https://github.com/marcinozog/AtlasCube/compare/v0.33.0...v0.34.0
 [0.33.0]: https://github.com/marcinozog/AtlasCube/compare/v0.32.0...v0.33.0
 [0.32.0]: https://github.com/marcinozog/AtlasCube/compare/v0.31.2...v0.32.0
 [0.31.2]: https://github.com/marcinozog/AtlasCube/compare/v0.31.1...v0.31.2
