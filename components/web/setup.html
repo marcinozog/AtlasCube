@@ -252,7 +252,11 @@
     .then(function (s) {
       if (s && s.version) {
         g_version = s.version;
-        document.getElementById('otaVer').textContent = 'Firmware ' + s.version;
+        // Append the web-UI hash this firmware expects, so the same hash shows in
+        // the "Web UI files" line below — a match means the web UI is in sync.
+        var eh = (s.www_expected || '').split(/\s+/)[0].slice(0, 8);
+        document.getElementById('otaVer').textContent =
+          'Firmware ' + s.version + (eh ? ' · ' + eh : '');
       }
       showWwwState(s);
       applyWifiMode(s && s.wifi_mode);
@@ -263,8 +267,17 @@
   // visible: www_version is what sits on the www partition, www_expected is what
   // this firmware was built against. They differ after an app-only OTA.
   function showWwwState(s) {
+    // www_version.txt is "<hash> <git-describe> <date> <time> UTC"; the middle
+    // git-describe drifts from the firmware version and only confuses, so show
+    // just the build time + short hash.
     var verEl = document.getElementById('wwwVer');
-    if (verEl) verEl.textContent = 'Web UI ' + ((s && s.www_version) || 'unknown');
+    if (verEl) {
+      var raw = (s && s.www_version) || '';
+      var p = raw.split(/\s+/);
+      verEl.textContent = 'Web UI built ' + (p.length >= 4
+        ? p[p.length - 3] + ' ' + p[p.length - 2].slice(0, 5) + ' UTC · ' + p[0].slice(0, 8)
+        : (raw || 'unknown'));
+    }
     document.getElementById('wwwWarn').classList.toggle('visible', !!(s && s.www_outdated));
     var box = document.getElementById('wwwHashes');
     if (s && s.www_outdated) {

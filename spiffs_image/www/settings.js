@@ -667,7 +667,13 @@ async function loadSettings() {
             isApMode = state.wifi_mode === 'ap';
             showApBanner(isApMode);
             const verEl = document.getElementById('ota_version');
-            if (verEl) verEl.textContent = state.version || 'unknown';
+            if (verEl) {
+                // Append the web-UI hash this firmware expects, so the same hash
+                // shows here and in the "Web UI files" panel below — a match means
+                // the web UI is in sync, a mismatch means an app-only OTA left it stale.
+                const h = (state.www_expected || '').split(/\s+/)[0].slice(0, 8);
+                verEl.textContent = (state.version || 'unknown') + (h ? ' · ' + h : '');
+            }
             showWwwState(state);
         }
 
@@ -1211,9 +1217,22 @@ function uploadFirmware() {
 // Toggle the "web UI out of date" warning and show both hashes so a mismatch is
 // visible: www_version is what sits on the www partition, www_expected is what
 // this firmware was built against. They differ after an app-only OTA.
+// www_version.txt is "<hash> <git-describe> <date> <time> UTC". The middle
+// git-describe drifts from the firmware version and only confuses, so render
+// just the build time + short hash: "2026-06-27 10:18 UTC · 7fcf1a8b".
+function fmtWwwBuilt(raw) {
+    if (!raw) return 'unknown';
+    const p = raw.split(/\s+/);
+    if (p.length < 4) return raw;
+    const hash = p[0].slice(0, 8);
+    const time = p[p.length - 2].slice(0, 5);   // drop seconds
+    const date = p[p.length - 3];
+    return date + ' ' + time + ' UTC · ' + hash;
+}
+
 function showWwwState(state) {
     const verEl = document.getElementById('www_ver');
-    if (verEl) verEl.textContent = (state && state.www_version) || 'unknown';
+    if (verEl) verEl.textContent = fmtWwwBuilt(state && state.www_version);
     const warnEl = document.getElementById('www_outdated_warn');
     if (warnEl) warnEl.style.display = state && state.www_outdated ? '' : 'none';
     const box = document.getElementById('www_hashes');
