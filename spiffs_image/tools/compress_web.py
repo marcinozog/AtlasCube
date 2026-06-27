@@ -115,7 +115,7 @@ def write_version(ver: str):
     # token (the hash) for staleness; the rest is human-readable context so the
     # web UI warning can show which side is older/newer at a glance. Keep the hash
     # first and space-separated — http_server.c splits on the first whitespace.
-    stamp = f"{ver} {fw_version()} {datetime.now(timezone.utc):%Y-%m-%d}"
+    stamp = f"{ver} {fw_version()} {datetime.now(timezone.utc):%Y-%m-%d %H:%M:%S}"
     DST_DIR.mkdir(parents=True, exist_ok=True)
     SRC_VERSION.write_text(stamp, encoding="utf-8")
     DST_VERSION.write_text(stamp, encoding="utf-8")

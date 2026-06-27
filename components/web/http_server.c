@@ -535,11 +535,11 @@ static esp_err_t api_state_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(json, "version", esp_app_get_description()->version);
 
     // www version — the stamp on the www partition (/spiffs/www_version.txt) vs.
-    // the one this app was built with. Format is "<hash> <fw-version> <date>";
+    // the one this app was built with. Format is "<hash> <fw-version> <date time>";
     // only the leading hash token decides staleness (the metadata changes across
     // builds even for identical UI), the rest is shown so the UI can tell which
     // side is older. They differ when an app-only OTA left the web UI behind.
-    char www_ver[64] = "";
+    char www_ver[80] = "";
     FILE *vf = fopen(WEB_ROOT "/www_version.txt", "r");
     if (vf) {
         if (fgets(www_ver, sizeof(www_ver), vf)) {
