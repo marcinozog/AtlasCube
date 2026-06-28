@@ -279,6 +279,10 @@ esp_err_t display_panel_init(void)
     uint8_t madctl = settings_get()->display.flip ? 0x00 : 0xC0;
     writeC8D8(CMD_MADCTL,      madctl);   // 0x36 - Orientation
 
+    // Baseline is INVOFF; settings.display.invert flips to INVON for batches
+    // that come out colour-inverted.
+    writeCommand(settings_get()->display.invert ? CMD_INVON : CMD_INVOFF);
+
     writeCommand(CMD_SLPOUT);
     vTaskDelay(pdMS_TO_TICKS(80));
 
@@ -395,4 +399,17 @@ void display_set_backlight(uint8_t brightness)
     if (brightness > 100) brightness = 100;
     uint8_t dcs = (uint8_t)((brightness * 0xFF) / 100);
     writeC8D8(CMD_WRDISBV, dcs);
+}
+
+void display_set_invert(bool invert)
+{
+    // writeCommand() takes SPI_LOCK, so this is safe to call from any task.
+    writeCommand(invert ? CMD_INVON : CMD_INVOFF);
+}
+
+void display_set_flip(bool flip)
+{
+    // writeC8D8() takes SPI_LOCK, so this is safe to call from any task.
+    // 0xC0 = MY|MX (portrait); flip 180° clears both → 0x00.
+    writeC8D8(CMD_MADCTL, flip ? 0x00 : 0xC0);
 }

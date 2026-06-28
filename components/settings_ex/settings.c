@@ -46,6 +46,7 @@ esp_err_t settings_init(void)
         s_settings.display.screen           = SCREEN_HOME;
         s_settings.display.theme            = THEME_DARK;
         s_settings.display.flip             = false;
+        s_settings.display.invert           = false;
         s_settings.display.bg_gradient      = true;
         s_settings.display.wallpaper_on     = false;
         s_settings.display.wallpaper_path[0] = '\0';
@@ -221,6 +222,8 @@ static esp_err_t load_from_file(void)
         }
         cJSON *fl = cJSON_GetObjectItem(display, "flip");
         s_settings.display.flip = cJSON_IsBool(fl) ? cJSON_IsTrue(fl) : false;
+        cJSON *iv = cJSON_GetObjectItem(display, "invert");
+        s_settings.display.invert = cJSON_IsBool(iv) ? cJSON_IsTrue(iv) : false;
         cJSON *bg = cJSON_GetObjectItem(display, "bg_gradient");
         s_settings.display.bg_gradient = cJSON_IsBool(bg) ? cJSON_IsTrue(bg) : true;
         cJSON *wp = cJSON_GetObjectItem(display, "wallpaper_on");
@@ -495,6 +498,7 @@ static esp_err_t save_to_file(void)
     cJSON_AddStringToObject(display, "theme",
         s_settings.display.theme == THEME_LIGHT ? "light" : "dark");
     cJSON_AddBoolToObject(display, "flip", s_settings.display.flip);
+    cJSON_AddBoolToObject(display, "invert", s_settings.display.invert);
     cJSON_AddBoolToObject(display, "bg_gradient", s_settings.display.bg_gradient);
     cJSON_AddBoolToObject(display, "wallpaper_on", s_settings.display.wallpaper_on);
     cJSON_AddStringToObject(display, "wallpaper_path", s_settings.display.wallpaper_path);
@@ -868,10 +872,21 @@ void settings_set_theme(ui_theme_t t)
 
 void settings_set_flip(bool enabled)
 {
-    // Orientation is latched into MADCTL at panel init, so the change only
-    // takes effect after a restart. Persist it and let the web UI prompt.
+    // Re-sends MADCTL / column-remap live (driver latches it, applies on the
+    // next flush); touch already follows this flag at runtime. No restart.
     if (s_settings.display.flip == enabled) return;
     s_settings.display.flip = enabled;
+    display_set_flip(enabled);
+    save_to_file();
+}
+
+void settings_set_invert(bool enabled)
+{
+    // Colour inversion is a single DCS command, so unlike flip it applies live
+    // (the driver latches it and sends INVON/INVOFF on the next flush).
+    if (s_settings.display.invert == enabled) return;
+    s_settings.display.invert = enabled;
+    display_set_invert(enabled);
     save_to_file();
 }
 

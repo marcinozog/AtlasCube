@@ -55,10 +55,19 @@
 
         <div class="panel">
             <label class="field-label">Flip display 180°</label>
-            <div class="field-hint">Rotate the whole screen upside-down (for inverted mounting). Takes effect after a restart.</div>
+            <div class="field-hint">Rotate the whole screen upside-down (for inverted mounting). Applies instantly.</div>
             <div class="theme-toggle" id="flipToggle" style="width:fit-content">
                 <button class="theme-btn" id="settingsBtnFlipOn"  onclick="setFlip(true)">🔄 Flipped</button>
                 <button class="theme-btn" id="settingsBtnFlipOff" onclick="setFlip(false)">⬆️ Normal</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <label class="field-label">Invert colours</label>
+            <div class="field-hint">Fixes panels that show inverted colours (e.g. yellow appears blue). Applies instantly — flip this if the colours look wrong.</div>
+            <div class="theme-toggle" id="invertToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnInvertOn"  onclick="setInvert(true)">🌗 Inverted</button>
+                <button class="theme-btn" id="settingsBtnInvertOff" onclick="setInvert(false)">🎨 Normal</button>
             </div>
         </div>
 

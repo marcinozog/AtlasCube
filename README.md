@@ -130,6 +130,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Screen background — choose a gradient, a solid color, or an **SD wallpaper image** (panel-sized RGB565 `.bin`, shared across all screens), from the Settings web UI
 - Custom boot splash logo — drop a panel-sized RGB565 `.bin` on the SD card to replace the built-in logo (auto-fit; falls back to the built-in logo if missing)
 - Optional per-source screens in the home ring — show or hide the Radio, SD player and Bluetooth screens from the Settings web UI (the home hub stays, so the ring is never empty)
+- 180° flip & colour inversion — rotate the whole screen upside-down (for inverted mounting) or invert panel colours (fixes batches where e.g. yellow shows as blue); both toggle from the Settings web UI and apply live, no restart
 - Screensavers — kick in after a configurable idle timeout; choose from clock hands, starfield, fireworks, plasma, Conway's Game of Life, blank (AMOLED-friendly "off"), **Dim** (just lowers the backlight, keeps the current screen), **Dashboard**, or **Photo frame** (see below)
 
 **Dashboard screensaver**

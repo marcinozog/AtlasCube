@@ -128,6 +128,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Tło ekranu — do wyboru gradient, jednolity kolor lub **tapeta z karty SD** (`.bin` RGB565 w rozmiarze panelu, wspólna dla wszystkich ekranów), ustawiane w web UI
 - Własne logo splash — wrzuć na kartę SD plik `.bin` RGB565 w rozmiarze panelu, żeby podmienić wbudowane logo (auto-skalowanie; gdy brak pliku, wraca do wbudowanego)
 - Opcjonalne ekrany per źródło w pierścieniu głównym — pokazujesz albo chowasz ekrany Radio, odtwarzacza SD i Bluetooth z web UI (hub główny zostaje, więc pierścień nigdy nie jest pusty)
+- Obrót 180° i inwersja kolorów — odwrócenie całego ekranu (przy montażu „do góry nogami") albo inwersja kolorów panelu (naprawia partie, gdzie np. żółty wychodzi niebieski); oba przełączniki w web UI, działają na żywo, bez restartu
 - Wygaszacze — startują po zadanym czasie bezczynności; do wyboru wskazówki zegara, pole gwiazd, fajerwerki, plazma, gra w życie Conwaya, czarny ekran (przyjazny AMOLED-om), **Dim** (tylko ściemnia podświetlenie, zostawia bieżący ekran), **Dashboard** albo **Fotoramka** (niżej)
 
 **Wygaszacz Dashboard**

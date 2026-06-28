@@ -100,6 +100,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(display, "theme",
         s->display.theme == THEME_LIGHT ? "light" : "dark");
     cJSON_AddBoolToObject(display, "flip", s->display.flip);
+    cJSON_AddBoolToObject(display, "invert", s->display.invert);
     cJSON_AddBoolToObject(display, "bg_gradient", s->display.bg_gradient);
     cJSON_AddBoolToObject(display, "wallpaper_on", s->display.wallpaper_on);
     cJSON_AddStringToObject(display, "wallpaper_path", s->display.wallpaper_path);
@@ -303,8 +304,21 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         }
         cJSON *fl = cJSON_GetObjectItem(display, "flip");
         if (cJSON_IsBool(fl)) {
-            ESP_LOGI("HTTP", "POST flip: %d (takes effect after restart)", cJSON_IsTrue(fl));
+            ESP_LOGI("HTTP", "POST flip: %d", cJSON_IsTrue(fl));
             settings_set_flip(cJSON_IsTrue(fl));
+            // Orientation is latched in the driver; force a full repaint so it
+            // gets flushed (and the screen visibly re-orients) right away.
+            ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
+            ui_event_send(&ev);
+        }
+        cJSON *iv = cJSON_GetObjectItem(display, "invert");
+        if (cJSON_IsBool(iv)) {
+            ESP_LOGI("HTTP", "POST invert: %d", cJSON_IsTrue(iv));
+            settings_set_invert(cJSON_IsTrue(iv));
+            // The panel command is latched in the driver; force a full repaint so
+            // it gets flushed (and the screen visibly updates) right away.
+            ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
+            ui_event_send(&ev);
         }
         cJSON *bg = cJSON_GetObjectItem(display, "bg_gradient");
         if (cJSON_IsBool(bg)) {

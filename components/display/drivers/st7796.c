@@ -21,8 +21,21 @@ static const char *TAG = "ST7796";
 
 static void backlight_init(void);
 void display_set_backlight(uint8_t brightness);
+void display_set_invert(bool invert);
+void display_set_flip(bool flip);
 
 static spi_device_handle_t spi;
+
+// Colour-inversion state. Baseline is INVON (0x21); the `invert` flag XORs it.
+// display_set_invert() (any task) latches state + a dirty flag; my_flush_cb()
+// (LVGL task, owner of all SPI commands) sends the DCS command.
+static bool          s_invert_on    = false;
+static volatile bool s_invert_dirty = false;
+
+// 180° flip state — same live mechanism as colour inversion. Baseline MADCTL is
+// 0xE8; flip toggles MY+MX → 0x28. Touch follows settings.display.flip at runtime.
+static bool          s_flip_on      = false;
+static volatile bool s_flip_dirty   = false;
 
 /* =========================
    LOW LEVEL SPI
@@ -112,7 +125,8 @@ static void st7796_init_cmds(void)
     // 0xE8 = MY + MX + MV (row/col exchange) + BGR — verified on the panel.
     // Toggle the BGR bit (0x08) if red/blue come out swapped.
     // Flip 180° toggles MY+MX (0xC0) → 0x28.
-    uint8_t d3[] = {settings_get()->display.flip ? (uint8_t)0x28 : (uint8_t)0xE8};
+    s_flip_on = settings_get()->display.flip;
+    uint8_t d3[] = { s_flip_on ? (uint8_t)0x28 : (uint8_t)0xE8 };
     lcd_data(d3, 1);
 
     lcd_cmd(0x3A); // Pixel format
@@ -163,7 +177,10 @@ static void st7796_init_cmds(void)
     lcd_data(d14, 1);
     vTaskDelay(pdMS_TO_TICKS(120));
 
-    lcd_cmd(0x21); // INVON — drop this if colors come out inverted
+    // INVON (0x21) is this panel's known-good baseline; settings.display.invert
+    // flips to INVOFF (0x20) for batches that come out colour-inverted.
+    s_invert_on = settings_get()->display.invert;
+    lcd_cmd(s_invert_on ? 0x20 : 0x21);
     lcd_cmd(0x29); // Display ON
     vTaskDelay(pdMS_TO_TICKS(20));
 }
@@ -174,6 +191,16 @@ static void st7796_init_cmds(void)
 
 static void my_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 {
+    if (s_invert_dirty) {            // apply a pending colour-inversion toggle
+        s_invert_dirty = false;
+        lcd_cmd(s_invert_on ? 0x20 : 0x21);
+    }
+    if (s_flip_dirty) {              // apply a pending 180° flip
+        s_flip_dirty = false;
+        uint8_t m = s_flip_on ? 0x28 : 0xE8;
+        lcd_cmd(0x36); lcd_data(&m, 1);
+    }
+
     int x1 = area->x1, x2 = area->x2;
     int y1 = area->y1, y2 = area->y2;
     int size = (x2 - x1 + 1) * (y2 - y1 + 1);
@@ -295,4 +322,16 @@ void display_set_backlight(uint8_t brightness)
     uint32_t duty = (brightness * 255) / 100;
     ledc_set_duty(LEDC_LOW_SPEED_MODE, LCD_BL_LEDC_CHANNEL, duty);
     ledc_update_duty(LEDC_LOW_SPEED_MODE, LCD_BL_LEDC_CHANNEL);
+}
+
+void display_set_invert(bool invert)
+{
+    s_invert_on    = invert;
+    s_invert_dirty = true;   // sent on the next flush, from the LVGL task
+}
+
+void display_set_flip(bool flip)
+{
+    s_flip_on    = flip;
+    s_flip_dirty = true;     // sent on the next flush, from the LVGL task
 }

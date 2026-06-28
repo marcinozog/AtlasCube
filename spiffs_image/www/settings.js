@@ -237,7 +237,7 @@ function setShowBootInfo(on) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Flip display 180° (latched into the panel at boot — needs a restart)
+// Flip display 180° (applied live — no restart)
 // ─────────────────────────────────────────────────────────────────────────────
 function setFlip(on) {
     document.getElementById('settingsBtnFlipOn') ?.classList.toggle('active', on);
@@ -246,6 +246,19 @@ function setFlip(on) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ display: { flip: on } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Invert panel colours (applied live — no restart)
+// ─────────────────────────────────────────────────────────────────────────────
+function setInvert(on) {
+    document.getElementById('settingsBtnInvertOn') ?.classList.toggle('active', on);
+    document.getElementById('settingsBtnInvertOff')?.classList.toggle('active', !on);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { invert: on } })
     }).catch(console.error);
 }
 
@@ -744,6 +757,10 @@ function populateForm(s) {
         const flip = s.display.flip === true;
         document.getElementById('settingsBtnFlipOn') ?.classList.toggle('active', flip);
         document.getElementById('settingsBtnFlipOff')?.classList.toggle('active', !flip);
+
+        const invert = s.display.invert === true;
+        document.getElementById('settingsBtnInvertOn') ?.classList.toggle('active', invert);
+        document.getElementById('settingsBtnInvertOff')?.classList.toggle('active', !invert);
 
         const bootInfo = s.display.show_boot_info !== false;   // default on
         document.getElementById('settingsBtnBootInfoOn') ?.classList.toggle('active', bootInfo);

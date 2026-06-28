@@ -218,10 +218,14 @@ in the web UI (Display → *Flip display 180°*) and stored in
 of the active `ui_profile`, the CO5300 rounder forces full-width X bands
 (§1a), and the SSD1322's 256×64 geometry has no meaningful portrait mode.
 
-The flip is latched into the panel's address-mapping register at init, so it
-**takes effect only after a restart** (`settings_set_flip()` just persists the
-flag). Each driver reads `settings_get()->display.flip` in its init sequence
-and toggles the mirror bits:
+The flip **applies live, no restart needed**. `settings_set_flip()` persists
+the flag and calls `display_set_flip()`; the driver latches the new state and
+re-sends its address-mapping register on the next flush (from the LVGL task, so
+it never races the flush on the lock-less SPI drivers — CO5300 sends it directly
+under its SPI mutex). The web POST then fires `UI_EVT_BG_CHANGED` to force a
+full repaint so the new orientation is drawn immediately. Each driver also reads
+`settings_get()->display.flip` in its init sequence for the boot-time state, and
+toggles these mirror bits:
 
 | Driver | normal | flipped | bits toggled |
 |---|---|---|---|
@@ -233,8 +237,33 @@ Because the controller remaps the entire GRAM uniformly, the flip is
 transparent to the partial flush logic — no CASET/RASET changes are needed.
 Touch is mirrored to match at runtime in `touch_lvgl_read_cb` (both axes,
 which equals a 180° rotation regardless of the per-profile baseline), so no
-reboot is needed on the touch side.
+reboot is needed on the touch side either.
 
 > On panels whose visible window is offset inside a larger GRAM, a flip can
 > shift the image by a few pixels; if that shows up on hardware, add a
-> per-orientation column/row start offset in the affected driver.
+> per-orientation column/row start offset in the affected driver. The live
+> switch may also flash one stale (already-reoriented) frame before the forced
+> repaint covers it — cosmetic.
+
+## 7. Colour inversion (`display.invert`)
+
+Some panel batches ship with the opposite default inversion state, so colours
+come out bit-complemented — the tell-tale symptom is **yellow showing as blue**
+(and vice-versa). That is a full inversion, *not* an R/B swap (which would yield
+cyan). The web UI (Display → *Invert colours*) exposes `settings.display.invert`
+to fix it, applied live via `display_set_invert()` with the same latch-and-flush
+mechanism as the flip above.
+
+The flag is **XORed over each driver's known-good baseline**, so the default
+`false` leaves every currently-working panel untouched:
+
+| Driver | baseline | `invert=false` | `invert=true` |
+|---|---|---|---|
+| ILI9341 / ST7796 | `INVON` | `INVON` (`0x21`) | `INVOFF` (`0x20`) |
+| ILI9488 / CO5300 | `INVOFF` | `INVOFF` (`0x20`) | `INVON` (`0x21`) |
+| SSD1322 (mono) | — | no-op | no-op |
+
+> Hardware inversion is a blunt, whole-frame bit-complement: it also inverts
+> wallpaper, album art and photos (they become photographic negatives). It is a
+> fix for mis-batched panels, not an aesthetic theme — a real "inverted theme"
+> belongs in the palette/theme system instead.

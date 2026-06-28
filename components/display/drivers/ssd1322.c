@@ -47,6 +47,12 @@ static spi_device_handle_t spi;
 static uint8_t            *s_gram;   // packed 4-bit frame, DMA-capable
 
 void display_set_backlight(uint8_t brightness);
+void display_set_flip(bool flip);
+
+// 180° flip state — re-sends the 0xA0 re-map on the next (full) flush, from the
+// LVGL task. Touch follows settings.display.flip at runtime.
+static bool          s_flip_on    = false;
+static volatile bool s_flip_dirty = false;
 
 /* =========================
    LOW LEVEL SPI
@@ -117,7 +123,8 @@ static void ssd1322_init_cmds(void)
     // 0x14 baseline. A 180° flip toggles column-address remap (bit1, 0x02)
     // and COM scan direction (bit4, 0x10) together → 0x06. Portrait is not
     // possible on this 256x64 panel, so flip is the only orientation option.
-    uint8_t remap0 = settings_get()->display.flip ? 0x06 : 0x14;
+    s_flip_on = settings_get()->display.flip;
+    uint8_t remap0 = s_flip_on ? 0x06 : 0x14;
     ssd1322_cmd(0xA0); ssd1322_data1(remap0); ssd1322_data1(0x11);
 
     ssd1322_cmd(0xB5); ssd1322_data1(0x00);                       // GPIO disabled
@@ -168,6 +175,11 @@ static void my_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_m
 {
     // FULL render mode → area is the whole screen, px_map is the whole buffer.
     (void)area;
+    if (s_flip_dirty) {              // apply a pending 180° flip
+        s_flip_dirty = false;
+        uint8_t remap0 = s_flip_on ? 0x06 : 0x14;
+        ssd1322_cmd(0xA0); ssd1322_data1(remap0); ssd1322_data1(0x11);
+    }
     const uint16_t *src = (const uint16_t *)px_map;
     int total = DISPLAY_WIDTH * DISPLAY_HEIGHT;
     for (int i = 0; i < total; i += 2) {
@@ -242,4 +254,17 @@ void display_set_backlight(uint8_t brightness)
     if (brightness > 100) brightness = 100;
     ssd1322_cmd(0xC1);
     ssd1322_data1((brightness * 255) / 100);
+}
+
+void display_set_invert(bool invert)
+{
+    // No-op on this monochrome panel — the colour-inversion toggle targets the
+    // RGB drivers. (SSD1322 could swap 0xA6/0xA7, but that's out of scope here.)
+    (void)invert;
+}
+
+void display_set_flip(bool flip)
+{
+    s_flip_on    = flip;
+    s_flip_dirty = true;     // re-mapped on the next flush, from the LVGL task
 }
