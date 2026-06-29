@@ -15,6 +15,10 @@
 #if CONFIG_TOUCH_FT6336U
 #include "ft6336u.h"
 #endif
+#if CONFIG_TOUCH_XPT2046
+#include "xpt2046.h"
+#include "driver/spi_master.h"
+#endif
 
 static const char *TAG = "TOUCH";
 
@@ -22,6 +26,7 @@ static i2c_master_bus_handle_t s_bus = NULL;
 static lv_indev_t *s_indev = NULL;
 static volatile bool s_int_flag = false;
 static bool s_pressed = false;
+static int  s_irq_gpio = -1;   // INT/PENIRQ line that gates polling (-1 = polled)
 
 static void IRAM_ATTR touch_isr(void *arg)
 {
@@ -34,18 +39,34 @@ static bool touch_driver_read(uint16_t *x, uint16_t *y)
     return cst816d_read(x, y);
 #elif CONFIG_TOUCH_FT6336U
     return ft6336u_read(x, y);
+#elif CONFIG_TOUCH_XPT2046
+    return xpt2046_read(x, y);
 #else
     (void)x; (void)y;
     return false;
 #endif
 }
 
+#if CONFIG_TOUCH_XPT2046
+// Map a raw 12-bit ADC reading to a pixel coordinate. Direction is encoded in
+// the calibration range itself: pass min < max for a normal axis, or min > max
+// to mirror it (so TOUCH_MIRROR_* are not needed for resistive panels).
+static inline uint16_t raw_to_px(uint16_t raw, int rmin, int rmax, int span)
+{
+    int den = rmax - rmin;
+    int v   = (den != 0) ? ((int)raw - rmin) * (span - 1) / den : 0;
+    if (v < 0)        v = 0;
+    if (v > span - 1) v = span - 1;
+    return (uint16_t)v;
+}
+#endif
+
 static void touch_lvgl_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 {
     // INT line idles high. When low (or recently fell), poll the controller.
     // We always poll on PRESSED so LVGL keeps receiving move events while
     // the finger is held — the chip only re-asserts INT on state changes.
-    bool int_low = (g_pins.ctp_int >= 0) ? (gpio_get_level(g_pins.ctp_int) == 0) : true;
+    bool int_low = (s_irq_gpio >= 0) ? (gpio_get_level(s_irq_gpio) == 0) : true;
     bool poll    = s_int_flag || int_low || s_pressed;
     s_int_flag = false;
 
@@ -56,6 +77,16 @@ static void touch_lvgl_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 
     uint16_t x = 0, y = 0;
     if (touch_driver_read(&x, &y)) {
+#if CONFIG_TOUCH_XPT2046
+        // Resistive controller returns raw ADC. Swap physical channels first
+        // (still in raw space), then scale each to its screen axis.
+#if TOUCH_SWAP_XY
+        { uint16_t t = x; x = y; y = t; }
+#endif
+        x = raw_to_px(x, TOUCH_RAW_X_MIN, TOUCH_RAW_X_MAX, DISPLAY_WIDTH);
+        y = raw_to_px(y, TOUCH_RAW_Y_MIN, TOUCH_RAW_Y_MAX, DISPLAY_HEIGHT);
+#else
+        // Capacitive controllers already report pixels.
 #if TOUCH_SWAP_XY
         { uint16_t t = x; x = y; y = t; }
 #endif
@@ -64,6 +95,7 @@ static void touch_lvgl_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 #endif
 #if TOUCH_MIRROR_Y
         y = DISPLAY_HEIGHT - 1 - y;
+#endif
 #endif
         // Runtime 180° flip (settings.display.flip). Mirroring both axes matches
         // the panel's MADCTL flip regardless of the per-profile baseline above.
@@ -81,12 +113,82 @@ static void touch_lvgl_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
     }
 }
 
-void touch_init(void)
+// ── INT/PENIRQ pin (optional, falling-edge wake-up for the LVGL read_cb) ──────
+static void touch_setup_irq(void)
 {
-#if CONFIG_TOUCH_NONE
-    ESP_LOGI(TAG, "Touch disabled (TOUCH_NONE)");
-    return;
-#else
+    if (s_irq_gpio < 0) return;
+
+    gpio_config_t io = {
+        .pin_bit_mask = (1ULL << s_irq_gpio),
+        .mode         = GPIO_MODE_INPUT,
+        .pull_up_en   = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type    = GPIO_INTR_NEGEDGE,
+    };
+    gpio_config(&io);
+
+    // gpio_install_isr_service may already be installed (e.g. by encoder)
+    esp_err_t ret = gpio_install_isr_service(0);
+    if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
+        ESP_LOGE(TAG, "gpio_install_isr_service failed: %s", esp_err_to_name(ret));
+    }
+    gpio_isr_handler_add(s_irq_gpio, touch_isr, NULL);
+}
+
+static void touch_register_indev(void)
+{
+    s_indev = lv_indev_create();
+    lv_indev_set_type(s_indev, LV_INDEV_TYPE_POINTER);
+    lv_indev_set_read_cb(s_indev, touch_lvgl_read_cb);
+}
+
+#if CONFIG_TOUCH_XPT2046
+static void touch_init_xpt2046(void)
+{
+    if (g_pins.tp_cs < 0) {
+        ESP_LOGW(TAG, "XPT2046 CS pin not configured — skipped");
+        return;
+    }
+
+    spi_host_device_t host;
+    if (g_pins.tp_clk >= 0 && g_pins.tp_mosi >= 0) {
+        // Dedicated SPI3 bus.
+        host = SPI3_HOST;
+        const spi_bus_config_t buscfg = {
+            .mosi_io_num     = g_pins.tp_mosi,
+            .miso_io_num     = g_pins.tp_miso,
+            .sclk_io_num     = g_pins.tp_clk,
+            .quadwp_io_num   = -1,
+            .quadhd_io_num   = -1,
+            .max_transfer_sz = 0,
+        };
+        esp_err_t err = spi_bus_initialize(host, &buscfg, SPI_DMA_DISABLED);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "spi_bus_initialize(SPI3) failed: %s", esp_err_to_name(err));
+            return;
+        }
+        ESP_LOGI(TAG, "XPT2046 on dedicated SPI3 (CLK=%d MOSI=%d MISO=%d)",
+                 g_pins.tp_clk, g_pins.tp_mosi, g_pins.tp_miso);
+    } else {
+        // Share the LCD bus — display_init() already brought it up (with MISO
+        // wired to tp_miso). XPT2046 just adds a second device with its own CS.
+        host = DISPLAY_HOST;
+        ESP_LOGI(TAG, "XPT2046 shares the LCD SPI bus (MISO=%d)", g_pins.tp_miso);
+    }
+
+    xpt2046_init(host, g_pins.tp_cs);
+
+    s_irq_gpio = g_pins.tp_irq;
+    touch_setup_irq();
+    touch_register_indev();
+
+    ESP_LOGI(TAG, "Initialized (XPT2046) — CS=%d IRQ=%d", g_pins.tp_cs, g_pins.tp_irq);
+}
+#endif
+
+#if CONFIG_TOUCH_CST816D || CONFIG_TOUCH_FT6336U
+static void touch_init_i2c(void)
+{
     // Pins are runtime now (TOUCH_NONE stays compile-time — it's a driver choice).
     if (g_pins.ctp_scl < 0 || g_pins.ctp_sda < 0) {
         ESP_LOGW(TAG, "Touch I2C pins not configured (SCL=%d SDA=%d) — skipped",
@@ -127,36 +229,27 @@ void touch_init(void)
     cst816d_init(s_bus, g_pins.ctp_rst);
 #elif CONFIG_TOUCH_FT6336U
     ft6336u_init(s_bus, g_pins.ctp_rst);
-#else
-    ESP_LOGE(TAG, "No touch driver selected in Kconfig");
-    return;
 #endif
 
-    // ── INT pin (optional, falling-edge wake-up for the LVGL read_cb) ────
-    if (g_pins.ctp_int >= 0) {
-        gpio_config_t io = {
-            .pin_bit_mask = (1ULL << g_pins.ctp_int),
-            .mode         = GPIO_MODE_INPUT,
-            .pull_up_en   = GPIO_PULLUP_ENABLE,
-            .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .intr_type    = GPIO_INTR_NEGEDGE,
-        };
-        gpio_config(&io);
-
-        // gpio_install_isr_service may already be installed (e.g. by encoder)
-        esp_err_t ret = gpio_install_isr_service(0);
-        if (ret != ESP_OK && ret != ESP_ERR_INVALID_STATE) {
-            ESP_LOGE(TAG, "gpio_install_isr_service failed: %s", esp_err_to_name(ret));
-        }
-        gpio_isr_handler_add(g_pins.ctp_int, touch_isr, NULL);
-    }
-
-    // ── LVGL pointer indev ───────────────────────────────────────────────
-    s_indev = lv_indev_create();
-    lv_indev_set_type(s_indev, LV_INDEV_TYPE_POINTER);
-    lv_indev_set_read_cb(s_indev, touch_lvgl_read_cb);
+    s_irq_gpio = g_pins.ctp_int;
+    touch_setup_irq();
+    touch_register_indev();
 
     ESP_LOGI(TAG, "Initialized — SCL=%d SDA=%d INT=%d RST=%d",
              g_pins.ctp_scl, g_pins.ctp_sda, g_pins.ctp_int, g_pins.ctp_rst);
+}
+#endif
+
+void touch_init(void)
+{
+#if CONFIG_TOUCH_NONE
+    ESP_LOGI(TAG, "Touch disabled (TOUCH_NONE)");
+    return;
+#elif CONFIG_TOUCH_XPT2046
+    touch_init_xpt2046();
+#elif CONFIG_TOUCH_CST816D || CONFIG_TOUCH_FT6336U
+    touch_init_i2c();
+#else
+    ESP_LOGE(TAG, "No touch driver selected in Kconfig");
 #endif
 }

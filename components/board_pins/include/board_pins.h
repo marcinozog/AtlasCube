@@ -71,6 +71,15 @@ typedef struct {
     int8_t bt_tx;
     int8_t bt_rx;
     // ── APPEND NEW PINS BELOW THIS LINE ONLY ──
+
+    // Touch (SPI — XPT2046 resistive).
+    // tp_clk/tp_mosi = -1 → share the LCD SPI bus (SPI2); only tp_cs/tp_miso/tp_irq
+    // are then used. Set all five → dedicated SPI3 bus.
+    int8_t tp_clk;
+    int8_t tp_mosi;
+    int8_t tp_miso;
+    int8_t tp_cs;
+    int8_t tp_irq;      // PENIRQ, -1 = polled
 } board_pins_t;
 
 // The single live pin map. Valid after board_pins_load().

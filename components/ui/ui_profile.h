@@ -42,6 +42,23 @@
     #error "Unknown UI_PROFILE"
 #endif
 
+// XPT2046 resistive-touch calibration: raw 12-bit ADC → pixel range, applied in
+// touch.c before swap/mirror/flip. These spans suit a typical ILI9341/ST7796
+// shield; to tune for a specific panel, #define TOUCH_RAW_* inside that profile
+// above (this block only fills in what a profile didn't override).
+#ifndef TOUCH_RAW_X_MIN
+    #define TOUCH_RAW_X_MIN 200
+#endif
+#ifndef TOUCH_RAW_X_MAX
+    #define TOUCH_RAW_X_MAX 3900
+#endif
+#ifndef TOUCH_RAW_Y_MIN
+    #define TOUCH_RAW_Y_MIN 200
+#endif
+#ifndef TOUCH_RAW_Y_MAX
+    #define TOUCH_RAW_Y_MAX 3900
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

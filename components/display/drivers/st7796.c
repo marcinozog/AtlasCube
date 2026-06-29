@@ -45,7 +45,8 @@ static void spi_init(void)
 {
     spi_bus_config_t buscfg = {
         .mosi_io_num = g_pins.lcd_mosi,
-        .miso_io_num = -1,
+        // MISO only matters when an XPT2046 shares this bus; -1 (default) otherwise.
+        .miso_io_num = g_pins.tp_miso,
         .sclk_io_num = g_pins.lcd_clk,
         .max_transfer_sz = DISPLAY_WIDTH * DISPLAY_HEIGHT * 2 + 8
     };

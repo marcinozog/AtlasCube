@@ -10,6 +10,9 @@ config TOUCH_CST816D
 config TOUCH_FT6336U
     bool "FT6336U"
 
+config TOUCH_XPT2046
+    bool "XPT2046 (resistive, SPI)"
+
 config TOUCH_NONE
     bool "None (no touch — e.g. mono OLED driven by encoder)"
 

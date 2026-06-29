@@ -120,7 +120,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Ekrany: hub główny (zegar + adaptacyjne sterowanie), radio, odtwarzacz SD, playlista, korektor, ustawienia, Bluetooth, wydarzenia, WiFi AP
 - Hub główny — domyślny ekran: zegar, który dostosowuje się do aktywnego źródła (radio / SD / BT), z nakładką (tap) do sterowania odtwarzaniem i wejścia w playlistę / przeglądarkę SD / BT / ustawienia. Obsługuje wszystkie źródła z jednego ekranu; ekrany per źródło są opcjonalne (chowasz je w Ustawienia → Ekran)
 - Nawigacja enkoderem (obrót + klik)
-- Dotyk pojemnościowy — CST816D (okrągły AMOLED) albo FT6336U (ST7796U), oba po I2C; działa równolegle z enkoderem
+- Dotyk — pojemnościowy CST816D (okrągły AMOLED) albo FT6336U (ST7796U) po I2C, lub rezystancyjny XPT2046 (SPI; współdzieli szynę LCD albo dedykowany SPI3, kalibracja per profil UI); działa równolegle z enkoderem
 - Gesty swipe — w poziomie krążą po pierścieniu głównym (hub ↔ bt ↔ radio ↔ sd ↔ mqtt, pomijając ukryte ekrany), w górę otwierają ustawienia (hub) albo listę źródła (radio→playlista, SD→przeglądarka); rozpoznawane przez LVGL na zwykłym indevie wskaźnika, bez kombinowania per kontroler
 - Nakładka sterująca — tap w ekran otwiera sterowanie odtwarzaniem (play/stop, vol±, prev/next), znika po chwili bezczynności; nakładka huba dokłada przyciski źródło/playlista/sd/ustawienia
 - Wskaźnik VU — opcjonalny widget na ekranie radia pokazujący spektrum FFT liczone na żywo z wyjścia audio; pozycję ustawiasz w edytorze layoutu
@@ -218,6 +218,11 @@ Wchodzisz na **[atlascube.net/flash](https://atlascube.net/flash/)** w Chrome / 
 | `AtlasCube-ili9488.bin` | ILI9488 480×320 (SPI, 18-bit) | FT6336U |
 | `AtlasCube-co5300.bin`  | CO5300 240×296 (QSPI AMOLED) | CST816D |
 | `AtlasCube-ssd1322.bin` | SSD1322 256×64 (mono OLED, SPI) | — (enkoder) |
+| `AtlasCube-ili9341-xpt2046.bin` | ILI9341 320×240 (SPI) | XPT2046 (rezystancyjny) — eksperymentalny |
+| `AtlasCube-st7796-xpt2046.bin`  | ST7796U 480×320 (SPI) | XPT2046 (rezystancyjny) — eksperymentalny |
+| `AtlasCube-ili9488-xpt2046.bin` | ILI9488 480×320 (SPI, 18-bit) | XPT2046 (rezystancyjny) — eksperymentalny |
+
+Warianty `-xpt2046` nie są jeszcze zweryfikowane sprzętowo — kalibracja może wymagać dostrojenia.
 
 **2. Pobierz** odpowiedni `.bin` z [najnowszego Release'a](https://github.com/marcinozog/AtlasCube/releases/latest).
 
@@ -340,7 +345,8 @@ Każdy GPIO ma domyślną wartość w [`main/include/defines.h`](main/include/de
 | Peryferium | Definicje | Uwagi |
 |---|---|---|
 | Wyświetlacz | `LCD_PIN_*` (SPI) / `DISPLAY_PIN_*` (QSPI) | w bloku `#if CONFIG_DISPLAY_*` danego drivera |
-| Dotyk | `CTP_SCL`, `CTP_SDA`, `CTP_INT`, `CTP_RST` | I2C; `-1` = nieużywany (`TOUCH_NONE` go pomija) |
+| Dotyk (I2C) | `CTP_SCL`, `CTP_SDA`, `CTP_INT`, `CTP_RST` | CST816D / FT6336U; `-1` = nieużywany (`TOUCH_NONE` go pomija) |
+| Dotyk (SPI) | `TP_CLK`, `TP_MOSI`, `TP_MISO`, `TP_CS`, `TP_IRQ` | tylko XPT2046; `TP_CLK`/`TP_MOSI` = `-1` współdzieli szynę LCD |
 | Karta SD | `SD_PIN_CLK`, `SD_PIN_CMD`, `SD_PIN_D0`, `SD_PIN_CD` | SDMMC 1-bit; CMD/D0 wymagają pull-upów ~10k |
 | DAC I2S | `I2S_DATA`, `I2S_BCK`, `I2S_LCK` | czyta je też ESP-ADF (przez `get_i2s_pins` płytki) |
 | Bluetooth | `BT_MODULE_TX_PIN`, `BT_MODULE_RX_PIN`, `BT_MOULE_PIN` | UART do QCC5125 |

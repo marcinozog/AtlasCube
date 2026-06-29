@@ -57,6 +57,7 @@
 // ===== TOUCH DRIVER =====
 #define TOUCH_FT6336U
 // #define TOUCH_CST816D
+// #define TOUCH_XPT2046   // resistive, SPI (shares LCD bus or dedicated SPI3)
 // #define TOUCH_NONE
 
 
@@ -121,11 +122,22 @@
 
 
 // ===== TOUCH =====
-// Driver selected via CONFIG_TOUCH_* in sdkconfig.defaults (CST816D / FT6336U)
+// Driver selected via CONFIG_TOUCH_* in sdkconfig.defaults (CST816D / FT6336U / XPT2046)
 #define CTP_SCL     47
 #define CTP_SDA     48
 #define CTP_INT     -1
 #define CTP_RST     -1
+
+#if CONFIG_TOUCH_XPT2046
+// XPT2046 resistive touch (SPI). Defaults share the LCD SPI bus (SPI2): leave
+// TP_CLK/TP_MOSI = -1 to reuse LCD_PIN_CLK/LCD_PIN_MOSI, and wire only CS/MISO/IRQ.
+// Set TP_CLK/TP_MOSI to real pins to put the controller on a dedicated SPI3 bus.
+#define TP_CLK      -1
+#define TP_MOSI     -1
+#define TP_MISO     45
+#define TP_CS       46
+#define TP_IRQ      -1   // PENIRQ, -1 = polled
+#endif
 
 
 

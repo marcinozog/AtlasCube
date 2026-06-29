@@ -45,7 +45,8 @@ static void spi_init(void)
 {
     spi_bus_config_t buscfg = {
         .mosi_io_num = g_pins.lcd_mosi,
-        .miso_io_num = -1,
+        // MISO only matters when an XPT2046 shares this bus; -1 (default) otherwise.
+        .miso_io_num = g_pins.tp_miso,
         .sclk_io_num = g_pins.lcd_clk,
         // 18-bit RGB666 over SPI → 3 bytes/pixel. We flush row-by-row, so the
         // largest single transfer is one display row (DISPLAY_WIDTH * 3 bytes).

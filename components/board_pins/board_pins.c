@@ -43,6 +43,11 @@ static const struct { const char *key; size_t off; } k_map[] = {
     { "bt_pin",   offsetof(board_pins_t, bt_pin)   },
     { "bt_tx",    offsetof(board_pins_t, bt_tx)    },
     { "bt_rx",    offsetof(board_pins_t, bt_rx)    },
+    { "tp_clk",   offsetof(board_pins_t, tp_clk)   },
+    { "tp_mosi",  offsetof(board_pins_t, tp_mosi)  },
+    { "tp_miso",  offsetof(board_pins_t, tp_miso)  },
+    { "tp_cs",    offsetof(board_pins_t, tp_cs)    },
+    { "tp_irq",   offsetof(board_pins_t, tp_irq)   },
 };
 #define PIN_COUNT (sizeof(k_map) / sizeof(k_map[0]))
 
@@ -82,6 +87,16 @@ static void load_defaults(void)
     g_pins.ctp_sda  = CTP_SDA;
     g_pins.ctp_int  = CTP_INT;
     g_pins.ctp_rst  = CTP_RST;
+
+#ifdef TP_CS
+    // XPT2046 SPI touch (only defined by variants using it; tp_clk/tp_mosi = -1
+    // means "share the LCD SPI bus"). Fields stay -1 otherwise.
+    g_pins.tp_clk   = TP_CLK;
+    g_pins.tp_mosi  = TP_MOSI;
+    g_pins.tp_miso  = TP_MISO;
+    g_pins.tp_cs    = TP_CS;
+    g_pins.tp_irq   = TP_IRQ;
+#endif
 
     g_pins.sd_clk   = SD_PIN_CLK;
     g_pins.sd_cmd   = SD_PIN_CMD;
