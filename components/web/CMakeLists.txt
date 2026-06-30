@@ -21,4 +21,5 @@ idf_component_register(
         spiffs
         fatfs
         board_pins
+        secrets
 )

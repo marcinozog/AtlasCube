@@ -27,6 +27,7 @@
 #include "screensaver_dashboard.h"
 #include "mqtt_svc.h"
 #include "mqtt_config.h"
+#include "secrets.h"
 #include "sdcard.h"
 #include "esp_spiffs.h"
 #include "esp_vfs_fat.h"
@@ -1492,10 +1493,12 @@ static esp_err_t api_mqtt_post_handler(httpd_req_t *req)
     j = cJSON_GetObjectItem(json, "host");       if (cJSON_IsString(j)) copy_str_field(c->host,       sizeof(c->host),       j->valuestring);
     j = cJSON_GetObjectItem(json, "port");       if (cJSON_IsNumber(j)) c->port = j->valueint;
     j = cJSON_GetObjectItem(json, "username");   if (cJSON_IsString(j)) copy_str_field(c->username,   sizeof(c->username),   j->valuestring);
-    // password: empty from client = keep the old one (mirrors wifi behavior)
+    // password: empty from client = keep the old one (mirrors wifi behavior).
+    // Persisted to NVS (secrets), never to mqtt.json — only when it changes.
     j = cJSON_GetObjectItem(json, "password");
     if (cJSON_IsString(j) && j->valuestring[0] != '\0') {
         copy_str_field(c->password, sizeof(c->password), j->valuestring);
+        secrets_set(SECRET_MQTT_PASS, c->password);
     }
     j = cJSON_GetObjectItem(json, "client_id");  if (cJSON_IsString(j)) copy_str_field(c->client_id,  sizeof(c->client_id),  j->valuestring);
     j = cJSON_GetObjectItem(json, "base_topic"); if (cJSON_IsString(j)) copy_str_field(c->base_topic, sizeof(c->base_topic), j->valuestring);

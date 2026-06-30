@@ -1,5 +1,6 @@
 #include "mqtt_config.h"
 #include "cJSON.h"
+#include "secrets.h"
 #include "esp_log.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -88,6 +89,11 @@ esp_err_t mqtt_config_load(void)
 {
     apply_defaults();
 
+    // Password lives in NVS (secrets), never in mqtt.json. Load it independently
+    // of the file so it survives a factory www/config reflash.
+    bool have_pass = secrets_get(SECRET_MQTT_PASS, s_cfg.password, sizeof(s_cfg.password));
+    bool migrated  = false;
+
     FILE *f = fopen(MQTT_CFG_FILE, "r");
     if (!f) {
         ESP_LOGI(TAG, "no %s — using defaults", MQTT_CFG_FILE);
@@ -116,7 +122,16 @@ esp_err_t mqtt_config_load(void)
     j = cJSON_GetObjectItem(json, "host");       if (cJSON_IsString(j)) copy_str(s_cfg.host,       sizeof(s_cfg.host),       j->valuestring);
     j = cJSON_GetObjectItem(json, "port");       if (cJSON_IsNumber(j)) s_cfg.port = j->valueint;
     j = cJSON_GetObjectItem(json, "username");   if (cJSON_IsString(j)) copy_str(s_cfg.username,   sizeof(s_cfg.username),   j->valuestring);
-    j = cJSON_GetObjectItem(json, "password");   if (cJSON_IsString(j)) copy_str(s_cfg.password,   sizeof(s_cfg.password),   j->valuestring);
+    if (!have_pass) {
+        // Migration: a pre-secrets file kept the password inline. Move it to NVS
+        // and strip it from the file via the resave at the end of load.
+        j = cJSON_GetObjectItem(json, "password");
+        if (cJSON_IsString(j) && j->valuestring[0] != '\0') {
+            copy_str(s_cfg.password, sizeof(s_cfg.password), j->valuestring);
+            secrets_set(SECRET_MQTT_PASS, s_cfg.password);
+            migrated = true;
+        }
+    }
     j = cJSON_GetObjectItem(json, "client_id");  if (cJSON_IsString(j)) copy_str(s_cfg.client_id,  sizeof(s_cfg.client_id),  j->valuestring);
     j = cJSON_GetObjectItem(json, "base_topic"); if (cJSON_IsString(j)) copy_str(s_cfg.base_topic, sizeof(s_cfg.base_topic), j->valuestring);
 
@@ -138,6 +153,10 @@ esp_err_t mqtt_config_load(void)
     }
 
     cJSON_Delete(json);
+    if (migrated) {
+        ESP_LOGI(TAG, "migrated inline MQTT password to NVS secrets — stripping from file");
+        mqtt_config_save();
+    }
     return ESP_OK;
 }
 
@@ -148,7 +167,7 @@ esp_err_t mqtt_config_save(void)
     cJSON_AddStringToObject(json, "host",       s_cfg.host);
     cJSON_AddNumberToObject(json, "port",       s_cfg.port);
     cJSON_AddStringToObject(json, "username",   s_cfg.username);
-    cJSON_AddStringToObject(json, "password",   s_cfg.password);
+    // password is stored in NVS (secrets), never written to this file
     cJSON_AddStringToObject(json, "client_id",  s_cfg.client_id);
     cJSON_AddStringToObject(json, "base_topic", s_cfg.base_topic);
 

@@ -7,4 +7,5 @@ idf_component_register(
         app_state
         bt_module
         display
+        secrets
 )

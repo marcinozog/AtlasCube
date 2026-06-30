@@ -13,6 +13,7 @@
 #include "display.h"
 #include "ui_manager.h"
 #include "screensavers.h"
+#include "secrets.h"
 #include "defines.h"
 
 static esp_err_t load_from_file(void);
@@ -430,16 +431,31 @@ static esp_err_t load_from_file(void)
     }
 
     // ── WIFI ──────────────────────────────────────────────────────────────────
+    // SSID stays in this file; the password lives in NVS (secrets) so it never
+    // ends up in the network-served config. Load the password from NVS first —
+    // independent of the file, so it survives a factory www/config reflash.
+    bool migrated = false;
+    bool have_pass = secrets_get(SECRET_WIFI_PASS, s_settings.wifi.password,
+                                 sizeof(s_settings.wifi.password));
+
     cJSON *wifi_obj = cJSON_GetObjectItem(json, "wifi");
     if (cJSON_IsObject(wifi_obj)) {
         cJSON *ssid = cJSON_GetObjectItem(wifi_obj, "ssid");
-        cJSON *pass = cJSON_GetObjectItem(wifi_obj, "password");
-        if (cJSON_IsString(ssid)) strncpy(s_settings.wifi.ssid,     ssid->valuestring, sizeof(s_settings.wifi.ssid)     - 1);
-        if (cJSON_IsString(pass)) strncpy(s_settings.wifi.password, pass->valuestring, sizeof(s_settings.wifi.password) - 1);
+        if (cJSON_IsString(ssid)) strncpy(s_settings.wifi.ssid, ssid->valuestring, sizeof(s_settings.wifi.ssid) - 1);
+
+        if (!have_pass) {
+            // Migration: a pre-secrets file kept the password inline. Move it to
+            // NVS and strip it from the file via the resave at the end of load.
+            cJSON *pass = cJSON_GetObjectItem(wifi_obj, "password");
+            if (cJSON_IsString(pass) && pass->valuestring[0] != '\0') {
+                strncpy(s_settings.wifi.password, pass->valuestring, sizeof(s_settings.wifi.password) - 1);
+                secrets_set(SECRET_WIFI_PASS, s_settings.wifi.password);
+                migrated = true;
+            }
+        }
     } else {
-        // older file without wifi section → AP on next restart
-        s_settings.wifi.ssid[0]     = '\0';
-        s_settings.wifi.password[0] = '\0';
+        // older file without wifi section → AP on next restart (keep any NVS password)
+        s_settings.wifi.ssid[0] = '\0';
     }
 
     // ── DEVICE ────────────────────────────────────────────────────────────────
@@ -465,6 +481,10 @@ static esp_err_t load_from_file(void)
     ESP_LOGI("SETTINGS", "NTP TZ:   %s",            s_settings.ntp.tz);
 
     cJSON_Delete(json);
+    if (migrated) {
+        ESP_LOGI("SETTINGS", "migrated inline Wi-Fi password to NVS secrets — stripping from file");
+        save_to_file();
+    }
     return ESP_OK;
 }
 
@@ -536,10 +556,9 @@ static esp_err_t save_to_file(void)
     cJSON_AddStringToObject(ntp, "tz",      s_settings.ntp.tz);
     cJSON_AddItemToObject(json, "ntp", ntp);
 
-    // wifi
+    // wifi — SSID only; the password lives in NVS (secrets), never in this file
     cJSON *wifi_obj = cJSON_CreateObject();
-    cJSON_AddStringToObject(wifi_obj, "ssid",     s_settings.wifi.ssid);
-    cJSON_AddStringToObject(wifi_obj, "password", s_settings.wifi.password);
+    cJSON_AddStringToObject(wifi_obj, "ssid", s_settings.wifi.ssid);
     cJSON_AddItemToObject(json, "wifi", wifi_obj);
 
     // device
@@ -937,8 +956,11 @@ void settings_set_show_boot_info(bool enabled)
 
 void settings_set_wifi(const char *ssid, const char *password)
 {
-    if (ssid)     strncpy(s_settings.wifi.ssid,     ssid,     sizeof(s_settings.wifi.ssid)     - 1);
-    if (password) strncpy(s_settings.wifi.password, password, sizeof(s_settings.wifi.password) - 1);
+    if (ssid) strncpy(s_settings.wifi.ssid, ssid, sizeof(s_settings.wifi.ssid) - 1);
+    if (password) {
+        strncpy(s_settings.wifi.password, password, sizeof(s_settings.wifi.password) - 1);
+        secrets_set(SECRET_WIFI_PASS, password);   // password → NVS, not the file
+    }
     ESP_LOGI("SETTINGS", "WiFi saved: ssid=\"%s\"", s_settings.wifi.ssid);
     save_to_file();
 }

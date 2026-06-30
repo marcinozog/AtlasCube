@@ -3,7 +3,6 @@
   "host": "",
   "port": 1883,
   "username": "",
-  "password": "",
   "client_id": "",
   "base_topic": "atlascube/kitchen",
   "widgets": [

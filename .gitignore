@@ -86,3 +86,6 @@ downloads/
 # (jeśli będziesz trzymał WiFi itp.)
 secrets.h
 wifi_config.h
+# Exception: the secrets/ component header is real source (NVS-backed store),
+# not a local secret file — the bare secrets.h rule above would hide it.
+!/components/secrets/include/secrets.h
