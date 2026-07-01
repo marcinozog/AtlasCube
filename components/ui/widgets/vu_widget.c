@@ -104,17 +104,34 @@ static void build_bins(void)
     }
 }
 
-// Recompute bar heights from the smoothed levels. Returns true if any changed, so
-// the caller invalidates the single VU object exactly once. LVGL task only.
-static bool recompute_heights(void)
+// Recompute bar heights and invalidate ONLY each bar's changed strip (delta), not the
+// whole VU rect. This makes the redraw + SPI transfer cost proportional to bar MOTION
+// rather than VU size, so a tall meter stays cheap. Costly on transfer-bound panels
+// (e.g. ILI9488 RGB666) where redrawing the full area every frame dominated. LVGL task.
+static void render_deltas(void)
 {
-    bool changed = false;
+    lv_area_t a;
+    lv_obj_get_coords(s_cont, &a);
+
     for (int b = 0; b < s_nbars; b++) {
         int hgt = (int)(powf(s_lvl[b], VU_GAMMA) * (float)s_h + 0.5f);
         if (hgt < 1) hgt = 1;
-        if (hgt != s_hgt[b]) { s_hgt[b] = hgt; changed = true; }
+        if (hgt == s_hgt[b]) continue;
+
+        int top_old = s_h - s_hgt[b];        // container-relative top edge of the bar
+        int top_new = s_h - hgt;
+        int y_lo = top_new < top_old ? top_new : top_old;   // inclusive
+        int y_hi = top_new < top_old ? top_old : top_new;   // exclusive
+        s_hgt[b] = hgt;
+
+        lv_area_t inv = {
+            .x1 = a.x1 + s_pad + b * s_slot,
+            .y1 = a.y1 + y_lo,
+            .y2 = a.y1 + y_hi - 1,
+        };
+        inv.x2 = inv.x1 + s_bar_w - 1;
+        lv_obj_invalidate_area(s_cont, &inv);
     }
-    return changed;
 }
 
 // Custom draw: paint all bars in ONE pass over the single VU object. This replaces
@@ -133,7 +150,7 @@ static void vu_draw_cb(lv_event_t *e)
     lv_draw_rect_dsc_init(&dsc);
     dsc.bg_color = lv_color_hex(th->vu_bar);
     dsc.bg_opa   = LV_OPA_COVER;
-    dsc.radius   = 0;   // TEST: was 2 — measuring corner-AA cost across 12 bars/frame
+    dsc.radius   = 0;   // square bars — corner AA was ~3 ms/frame for no visible gain
 
     for (int b = 0; b < s_nbars; b++) {
         int hgt = s_hgt[b] < 1 ? 1 : s_hgt[b];
@@ -214,7 +231,7 @@ static void fft_task(void *arg)
 static void tick_cb(lv_timer_t *t)
 {
     (void)t;
-    if (recompute_heights()) lv_obj_invalidate(s_cont);  // one redraw → one flush area
+    render_deltas();   // invalidates only the changed strip of each bar
 }
 
 void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h)
