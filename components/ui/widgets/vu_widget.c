@@ -23,7 +23,10 @@ static const char *TAG = "VU_WIDGET";
 #define VU_BARS_MAX   12           // bar count — bars are log-spaced across the
                                    // spectrum (decoupled from the EQ band count),
                                    // so this can be any value, not just 2*bands.
-#define VU_TICK_MS    33           // refresh period (~30 fps; only this small rect redraws)
+#define VU_TICK_MS    50           // refresh period (~20 fps). Lower than 30 fps on
+                                   // purpose: the full-VU redraw saturates CPU1 (shared
+                                   // with the audio decoders), so 20 fps leaves headroom
+                                   // for glitch-free audio. Drop to 33 for smoother VU.
 #define VU_SAMPLE_HZ  44100.0f     // PLAYBACK_SAMPLE_RATE (fixed post-rsp)
 #define VU_FREQ_TOP   17000.0f     // clamp the top band below Nyquist so the last
                                    // bar doesn't peak on >16 kHz codec noise
@@ -41,10 +44,13 @@ static const char *TAG = "VU_WIDGET";
 
 // ── Display objects ──────────────────────────────────────────────────────────
 static lv_obj_t   *s_cont = NULL;
-static lv_obj_t   *s_bars[VU_BARS_MAX];
 static lv_timer_t *s_timer = NULL;
 static int         s_h      = 0;   // container inner height (bar baseline)
 static int         s_nbars  = 0;   // active bar count (= VU_BARS_MAX, log-spaced)
+static int         s_hgt[VU_BARS_MAX]; // current bar heights in px (LVGL task only)
+static int         s_slot   = 0;   // per-bar horizontal slot width
+static int         s_bar_w  = 0;   // drawn bar width (< slot → leaves the gap)
+static int         s_pad    = 0;   // left padding to centre the row
 
 // ── FFT task (core 0) ────────────────────────────────────────────────────────
 static TaskHandle_t      s_fft_task = NULL;
@@ -98,15 +104,46 @@ static void build_bins(void)
     }
 }
 
-// Push the current s_lvl[] into bar heights. Only the container area invalidates.
-static void render_bars(void)
+// Recompute bar heights from the smoothed levels. Returns true if any changed, so
+// the caller invalidates the single VU object exactly once. LVGL task only.
+static bool recompute_heights(void)
 {
+    bool changed = false;
     for (int b = 0; b < s_nbars; b++) {
         int hgt = (int)(powf(s_lvl[b], VU_GAMMA) * (float)s_h + 0.5f);
         if (hgt < 1) hgt = 1;
-        if (hgt == lv_obj_get_height(s_bars[b])) continue;
-        lv_obj_set_height(s_bars[b], hgt);
-        lv_obj_set_y(s_bars[b], s_h - hgt);
+        if (hgt != s_hgt[b]) { s_hgt[b] = hgt; changed = true; }
+    }
+    return changed;
+}
+
+// Custom draw: paint all bars in ONE pass over the single VU object. This replaces
+// the former 12 child objects, whose disjoint invalidation rects forced ~12 separate
+// render+flush areas per frame — the real cost (35 ms render / 100% CPU for 318x58 px).
+static void vu_draw_cb(lv_event_t *e)
+{
+    lv_obj_t   *obj   = lv_event_get_target(e);
+    lv_layer_t *layer = lv_event_get_layer(e);
+    const ui_theme_colors_t *th = theme_get();
+
+    lv_area_t a;
+    lv_obj_get_coords(obj, &a);
+
+    lv_draw_rect_dsc_t dsc;
+    lv_draw_rect_dsc_init(&dsc);
+    dsc.bg_color = lv_color_hex(th->vu_bar);
+    dsc.bg_opa   = LV_OPA_COVER;
+    dsc.radius   = 0;   // TEST: was 2 — measuring corner-AA cost across 12 bars/frame
+
+    for (int b = 0; b < s_nbars; b++) {
+        int hgt = s_hgt[b] < 1 ? 1 : s_hgt[b];
+        lv_area_t bar = {
+            .x1 = a.x1 + s_pad + b * s_slot,
+            .y1 = a.y2 - hgt + 1,
+            .y2 = a.y2,
+        };
+        bar.x2 = bar.x1 + s_bar_w - 1;
+        lv_draw_rect(layer, &dsc, &bar);
     }
 }
 
@@ -177,7 +214,7 @@ static void fft_task(void *arg)
 static void tick_cb(lv_timer_t *t)
 {
     (void)t;
-    render_bars();
+    if (recompute_heights()) lv_obj_invalidate(s_cont);  // one redraw → one flush area
 }
 
 void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h)
@@ -222,23 +259,17 @@ void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h)
     lv_obj_clear_flag(s_cont, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
     s_h = h;
 
-    const int slot  = w / s_nbars;
-    const int bar_w = (slot * 7) / 10;
-    const int pad   = (w - slot * s_nbars) / 2;   // centre the row
+    s_slot  = w / s_nbars;
+    s_bar_w = (s_slot * 7) / 10;
+    s_pad   = (w - s_slot * s_nbars) / 2;   // centre the row
 
     for (int b = 0; b < s_nbars; b++) {
-        lv_obj_t *bar = lv_obj_create(s_cont);
-        lv_obj_remove_style_all(bar);
-        lv_obj_set_width(bar, bar_w);
-        lv_obj_set_height(bar, 1);
-        lv_obj_set_style_radius(bar, 2, 0);
-        lv_obj_set_style_bg_color(bar, lv_color_hex(th->vu_bar), 0);
-        lv_obj_set_style_bg_opa(bar, LV_OPA_COVER, 0);
-        lv_obj_clear_flag(bar, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_set_pos(bar, pad + b * slot, s_h - 1);
-        s_bars[b] = bar;
-        s_lvl[b]  = 0.0f;
+        s_lvl[b] = 0.0f;
+        s_hgt[b] = 1;
     }
+
+    // Bars are painted in vu_draw_cb as a single draw area, not as child objects.
+    lv_obj_add_event_cb(s_cont, vu_draw_cb, LV_EVENT_DRAW_POST, NULL);
 
     s_last_count = audio_levels_count();
 
@@ -272,7 +303,7 @@ void vu_widget_destroy(void)
     if (s_fft_done) { vSemaphoreDelete(s_fft_done); s_fft_done = NULL; }
 
     if (s_timer) { lv_timer_delete(s_timer); s_timer = NULL; }
-    if (s_cont)  { lv_obj_delete(s_cont);  s_cont  = NULL; }  // frees the bars too
+    if (s_cont)  { lv_obj_delete(s_cont);  s_cont  = NULL; }  // also drops vu_draw_cb
     free(s_raw); free(s_win); free(s_cf);
     s_raw = NULL; s_win = NULL; s_cf = NULL;
     ESP_LOGI(TAG, "Destroyed");
@@ -283,6 +314,5 @@ void vu_widget_apply_theme(void)
     if (!s_cont) return;
     const ui_theme_colors_t *th = theme_get();
     lv_obj_set_style_bg_color(s_cont, lv_color_hex(th->vu_bg), 0);
-    for (int b = 0; b < s_nbars; b++)
-        lv_obj_set_style_bg_color(s_bars[b], lv_color_hex(th->vu_bar), 0);
+    lv_obj_invalidate(s_cont);   // bar colour is read fresh in vu_draw_cb
 }

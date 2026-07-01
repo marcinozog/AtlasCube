@@ -67,6 +67,12 @@
 #define DISPLAY_HOST      SPI2_HOST
 #define DISPLAY_CLK_SPEED   40000000
 
+// On-screen FPS + CPU% overlay (bottom-right). 1 = show, 0 = hide at runtime.
+// The monitor is always compiled in (needs CONFIG_LV_USE_SYSMON/OBSERVER/PERF_MONITOR
+// in sdkconfig.defaults); this flag only toggles visibility. To drop it entirely
+// (and its tiny measurement timer) turn those three CONFIG_LV_USE_* off instead.
+#define UI_SHOW_FPS_OVERLAY 1
+
 #if CONFIG_DISPLAY_ILI9341
 
 #define LCD_PIN_MOSI  39

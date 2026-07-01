@@ -12,7 +12,10 @@
 
 static const char *TAG = "ILI9341";
 
-#define LVGL_BUF_LINES 40
+// Two buffers now (double-buffering), so keep each half small enough that
+// 2 * DISPLAY_WIDTH * LVGL_BUF_LINES * 2B stays within the internal DMA-RAM
+// budget (~25 kB total, same as the previous single buf40).
+#define LVGL_BUF_LINES 20
 
 #define LCD_BL_LEDC_TIMER    LEDC_TIMER_0
 #define LCD_BL_LEDC_CHANNEL  LEDC_CHANNEL_0
@@ -37,6 +40,19 @@ static volatile bool s_invert_dirty = false;
 static bool          s_flip_on      = false;
 static volatile bool s_flip_dirty   = false;
 
+// Async flush: the big pixel blob is queued (non-blocking) and flush_ready fires
+// from the SPI done-ISR, so the LVGL task can render the next area into the 2nd
+// buffer while DMA pushes the current one. The window commands (2A/2B/2C) stay
+// blocking — a few bytes each. queue_trans needs the descriptor reclaimed with
+// get_trans_result later; we do that at the top of the next flush.
+static spi_transaction_t s_color_trans;
+static volatile bool     s_color_inflight = false;
+
+static void spi_post_cb(spi_transaction_t *t)
+{
+    if (t->user) lv_display_flush_ready((lv_display_t *)t->user);
+}
+
 /* =========================
    LOW LEVEL SPI
    ========================= */
@@ -58,6 +74,7 @@ static void spi_init(void)
         .mode = 0,
         .spics_io_num = g_pins.lcd_cs,
         .queue_size = 7,
+        .post_cb = spi_post_cb,
     };
 
     ESP_ERROR_CHECK(spi_bus_add_device(DISPLAY_HOST, &devcfg, &spi));
@@ -204,6 +221,12 @@ static void ili9341_init_cmds(void)
 
 static void my_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
 {
+    if (s_color_inflight) {          // reclaim the previous async transfer (already done)
+        spi_transaction_t *rtrans;
+        spi_device_get_trans_result(spi, &rtrans, portMAX_DELAY);
+        s_color_inflight = false;
+    }
+
     if (s_invert_dirty) {            // apply a pending colour-inversion toggle
         s_invert_dirty = false;
         lcd_cmd(s_invert_on ? 0x20 : 0x21);
@@ -230,9 +253,18 @@ static void my_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_m
     lcd_cmd(0x2B); lcd_data(row_data, 4);
 
     lcd_cmd(0x2C);
-    lcd_data(px_map, size * 2);
 
-    lv_display_flush_ready(disp);
+    // Queue the pixel blob asynchronously; flush_ready fires from spi_post_cb once
+    // DMA completes, freeing the LVGL task to render the next area meanwhile.
+    gpio_set_level(g_pins.lcd_dc, 1);   // data phase for the pixel blob
+    s_color_trans = (spi_transaction_t){
+        .length    = (size_t)size * 2 * 8,
+        .tx_buffer = px_map,
+        .user      = disp,              // tags this trans → post_cb calls flush_ready
+    };
+    spi_device_queue_trans(spi, &s_color_trans, portMAX_DELAY);  // returns immediately
+    s_color_inflight = true;
+    // NOTE: do NOT call lv_display_flush_ready() here — spi_post_cb does it.
 }
 
 static void ili9341_clear(uint16_t color)
@@ -268,13 +300,16 @@ void ili9341_init(void)
     backlight_init();
     ili9341_clear(0x0000);
 
-    /* LVGL buffer */
-    static lv_color_t *buf = NULL;
+    /* LVGL buffers — double-buffered so rendering overlaps the async DMA push */
+    static lv_color_t *buf  = NULL;
+    static lv_color_t *buf2 = NULL;
 
-    buf = heap_caps_malloc(DISPLAY_WIDTH * LVGL_BUF_LINES * sizeof(lv_color_t),
-                           MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+    buf  = heap_caps_malloc(DISPLAY_WIDTH * LVGL_BUF_LINES * sizeof(lv_color_t),
+                            MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
+    buf2 = heap_caps_malloc(DISPLAY_WIDTH * LVGL_BUF_LINES * sizeof(lv_color_t),
+                            MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL);
 
-    if (!buf) {
+    if (!buf || !buf2) {
         ESP_LOGE(TAG, "Buffer alloc failed");
         return;
     }
@@ -287,7 +322,7 @@ void ili9341_init(void)
     lv_display_set_buffers(
         disp,
         buf,
-        NULL,
+        buf2,
         DISPLAY_WIDTH * LVGL_BUF_LINES,
         LV_DISPLAY_RENDER_MODE_PARTIAL
     );

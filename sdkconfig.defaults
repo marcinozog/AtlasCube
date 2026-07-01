@@ -64,6 +64,14 @@ CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
 # CONFIG_LV_FONT_MONTSERRAT_28=y
 CONFIG_LV_FONT_MONTSERRAT_48=y
 
+# On-screen FPS + CPU% overlay (bottom-right) for perf/stability testing.
+# PERF_MONITOR requires SYSMON, which requires OBSERVER. Kept in Kconfig (not a
+# -D on the lvgl lib) because these change lv_global_t layout and must be seen
+# identically by every translation unit.
+CONFIG_LV_USE_OBSERVER=y
+CONFIG_LV_USE_SYSMON=y
+CONFIG_LV_USE_PERF_MONITOR=y
+
 CONFIG_LWIP_MAX_SOCKETS=16
 
 # Segmented HLS (.m3u8) radio opens a fresh TLS connection per .ts segment and
