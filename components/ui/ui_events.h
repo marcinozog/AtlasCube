@@ -49,6 +49,7 @@ typedef enum {
     UI_EVT_INPUT,            // event from encoder / buttons
     UI_EVT_EVENT_FIRED,      // events_service fired an event (fullscreen toast)
     UI_EVT_OTA_PROGRESS,     // firmware update progress (0..100, or -1 = failed)
+    UI_EVT_WIFI_SCAN_DONE,   // async WiFi scan finished — results ready in wifi_manager
 } ui_event_type_t;
 
 // --------------------------------------------------------------------------

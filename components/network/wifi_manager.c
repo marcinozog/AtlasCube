@@ -10,6 +10,7 @@
 #include "freertos/event_groups.h"
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 static const char *TAG = "WIFI";
 
@@ -25,6 +26,18 @@ static EventGroupHandle_t s_event_group;
 static bool               s_connected = false;
 static int                s_retry_cnt = 0;
 static wifi_run_mode_t    s_run_mode  = WIFI_RUN_MODE_AP;
+
+// STA auto-connect is only wanted when we actually run as a client. The scan
+// path (provisioning) brings up a STA interface purely to scan, so the STA_START
+// / STA_DISCONNECTED handlers must not fire connect()/retry storms there.
+static bool               s_sta_autoconnect = false;
+
+// ── Scan state ───────────────────────────────────────────────────────────────
+static bool                s_sta_netif_up   = false;   // STA netif created?
+static volatile bool       s_scan_busy      = false;
+static wifi_scan_ap_t      s_scan_results[WIFI_SCAN_MAX_AP];
+static volatile int        s_scan_count     = 0;
+static wifi_scan_done_cb_t s_scan_done_cb   = NULL;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // OTA anti-brick: with CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE a freshly
@@ -53,11 +66,42 @@ static void event_handler(void *arg, esp_event_base_t base,
 {
     if (base == WIFI_EVENT) {
         if (id == WIFI_EVENT_STA_START) {
-            esp_wifi_connect();
+            if (s_sta_autoconnect) esp_wifi_connect();
+
+        } else if (id == WIFI_EVENT_SCAN_DONE) {
+            uint16_t num = 0;
+            esp_wifi_scan_get_ap_num(&num);
+            wifi_ap_record_t *recs = NULL;
+            if (num > 0) recs = calloc(num, sizeof(wifi_ap_record_t));
+            if (recs && esp_wifi_scan_get_ap_records(&num, recs) == ESP_OK) {
+                int n = 0;
+                for (int i = 0; i < num && n < WIFI_SCAN_MAX_AP; i++) {
+                    const char *ssid = (const char *)recs[i].ssid;
+                    if (ssid[0] == '\0') continue;             // skip hidden
+                    bool dup = false;                          // keep first (list is RSSI-sorted)
+                    for (int j = 0; j < n; j++)
+                        if (strcmp(s_scan_results[j].ssid, ssid) == 0) { dup = true; break; }
+                    if (dup) continue;
+                    strlcpy(s_scan_results[n].ssid, ssid, sizeof(s_scan_results[n].ssid));
+                    s_scan_results[n].rssi   = recs[i].rssi;
+                    s_scan_results[n].secure = recs[i].authmode != WIFI_AUTH_OPEN;
+                    n++;
+                }
+                s_scan_count = n;
+                ESP_LOGI(TAG, "Scan done: %d unique SSIDs (of %u)", n, num);
+            } else {
+                s_scan_count = 0;
+                ESP_LOGW(TAG, "Scan done but no records");
+            }
+            free(recs);
+            s_scan_busy = false;
+            if (s_scan_done_cb) s_scan_done_cb();
 
         } else if (id == WIFI_EVENT_STA_DISCONNECTED) {
             s_connected = false;
-            if (s_retry_cnt < WIFI_STA_MAX_RETRY) {
+            if (!s_sta_autoconnect) {
+                // Provisioning/scan STA interface — ignore disconnects entirely.
+            } else if (s_retry_cnt < WIFI_STA_MAX_RETRY) {
                 s_retry_cnt++;
                 ESP_LOGI(TAG, "STA retry %d/%d", s_retry_cnt, WIFI_STA_MAX_RETRY);
                 esp_wifi_connect();
@@ -126,6 +170,8 @@ void wifi_init(const char *ssid, const char *pass)
         // Create both netifs; AP stays active during the STA attempt
         esp_netif_create_default_wifi_ap();
         esp_netif_create_default_wifi_sta();
+        s_sta_netif_up    = true;
+        s_sta_autoconnect = true;   // we want to connect as a client
 
         wifi_config_t sta_cfg = {0};
         strncpy((char *)sta_cfg.sta.ssid, ssid, sizeof(sta_cfg.sta.ssid) - 1);
@@ -177,6 +223,61 @@ wifi_run_mode_t wifi_get_run_mode(void)  { return s_run_mode; }
 
 const char *wifi_get_ap_ssid(void) { return WIFI_AP_SSID; }
 const char *wifi_get_ap_pass(void) { return WIFI_AP_PASS; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WiFi scan
+// ─────────────────────────────────────────────────────────────────────────────
+void wifi_manager_set_scan_done_cb(wifi_scan_done_cb_t cb) { s_scan_done_cb = cb; }
+bool wifi_manager_scan_busy(void)                          { return s_scan_busy; }
+
+void wifi_manager_scan_start(void)
+{
+    if (s_scan_busy) { ESP_LOGW(TAG, "Scan already in progress"); return; }
+
+    // We're provisioning now: stop auto-reconnecting to any previously-configured
+    // AP so the scan isn't fighting a connect/retry loop (relevant when we fell
+    // back to AP after a failed STA attempt — that STA netif already exists).
+    s_sta_autoconnect = false;
+
+    // Scanning needs a STA interface. In AP-only mode bring one up (the AP stays
+    // online) and switch to APSTA.
+    if (!s_sta_netif_up) {
+        ESP_LOGI(TAG, "Scan: bringing up STA interface (AP stays up)");
+        esp_netif_create_default_wifi_sta();
+        s_sta_netif_up = true;
+    }
+    wifi_mode_t mode = WIFI_MODE_NULL;
+    esp_wifi_get_mode(&mode);
+    if (mode != WIFI_MODE_APSTA) {
+        if (esp_wifi_set_mode(WIFI_MODE_APSTA) != ESP_OK)
+            ESP_LOGE(TAG, "Scan: set APSTA failed");
+    }
+    esp_wifi_disconnect();   // cancel any stale/ongoing STA connect attempt
+
+    s_scan_count = 0;
+    s_scan_busy  = true;
+    esp_err_t err = esp_wifi_scan_start(NULL, false);   // async, all channels
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_wifi_scan_start failed: %s", esp_err_to_name(err));
+        s_scan_busy = false;
+        if (s_scan_done_cb) s_scan_done_cb();   // report completion (empty result)
+    }
+}
+
+static int cmp_rssi_desc(const void *a, const void *b)
+{
+    return ((const wifi_scan_ap_t *)b)->rssi - ((const wifi_scan_ap_t *)a)->rssi;
+}
+
+int wifi_manager_scan_get(wifi_scan_ap_t *out, int max)
+{
+    if (!out || max <= 0) return 0;
+    int n = s_scan_count;
+    if (n > max) n = max;
+    memcpy(out, s_scan_results, n * sizeof(wifi_scan_ap_t));
+    qsort(out, n, sizeof(wifi_scan_ap_t), cmp_rssi_desc);
+    return n;
+}
 
 const char *wifi_get_ip(char *buf, size_t len)
 {
