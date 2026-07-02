@@ -423,9 +423,22 @@ static void gesture_dispatch_cb(lv_event_t *e)
 // Main loop — the only place we touch LVGL
 // --------------------------------------------------------------------------
 
+// Show or hide LVGL's built-in performance monitor. Must run on the LVGL task.
+static void apply_fps_overlay(void)
+{
+#if defined(LV_USE_PERF_MONITOR) && LV_USE_PERF_MONITOR
+    if (settings_get()->display.show_fps)
+        lv_sysmon_show_performance(NULL);
+    else
+        lv_sysmon_hide_performance(NULL);
+#endif
+}
+
 void ui_manager_run(void)
 {
     s_last_input_us = esp_timer_get_time();
+
+    apply_fps_overlay();   // reflect settings.display.show_fps at boot
 
     // Attach gesture handler to the (singleton) active screen object — it
     // survives lv_obj_clean() between navigations because clean only removes
@@ -473,6 +486,10 @@ void ui_manager_run(void)
             }
             if (ev.type == UI_EVT_PROFILE_CHANGED) {
                 do_rebuild_active();
+                continue;
+            }
+            if (ev.type == UI_EVT_FPS_CHANGED) {
+                apply_fps_overlay();
                 continue;
             }
             if (ev.type == UI_EVT_EVENT_FIRED) {

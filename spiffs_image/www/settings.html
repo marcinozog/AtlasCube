@@ -72,6 +72,15 @@
         </div>
 
         <div class="panel">
+            <label class="field-label">FPS overlay</label>
+            <div class="field-hint">Show LVGL's on-screen FPS + CPU% counter (bottom-right). Applies instantly.</div>
+            <div class="theme-toggle" id="fpsToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnFpsOn"  onclick="setShowFps(true)">📊 Show</button>
+                <button class="theme-btn" id="settingsBtnFpsOff" onclick="setShowFps(false)">🚫 Hide</button>
+            </div>
+        </div>
+
+        <div class="panel">
             <label class="field-label">Show/hide Bluetooth screen</label>
             <div class="theme-toggle" id="btScreenToggle" style="width:fit-content">
                 <button class="theme-btn" id="settingsBtnBTshow" onclick="setDeviceBTScreen(true)">✅ Show</button>

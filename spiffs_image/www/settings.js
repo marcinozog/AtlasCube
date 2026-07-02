@@ -263,6 +263,19 @@ function setInvert(on) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// FPS overlay (applied live — no restart)
+// ─────────────────────────────────────────────────────────────────────────────
+function setShowFps(on) {
+    document.getElementById('settingsBtnFpsOn') ?.classList.toggle('active', on);
+    document.getElementById('settingsBtnFpsOff')?.classList.toggle('active', !on);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { show_fps: on } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Brightness (display)
 // ─────────────────────────────────────────────────────────────────────────────
 function setDisplayBrightness(t) {
@@ -761,6 +774,10 @@ function populateForm(s) {
         const invert = s.display.invert === true;
         document.getElementById('settingsBtnInvertOn') ?.classList.toggle('active', invert);
         document.getElementById('settingsBtnInvertOff')?.classList.toggle('active', !invert);
+
+        const showFps = s.display.show_fps === true;   // default off
+        document.getElementById('settingsBtnFpsOn') ?.classList.toggle('active', showFps);
+        document.getElementById('settingsBtnFpsOff')?.classList.toggle('active', !showFps);
 
         const bootInfo = s.display.show_boot_info !== false;   // default on
         document.getElementById('settingsBtnBootInfoOn') ?.classList.toggle('active', bootInfo);

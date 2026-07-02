@@ -45,6 +45,7 @@ typedef struct {
     bool            show_boot_info;  // version + IP overlay on the splash (STA only)
     bool            sd_show_screen;  // show/hide SD player screen in the nav ring
     bool            radio_show_screen; // show/hide radio screen in the nav ring
+    bool            show_fps;        // on-screen LVGL FPS + CPU% overlay (applied live)
     dim_schedule_t  dim_schedule;
 } display_settings_t;
 
@@ -156,6 +157,7 @@ void settings_set_ntp(const char *server1, const char *server2, const char *tz);
 void settings_set_theme(ui_theme_t theme);
 void settings_set_flip(bool enabled);
 void settings_set_invert(bool enabled);
+void settings_set_show_fps(bool enabled);
 void settings_set_bg_gradient(bool enabled);
 void settings_set_wallpaper(bool on, const char *path);
 void settings_set_logo_path(const char *path);

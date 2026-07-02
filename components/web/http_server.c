@@ -109,6 +109,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddBoolToObject(display, "show_boot_info", s->display.show_boot_info);
     cJSON_AddBoolToObject(display, "sd_show_screen", s->display.sd_show_screen);
     cJSON_AddBoolToObject(display, "radio_show_screen", s->display.radio_show_screen);
+    cJSON_AddBoolToObject(display, "show_fps", s->display.show_fps);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s->display.dim_schedule.enabled);
     cJSON_AddNumberToObject(dim, "dim_hour",       s->display.dim_schedule.dim_hour);
@@ -320,6 +321,11 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             // it gets flushed (and the screen visibly updates) right away.
             ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
             ui_event_send(&ev);
+        }
+        cJSON *sfp = cJSON_GetObjectItem(display, "show_fps");
+        if (cJSON_IsBool(sfp)) {
+            ESP_LOGI("HTTP", "POST show_fps: %d", cJSON_IsTrue(sfp));
+            settings_set_show_fps(cJSON_IsTrue(sfp));
         }
         cJSON *bg = cJSON_GetObjectItem(display, "bg_gradient");
         if (cJSON_IsBool(bg)) {

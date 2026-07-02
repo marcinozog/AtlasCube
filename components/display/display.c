@@ -44,11 +44,9 @@ void display_init(void)
     #error "Unknown DISPLAY_TYPE"
 #endif
 
-    // The driver's lv_display_create() auto-shows LVGL's perf monitor. Hide it here
-    // when UI_SHOW_FPS_OVERLAY is off. Safe: lvgl_task hasn't started yet.
-#if defined(LV_USE_PERF_MONITOR) && LV_USE_PERF_MONITOR && !UI_SHOW_FPS_OVERLAY
-    lv_sysmon_hide_performance(NULL);
-#endif
+    // The driver's lv_display_create() auto-shows LVGL's perf monitor. Its
+    // visibility now follows settings.display.show_fps and is applied by
+    // ui_manager_run() on the LVGL task (see UI_EVT_FPS_CHANGED).
 
     // Initialize the manager BEFORE starting the task (creates queue, registers callback)
     ui_manager_init();

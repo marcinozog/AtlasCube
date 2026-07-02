@@ -55,6 +55,7 @@ esp_err_t settings_init(void)
         s_settings.display.show_boot_info   = true;
         s_settings.display.sd_show_screen   = true;
         s_settings.display.radio_show_screen = true;
+        s_settings.display.show_fps         = false;
         s_settings.display.dim_schedule.enabled        = false;
         s_settings.display.dim_schedule.dim_hour       = 22;
         s_settings.display.dim_schedule.dim_minute     = 0;
@@ -245,6 +246,8 @@ static esp_err_t load_from_file(void)
         s_settings.display.sd_show_screen = cJSON_IsBool(sds) ? cJSON_IsTrue(sds) : true;
         cJSON *rds = cJSON_GetObjectItem(display, "radio_show_screen");
         s_settings.display.radio_show_screen = cJSON_IsBool(rds) ? cJSON_IsTrue(rds) : true;
+        cJSON *sfp = cJSON_GetObjectItem(display, "show_fps");
+        s_settings.display.show_fps = cJSON_IsBool(sfp) ? cJSON_IsTrue(sfp) : false;
 
         // dim schedule defaults (used if section is missing or partial)
         s_settings.display.dim_schedule.enabled        = false;
@@ -526,6 +529,7 @@ static esp_err_t save_to_file(void)
     cJSON_AddBoolToObject(display, "show_boot_info", s_settings.display.show_boot_info);
     cJSON_AddBoolToObject(display, "sd_show_screen", s_settings.display.sd_show_screen);
     cJSON_AddBoolToObject(display, "radio_show_screen", s_settings.display.radio_show_screen);
+    cJSON_AddBoolToObject(display, "show_fps", s_settings.display.show_fps);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s_settings.display.dim_schedule.enabled);
     cJSON_AddNumberToObject(dim, "dim_hour",       s_settings.display.dim_schedule.dim_hour);
@@ -906,6 +910,17 @@ void settings_set_invert(bool enabled)
     if (s_settings.display.invert == enabled) return;
     s_settings.display.invert = enabled;
     display_set_invert(enabled);
+    save_to_file();
+}
+
+void settings_set_show_fps(bool enabled)
+{
+    // LVGL's perf monitor is always compiled in; toggling it touches LVGL
+    // objects, so the show/hide must run on the LVGL task — post an event.
+    if (s_settings.display.show_fps == enabled) return;
+    s_settings.display.show_fps = enabled;
+    ui_event_t ev = { .type = UI_EVT_FPS_CHANGED };
+    ui_event_send(&ev);
     save_to_file();
 }
 
