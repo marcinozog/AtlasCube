@@ -91,6 +91,10 @@
                  letter-spacing: 0.5px; margin: 22px 0 10px; padding-bottom: 6px;
                  border-bottom: 1px solid #2a4a7f; }
   .pin-section:first-child { margin-top: 8px; }
+  .pin-section-note { font-size: 11.5px; color: #9fb0c8; margin: -4px 0 10px;
+                      line-height: 1.5; }
+  .pin-section-note code { background: rgba(0,0,0,0.25); padding: 1px 5px;
+                           border-radius: 4px; color: #cfe0ff; }
   .conflicts { display: none; margin: 4px 0 12px; padding: 10px 14px; border-radius: 8px;
                background: #2a1718; border: 1px solid #6b2a2a; color: #ffc4c4;
                font-size: 12.5px; line-height: 1.5; }
@@ -538,7 +542,12 @@
     { title: 'SPI LCD',          keys: ['lcd_mosi','lcd_clk','lcd_cs','lcd_dc','lcd_rst','lcd_led'] },
     { title: 'QSPI LCD',         keys: ['qspi_cs','qspi_clk','qspi_d0','qspi_d1','qspi_d2','qspi_d3','qspi_rst'] },
     { title: 'Touch (I2C)',      keys: ['ctp_scl','ctp_sda','ctp_int','ctp_rst'] },
-    { title: 'Touch (SPI/XPT2046)', keys: ['tp_clk','tp_mosi','tp_miso','tp_cs','tp_irq'] },
+    { title: 'Touch (SPI/XPT2046)', keys: ['tp_clk','tp_mosi','tp_miso','tp_cs','tp_irq'],
+      note: 'To <b>share the LCD SPI bus</b>, set <code>tp_clk</code> and <code>tp_mosi</code> ' +
+            'to <code>-1</code> — only <code>tp_miso</code>, <code>tp_cs</code> and ' +
+            '<code>tp_irq</code> are then needed. For a <b>dedicated SPI3 bus</b>, give ' +
+            '<code>tp_clk</code>/<code>tp_mosi</code> their own free GPIOs — not the same ' +
+            'pins as the LCD.' },
     { title: 'SD card (SDMMC)',  keys: ['sd_clk','sd_cmd','sd_d0','sd_cd'] },
     { title: 'Audio (I2S DAC)',  keys: ['i2s_data','i2s_bck','i2s_lck'] },
     { title: 'Rotary encoder',   keys: ['enc_clk','enc_dt','enc_btn'] },
@@ -571,20 +580,26 @@
         grid.appendChild(row);
       }
 
-      function addSection(title, keys) {
+      function addSection(title, keys, note) {
         var present = keys.filter(function (k) { return k in d.pins; });
         if (!present.length) return;
         var h = document.createElement('div');
         h.className = 'pin-section';
         h.textContent = title;
         grid.appendChild(h);
+        if (note) {
+          var n = document.createElement('div');
+          n.className = 'pin-section-note';
+          n.innerHTML = note;
+          grid.appendChild(n);
+        }
         present.forEach(addRow);
       }
 
       var placed = {};
       PIN_SECTIONS.forEach(function (s) {
         s.keys.forEach(function (k) { placed[k] = 1; });
-        addSection(s.title, s.keys);
+        addSection(s.title, s.keys, s.note);
       });
       // Any key the firmware exposes that we don't know about yet.
       var leftover = Object.keys(d.pins).filter(function (k) { return !placed[k]; });
