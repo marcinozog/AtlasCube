@@ -57,7 +57,8 @@
 // ===== TOUCH DRIVER =====
 #define TOUCH_FT6336U
 // #define TOUCH_CST816D
-// #define TOUCH_XPT2046   // resistive, SPI (shares LCD bus or dedicated SPI3)
+// XPT2046 = resistive SPI touch (shares LCD bus or dedicated SPI3)
+// #define TOUCH_XPT2046
 // #define TOUCH_NONE
 
 
