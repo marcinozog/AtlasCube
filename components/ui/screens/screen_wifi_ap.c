@@ -385,9 +385,9 @@ static void wifi_create(lv_obj_t *parent)
 
     // ── Status / hint line ───────────────────────────────────────────────────
     s_status = lv_label_create(parent);
-    lv_label_set_text_fmt(s_status, "or connect to \"%s\" @ 192.168.4.1",
-                          wifi_get_ap_ssid());
-    lv_label_set_long_mode(s_status, LV_LABEL_LONG_DOT);
+    lv_label_set_text_fmt(s_status, "or connect to \"%s\" (pass: %s)\n@ 192.168.4.1",
+                          wifi_get_ap_ssid(), wifi_get_ap_pass());
+    lv_label_set_long_mode(s_status, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(s_status, LV_PCT(96));
     lv_obj_set_style_text_font(s_status, p->wifi_hint_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_status, lv_color_white(), LV_PART_MAIN);
