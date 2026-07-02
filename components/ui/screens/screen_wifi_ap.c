@@ -89,6 +89,7 @@ static void wifi_create(lv_obj_t *parent)
 
 static void wifi_destroy(void) { s_root = NULL; }
 static void wifi_on_event(const ui_event_t *ev) { (void)ev; }
+static void wifi_on_input(ui_input_t input) { (void)input; }  // no keyboard here
 
 #else  // !CONFIG_TOUCH_NONE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -106,6 +107,30 @@ static wifi_scan_ap_t s_aps[WIFI_SCAN_MAX_AP];
 static int            s_ap_count    = 0;
 static char           s_sel_ssid[33] = {0};
 static bool           s_sel_secure   = false;
+static int            s_focus        = -1;   // encoder-highlighted network row
+
+// ── Encoder → LVGL bridge (password overlay only) ────────────────────────────
+// The project routes the encoder through its own ui_input bus, not an LVGL
+// indev, so the on-screen keyboard can't be driven by the knob on its own.
+// While the password overlay is open we spin up a throwaway ENCODER indev whose
+// read_cb drains an accumulator that wifi_on_input() fills, and drop the keyboard
+// into a group. That makes lv_keyboard's built-in encoder navigation work with
+// no change to encoder.c or ui_manager. Both are torn down in close_overlay().
+// Safe without locks: wifi_on_input (writer) and enc_read_cb (reader) both run
+// on the LVGL task.
+static lv_indev_t    *s_enc_indev    = NULL;
+static lv_group_t    *s_enc_group    = NULL;
+static int            s_enc_diff     = 0;    // rotation steps since last read
+static int            s_enc_press    = 0;    // >0 → report PRESSED for N reads
+
+static void enc_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
+{
+    (void)indev;
+    data->enc_diff = (int16_t)s_enc_diff;
+    s_enc_diff = 0;
+    if (s_enc_press > 0) { data->state = LV_INDEV_STATE_PRESSED; s_enc_press--; }
+    else                   data->state = LV_INDEV_STATE_RELEASED;
+}
 
 // ── Simplified keyboard layout ───────────────────────────────────────────────
 // Digits stay on a dedicated top row so letters AND numbers are visible at once
@@ -174,6 +199,10 @@ static void reboot_timer_cb(lv_timer_t *t)
 
 static void close_overlay(void)
 {
+    if (s_enc_indev) { lv_indev_delete(s_enc_indev); s_enc_indev = NULL; }
+    if (s_enc_group) { lv_group_delete(s_enc_group); s_enc_group = NULL; }
+    s_enc_diff = 0;
+    s_enc_press = 0;
     if (s_overlay) { lv_obj_del(s_overlay); s_overlay = NULL; }
 }
 
@@ -295,6 +324,19 @@ static void open_password_overlay(const char *ssid, bool secure)
 
     lv_obj_add_event_cb(kb, kb_event_cb, LV_EVENT_READY,  NULL);
     lv_obj_add_event_cb(kb, kb_event_cb, LV_EVENT_CANCEL, NULL);
+
+    // Encoder navigation for the keyboard (harmless when no encoder is wired —
+    // wifi_on_input simply never feeds the accumulator). Edit mode is forced so a
+    // knob turn moves between keys immediately instead of leaving the widget.
+    s_enc_diff  = 0;
+    s_enc_press = 0;
+    s_enc_group = lv_group_create();
+    lv_group_add_obj(s_enc_group, kb);
+    lv_group_set_editing(s_enc_group, true);
+    s_enc_indev = lv_indev_create();
+    lv_indev_set_type(s_enc_indev, LV_INDEV_TYPE_ENCODER);
+    lv_indev_set_read_cb(s_enc_indev, enc_read_cb);
+    lv_indev_set_group(s_enc_indev, s_enc_group);
 }
 
 // ── Network list ─────────────────────────────────────────────────────────────
@@ -342,10 +384,28 @@ static void rebuild_list(void)
     }
 }
 
+// Outline the encoder-focused row so knob users can see the selection. No-op on
+// pure-touch use (s_focus stays -1 → every row drawn plain).
+static void highlight_focus(void)
+{
+    if (!s_list) return;
+    const ui_theme_colors_t *th = theme_get();
+    uint32_t n = lv_obj_get_child_count(s_list);
+    for (uint32_t i = 0; i < n; i++) {
+        lv_obj_t *row = lv_obj_get_child(s_list, i);
+        bool sel = ((int)i == s_focus);
+        lv_obj_set_style_border_width(row, sel ? 2 : 0, LV_PART_MAIN);
+        lv_obj_set_style_border_color(row, lv_color_hex(th->accent), LV_PART_MAIN);
+    }
+    if (s_focus >= 0 && s_focus < (int)n)
+        lv_obj_scroll_to_view(lv_obj_get_child(s_list, s_focus), LV_ANIM_ON);
+}
+
 static void scan_btn_cb(lv_event_t *e)
 {
     (void)e;
     if (wifi_manager_scan_busy()) return;
+    s_focus = -1;
     if (s_list)    lv_obj_clean(s_list);
     if (s_spinner) lv_obj_clear_flag(s_spinner, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_state(s_scan_btn, LV_STATE_DISABLED);
@@ -385,7 +445,12 @@ static void wifi_create(lv_obj_t *parent)
 
     // ── Status / hint line ───────────────────────────────────────────────────
     s_status = lv_label_create(parent);
-    lv_label_set_text_fmt(s_status, "or connect to \"%s\" (pass: %s)\n@ 192.168.4.1",
+    // Startup hint: show the AP-mode connection data (browser fallback) and tell
+    // the user the knob starts a scan. Overwritten with progress once scanning.
+    lv_label_set_text_fmt(s_status,
+                          "AP mode - browser setup: http://192.168.4.1\n"
+                          "WiFi \"%s\"  pass: %s\n"
+                          "or press the knob to scan networks",
                           wifi_get_ap_ssid(), wifi_get_ap_pass());
     lv_label_set_long_mode(s_status, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(s_status, LV_PCT(96));
@@ -430,6 +495,7 @@ static void wifi_destroy(void)
     close_overlay();
     s_root = s_list = s_scan_btn = s_spinner = s_status = NULL;
     s_ap_count = 0;
+    s_focus    = -1;
 }
 
 static void wifi_on_event(const ui_event_t *ev)
@@ -440,16 +506,57 @@ static void wifi_on_event(const ui_event_t *ev)
     s_ap_count = wifi_manager_scan_get(s_aps, WIFI_SCAN_MAX_AP);
     if (s_spinner)  lv_obj_add_flag(s_spinner, LV_OBJ_FLAG_HIDDEN);
     if (s_scan_btn) lv_obj_clear_state(s_scan_btn, LV_STATE_DISABLED);
-    if (s_ap_count > 0) set_status("Tap a network to connect");
-    else                set_status("No networks found - tap Scan again");
+    if (s_ap_count > 0) set_status("Pick a network - tap or turn the knob");
+    else                set_status("No networks found - press knob to rescan");
     rebuild_list();
+    s_focus = (s_ap_count > 0) ? 0 : -1;
+    highlight_focus();
+}
+
+static void wifi_on_input(ui_input_t input)
+{
+    // Password overlay open → funnel the knob into the LVGL keyboard through the
+    // throwaway encoder indev; long-press backs out of the overlay.
+    if (s_overlay) {
+        switch (input) {
+            case UI_INPUT_ENCODER_CW:         s_enc_diff++;      break;
+            case UI_INPUT_ENCODER_CCW:        s_enc_diff--;      break;
+            case UI_INPUT_ENCODER_PRESS:      s_enc_press = 2;   break; // press+release
+            case UI_INPUT_ENCODER_LONG_PRESS: close_overlay();   break;
+            default: break;
+        }
+        return;
+    }
+
+    // Network list: knob moves the highlight, press opens the selected AP,
+    // long-press (re)scans. Press on an empty list scans too.
+    switch (input) {
+        case UI_INPUT_ENCODER_CW:
+        case UI_INPUT_ENCODER_CCW: {
+            if (s_ap_count <= 0) break;
+            int next = s_focus + ((input == UI_INPUT_ENCODER_CW) ? 1 : -1);
+            if (next < 0)            next = 0;
+            if (next >= s_ap_count)  next = s_ap_count - 1;
+            if (next != s_focus) { s_focus = next; highlight_focus(); }
+            break;
+        }
+        case UI_INPUT_ENCODER_PRESS:
+            if (s_ap_count <= 0) { scan_btn_cb(NULL); break; }
+            if (s_focus < 0 || s_focus >= s_ap_count) s_focus = 0;
+            open_password_overlay(s_aps[s_focus].ssid, s_aps[s_focus].secure);
+            break;
+        case UI_INPUT_ENCODER_LONG_PRESS:
+            scan_btn_cb(NULL);
+            break;
+        default:
+            break;
+    }
 }
 
 #endif  // CONFIG_TOUCH_NONE
 
 // ─────────────────────────────────────────────────────────────────────────────
 
-static void wifi_on_input(ui_input_t input)     { (void)input; }
 static void wifi_apply_theme(void)              { /* static screen, theme fixed in AP */ }
 
 const ui_screen_t screen_wifi = {
