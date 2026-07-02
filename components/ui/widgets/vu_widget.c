@@ -33,8 +33,10 @@ static const char *TAG = "VU_WIDGET";
 #define VU_DB_FLOOR    0.0f        // peak power(dB) mapped to bar = 0
 #define VU_DB_CEIL     36.0f       // peak power(dB) mapped to bar = full height
 #define VU_ATTACK      0.95f       // smoothing when a bar rises (fast)
-#define VU_DECAY       0.50f       // smoothing when a bar falls (higher → snappier drop)
-#define VU_GAMMA       0.6f        // <1 boosts perceived motion at low levels
+#define VU_DECAY       0.65f       // smoothing when a bar falls (higher → snappier drop,
+                                   // so bars return between beats and the rhythm shows)
+#define VU_GAMMA       0.8f        // <1 boosts perceived motion at low levels; 0.8 keeps
+                                   // enough loud-vs-quiet spread to read the dynamics
 
 // FFT runs on its own task pinned to core 0 so the heavy transform never
 // blocks the LVGL task's (blocking) display flush — see audio task notes.
