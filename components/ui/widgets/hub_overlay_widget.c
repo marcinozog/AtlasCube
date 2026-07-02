@@ -266,13 +266,13 @@ void hub_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
     lv_obj_add_flag(parent, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(parent, parent_clicked_cb, LV_EVENT_CLICKED, NULL);
 
-    // Full-screen dim layer — tapping the dim area (outside buttons) hides it.
+    // Full-screen solid layer — tapping the empty area (outside buttons) hides it.
     s_overlay = lv_obj_create(parent);
     lv_obj_remove_style_all(s_overlay);
     lv_obj_set_size(s_overlay, DISPLAY_WIDTH, DISPLAY_HEIGHT);
     lv_obj_set_pos(s_overlay, 0, 0);
     lv_obj_set_style_bg_color(s_overlay, lv_color_black(), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(s_overlay, LV_OPA_60, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(s_overlay, LV_OPA_COVER, LV_PART_MAIN);  // solid → no per-frame reblend over the live VU/clock underneath
     lv_obj_clear_flag(s_overlay, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(s_overlay, LV_OBJ_FLAG_CLICKABLE);   // absorb taps on the dim area
     lv_obj_add_flag(s_overlay, LV_OBJ_FLAG_HIDDEN);
