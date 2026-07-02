@@ -22,7 +22,9 @@
 
 static const char *TAG = "TOUCH";
 
+#if CONFIG_TOUCH_CST816D || CONFIG_TOUCH_FT6336U
 static i2c_master_bus_handle_t s_bus = NULL;
+#endif
 static lv_indev_t *s_indev = NULL;
 static volatile bool s_int_flag = false;
 static bool s_pressed = false;

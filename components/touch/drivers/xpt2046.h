@@ -16,7 +16,7 @@ void xpt2046_init(spi_host_device_t host, int cs_gpio);
  * Read the current touch point as RAW 12-bit ADC values (NOT pixels — the
  * caller maps to screen coordinates via the per-profile TOUCH_RAW_* calibration).
  *
- * Returns true and writes *x/*y when a finger is pressed (measured Z pressure
+ * Returns true and writes *x / *y when a finger is pressed (measured Z pressure
  * above threshold); false otherwise.
  */
 bool xpt2046_read(uint16_t *x, uint16_t *y);
