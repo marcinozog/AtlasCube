@@ -9,6 +9,22 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-07-02
+
+### Added
+- **ui:** runtime FPS-overlay toggle via web UI
+- **vu:** snappier decay + less gamma compression for more musical VU
+- **wifi:** on-screen WiFi provisioning on the AP setup screen
+- **security:** store WiFi/MQTT passwords in NVS, not config JSON
+- **touch:** add XPT2046 resistive (SPI) touch driver
+- **display:** live colour-invert toggle + make 180° flip live
+
+### Changed
+- **ci:** touch-controller suffix in all firmware variant names
+- **ui:** solid overlay bg — fix sluggish touch over live VU
+- **ui:** VU meter delta rendering — redraw only the moving bar tips
+- **ui:** non-blocking VU meter — custom-draw + async DMA flush
+
 ## [0.34.2] - 2026-06-27
 
 ### Fixed
@@ -499,7 +515,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.34.2...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.35.0...HEAD
+[0.35.0]: https://github.com/marcinozog/AtlasCube/compare/v0.34.2...v0.35.0
 [0.34.2]: https://github.com/marcinozog/AtlasCube/compare/v0.34.1...v0.34.2
 [0.34.1]: https://github.com/marcinozog/AtlasCube/compare/v0.34.0...v0.34.1
 [0.34.0]: https://github.com/marcinozog/AtlasCube/compare/v0.33.0...v0.34.0
