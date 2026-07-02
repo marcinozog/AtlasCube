@@ -9,6 +9,11 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.35.2] - 2026-07-02
+
+### Fixed
+- **touch:** make XPT2046 variant build under -Werror
+
 ## [0.35.1] - 2026-07-02
 
 ### Fixed
@@ -520,7 +525,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.35.1...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.35.2...HEAD
+[0.35.2]: https://github.com/marcinozog/AtlasCube/compare/v0.35.1...v0.35.2
 [0.35.1]: https://github.com/marcinozog/AtlasCube/compare/v0.35.0...v0.35.1
 [0.35.0]: https://github.com/marcinozog/AtlasCube/compare/v0.34.2...v0.35.0
 [0.34.2]: https://github.com/marcinozog/AtlasCube/compare/v0.34.1...v0.34.2
