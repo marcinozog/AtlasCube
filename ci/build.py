@@ -34,11 +34,11 @@ from env_setup import (REPO_ROOT, IDF_VERSION, ADF_VERSION, TARGET,  # noqa: E40
 
 # variant -> (DISPLAY, UI_PROFILE, TOUCH, FLASH); mirrors the old select-variant.sh table
 VARIANTS = {
-    "ili9341": ("ILI9341", "320x240",     "FT6336U", "16MB"),
-    "st7796":  ("ST7796",  "480x320",     "FT6336U", "16MB"),
-    "ili9488": ("ILI9488", "480x320",     "FT6336U", "16MB"),
-    "co5300":  ("CO5300",  "240X296",     "CST816D", "16MB"),
-    "ssd1322": ("SSD1322", "MONO_256X64", "NONE",    "16MB"),
+    "ili9341-ft6336u": ("ILI9341", "320x240",     "FT6336U", "16MB"),
+    "st7796-ft6336u":  ("ST7796",  "480x320",     "FT6336U", "16MB"),
+    "ili9488-ft6336u": ("ILI9488", "480x320",     "FT6336U", "16MB"),
+    "co5300-cst816d":  ("CO5300",  "240X296",     "CST816D", "16MB"),
+    "ssd1322":         ("SSD1322", "MONO_256X64", "NONE",    "16MB"),
     # XPT2046 resistive-touch variants (experimental — not HW-verified). Same
     # panels as above, resistive SPI touch instead of the I2C capacitive default.
     "ili9341-xpt2046": ("ILI9341", "320x240", "XPT2046", "16MB"),

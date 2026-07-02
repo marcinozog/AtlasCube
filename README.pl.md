@@ -213,10 +213,10 @@ Wchodzisz na **[atlascube.net/flash](https://atlascube.net/flash/)** w Chrome / 
 
 | Plik | Wyświetlacz | Dotyk |
 |---|---|---|
-| `AtlasCube-ili9341.bin` | ILI9341 320×240 (SPI) | FT6336U |
-| `AtlasCube-st7796.bin`  | ST7796U 480×320 (SPI) | FT6336U |
-| `AtlasCube-ili9488.bin` | ILI9488 480×320 (SPI, 18-bit) | FT6336U |
-| `AtlasCube-co5300.bin`  | CO5300 240×296 (QSPI AMOLED) | CST816D |
+| `AtlasCube-ili9341-ft6336u.bin` | ILI9341 320×240 (SPI) | FT6336U |
+| `AtlasCube-st7796-ft6336u.bin`  | ST7796U 480×320 (SPI) | FT6336U |
+| `AtlasCube-ili9488-ft6336u.bin` | ILI9488 480×320 (SPI, 18-bit) | FT6336U |
+| `AtlasCube-co5300-cst816d.bin`  | CO5300 240×296 (QSPI AMOLED) | CST816D |
 | `AtlasCube-ssd1322.bin` | SSD1322 256×64 (mono OLED, SPI) | — (enkoder) |
 | `AtlasCube-ili9341-xpt2046.bin` | ILI9341 320×240 (SPI) | XPT2046 (rezystancyjny) — eksperymentalny |
 | `AtlasCube-st7796-xpt2046.bin`  | ST7796U 480×320 (SPI) | XPT2046 (rezystancyjny) — eksperymentalny |
