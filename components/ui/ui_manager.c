@@ -11,6 +11,7 @@
 #include "screensavers.h"
 #include "display.h"
 #include "lvgl.h"
+#include "display/lv_display_private.h"   // disp->perf_label for apply_fps_overlay()
 #include "freertos/FreeRTOS.h"
 #include "freertos/queue.h"
 #include "esp_log.h"
@@ -424,13 +425,22 @@ static void gesture_dispatch_cb(lv_event_t *e)
 // --------------------------------------------------------------------------
 
 // Show or hide LVGL's built-in performance monitor. Must run on the LVGL task.
+//
+// LVGL auto-creates the perf monitor once inside lv_display_create(), so we
+// only ever toggle the HIDDEN flag on that single label. Calling
+// lv_sysmon_show_performance() is deliberately avoided: it is not idempotent —
+// every call recreates the label (plus a fresh timer/observer/LV_EVENT_ALL cb)
+// and orphans the previous one, which shows up as a frozen "ghost" overlay and
+// leaks per-frame callbacks on repeated toggles.
 static void apply_fps_overlay(void)
 {
 #if defined(LV_USE_PERF_MONITOR) && LV_USE_PERF_MONITOR
+    lv_display_t *disp = lv_display_get_default();
+    if (!disp || !disp->perf_label) return;   // nothing was created → nothing to do
     if (settings_get()->display.show_fps)
-        lv_sysmon_show_performance(NULL);
+        lv_obj_remove_flag(disp->perf_label, LV_OBJ_FLAG_HIDDEN);
     else
-        lv_sysmon_hide_performance(NULL);
+        lv_obj_add_flag(disp->perf_label, LV_OBJ_FLAG_HIDDEN);
 #endif
 }
 
