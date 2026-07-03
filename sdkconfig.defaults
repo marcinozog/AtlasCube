@@ -46,12 +46,18 @@ CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 # pbuf fits and the web UI stays usable mid-stream.
 CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=2048
 
-CONFIG_MBEDTLS_HARDWARE_AES=n
-CONFIG_MBEDTLS_HARDWARE_SHA=n
-CONFIG_MBEDTLS_HARDWARE_MPI=n
+# Hardware crypto re-enabled 2026-07-03: software AES-GCM (gcm_mult GHASH) on the
+# TLS record path was pegging CPU0 during HLS/HTTPS playback → IDLE0 task_wdt +
+# audible stutter. HW AES pulls in HW GCM (S3 AES peripheral does GHASH), and
+# HW SHA/MPI accelerate the per-segment TLS handshakes HLS keeps reopening.
+# The old "failed allocation during renegotiation" reason no longer holds after the
+# 2026-06-15 RAM recovery (INT largest free ~31KB mid-stream now).
+CONFIG_MBEDTLS_HARDWARE_AES=y
+CONFIG_MBEDTLS_HARDWARE_SHA=y
+CONFIG_MBEDTLS_HARDWARE_MPI=y
 
 # WARNING: DYNAMIC_BUFFER + renegotiation = broken HTTPS (Eurozet CDN)
-# HARDWARE_AES = failed allocation during renegotiation when internal RAM < ~20KB
+# If HW AES regresses on a renegotiating CDN under low internal RAM, revert these to n.
 
 
 CONFIG_HTTPD_WS_SUPPORT=y
