@@ -136,6 +136,22 @@
         <div id="ev_list" class="ev-list"></div>
     </div>
 
+    <!-- ══════════════════════════════════════════
+         Voice files audit (events ↔ /voice)
+    ══════════════════════════════════════════ -->
+    <div class="section-gap"></div>
+    <div class="panel">
+        <div class="ev-form-header">
+            <span>🧹 Voice files check</span>
+            <button class="btn-secondary" onclick="voiceAudit()">Run check</button>
+        </div>
+        <div class="pl-hint">
+            Cross-checks voice events against the WAVs in /voice — every voice event
+            should have its file, and every file should be used by an event.
+        </div>
+        <div id="ev_audit" class="ev-list"></div>
+    </div>
+
     <!-- ── Toolbar ── -->
     <div class="toolbar">
         <a href="/index.html" class="tool-btn tool-link">📻 Radio</a>

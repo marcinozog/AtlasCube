@@ -201,6 +201,93 @@ function sdPickUseFolder() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Voice files audit — cross-check voice events ↔ WAVs in /voice
+// ─────────────────────────────────────────────────────────────────────────────
+
+// List every file under /voice, returning paths relative to /voice
+// (e.g. "clip.wav", or "old/old.wav" for the legacy per-event folder scheme).
+// The app only ever nests one level deep, but recurse generically. Returns null
+// when the SD card or the /voice folder is unavailable.
+async function listVoiceFiles(dir = '/voice', prefix = '') {
+    let data;
+    try {
+        const res = await fetch('/api/sd/list?path=' + encodeURIComponent(dir), { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        data = await res.json();
+    } catch (e) {
+        return null;
+    }
+    const out = [];
+    for (const e of (data.entries || [])) {
+        const rel = prefix ? prefix + '/' + e.name : e.name;
+        if (e.dir) {
+            const sub = await listVoiceFiles(dir + '/' + e.name, rel);
+            if (sub) out.push(...sub);
+        } else {
+            out.push(rel);
+        }
+    }
+    return out;
+}
+
+async function voiceAudit() {
+    const box = document.getElementById('ev_audit');
+    box.innerHTML = '<div class="pl-hint" style="padding:12px">Checking…</div>';
+
+    // Work off a fresh event list so the report reflects the current state.
+    await evLoad();
+
+    const files = await listVoiceFiles();
+    if (files === null) {
+        box.innerHTML = '<div class="pl-hint" style="padding:12px;color:#e66">' +
+            'SD card not available or /voice folder is missing.</div>';
+        return;
+    }
+
+    const voiceEvents = events.filter(e => e.type === 'voice');
+    const referenced  = new Set(voiceEvents.map(e => (e.sound || '').trim()).filter(Boolean));
+    const fileSet     = new Set(files);
+
+    // Voice events pointing at a file that isn't on the card (blank sound → missing).
+    const missing = voiceEvents.filter(e => !e.sound || !fileSet.has(e.sound.trim()));
+    // WAVs on the card that no voice event references.
+    const orphans = files.filter(f => !referenced.has(f));
+
+    if (missing.length === 0 && orphans.length === 0) {
+        box.innerHTML = '<div class="pl-hint" style="padding:12px;color:#6c6">' +
+            '✅ All voice events and files match.</div>';
+        return;
+    }
+
+    let html = '';
+    if (missing.length) {
+        html += `<div class="pl-hint" style="padding:8px 12px">⚠️ ${missing.length} ` +
+                `voice event(s) with no file in /voice:</div>`;
+        html += missing.map(e => `
+            <div class="ev-row">
+                <div class="ev-icon">🗣️</div>
+                <div class="ev-info">
+                    <div class="ev-title">${escapeHtml(e.title || '(untitled)')}</div>
+                    <div class="ev-meta">${escapeHtml(e.sound || '(no file set)')}</div>
+                </div>
+                <button class="ev-btn" title="Edit" onclick="evEdit('${e.id}')">✎</button>
+            </div>`).join('');
+    }
+    if (orphans.length) {
+        html += `<div class="pl-hint" style="padding:8px 12px">🗑️ ${orphans.length} ` +
+                `file(s) in /voice with no event:</div>`;
+        html += orphans.map(f => `
+            <div class="ev-row">
+                <div class="ev-icon">📄</div>
+                <div class="ev-info">
+                    <div class="ev-title">${escapeHtml(f)}</div>
+                </div>
+            </div>`).join('');
+    }
+    box.innerHTML = html;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Load / Render
 // ─────────────────────────────────────────────────────────────────────────────
 async function evLoad() {
