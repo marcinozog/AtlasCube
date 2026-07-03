@@ -370,6 +370,7 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             else if (strcmp(scr->valuestring, "home")  == 0) settings_set_screen(SCREEN_HOME);
             else if (strcmp(scr->valuestring, "clock") == 0) settings_set_screen(SCREEN_HOME);
             else if (strcmp(scr->valuestring, "bt")    == 0) settings_set_screen(SCREEN_BT);
+            else if (strcmp(scr->valuestring, "sd")    == 0) settings_set_screen(SCREEN_SD);
             else ESP_LOGW("HTTP", "POST screen: unknown '%s'", scr->valuestring);
         }
         cJSON *dim = cJSON_GetObjectItem(display, "dim_schedule");
