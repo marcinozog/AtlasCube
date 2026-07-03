@@ -1,9 +1,15 @@
 #include "xpt2046.h"
 
 #include "esp_log.h"
+#include "esp_timer.h"
 #include <string.h>
 
 static const char *TAG = "XPT2046";
+
+// Temporary HW-bring-up diagnostics: throttled dump of raw Z / X / Y so testers
+// can report actual controller readings (this variant was never HW-calibrated).
+// Set to 1 to re-enable while tuning TOUCH_RAW_* / XPT_Z_THRESHOLD.
+#define XPT_DEBUG 0
 
 // Control bytes: start bit set, 12-bit conversion, differential mode.
 // A2..A0 select the channel (see datasheet table).
@@ -58,14 +64,46 @@ bool xpt2046_read(uint16_t *x, uint16_t *y)
     uint16_t z1 = xpt_xfer(XPT_CMD_Z1);
     uint16_t z2 = xpt_xfer(XPT_CMD_Z2);
     int z = (int)z1 + 4095 - (int)z2;
-    if (z < XPT_Z_THRESHOLD) return false;
+
+    // z1 == 0 is non-physical for a real press (a pressed panel always pulls z1
+    // above 0). It means the controller isn't driving MISO — disconnected or a
+    // dead read returning all-zeros, which the formula would otherwise turn into
+    // z=4095 → a latched ghost touch at (0,0). Force "released" instead.
+    if (z1 == 0) z = 0;
+
+#if XPT_DEBUG
+    static int64_t s_last_log_us = 0;
+    int64_t now = esp_timer_get_time();
+    bool log_now = (now - s_last_log_us) > 500000;   // throttle to ~2 Hz
+#endif
+
+    if (z < XPT_Z_THRESHOLD) {
+#if XPT_DEBUG
+        if (log_now) {
+            s_last_log_us = now;
+            ESP_LOGI(TAG, "z1=%u z2=%u z=%d (< thr %d) -> released",
+                     z1, z2, z, XPT_Z_THRESHOLD);
+        }
+#endif
+        return false;
+    }
 
     uint32_t sx = 0, sy = 0;
     for (int i = 0; i < XPT_SAMPLES; i++) {
         sx += xpt_xfer(XPT_CMD_X);
         sy += xpt_xfer(XPT_CMD_Y);
     }
-    if (x) *x = (uint16_t)(sx / XPT_SAMPLES);
-    if (y) *y = (uint16_t)(sy / XPT_SAMPLES);
+    uint16_t rx = (uint16_t)(sx / XPT_SAMPLES);
+    uint16_t ry = (uint16_t)(sy / XPT_SAMPLES);
+
+#if XPT_DEBUG
+    if (log_now) {
+        s_last_log_us = now;
+        ESP_LOGI(TAG, "z1=%u z2=%u z=%d PRESSED  raw x=%u y=%u", z1, z2, z, rx, ry);
+    }
+#endif
+
+    if (x) *x = rx;
+    if (y) *y = ry;
     return true;
 }

@@ -20,6 +20,14 @@
     #define TOUCH_SWAP_XY   1
     #define TOUCH_MIRROR_X  1
     #define TOUCH_MIRROR_Y  0
+    // XPT2046 raw ADC spans from a bring-up session on one ILI9341+XPT2046 panel
+    // (swaps: RAW_X bounds the raw-Y channel → width, RAW_Y bounds raw-X → height).
+    // Direction (MIN>MAX = inverted) is a best-guess from blind corner presses —
+    // verify on a live screen and swap MIN<->MAX per axis if a tap lands mirrored.
+    #define TOUCH_RAW_X_MIN 3800
+    #define TOUCH_RAW_X_MAX 400
+    #define TOUCH_RAW_Y_MIN 3750
+    #define TOUCH_RAW_Y_MAX 500
 #elif defined(UI_PROFILE_480x320)
     #define DISPLAY_WIDTH   480
     #define DISPLAY_HEIGHT  320
