@@ -6,9 +6,10 @@
 //   AND resizable (4 corner handles). Elements with only x/y (e.g. labels)
 //   are positionable only — their size is determined by font metrics.
 //
-//   Sections (tabs): clock, bt — each has its own field schema, renderer,
-//   and JSON state. Selecting a tab switches what the form edits and what
-//   the SVG draws.
+//   Sections (tabs): clock (= Home screen), radio, bt, sd — each has its own
+//   field schema, renderer, and JSON state. Selecting a tab switches what the
+//   form edits and what the SVG draws. The "clock" key is historical: it holds
+//   the Home screen's fields (clock face + strip + indicators + calendar).
 // ════════════════════════════════════════════════════════════════════════════
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -53,6 +54,12 @@ const CLOCK_FIELDS = [
     { key: 'clock_show_event_indicator', label: 'Show event indic.', type: 'bool' },
     { key: 'clock_event_indic_x',        label: 'Event indic. X',    type: 'number' },
     { key: 'clock_event_indic_y',        label: 'Event indic. Y',    type: 'number' },
+
+    { key: 'clock_show_calendar', label: 'Show calendar',  type: 'bool' },
+    { key: 'clock_calendar_x',    label: 'Calendar X',     type: 'number' },
+    { key: 'clock_calendar_y',    label: 'Calendar Y',     type: 'number' },
+    { key: 'clock_calendar_w',    label: 'Calendar W',     type: 'number' },
+    { key: 'clock_calendar_font', label: 'Calendar font',  type: 'font'   },
 ];
 
 const BT_FIELDS = [
@@ -159,7 +166,7 @@ const SD_FIELDS = [
 // Each entry: { title, fields, renderer (active section's renderSvg) }
 
 const SECTIONS = {
-    clock: { title: 'Clock',     fields: CLOCK_FIELDS, renderer: renderClock },
+    clock: { title: 'Home',      fields: CLOCK_FIELDS, renderer: renderClock },
     bt:    { title: 'Bluetooth', fields: BT_FIELDS,    renderer: renderBt    },
     radio: { title: 'Radio',     fields: RADIO_FIELDS, renderer: renderRadio },
     sd:    { title: 'SD Player', fields: SD_FIELDS,    renderer: renderSd    },
@@ -345,6 +352,18 @@ function renderClock(svg) {
             x: c.clock_event_indic_x, y: c.clock_event_indic_y, w: 16, h: 16,
             label: 'evt', cls: 'label-rect',
             fields: { x: 'clock_event_indic_x', y: 'clock_event_indic_y' },
+        });
+    }
+
+    if (c.clock_show_calendar) {
+        // Scrolling agenda line — top-left anchored, width for scroll (0 → full).
+        const fh = fontHeight(c.clock_calendar_font);
+        const cw = c.clock_calendar_w > 0 ? c.clock_calendar_w : W;
+        drawFreeElement(svg, {
+            x: c.clock_calendar_x, y: c.clock_calendar_y, w: cw, h: fh,
+            label: 'calendar', cls: 'label-rect',
+            fields: { x: 'clock_calendar_x', y: 'clock_calendar_y', w: 'clock_calendar_w' },
+            text: '23:30  Dentysta', textSize: fh,
         });
     }
 
