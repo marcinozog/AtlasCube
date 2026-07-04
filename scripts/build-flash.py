@@ -8,18 +8,20 @@ first run it clones and patches ESP-ADF for you; afterwards it compresses the we
 UI, builds, and asks how much of the device to overwrite:
 
   1) Everything (factory)     — bootloader + partition table + app + www + config
-                                (default settings JSON). A full image: use on a
-                                fresh or erased chip. This RESETS saved settings to
-                                defaults.
-  2) Firmware only            — app slot only, flashed over USB. Keeps the web UI
-                                and your settings. Needs a bootloader already on
-                                the chip (i.e. flashed before via option 1).
+                                (default settings JSON + station list). A full
+                                image: use on a fresh or erased chip. This RESETS
+                                saved settings AND the station list to defaults.
+  2) Firmware only            — app slot only, flashed over USB. Keeps the web UI,
+                                your settings and your station list. Needs a
+                                bootloader already on the chip (i.e. flashed before
+                                via option 1).
   3) Firmware + Web UI        — app + www partition, flashed over USB. Keeps your
-                                settings.
+                                settings and your station list.
 
 The choices map to the flash layout: the app, the editable web UI (`www`), and
-the user settings (`config`) live in separate partitions, so you can reflash code
-without losing the UI, and reflash the UI without losing settings.
+the user data (`config`: settings + the station list playlist.csv) live in
+separate partitions, so you can reflash code without losing the UI, and reflash
+the UI without losing settings or your stations.
 
 Tip: to tweak the web UI without flashing at all, edit files live in the browser
 (the on-device file editor / the built-in setup page upload) — they write to the
@@ -172,11 +174,11 @@ def ensure_setup(idf_path, adf_arg, force):
 
 
 ACTIONS = {
-    "all":   "Everything / factory          (bootloader + partitions + app + www + config; works on a blank chip; RESETS settings)",
-    "fw":    "Firmware only                 (app slot only, over USB; resets OTA boot slot; keeps web UI and settings)",
-    "ui":    "Firmware + Web UI             (app + www, over USB; resets OTA boot slot; keeps settings)",
+    "all":   "Everything / factory          (bootloader + partitions + app + www + config; works on a blank chip; RESETS settings + station list)",
+    "fw":    "Firmware only                 (app slot only, over USB; resets OTA boot slot; keeps web UI, settings and station list)",
+    "ui":    "Firmware + Web UI             (app + www, over USB; resets OTA boot slot; keeps settings and station list)",
     "build":  "Build only (e.g. OTA image)   (compile + compress web/*.gz; don't flash)",
-    "erase":  "Erase all                     (wipe the WHOLE flash: app + web UI + settings + NVS)",
+    "erase":  "Erase all                     (wipe the WHOLE flash: app + web UI + settings + station list + NVS)",
     "update": "Update from git              (git pull the repo incl. this script; then re-run the script)",
 }
 
@@ -316,7 +318,7 @@ def main():
     # Erase is a standalone, destructive flash op — no build needed.
     if action == "erase":
         if sys.stdin.isatty():
-            ans = input("Erase the ENTIRE flash (app, web UI, settings, NVS)? [y/N] ").strip().lower()
+            ans = input("Erase the ENTIRE flash (app, web UI, settings, station list, NVS)? [y/N] ").strip().lower()
             if ans not in ("y", "yes"):
                 print("Aborted.")
                 return
