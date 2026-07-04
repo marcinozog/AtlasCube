@@ -57,6 +57,7 @@
         <div class="toolbar" style="margin-top:10px">
             <a href="index.html" class="tool-btn tool-link">📻 Home</a>
             <a href="playlist.html" class="tool-btn tool-link">📝 Stations</a>
+            <a href="settings.html#tab=audio" class="tool-btn tool-link">🎚️ Equalizer</a>
         </div>
     </section>
 
@@ -76,7 +77,10 @@
     <section class="panel">
         <div class="panel-label">4 · SCHEDULE</div>
         <div class="field-hint" style="font-size:12px;line-height:1.6">
-            Set alarms and timed playback — wake up to a station or start music at a set hour.
+            The Events page has two tabs. <strong>🗓️ Events</strong> holds reminders,
+            birthdays, name days and voice notifications. <strong>🎵 Playback</strong>
+            schedules the radio or an SD file (or folder) to start automatically at a
+            set time — daily, weekly or one-off.
         </div>
         <div class="toolbar" style="margin-top:10px">
             <a href="events.html" class="tool-btn tool-link">🗓 Events</a>
@@ -88,17 +92,33 @@
         <div class="panel-label">5 · MAKE IT YOURS</div>
         <div class="field-hint" style="font-size:12px;line-height:1.6">
             Tune the device screen, dim &amp; wake behaviour, screensaver and colour theme.
+            Rearrange the on-screen layout with the Layout Editor.
         </div>
         <div class="toolbar" style="margin-top:10px">
             <a href="settings.html#tab=display" class="tool-btn tool-link">🖥️ Display</a>
+            <a href="settings.html#tab=night" class="tool-btn tool-link">🔅 Dim &amp; Wake</a>
             <a href="settings.html#tab=screensaver" class="tool-btn tool-link">🌀 Screensaver</a>
             <a href="settings.html#tab=colors" class="tool-btn tool-link">🎨 Theme</a>
+            <a href="layout.html" class="tool-btn tool-link">🖼️ Layout Editor</a>
         </div>
     </section>
 
-    <!-- ── 6. Advanced ── -->
+    <!-- ── 6. Smart home ── -->
     <section class="panel">
-        <div class="panel-label">6 · ADVANCED</div>
+        <div class="panel-label">6 · SMART HOME</div>
+        <div class="field-hint" style="font-size:12px;line-height:1.6">
+            Connect AtlasCube to your home automation over MQTT — control it from a broker
+            and build custom on-screen widgets that show or trigger your devices.
+        </div>
+        <div class="toolbar" style="margin-top:10px">
+            <a href="settings.html#tab=mqtt" class="tool-btn tool-link">📨 MQTT</a>
+            <a href="mqtt.html" class="tool-btn tool-link">🔧 Widgets</a>
+        </div>
+    </section>
+
+    <!-- ── 7. Advanced ── -->
+    <section class="panel">
+        <div class="panel-label">7 · ADVANCED</div>
         <div class="field-hint" style="font-size:12px;line-height:1.6">
             File manager, file editors, hardware pin setup and firmware updates (OTA) live
             under Settings → Tools. These are powerful — change them only if you know why.

@@ -7,6 +7,32 @@
     max-width: calc(100vw - 24px);
 }
 
+/* Two-way tab switch styled as a prominent segmented control, so the
+   Playback mode reads as a togglable option (people were missing it). */
+.tab-nav--segmented {
+    gap: 0;
+    padding: 3px;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+.tab-nav--segmented .tab-btn {
+    flex: 1 1 0;                              /* equal halves */
+    top: 0;
+    text-align: center;
+    border: none;
+    border-radius: calc(var(--radius-sm) - 2px);
+    font-size: 13px;
+    padding: 9px 12px;
+}
+.tab-nav--segmented .tab-btn.active {
+    background: var(--accent);
+    color: var(--bg);                        /* strong fill, high contrast */
+    border: none;
+}
+
 .ev-form-header {
     display: flex;
     justify-content: space-between;
