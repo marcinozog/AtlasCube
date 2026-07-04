@@ -16,12 +16,12 @@
 # slows the boot-time mount scan).
 #
 # Two SPIFFS partitions intentionally split the old `storage`:
-#   www    — editable web UI (gz assets) plus the station list (playlist.csv,
-#            shipped uncompressed). Uploaded/edited at runtime. Re-flashed
+#   www    — editable web UI (gz assets). Uploaded/edited at runtime. Re-flashed
 #            wholesale on a full flash; an OTA app update never touches it.
-#   config — user settings JSON (settings/theme/events/mqtt/ui_profile).
-#            Physically isolated so wiping or re-uploading www can never clobber
-#            the user's configuration. 128 KB is ample for a few KB of JSON plus
+#   config — user data: settings JSON (settings/theme/events/mqtt/ui_profile) plus
+#            the station list (playlist.csv, shipped uncompressed). Physically
+#            isolated so wiping or re-uploading www can never clobber it. 128 KB is
+#            ample for the JSON plus a realistic 512-station list (~60 KB) and
 #            SPIFFS overhead.
 #
 # Two app slots are required for OTA: the new image is written to the inactive

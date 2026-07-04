@@ -5,11 +5,12 @@ Run once before idf.py build when you change www files.
 Usage:
     python tools/compress_web.py
 
-The web UI and the default station list (playlist.csv) live in spiffs_image/www/.
-Compressible assets (html/css/js/svg/ico) are gzip'd into spiffs_image/web/*.gz;
-files that the firmware reads with a plain fopen (playlist.csv) are copied verbatim
-so they stay readable. User settings (settings/theme/events/mqtt JSON) live in
-spiffs_image/config/ and ship to the separate `config` partition — not touched here.
+The web UI lives in spiffs_image/www/. Compressible assets (html/css/js/svg/ico)
+are gzip'd into spiffs_image/web/*.gz; any files the firmware reads with a plain
+fopen (COPY_EXTENSIONS) are copied verbatim so they stay readable. User data
+(settings/theme/events/mqtt JSON plus the default station list playlist.csv) lives
+in spiffs_image/config/ and ships to the separate `config` partition — not touched
+here — so a www re-upload/re-flash can't clobber it.
 """
 import gzip
 import hashlib
@@ -85,8 +86,8 @@ def compute_version() -> str:
     """Short hash of the UI source assets (uncompressed). Identifies which build
     the www partition came from, independent of gzip output (the on-device file
     editor re-gzips uploads with a different zlib, so hashing the .gz would drift).
-    Only EXTENSIONS are hashed: playlist.csv and other user-editable data are
-    excluded so editing stations never flags the web UI as stale."""
+    Only EXTENSIONS are hashed: any verbatim/user-editable data (COPY_EXTENSIONS)
+    is excluded so editing it never flags the web UI as stale."""
     h = hashlib.sha256()
     for path in sorted(SRC_DIR.rglob("*")):
         if not path.is_file() or path.suffix not in EXTENSIONS:

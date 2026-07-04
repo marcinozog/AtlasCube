@@ -2,14 +2,16 @@
 
 #include "sdkconfig.h"
 
-// www partition (editable UI + station list) is mounted at /spiffs; user settings
-// (settings/theme/events/mqtt JSON) live on a separate `config` partition mounted
-// at /config so a www update can't clobber them. The playlist is content, not a
-// setting (up to PLAYLIST_MAX_ENTRIES stations), so it ships and lives on /spiffs.
+// www partition (editable UI) is mounted at /spiffs; user data (settings/theme/
+// events/mqtt JSON plus the station list) lives on a separate `config` partition
+// mounted at /config so a www update (re-upload/re-flash) can't clobber it. The
+// playlist is user data too, so it lives on /config; the default ships in the
+// config image and is seeded once from the old /spiffs location (see playlist.c).
 #define WEB_ROOT "/spiffs"
 #define CONFIG_ROOT "/config"
 #define SETTINGS_FILE "/config/settings.json"
-#define PLAYLIST_FILE "/spiffs/playlist.csv"
+#define PLAYLIST_FILE "/config/playlist.csv"
+#define PLAYLIST_FILE_LEGACY "/spiffs/playlist.csv"   // pre-move location, for one-time seed
 #define THEME_FILE "/config/theme.json"
 #define EVENTS_FILE "/config/events.json"
 

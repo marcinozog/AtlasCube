@@ -157,10 +157,9 @@ void app_main(void)
 void init_fs(void)
 {
     // Two SPIFFS partitions (see partitions16MB.csv):
-    //   www    → /spiffs : editable web UI + station list (playlist.csv), may be
-    //                       wiped/re-uploaded at runtime.
-    //   config → /config : user settings JSON, physically isolated so a www
-    //                       update can never clobber the configuration.
+    //   www    → /spiffs : editable web UI, may be wiped/re-uploaded at runtime.
+    //   config → /config : user data (settings JSON + station list playlist.csv),
+    //                       physically isolated so a www update can never clobber it.
     esp_vfs_spiffs_conf_t www_conf = {
         .base_path = "/spiffs",
         .partition_label = "www",

@@ -12,9 +12,36 @@ static const char *TAG = "PLAYLIST";
 EXT_RAM_BSS_ATTR static playlist_entry_t s_entries[PLAYLIST_MAX_ENTRIES];
 static int s_count = 0;
 
+// One-time migration: the playlist used to live on the www partition (/spiffs),
+// where a UI re-upload/re-flash would clobber it. It now lives on /config. If the
+// new location is empty but the old one still holds the user's stations (first
+// boot after the OTA that moved it), copy them over so they aren't lost. Runs once;
+// afterwards /config is the source of truth and the /spiffs copy is ignored.
+static void playlist_seed_from_legacy(void)
+{
+    FILE *dst_probe = fopen(PLAYLIST_FILE, "r");
+    if (dst_probe) { fclose(dst_probe); return; }   // already migrated / seeded
+
+    FILE *src = fopen(PLAYLIST_FILE_LEGACY, "r");
+    if (!src) return;                                // nothing to migrate
+
+    FILE *dst = fopen(PLAYLIST_FILE, "w");
+    if (!dst) { fclose(src); return; }
+
+    char buf[512];
+    size_t n;
+    while ((n = fread(buf, 1, sizeof(buf), src)) > 0) fwrite(buf, 1, n, dst);
+
+    fclose(src);
+    fclose(dst);
+    ESP_LOGI(TAG, "Migrated playlist %s -> %s", PLAYLIST_FILE_LEGACY, PLAYLIST_FILE);
+}
+
 esp_err_t playlist_load(void)
 {
     s_count = 0;
+
+    playlist_seed_from_legacy();
 
     FILE *f = fopen(PLAYLIST_FILE, "r");
     if (!f) {
