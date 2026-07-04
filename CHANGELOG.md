@@ -9,6 +9,15 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-07-04
+
+### Added
+- **events:** EV_CALENDAR mirror type + bulk PUT /api/events/calendar
+- **layout:** calendar widget fields on Home tab (renamed from Clock)
+
+### Fixed
+- **playlist:** move station list to /config so a www update can't clobber it
+
 ## [0.36.0] - 2026-07-04
 
 ### Added
@@ -541,7 +550,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.36.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.37.0...HEAD
+[0.37.0]: https://github.com/marcinozog/AtlasCube/compare/v0.36.0...v0.37.0
 [0.36.0]: https://github.com/marcinozog/AtlasCube/compare/v0.35.2...v0.36.0
 [0.35.2]: https://github.com/marcinozog/AtlasCube/compare/v0.35.1...v0.35.2
 [0.35.1]: https://github.com/marcinozog/AtlasCube/compare/v0.35.0...v0.35.1
