@@ -9,6 +9,22 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-07-04
+
+### Added
+- **events:** add voice-file audit on events.html cross-checking events ↔ /voice
+- **display:** add SD player quick-switch button on settings display tab
+- **wifi:** encoder navigation on the on-screen WiFi setup
+
+### Changed
+- **hls:** rebuild icy_stream lib with TLS keep-alive segment reuse
+- **tls:** re-enable hardware AES/SHA/MPI to fix HLS stutter + IDLE0 watchdog
+
+### Fixed
+- **fps:** toggle HIDDEN flag on the auto-created perf monitor to kill ghost overlay
+- **touch:** guard XPT2046 dead-MISO ghost-press + seed 320x240 calibration
+- **wifi:** show AP password on touch WiFi setup screen
+
 ## [0.35.2] - 2026-07-02
 
 ### Fixed
@@ -525,7 +541,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.35.2...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.36.0...HEAD
+[0.36.0]: https://github.com/marcinozog/AtlasCube/compare/v0.35.2...v0.36.0
 [0.35.2]: https://github.com/marcinozog/AtlasCube/compare/v0.35.1...v0.35.2
 [0.35.1]: https://github.com/marcinozog/AtlasCube/compare/v0.35.0...v0.35.1
 [0.35.0]: https://github.com/marcinozog/AtlasCube/compare/v0.34.2...v0.35.0
