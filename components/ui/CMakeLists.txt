@@ -37,6 +37,7 @@ idf_component_register(
         "widgets/now_playing_widget.c"
         "widgets/mode_indicator_widget.c"
         "widgets/event_indicator_widget.c"
+        "widgets/calendar_widget.c"
         "widgets/controls_overlay_widget.c"
         "widgets/hub_overlay_widget.c"
         "widgets/vol_overlay_widget.c"

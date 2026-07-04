@@ -884,6 +884,7 @@ static const char *ev_type_str(event_type_t t)
         case EV_ANNIVERSARY: return "anniversary";
         case EV_VOICE:       return "voice";
         case EV_SCHEDULE:    return "schedule";
+        case EV_CALENDAR:    return "calendar";
         default:             return "reminder";
     }
 }
@@ -897,6 +898,7 @@ static event_type_t ev_type_from_str(const char *s)
     if (strcmp(s, "alarm")       == 0) return EV_SCHEDULE;  // legacy → playback
     if (strcmp(s, "voice")       == 0) return EV_VOICE;
     if (strcmp(s, "schedule")    == 0) return EV_SCHEDULE;
+    if (strcmp(s, "calendar")    == 0) return EV_CALENDAR;
     return EV_REMINDER;
 }
 
@@ -1133,6 +1135,75 @@ static esp_err_t api_events_post_handler(httpd_req_t *req)
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, str);
     free(str);
+    return ESP_OK;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PUT /api/events/calendar  — bulk "wipe & replace" of all EV_CALENDAR events.
+// Body: a bare JSON array (or { "events": [...] }) of calendar events. The
+// phone calendar is the source of truth, so we mirror the whole current window
+// in one shot instead of tracking per-event ids. Registered before the
+// wildcard PUT so it wins the match over /api/events/{id}.
+// ─────────────────────────────────────────────────────────────────────────────
+static esp_err_t api_events_calendar_put_handler(httpd_req_t *req)
+{
+    char *buf = NULL;
+    if (read_body(req, &buf, 16384) != ESP_OK) return ESP_FAIL;   // ~100 events
+
+    cJSON *json = cJSON_Parse(buf);
+    free(buf);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    cJSON *arr = cJSON_IsArray(json) ? json : cJSON_GetObjectItem(json, "events");
+    if (!cJSON_IsArray(arr)) {
+        cJSON_Delete(json);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Expected array");
+        return ESP_FAIL;
+    }
+
+    int      n     = cJSON_GetArraySize(arr);
+    event_t *items = NULL;
+    int      count = 0;
+    if (n > 0) {
+        items = calloc(n, sizeof(event_t));
+        if (!items) {
+            cJSON_Delete(json);
+            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OOM");
+            return ESP_FAIL;
+        }
+        for (int i = 0; i < n; ++i) {
+            cJSON *it = cJSON_GetArrayItem(arr, i);
+            if (!cJSON_IsObject(it)) continue;
+
+            event_t e = {0};
+            e.enabled    = true;
+            e.recurrence = EV_REC_NONE;
+            event_patch_from_json(&e, it);
+            e.type = EV_CALENDAR;                 // enforce regardless of body
+            if (event_validate(&e) != NULL) continue;   // skip malformed entries
+            items[count++] = e;
+        }
+    }
+    cJSON_Delete(json);
+
+    esp_err_t rc = events_replace_calendar(items, count);
+    free(items);
+    if (rc != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Replace failed");
+        return ESP_FAIL;
+    }
+
+    // Refresh the calendar widget / indicators on the active screen promptly.
+    ui_event_t st = { .type = UI_EVT_STATE_CHANGED };
+    ui_event_send(&st);
+
+    char resp[48];
+    snprintf(resp, sizeof(resp), "{\"ok\":true,\"count\":%d}", count);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, resp);
     return ESP_OK;
 }
 
@@ -2824,6 +2895,14 @@ void http_server_start(void)
         .handler = api_events_post_handler,
     };
     httpd_register_uri_handler(server, &api_events_post);
+
+    // Exact path registered before the wildcard PUT below so it wins the match.
+    httpd_uri_t api_events_calendar_put = {
+        .uri     = "/api/events/calendar",
+        .method  = HTTP_PUT,
+        .handler = api_events_calendar_put_handler,
+    };
+    httpd_register_uri_handler(server, &api_events_calendar_put);
 
     httpd_uri_t api_events_put = {
         .uri     = "/api/events/*",

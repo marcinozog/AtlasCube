@@ -1020,6 +1020,11 @@ static void load_clock(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "clock_mode_indic_y",         &p->clock_mode_indic_y);
     load_i16 (obj, "clock_event_indic_x",        &p->clock_event_indic_x);
     load_i16 (obj, "clock_event_indic_y",        &p->clock_event_indic_y);
+    load_bool(obj, "clock_show_calendar",        &p->clock_show_calendar);
+    load_i16 (obj, "clock_calendar_x",           &p->clock_calendar_x);
+    load_i16 (obj, "clock_calendar_y",           &p->clock_calendar_y);
+    load_i16 (obj, "clock_calendar_w",           &p->clock_calendar_w);
+    load_font(obj, "clock_calendar_font",        &p->clock_calendar_font);
 }
 
 static void load_bt(const cJSON *obj, ui_profile_t *p)
@@ -1242,6 +1247,11 @@ static cJSON *dump_clock(const ui_profile_t *p)
     add_i16 (o, "clock_mode_indic_y",         p->clock_mode_indic_y);
     add_i16 (o, "clock_event_indic_x",        p->clock_event_indic_x);
     add_i16 (o, "clock_event_indic_y",        p->clock_event_indic_y);
+    add_bool(o, "clock_show_calendar",        p->clock_show_calendar);
+    add_i16 (o, "clock_calendar_x",           p->clock_calendar_x);
+    add_i16 (o, "clock_calendar_y",           p->clock_calendar_y);
+    add_i16 (o, "clock_calendar_w",           p->clock_calendar_w);
+    add_font(o, "clock_calendar_font",        p->clock_calendar_font);
     return o;
 }
 

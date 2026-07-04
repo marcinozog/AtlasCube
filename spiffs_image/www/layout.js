@@ -363,7 +363,7 @@ function renderClock(svg) {
             x: c.clock_calendar_x, y: c.clock_calendar_y, w: cw, h: fh,
             label: 'calendar', cls: 'label-rect',
             fields: { x: 'clock_calendar_x', y: 'clock_calendar_y', w: 'clock_calendar_w' },
-            text: '23:30  Dentysta', textSize: fh,
+            text: '18:30  Dentist appt.', textSize: fh,
         });
     }
 

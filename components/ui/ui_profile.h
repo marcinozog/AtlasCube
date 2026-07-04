@@ -117,6 +117,14 @@ typedef struct {
     int16_t          clock_event_indic_x;      // event_indicator widget position
     int16_t          clock_event_indic_y;
 
+    // Calendar widget — next upcoming EV_CALENDAR event for today (mirror of the
+    // phone calendar). Hidden when nothing is upcoming; off by default.
+    bool             clock_show_calendar;
+    int16_t          clock_calendar_x;
+    int16_t          clock_calendar_y;
+    int16_t          clock_calendar_w;         // label width for scroll (0 → full width)
+    const lv_font_t *clock_calendar_font;
+
     // screen_radio — absolute LCD coordinates (top-left origin)
     int16_t          radio_np_x;               // now-playing widget (station + title labels)
     int16_t          radio_np_y;

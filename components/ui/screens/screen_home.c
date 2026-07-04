@@ -2,6 +2,7 @@
 #include "screen_home.h"
 #include "mode_indicator_widget.h"
 #include "event_indicator_widget.h"
+#include "calendar_widget.h"
 #include "hub_overlay_widget.h"
 #include "vol_overlay_widget.h"
 #include "app_state.h"
@@ -203,6 +204,11 @@ static void home_create(lv_obj_t *parent)
         event_indicator_create(parent, p->clock_event_indic_x, p->clock_event_indic_y);
     }
 
+    if (p->clock_show_calendar) {
+        calendar_widget_create(parent, p->clock_calendar_x, p->clock_calendar_y,
+                               p->clock_calendar_w, p->clock_calendar_font);
+    }
+
     if (p->clock_show_strip) {
         s_strip = make_panel(parent, p->clock_strip_x, p->clock_strip_y,
                              p->clock_strip_w, p->clock_strip_h, th->bg_secondary);
@@ -239,6 +245,7 @@ static void home_destroy(void)
     hub_overlay_destroy();
     vol_overlay_hide();
 
+    calendar_widget_destroy();
     event_indicator_destroy();
     mode_indicator_destroy();
     s_root = s_strip = NULL;
@@ -258,6 +265,7 @@ static void home_on_event(const ui_event_t *ev)
             netinfo_update();
             mode_indicator_update();
             event_indicator_update();
+            calendar_widget_update();
             hub_overlay_set_mode(home_ctrl_mode());
             break;
         case UI_EVT_TITLE_CHANGED:
@@ -346,6 +354,7 @@ static void home_apply_theme(void)
 
     mode_indicator_apply_theme();
     event_indicator_apply_theme();
+    calendar_widget_apply_theme();
     lv_obj_invalidate(s_root);
 }
 

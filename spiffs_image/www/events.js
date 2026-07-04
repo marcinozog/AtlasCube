@@ -11,6 +11,7 @@ const TYPE_ICON = {
     reminder:    '⏰',
     voice:       '🗣️',
     schedule:    '🎵',
+    calendar:    '📅',
 };
 
 const TYPE_LABEL = {
@@ -20,6 +21,7 @@ const TYPE_LABEL = {
     reminder:    'Reminder',
     voice:       'Voice',
     schedule:    'Playback',
+    calendar:    'Calendar',
 };
 
 const REC_LABEL = {

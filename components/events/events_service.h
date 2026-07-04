@@ -14,7 +14,7 @@ extern "C" {
 // Model
 // --------------------------------------------------------------------------
 
-#define EVENTS_MAX          50
+#define EVENTS_MAX          100
 #define EVENT_ID_LEN        9       // 8 hex + '\0'
 #define EVENT_TITLE_LEN     64
 #define EVENT_SOUND_LEN     128     // SD path (rel. to card root) or /voice WAV, '\0' incl.
@@ -26,6 +26,11 @@ typedef enum {
     EV_ANNIVERSARY,
     EV_VOICE,
     EV_SCHEDULE,
+    // Read-only mirror of an external source (phone calendar). Source of truth
+    // lives outside the firmware, so these are never fired (no melody/toast) and
+    // are excluded from the 🔔 pending counter — they only feed the on-screen
+    // calendar widget. Managed in bulk via events_replace_calendar().
+    EV_CALENDAR,
     EV_TYPE_COUNT
 } event_type_t;
 
@@ -123,6 +128,23 @@ int events_get_all(event_t *out, int max);
 
 /** Number of active events in memory. */
 int events_count(void);
+
+/**
+ * Bulk "wipe & replace" of all EV_CALENDAR events: drops every existing
+ * calendar event, then appends `arr[0..n)` (their `type` is forced to
+ * EV_CALENDAR, a random id is generated when empty). Non-calendar events are
+ * left untouched. One SPIFFS write. Excess entries beyond EVENTS_MAX are
+ * dropped silently. Called from the bulk sync endpoint.
+ */
+esp_err_t events_replace_calendar(const event_t *arr, int n);
+
+/**
+ * Copies the next upcoming EV_CALENDAR event for today (soonest target time
+ * that hasn't passed yet) into `out`. Returns false when NTP isn't synced or
+ * nothing is upcoming. Used by the calendar widget (LVGL task) — copies rather
+ * than returning a pointer so a concurrent bulk replace can't pull data out.
+ */
+bool events_calendar_current(event_t *out);
 
 /** Looks up by id; returns an internal pointer or NULL. Do not modify. */
 const event_t *events_find(const char *id);

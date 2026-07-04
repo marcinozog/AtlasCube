@@ -78,6 +78,7 @@ static const char *type_to_str(event_type_t t)
         case EV_ANNIVERSARY: return "anniversary";
         case EV_VOICE:       return "voice";
         case EV_SCHEDULE:    return "schedule";
+        case EV_CALENDAR:    return "calendar";
         default:             return "reminder";
     }
 }
@@ -93,6 +94,7 @@ static event_type_t type_from_str(const char *s)
     if (strcmp(s, "alarm")       == 0) return EV_SCHEDULE;
     if (strcmp(s, "voice")       == 0) return EV_VOICE;
     if (strcmp(s, "schedule")    == 0) return EV_SCHEDULE;
+    if (strcmp(s, "calendar")    == 0) return EV_CALENDAR;
     return EV_REMINDER;
 }
 
@@ -354,6 +356,8 @@ static void check_events(void)
     lock();
     for (int i = 0; i < s_count; ++i) {
         event_t *e = &s_events[i];
+        // Calendar mirror events are display-only — never fired.
+        if (e->type == EV_CALENDAR) continue;
         if (!matches_today(e, &lt)) continue;
 
         int target = e->hour * 60 + e->minute;
@@ -496,6 +500,68 @@ int events_count(void)
     return n;
 }
 
+esp_err_t events_replace_calendar(const event_t *arr, int n)
+{
+    if (n < 0) n = 0;
+
+    lock();
+
+    // Drop existing calendar events, compacting the arrays in place.
+    int w = 0;
+    for (int r = 0; r < s_count; ++r) {
+        if (s_events[r].type == EV_CALENDAR) continue;
+        if (w != r) {
+            s_events[w]      = s_events[r];
+            s_fired_today[w] = s_fired_today[r];
+        }
+        w++;
+    }
+    s_count = w;
+
+    // Append the new calendar set (forcing type + id), respecting capacity.
+    for (int i = 0; i < n && s_count < EVENTS_MAX; ++i) {
+        event_t e = arr[i];
+        e.type = EV_CALENDAR;
+        if (e.id[0] == '\0') gen_id(e.id);
+        s_events[s_count]      = e;
+        s_fired_today[s_count] = false;   // never fires, but keep arrays aligned
+        s_count++;
+    }
+
+    esp_err_t err = save_to_file();
+    unlock();
+
+    ESP_LOGI(TAG, "Calendar replaced: %d event(s), total now %d", n, s_count);
+    return err;
+}
+
+bool events_calendar_current(event_t *out)
+{
+    if (!out || !s_initialized || !ntp_service_is_synced()) return false;
+
+    time_t now = time(NULL);
+    struct tm lt;
+    localtime_r(&now, &lt);
+    int now_min = lt.tm_hour * 60 + lt.tm_min;
+
+    lock();
+    int best        = -1;
+    int best_target = 24 * 60 + 1;   // sentinel past end-of-day
+    for (int i = 0; i < s_count; ++i) {
+        const event_t *e = &s_events[i];
+        if (e->type != EV_CALENDAR) continue;
+        if (!matches_today(e, &lt)) continue;      // checks enabled + today's date
+
+        int target = e->hour * 60 + e->minute;
+        if (target < now_min) continue;            // already passed today
+        if (target < best_target) { best_target = target; best = i; }
+    }
+    bool found = best >= 0;
+    if (found) *out = s_events[best];
+    unlock();
+    return found;
+}
+
 const event_t *events_find(const char *id)
 {
     if (!id) return NULL;
@@ -519,6 +585,7 @@ const char *events_type_label(event_type_t t)
         case EV_ANNIVERSARY: return "ANNIVERSARY";
         case EV_VOICE:       return "VOICE";
         case EV_SCHEDULE:    return "PLAYBACK";
+        case EV_CALENDAR:    return "CALENDAR";
         case EV_REMINDER:
         default:             return "REMINDER";
     }
@@ -537,6 +604,7 @@ int events_pending_today_count(void)
     int n = 0;
     for (int i = 0; i < s_count; ++i) {
         const event_t *e = &s_events[i];
+        if (e->type == EV_CALENDAR) continue;   // display-only, not counted
         if (!e->enabled) continue;
         if (s_fired_today[i]) continue;
         if (!matches_today(e, &lt)) continue;
