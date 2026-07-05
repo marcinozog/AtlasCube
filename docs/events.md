@@ -46,8 +46,8 @@ only feeds the Home-screen calendar widget (see
 | `volume` | int | `EV_SCHEDULE` / `EV_VOICE`: 0..100, applied via `settings_set_volume()` at fire time so playback starts at a predictable level |
 | `sound` | `char[128]` | `EV_VOICE`: WAV filename under `/voice`. `EV_SCHEDULE`: SD file/folder path relative to the card root (empty → play `station`) |
 
-Maximum `EVENTS_MAX = 100` events (shared between user-managed and
-calendar-mirror events). Static array in RAM, guarded by a mutex against
+Maximum `EVENTS_MAX = 200` events (shared between user-managed and
+calendar-mirror events). Static array in PSRAM, guarded by a mutex against
 concurrent access from scheduler and CRUD.
 
 Plus runtime-only state (RAM, not persisted):
@@ -332,4 +332,4 @@ fed by `events_calendar_current()`.
   a circular dependency. In practice: set TZ once on first run.
   `settings.html` has a warning about this.
 - Buzzer patterns are fixed — not configurable per event.
-- Maximum 100 events (user-managed + calendar-mirror combined).
+- Maximum 200 events (user-managed + calendar-mirror combined).

@@ -14,7 +14,7 @@ extern "C" {
 // Model
 // --------------------------------------------------------------------------
 
-#define EVENTS_MAX          100
+#define EVENTS_MAX          200
 #define EVENT_ID_LEN        9       // 8 hex + '\0'
 #define EVENT_TITLE_LEN     64
 #define EVENT_SOUND_LEN     128     // SD path (rel. to card root) or /voice WAV, '\0' incl.
