@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 
 // SD-card music player with folder browsing. Scans a folder for audio files
 // (mp3/wav/flac/aac) and subfolders; plays files as a queue. Mutually exclusive
@@ -40,6 +41,12 @@ void sd_player_prev(void);
 // restore path to resume SD music after the notification finishes. No-op if no
 // track was queued.
 void sd_player_resume_current(void);
+
+// Current track progress for the on-screen player. Position is wall-clock based
+// (freezes on pause); duration is read from the file header at track start and
+// is 0 when unknown (FLAC/AAC or unparseable). Both are 0 when SD isn't active.
+uint32_t sd_player_position_ms(void);
+uint32_t sd_player_duration_ms(void);
 
 // Pause/resume the current track (toggle). Shuffle (toggle) and repeat (cycle
 // none → all → one) affect next/auto-advance selection.

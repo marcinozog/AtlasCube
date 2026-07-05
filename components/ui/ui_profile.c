@@ -74,6 +74,7 @@ static const ui_profile_t k_defaults = {
     .sd_folder_font            = &lv_font_montserrat_12_pl,
     .sd_info_y                 = 30,
     .sd_info_font              = &lv_font_montserrat_12_pl,
+    .sd_show_time              = false,   // no spare line on a 64px mono panel
     .sd_show_mode_indicator    = false,
     .sd_show_clock             = false,
     .sd_show_event_indicator   = false,
@@ -244,6 +245,7 @@ static const ui_profile_t k_defaults = {
     .sd_folder_font            = &lv_font_montserrat_12_pl,
     .sd_info_y                 = 52,
     .sd_info_font              = &lv_font_montserrat_12_pl,
+    .sd_show_time              = false,   // no spare line on a 64px mono panel
     .sd_show_mode_indicator    = false,
     .sd_show_clock             = false,
     .sd_show_event_indicator   = false,
@@ -420,8 +422,9 @@ static const ui_profile_t k_defaults = {
     .sd_title_font             = &lv_font_montserrat_14_pl,
     .sd_folder_y               = 278,
     .sd_folder_font            = &lv_font_montserrat_14_pl,
-    .sd_info_y                 = 182,
+    .sd_info_y                 = 170,   // raised so the "elapsed/total" line below fits above the VU
     .sd_info_font              = &lv_font_montserrat_12_pl,
+    .sd_show_time              = true,
     .sd_show_mode_indicator    = true,
     .sd_show_clock             = true,
     .sd_show_event_indicator   = true,
@@ -609,8 +612,9 @@ static const ui_profile_t k_defaults = {
     .sd_title_font             = &lv_font_montserrat_14_pl,
     .sd_folder_y               = 209,
     .sd_folder_font            = &lv_font_montserrat_14_pl,
-    .sd_info_y                 = 130,
+    .sd_info_y                 = 100,   // raised so the "elapsed/total" line below fits above the VU
     .sd_info_font              = &lv_font_montserrat_12_pl,
+    .sd_show_time              = true,
     .sd_show_mode_indicator    = true,
     .sd_show_clock             = true,
     .sd_show_event_indicator   = true,
@@ -791,8 +795,9 @@ static const ui_profile_t k_defaults = {
     .sd_title_font             = &lv_font_montserrat_14_pl,
     .sd_folder_y               = 278,
     .sd_folder_font            = &lv_font_montserrat_14_pl,
-    .sd_info_y                 = 174,
+    .sd_info_y                 = 140,   // raised so the "elapsed/total" line below fits above the VU
     .sd_info_font              = &lv_font_montserrat_14_pl,
+    .sd_show_time              = true,
     .sd_show_mode_indicator    = true,
     .sd_show_clock             = true,
     .sd_show_event_indicator   = true,
@@ -1131,6 +1136,7 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_font(obj, "sd_folder_font",            &p->sd_folder_font);
     load_i16 (obj, "sd_info_y",                 &p->sd_info_y);
     load_font(obj, "sd_info_font",              &p->sd_info_font);
+    load_bool(obj, "sd_show_time",              &p->sd_show_time);
     load_bool(obj, "sd_show_mode_indicator",    &p->sd_show_mode_indicator);
     load_bool(obj, "sd_show_clock",             &p->sd_show_clock);
     load_bool(obj, "sd_show_event_indicator",   &p->sd_show_event_indicator);
@@ -1157,6 +1163,7 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_font(o, "sd_folder_font",            p->sd_folder_font);
     add_i16 (o, "sd_info_y",                 p->sd_info_y);
     add_font(o, "sd_info_font",              p->sd_info_font);
+    add_bool(o, "sd_show_time",              p->sd_show_time);
     add_bool(o, "sd_show_mode_indicator",    p->sd_show_mode_indicator);
     add_bool(o, "sd_show_clock",             p->sd_show_clock);
     add_bool(o, "sd_show_event_indicator",   p->sd_show_event_indicator);

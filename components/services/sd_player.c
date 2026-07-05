@@ -2,7 +2,7 @@
 #include "sdcard.h"
 #include "audio_file_player.h"
 #include "audio_engine.h"
-#include "id3.h"
+#include "metadata.h"
 #include "app_state.h"
 #include "settings.h"
 #include "radio_service.h"
@@ -10,6 +10,7 @@
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "esp_random.h"
+#include "esp_timer.h"
 #include <dirent.h>
 #include <string.h>
 #include <strings.h>
@@ -39,6 +40,14 @@ static char s_dir[SD_DIR_MAX];    // last browsed dir (reported to the UI)
 static char s_play_dir[SD_DIR_MAX];
 static int  s_play_index = -1;
 static int  s_play_count = 0;
+
+// On-screen progress. Position is wall-clock (the prebuilt engine's byte position
+// isn't queried): s_track_start_us is shifted forward by each pause interval so
+// the elapsed time excludes paused spans. s_dur_ms is read once per track from
+// the file header (0 = unknown → the UI shows elapsed only).
+static int64_t  s_track_start_us = 0;   // 0 = idle
+static int64_t  s_pause_start_us = 0;   // 0 = running
+static uint32_t s_dur_ms         = 0;
 
 // Modes.
 typedef enum { SD_REPEAT_NONE = 0, SD_REPEAT_ALL, SD_REPEAT_ONE } sd_repeat_t;
@@ -171,6 +180,11 @@ static void play_at(int idx, int n)
 
     char path[SD_DIR_MAX + SD_NAME_MAX];
     snprintf(path, sizeof(path), "%s/%s", s_play_dir, s_queue[idx]);
+
+    // Start the on-screen progress clock and read the track length once.
+    s_track_start_us = esp_timer_get_time();
+    s_pause_start_us = 0;
+    s_dur_ms         = media_duration_ms(path);
 
     // Display title from the ID3 tag ("Artist - Title"); fall back to the file
     // name when there's no usable tag. sd_track stays the file name (the queue
@@ -379,11 +393,35 @@ void sd_player_toggle_pause(void)
     if (!sd_player_is_active()) return;
     if (audio_engine_is_paused()) {
         audio_engine_resume();
+        if (s_pause_start_us) {                       // exclude the paused span
+            s_track_start_us += esp_timer_get_time() - s_pause_start_us;
+            s_pause_start_us  = 0;
+        }
         app_state_update(&(app_state_patch_t){ .has_sd_paused = true, .sd_paused = false });
     } else {
         audio_engine_pause();
+        s_pause_start_us = esp_timer_get_time();
         app_state_update(&(app_state_patch_t){ .has_sd_paused = true, .sd_paused = true });
     }
+}
+
+
+// Wall-clock playback position of the current SD track, in ms (0 when idle).
+// Freezes while paused; runs slightly ahead of the speaker by the pipeline
+// startup latency (~0.5 s).
+uint32_t sd_player_position_ms(void)
+{
+    if (!sd_player_is_active() || !s_track_start_us) return 0;
+    int64_t base = s_pause_start_us ? s_pause_start_us : esp_timer_get_time();
+    int64_t ms   = (base - s_track_start_us) / 1000;
+    return ms > 0 ? (uint32_t)ms : 0;
+}
+
+// Length of the current SD track in ms, read from the file header at track start
+// (0 = unknown, e.g. FLAC/AAC or an unparseable file).
+uint32_t sd_player_duration_ms(void)
+{
+    return sd_player_is_active() ? s_dur_ms : 0;
 }
 
 

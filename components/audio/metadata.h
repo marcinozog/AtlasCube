@@ -2,7 +2,11 @@
 
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
 
+// Local-file audio metadata for the SD music player: "now playing" title (from
+// the ID3v2 tag) and track length.
+//
 // Minimal ID3v2 tag reader for the SD music player's "now playing" title.
 //
 // Reads the TIT2 (title) and TPE1 (artist) text frames from an MP3's ID3v2
@@ -17,3 +21,9 @@
 // missing/unsupported tag, or any read error — the caller then falls back to
 // the file name.
 bool id3_read_title(const char *path, char *out, size_t out_size);
+
+// Exact play length of a local track, in milliseconds. MP3 (CBR via bitrate,
+// VBR via the Xing/Info/VBRI frame count) and WAV (PCM header) are supported;
+// other formats return 0. Reads only the file's head, so it's cheap to call at
+// track start.
+uint32_t media_duration_ms(const char *path);

@@ -3,7 +3,7 @@ idf_component_register(
         "audio_net_player.c"
         "audio_file_player.c"
         "audio_levels.c"
-        "id3.c"
+        "metadata.c"
         "heap_report.c"
     INCLUDE_DIRS "."
     REQUIRES

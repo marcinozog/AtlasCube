@@ -163,6 +163,7 @@ typedef struct {
     const lv_font_t *sd_folder_font;
     int16_t          sd_info_y;                // "VOL: n%   PAUSED   SHUFFLE ..."
     const lv_font_t *sd_info_font;
+    bool             sd_show_time;             // "elapsed / total" row (needs a spare line; off on mono)
 
     bool             sd_show_mode_indicator;
     bool             sd_show_clock;

@@ -29,10 +29,12 @@
 
 static const char *TAG = "SCR_SD";
 
-static lv_obj_t *s_root   = NULL;
-static lv_obj_t *s_title  = NULL;   // track title (ID3 or file name)
-static lv_obj_t *s_folder = NULL;   // "<folder>   idx/count"
-static lv_obj_t *s_info   = NULL;   // "VOL: n%   PAUSED   SHUFFLE   REPEAT ..."
+static lv_obj_t   *s_root   = NULL;
+static lv_obj_t   *s_title  = NULL;   // track title (ID3 or file name)
+static lv_obj_t   *s_folder = NULL;   // "<folder>   idx/count"
+static lv_obj_t   *s_info   = NULL;   // "VOL: n%   PAUSED   SHUFFLE   REPEAT ..."
+static lv_obj_t   *s_time   = NULL;   // "1:23 / 4:56" playback progress
+static lv_timer_t *s_tick   = NULL;   // 1 Hz refresh for the progress counter
 
 // Last path segment for display ("/sdcard/music/Rock" → "Rock").
 static const char *basename_of(const char *path)
@@ -41,6 +43,36 @@ static const char *basename_of(const char *path)
     const char *slash = strrchr(path, '/');
     return slash ? slash + 1 : path;
 }
+
+static void fmt_mmss(char *buf, size_t n, uint32_t ms)
+{
+    uint32_t s = ms / 1000;
+    snprintf(buf, n, "%lu:%02lu", (unsigned long)(s / 60), (unsigned long)(s % 60));
+}
+
+// Refresh the "elapsed / total" counter. Driven by the 1 Hz timer (there is no
+// per-second UI heartbeat) and once on create. Shows elapsed only until the
+// length is known (or for formats without one).
+static void progress_update(void)
+{
+    if (!s_time) return;
+    if (!app_state_get()->sd_active) { lv_label_set_text(s_time, ""); return; }
+
+    uint32_t pos = sd_player_position_ms();
+    uint32_t dur = sd_player_duration_ms();
+    char p[8], d[8], out[20];
+    fmt_mmss(p, sizeof(p), pos);
+    if (dur) {
+        if (pos > dur) pos = dur;
+        fmt_mmss(d, sizeof(d), dur);
+        snprintf(out, sizeof(out), "%s / %s", p, d);
+    } else {
+        snprintf(out, sizeof(out), "%s", p);
+    }
+    lv_label_set_text(s_time, out);
+}
+
+static void tick_cb(lv_timer_t *t) { (void)t; progress_update(); }
 
 static const char *repeat_str(int r)
 {
@@ -79,6 +111,8 @@ static void refresh_from_state(void)
     if (r[0])          n += snprintf(info + n, sizeof(info) - n, "   %s", r);
     lv_label_set_text(s_info, info);
 
+    progress_update();            // snap the counter on track/source change
+
     controls_overlay_refresh();   // keep center play/stop in sync with external changes
 }
 
@@ -110,6 +144,14 @@ static void sd_player_screen_create(lv_obj_t *parent)
     s_folder = make_centered_label(parent, p->sd_folder_font, th->accent,     p->sd_folder_y);
     s_info   = make_centered_label(parent, p->sd_info_font,   th->text_muted, p->sd_info_y);
 
+    // Playback counter just below the VOL/mode line (position follows the
+    // profile-driven s_info). Skipped on panels with no spare line (mono).
+    if (p->sd_show_time) {
+        s_time = make_centered_label(parent, p->sd_info_font, th->text_muted, 0);
+        lv_obj_align_to(s_time, s_info, LV_ALIGN_OUT_BOTTOM_MID, 0, 4);
+        s_tick = lv_timer_create(tick_cb, 1000, NULL);
+    }
+
     // Clock + indicators (own sd_* layout fields, same widgets as screen_radio).
     if (p->sd_show_clock) {
         clock_widget_create(parent, p->sd_clock_widget_x, p->sd_clock_widget_y,
@@ -134,6 +176,7 @@ static void sd_player_screen_create(lv_obj_t *parent)
 
 static void sd_player_screen_destroy(void)
 {
+    if (s_tick) { lv_timer_delete(s_tick); s_tick = NULL; }
     controls_overlay_destroy();
     vol_overlay_hide();
     vu_widget_destroy();
@@ -144,6 +187,7 @@ static void sd_player_screen_destroy(void)
     s_title  = NULL;
     s_folder = NULL;
     s_info   = NULL;
+    s_time   = NULL;
     ESP_LOGI(TAG, "Destroyed");
 }
 
