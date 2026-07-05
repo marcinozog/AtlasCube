@@ -9,6 +9,18 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.38.0] - 2026-07-05
+
+### Added
+- **web:** add config settings export/import (JSON backup) to Tools
+- **events:** raise EVENTS_MAX 100→200 (buffers already in PSRAM)
+
+### Fixed
+- **web:** cache-bust JS/CSS with ?v=<www-version> so UI updates aren't masked by stale browser cache
+- **web:** retry per-file www uploads to survive transient connection resets
+- **web:** style Export/Import settings buttons like the other tool buttons
+- **web:** stream file uploads through gzip so large UI files (settings.js) aren't capped at 64 KB
+
 ## [0.37.0] - 2026-07-04
 
 ### Added
@@ -550,7 +562,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.37.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.38.0...HEAD
+[0.38.0]: https://github.com/marcinozog/AtlasCube/compare/v0.37.0...v0.38.0
 [0.37.0]: https://github.com/marcinozog/AtlasCube/compare/v0.36.0...v0.37.0
 [0.36.0]: https://github.com/marcinozog/AtlasCube/compare/v0.35.2...v0.36.0
 [0.35.2]: https://github.com/marcinozog/AtlasCube/compare/v0.35.1...v0.35.2
