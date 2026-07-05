@@ -1282,6 +1282,21 @@ function showWwwState(state) {
 // gzips HTML/CSS/JS). Sequential — the endpoint takes one file per request. After
 // the batch, re-read /api/state so the "out of date" warning clears once the new
 // www_version.txt has landed.
+// PUT a single file, retrying a few times on a dropped connection — uploading
+// the whole www set back-to-back can transiently starve the device's internal
+// RAM (see radio-https-fragility) and reset one socket; a retry clears it.
+async function putWithRetry(file, tries = 3) {
+    for (let a = 1; a <= tries; a++) {
+        try {
+            const r = await fetch('/api/files/' + encodeURIComponent(file.name),
+                                  { method: 'PUT', body: file });
+            if (r.ok) return true;
+        } catch (_) { /* connection reset — fall through to retry */ }
+        if (a < tries) await new Promise(res => setTimeout(res, 250));
+    }
+    return false;
+}
+
 async function uploadWebUi() {
     const fileEl = document.getElementById('www_files');
     const btn    = document.getElementById('www_btn');
@@ -1301,11 +1316,7 @@ async function uploadWebUi() {
     for (let i = 0; i < list.length; i++) {
         const file = list[i];
         showStatusEl('www_status', 'Uploading ' + file.name + ' (' + (i + 1) + '/' + list.length + ')…', '');
-        try {
-            const r = await fetch('/api/files/' + encodeURIComponent(file.name),
-                                  { method: 'PUT', body: file });
-            if (r.ok) ok++; else failed.push(file.name);
-        } catch (_) { failed.push(file.name); }
+        if (await putWithRetry(file)) ok++; else failed.push(file.name);
     }
     btn.disabled = false;
     showStatusEl('www_status', 'Done: ' + ok + ' uploaded' +
