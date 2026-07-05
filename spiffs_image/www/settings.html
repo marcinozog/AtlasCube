@@ -712,6 +712,27 @@
             <button id="www_btn" onclick="uploadWebUi()">⬆️ Upload web UI files</button>
             <div id="www_status" class="save-status"></div>
         </div>
+
+        <div class="panel">
+            <label class="field-label">⚙️ Settings &amp; stations backup</label>
+            <div class="field-hint">
+                Download every user file on the <code>config</code> partition (settings,
+                theme, events, MQTT, layout and the station list) as a single
+                <code>.json</code> — a snapshot to keep before a full USB flash, which
+                erases them. Wi-Fi/MQTT passwords live in a separate secure store and are
+                <strong>not</strong> included. Restore reuploads each file, then restart.
+            </div>
+            <button id="cfg_export_btn" onclick="exportSettings()">⬇️ Export settings</button>
+            <div id="cfg_export_status" class="save-status"></div>
+
+            <div class="ota-divider"></div>
+            <div class="field-hint">
+                Restore a backup made above. Existing files are overwritten.
+            </div>
+            <input type="file" id="cfg_import_file" class="ota-file" accept=".json" />
+            <button id="cfg_import_btn" onclick="importSettings()">⬆️ Import settings</button>
+            <div id="cfg_import_status" class="save-status"></div>
+        </div>
     </section>
 
     <!-- ── Toolbar ── -->

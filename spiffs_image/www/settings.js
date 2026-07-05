@@ -1323,6 +1323,87 @@ function showStatusEl(id, msg, kind) {
     el.className = 'save-status' + (kind ? ' ' + kind : '');
 }
 
+// ── Settings backup / restore ────────────────────────────────────────────────
+// Bundle every file on the config partition into one JSON. The config files are
+// listed via /api/files?root=config and read through the static handler (it falls
+// back to the config root), then written back via PUT /api/files/<name>?root=config.
+// Layout-independent: unlike a raw partition dump it survives partition resizes,
+// which is exactly the v0.38.0 (128 KB→1 MB) case that erases user data on flash.
+const CFG_BACKUP_MAGIC = 'atlascube-settings';
+
+async function exportSettings() {
+    const btn = document.getElementById('cfg_export_btn');
+    btn.disabled = true;
+    showStatusEl('cfg_export_status', 'Reading config files…', '');
+    try {
+        const list = await (await fetch('/api/files?root=config', { cache: 'no-store' })).json();
+        if (!Array.isArray(list) || !list.length) {
+            showStatusEl('cfg_export_status', 'Nothing to export.', 'error');
+            return;
+        }
+        const files = {};
+        for (let i = 0; i < list.length; i++) {
+            const name = list[i].name;
+            showStatusEl('cfg_export_status', 'Reading ' + name + ' (' + (i + 1) + '/' + list.length + ')…', '');
+            const r = await fetch('/' + encodeURIComponent(name), { cache: 'no-store' });
+            if (!r.ok) throw new Error('read ' + name + ' → HTTP ' + r.status);
+            files[name] = await r.text();
+        }
+        const bundle = { format: CFG_BACKUP_MAGIC, version: 1, created: new Date().toISOString(), files };
+        const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
+        const stamp = bundle.created.slice(0, 19).replace(/[:T]/g, '-');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'atlascube-settings-' + stamp + '.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+        showStatusEl('cfg_export_status', '✅ Exported ' + list.length + ' files.', 'ok');
+    } catch (e) {
+        showStatusEl('cfg_export_status', '❌ Export failed: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function importSettings() {
+    const fileEl = document.getElementById('cfg_import_file');
+    const btn    = document.getElementById('cfg_import_btn');
+    const f = fileEl.files[0];
+    if (!f) { showStatusEl('cfg_import_status', '❌ Choose a backup .json first', 'error'); return; }
+
+    let bundle;
+    try {
+        bundle = JSON.parse(await f.text());
+    } catch (_) {
+        showStatusEl('cfg_import_status', '❌ Not valid JSON', 'error');
+        return;
+    }
+    if (!bundle || bundle.format !== CFG_BACKUP_MAGIC || !bundle.files || typeof bundle.files !== 'object') {
+        showStatusEl('cfg_import_status', '❌ Not an AtlasCube settings backup', 'error');
+        return;
+    }
+    const names = Object.keys(bundle.files);
+    if (!names.length) { showStatusEl('cfg_import_status', '❌ Backup is empty', 'error'); return; }
+
+    btn.disabled = true;
+    let ok = 0, fail = 0;
+    for (let i = 0; i < names.length; i++) {
+        const name = names[i];
+        showStatusEl('cfg_import_status', 'Restoring ' + name + ' (' + (i + 1) + '/' + names.length + ')…', '');
+        try {
+            const r = await fetch('/api/files/' + encodeURIComponent(name) + '?root=config',
+                                  { method: 'PUT', body: bundle.files[name] });
+            if (r.ok) ok++; else fail++;
+        } catch (_) { fail++; }
+    }
+    btn.disabled = false;
+    showStatusEl('cfg_import_status',
+                 'Done: ' + ok + ' restored' + (fail ? ', ' + fail + ' failed' : '') +
+                 '. Restart the device to apply.', fail > 0 ? 'error' : 'ok');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────────────────────────────────────

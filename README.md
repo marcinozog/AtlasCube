@@ -171,6 +171,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Optional microSD card over SDMMC (1-bit mode), wired to the build's SDMMC pins
 - Web **SD file manager** (Settings → Tools) — browse folders, create directories, upload, rename, and delete files straight from the browser (LVGL `.bin` images preview inline); the Android app can push files too
 - Web **SPIFFS ⇄ SD backup/restore** (Settings → Tools) — a separate dual-pane manager that copies files between the device's SPIFFS and the SD card: back up configs / web UI to the card and restore them later. Client-side, copy-only
+- Web **Settings & stations backup** (Settings → Tools) — one-click *Export settings* downloads every user file on the config partition (settings, theme, events, MQTT, layout, station list) as a single `.json`, and *Import settings* restores it. No SD card needed; layout-independent, so a backup survives a partition change (e.g. before a full USB flash that erases user data). Wi-Fi/MQTT passwords are stored separately and are not included
 - Backs the photo-frame slides, voice-notification clips, local music for the SD player, plus the optional screen wallpaper and custom boot splash logo; more on-card content (e.g. station logos) is on the roadmap
 
 **Android app** *(beta)*
