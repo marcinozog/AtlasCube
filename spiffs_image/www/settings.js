@@ -1296,19 +1296,21 @@ async function uploadWebUi() {
     }
 
     btn.disabled = true;
-    let ok = 0, fail = 0;
+    let ok = 0;
+    const failed = [];
     for (let i = 0; i < list.length; i++) {
         const file = list[i];
         showStatusEl('www_status', 'Uploading ' + file.name + ' (' + (i + 1) + '/' + list.length + ')…', '');
         try {
             const r = await fetch('/api/files/' + encodeURIComponent(file.name),
                                   { method: 'PUT', body: file });
-            if (r.ok) ok++; else fail++;
-        } catch (_) { fail++; }
+            if (r.ok) ok++; else failed.push(file.name);
+        } catch (_) { failed.push(file.name); }
     }
     btn.disabled = false;
-    showStatusEl('www_status', 'Done: ' + ok + ' uploaded' + (fail ? ', ' + fail + ' failed' : '') +
-                 '. Reload the page to use the new UI.', fail > 0 ? 'error' : 'ok');
+    showStatusEl('www_status', 'Done: ' + ok + ' uploaded' +
+                 (failed.length ? ', ' + failed.length + ' failed (' + failed.join(', ') + ')' : '') +
+                 '. Reload the page to use the new UI.', failed.length > 0 ? 'error' : 'ok');
     try {
         const st = await (await fetch('/api/state', { cache: 'no-store' })).json();
         showWwwState(st);

@@ -1638,36 +1638,10 @@ static esp_err_t api_mqtt_post_handler(httpd_req_t *req)
 // GET /api/files            — JSON [{name, size, gz}] of editable files
 // PUT /api/files/<name>     — body = plain text; server gzips when applicable
 // ─────────────────────────────────────────────────────────────────────────────
-static esp_err_t gzip_buffer(const char *src, size_t src_len,
-                             uint8_t **out_buf, size_t *out_len)
-{
-    z_stream s = {0};
-    // windowBits = 15 + 16 → gzip wrapper (matches tools/compress_web.py output)
-    if (deflateInit2(&s, Z_BEST_COMPRESSION, Z_DEFLATED,
-                     15 + 16, 8, Z_DEFAULT_STRATEGY) != Z_OK) {
-        return ESP_FAIL;
-    }
-    unsigned long bound = deflateBound(&s, src_len);
-    uint8_t *buf = malloc(bound);
-    if (!buf) {
-        deflateEnd(&s);
-        return ESP_ERR_NO_MEM;
-    }
-    s.next_in   = (Bytef *)src;
-    s.avail_in  = src_len;
-    s.next_out  = buf;
-    s.avail_out = bound;
-    int r = deflate(&s, Z_FINISH);
-    if (r != Z_STREAM_END) {
-        free(buf);
-        deflateEnd(&s);
-        return ESP_FAIL;
-    }
-    *out_len = s.total_out;
-    *out_buf = buf;
-    deflateEnd(&s);
-    return ESP_OK;
-}
+// api_files_put_handler streams the body through zlib in fixed chunks rather
+// than buffering the whole file, so an upload isn't capped by RAM.
+#define FILE_STREAM_CHUNK 4096
+#define WWW_UPLOAD_MAX    (512 * 1024)   // sanity guard, not a real-world limit
 
 // Resolve ?root=config → /config (user settings), default → /spiffs (www).
 static const char *files_root_from_query(httpd_req_t *req)
@@ -1817,27 +1791,15 @@ static esp_err_t api_files_put_handler(httpd_req_t *req)
                     strcmp(ext, ".css")  == 0 ||
                     strcmp(ext, ".js")   == 0);
 
+    // Stream the body through gzip (or straight to disk for raw formats) so a
+    // large file (e.g. settings.js) never has to be buffered whole in RAM — only
+    // small fixed chunk buffers plus zlib's own state. No fixed size cap;
+    // WWW_UPLOAD_MAX is just a sanity guard against a runaway request.
     int total = req->content_len;
-    if (total < 0 || total > 65536) {
+    if (total <= 0 || total > WWW_UPLOAD_MAX) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad content length");
         return ESP_FAIL;
     }
-    char *body = malloc((size_t)total + 1);
-    if (!body) {
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OOM");
-        return ESP_FAIL;
-    }
-    int recv = 0;
-    while (recv < total) {
-        int r = httpd_req_recv(req, body + recv, total - recv);
-        if (r <= 0) {
-            free(body);
-            httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Recv error");
-            return ESP_FAIL;
-        }
-        recv += r;
-    }
-    body[total] = '\0';
 
     char dest_path[256];
     if (do_gzip)
@@ -1850,28 +1812,64 @@ static esp_err_t api_files_put_handler(httpd_req_t *req)
 
     FILE *f = fopen(tmp_path, "wb");
     if (!f) {
-        free(body);
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Cannot open tmp");
         return ESP_FAIL;
     }
 
-    size_t bytes_written = 0;
-    esp_err_t rc = ESP_OK;
-    if (do_gzip) {
-        uint8_t *gz = NULL;
-        size_t gz_len = 0;
-        rc = gzip_buffer(body, (size_t)total, &gz, &gz_len);
-        free(body);
-        if (rc == ESP_OK) {
-            bytes_written = fwrite(gz, 1, gz_len, f);
-            free(gz);
-            if (bytes_written != gz_len) rc = ESP_FAIL;
-        }
-    } else {
-        bytes_written = fwrite(body, 1, (size_t)total, f);
-        free(body);
-        if (bytes_written != (size_t)total) rc = ESP_FAIL;
+    uint8_t *in  = malloc(FILE_STREAM_CHUNK);
+    uint8_t *out = do_gzip ? malloc(FILE_STREAM_CHUNK) : NULL;
+    if (!in || (do_gzip && !out)) {
+        free(in); free(out);
+        fclose(f); remove(tmp_path);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OOM");
+        return ESP_FAIL;
     }
+
+    z_stream zs = {0};
+    // windowBits = 15 + 16 → gzip wrapper (matches tools/compress_web.py output)
+    if (do_gzip && deflateInit2(&zs, Z_BEST_COMPRESSION, Z_DEFLATED,
+                                15 + 16, 8, Z_DEFAULT_STRATEGY) != Z_OK) {
+        free(in); free(out);
+        fclose(f); remove(tmp_path);
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "gzip init");
+        return ESP_FAIL;
+    }
+
+    size_t bytes_written = 0;   // bytes landed on disk (compressed size when gzip)
+    esp_err_t rc = ESP_OK;
+    int received = 0;
+    while (received < total) {
+        int want = total - received;
+        if (want > FILE_STREAM_CHUNK) want = FILE_STREAM_CHUNK;
+        int r = httpd_req_recv(req, (char *)in, want);
+        if (r == HTTPD_SOCK_ERR_TIMEOUT) continue;
+        if (r <= 0) { rc = ESP_FAIL; break; }
+        received += r;
+
+        if (do_gzip) {
+            // Feed this chunk to deflate and drain all it produces; Z_FINISH on
+            // the last chunk flushes the remaining output plus the gzip trailer.
+            int flush = (received >= total) ? Z_FINISH : Z_NO_FLUSH;
+            zs.next_in  = in;
+            zs.avail_in = r;
+            do {
+                zs.next_out  = out;
+                zs.avail_out = FILE_STREAM_CHUNK;
+                if (deflate(&zs, flush) == Z_STREAM_ERROR) { rc = ESP_FAIL; break; }
+                size_t have = FILE_STREAM_CHUNK - zs.avail_out;
+                if (have && fwrite(out, 1, have, f) != have) { rc = ESP_FAIL; break; }
+                bytes_written += have;
+            } while (zs.avail_out == 0);
+            if (rc != ESP_OK) break;
+        } else {
+            if (fwrite(in, 1, (size_t)r, f) != (size_t)r) { rc = ESP_FAIL; break; }
+            bytes_written += (size_t)r;
+        }
+    }
+
+    if (do_gzip) deflateEnd(&zs);
+    free(in);
+    free(out);
     fclose(f);
 
     if (rc != ESP_OK) {
