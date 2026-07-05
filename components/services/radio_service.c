@@ -10,6 +10,8 @@
 #include "sdcard.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "freertos/FreeRTOS.h"   // + krótkotrwały worker task na internal-stack (finish_task)
+#include "freertos/task.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -120,19 +122,34 @@ static void on_notification_finished(void)
 }
 
 
-// Single file-finished dispatcher (audio_file_player has one callback). A voice
-// notification restoring the previous source takes priority; otherwise, if the
-// SD music player owns the file, advance its queue.
-static void on_file_finished(void)
+// Restores the previous source after a file (voice notification / SD track) ends.
+// Runs on its own short-lived task, NOT inline in on_file_finished(): the engine
+// fires the file-end callback on audio_play_task, whose 8 KB stack lives in PSRAM
+// (see audio_engine.c). The restore path persists settings to SPIFFS, and a flash
+// write disables the cache — which makes any PSRAM-resident stack unreadable and
+// trips esp_task_stack_is_sane_cache_disabled(). This task's stack is in internal
+// RAM, so it's cache-safe. It self-deletes, so devices that never fire a file-end
+// pay nothing.
+static void finish_task(void *arg)
 {
+    (void)arg;
+
+    // A voice notification restoring the previous source takes priority;
+    // otherwise, if the SD music player owns the file, advance its queue.
     if (s_notif_active) {
         on_notification_finished();
-        return;
-    }
-    if (sd_player_is_active()) {
+    } else if (sd_player_is_active()) {
         sd_player_on_track_end();
-        return;
     }
+
+    vTaskDelete(NULL);   // stack reclaimed by the idle task
+}
+
+// Single file-finished dispatcher, invoked by the audio engine on audio_play_task
+// (PSRAM stack). Only spawns the restore worker — see finish_task() for why.
+static void on_file_finished(void)
+{
+    xTaskCreate(finish_task, "radio_finish", 4096, NULL, 5, NULL);
 }
 
 
