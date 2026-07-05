@@ -14,6 +14,7 @@ here — so a www re-upload/re-flash can't clobber it.
 """
 import gzip
 import hashlib
+import re
 import shutil
 import subprocess
 from datetime import datetime, timezone
@@ -41,6 +42,36 @@ VERSION_NAME = "www_version.txt"
 SRC_VERSION  = SRC_DIR / VERSION_NAME
 DST_VERSION  = DST_DIR / VERSION_NAME
 HEADER_FILE  = REPO_ROOT / "components" / "web" / "web_assets_version.h"
+
+# Cache-busting: JS/CSS are served with a long max-age (see http_server.c) so the
+# browser doesn't re-fetch every asset on each page open — important while radio is
+# streaming. The downside is a stale cached script/style after a UI update. To bust
+# it we stamp ?v=<www-version> onto every LOCAL .js/.css reference in the HTML.
+# Because HTML itself is served no-cache, the browser always sees the fresh tag and
+# a changed ?v= forces a re-fetch; unchanged files keep their long cache.
+#
+# VER_STRIP removes a previously injected ?v=<12 hex> so re-runs are idempotent and
+# so the query never feeds back into the version hash. VER_INJECT matches a local
+# asset ref (not http(s):// or protocol-relative //) whose value ends in .js/.css.
+VER_STRIP  = re.compile(rb"\?v=[0-9a-f]{12}")
+VER_INJECT = re.compile(rb'((?:src|href)=")(?!https?://|//)([^"]+?\.(?:js|css))(")')
+
+def stamp_html_assets(data: bytes, ver: bytes) -> bytes:
+    stripped = VER_STRIP.sub(b"", data)
+    return VER_INJECT.sub(lambda m: m.group(1) + m.group(2) + b"?v=" + ver + m.group(3), stripped)
+
+def inject_versions(ver: str):
+    """Rewrite www/*.html in place, stamping ?v=<ver> onto local .js/.css refs.
+    Runs before compression so the web/*.gz copies inherit the stamp, and touches
+    the source so a raw www re-upload through /setup carries it too. Only writes
+    when the bytes actually change, to avoid needless mtime churn / gz rebuilds."""
+    ver_b = ver.encode()
+    for path in sorted(SRC_DIR.rglob("*.html")):
+        raw = path.read_bytes()
+        out = stamp_html_assets(raw, ver_b)
+        if out != raw:
+            path.write_bytes(out)
+            print(f"  stamp {path.relative_to(SRC_DIR)}  (?v={ver})")
 
 def compress_file(src: Path):
     rel = src.relative_to(SRC_DIR)
@@ -97,7 +128,12 @@ def compute_version() -> str:
         # Normalise CRLF -> LF so the hash matches on Windows (autocrlf checkout)
         # and Linux/CI, which would otherwise hash different bytes for the same
         # source and flag a spurious www mismatch after an OTA.
-        h.update(path.read_bytes().replace(b"\r\n", b"\n"))
+        data = path.read_bytes().replace(b"\r\n", b"\n")
+        # Strip our own cache-busting ?v=<hash> from HTML before hashing, otherwise
+        # injecting the hash would change the HTML and thus the next hash forever.
+        if path.suffix == ".html":
+            data = VER_STRIP.sub(b"", data)
+        h.update(data)
     return h.hexdigest()[:12]
 
 
@@ -137,6 +173,13 @@ def write_version(ver: str):
 
 def main():
     print(f"Compressing web assets from {SRC_DIR}/\n")
+
+    # Version first: it's independent of the ?v= we're about to inject (the hash
+    # normalises it away), and injecting must happen before compression so the
+    # web/*.gz copies inherit the stamped HTML.
+    version = compute_version()
+    inject_versions(version)
+
     expected = set()
     for path in sorted(SRC_DIR.rglob("*")):
         if not path.is_file() or ".gz" in path.suffixes:
@@ -147,7 +190,7 @@ def main():
         elif path.suffix in COPY_EXTENSIONS:
             copy_file(path)
             expected.add(DST_DIR / path.relative_to(SRC_DIR))
-    write_version(compute_version())
+    write_version(version)
     expected.add(DST_VERSION)
     prune_stale(expected)
     print("\nDone. Flash with: idf.py build flash")
