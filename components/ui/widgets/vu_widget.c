@@ -14,11 +14,11 @@
 static const char *TAG = "VU_WIDGET";
 
 // ── Tunables ────────────────────────────────────────────────────────────────
-// N=2048 → 21.5 Hz/bin at 44.1 kHz, window ~46 ms. Shorter window = less visual
-// lag behind the audio (the bar reflects ~46 ms of past PCM, not ~93 ms as N=4096
-// did). Trade-off: the 31 & 62 Hz half-octave bars partly re-merge (bins 1-2),
-// but the bars above ~125 Hz still separate. Bars sit on the EQ's own band
-// centres (2 per octave) so meter and equaliser describe the same bands.
+// N=1024 → 43 Hz/bin at 44.1 kHz, window ~23 ms (short = low visual lag). N=2048 was
+// tried to sharpen the bass: it only moved the first single-bar tone from ~800 Hz to
+// ~500 Hz for 2× the FFT work and a longer window — a poor trade, so back to 1024.
+// The real lever for low-end separation is the meter's low edge (f_lo in build_bins),
+// not N: below ~1-2 bins wide the lowest bars gang together no matter the resolution.
 #define VU_FFT_N      1024         // FFT window (power of two)
 #define VU_BARS_MAX   12           // bar count — bars are log-spaced across the
                                    // spectrum (decoupled from the EQ band count),
@@ -83,18 +83,19 @@ static void edge_to_bins(int bar, float f_lo, float f_hi)
     s_bin_hi[bar] = hi;
 }
 
-// Lay VU_BARS_MAX bars log-spaced across the audible band (60 Hz … VU_FREQ_TOP),
-// decoupled from the EQ band count so the bar count is free. The low edge starts
-// at 60 Hz, not lower: at N=1024 (43 Hz/bin) anything below ~90 Hz collapses onto
-// FFT bin 1, so starting lower just made the bottom bars move identically. 60 Hz
-// keeps each low bar at least one bin wide; the small speaker can't reproduce
-// sub-60 Hz anyway. Top is clamped below the Nyquist noise. Each bar spans one
-// equal ratio step, so spacing is even on a log (musical) axis.
+// Lay VU_BARS_MAX bars log-spaced across the audible band (f_lo … VU_FREQ_TOP),
+// decoupled from the EQ band count so the bar count is free. The low edge starts at
+// 120 Hz, not lower: at N=1024 (43 Hz/bin) the bars below ~120 Hz are only 1-2 bins
+// wide and share bins with their neighbours, so a bass tone lit 4-5 bottom bars
+// identically no matter the FFT size. Starting at 120 Hz packs the 12 bars into the
+// range the FFT can actually resolve (single-bar tones from ~300 Hz up) and the small
+// speaker can't reproduce sub-120 Hz anyway. Top is clamped below the Nyquist noise.
+// Each bar spans one equal ratio step, so spacing is even on a log (musical) axis.
 static void build_bins(void)
 {
     s_nbars = VU_BARS_MAX;
 
-    const float f_lo  = 60.0f;          // see note above (FFT bin resolution)
+    const float f_lo  = 120.0f;         // see note above (FFT bin resolution)
     const float f_hi  = VU_FREQ_TOP;
     const float ratio = powf(f_hi / f_lo, 1.0f / (float)s_nbars);
 
@@ -213,7 +214,7 @@ static void fft_compute(void)
     }
 }
 
-// Dedicated FFT task, pinned to core 0 so the 4096-pt transform never blocks the
+// Dedicated FFT task, pinned to core 0 so the FFT transform never blocks the
 // LVGL task's blocking display flush. Working buffers live in PSRAM; only this
 // ~4 KB stack sits in internal RAM. Yields between frames at the VU refresh rate.
 static void fft_task(void *arg)
