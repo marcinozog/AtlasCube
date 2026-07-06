@@ -106,6 +106,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 **Audio**
 - Strumieniowe radio internetowe — MP3, AAC, FLAC (przez [esp-adf](https://github.com/espressif/esp-adf))
 - Strumienie HLS — gra segmentowane playlisty `.m3u8` obok zwykłych strumieni MP3/AAC/FLAC; segmenty MPEG-TS są w locie demuxowane do ADTS
+- Podcasty — gra odcinek podcastu jako **skończony strumień HTTP** (tryb inny niż radio bez końca: koniec pliku to czyste zatrzymanie, nie ponowne łączenie), z tytułem odcinka na ekranie, i **wznawia w połowie odcinka** przez żądanie HTTP `Range`. Katalogiem jest [aplikacja Android](https://github.com/marcinozog/AtlasCube-Remote/) — przegląda/wyszukuje feedy (iTunes, listy Apple lub dodanie po URL — wszystko bez klucza API), wysyła bezpośredni URL odcinka i zapamiętuje pozycję odtwarzania; dźwięk leci prosto z CDN do urządzenia, dokładnie jak stacja radiowa
 - Metadane ICY — nazwa stacji i aktualny utwór widoczne na ekranie oraz w web UI
 - 10-pasmowy EQ parametryczny + miękka regulacja głośności (własny element DSP, rdzeń 1)
 - Playlista — do 50 stacji, trzymana w SPIFFS
@@ -173,7 +174,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 
 **Aplikacja Android** *(beta)*
 - Pilot do odtwarzania, zmiany stacji i głośności
-- Wzorowana na YoRadio Remote, plus rzeczy specyficzne dla AtlasCube: wydarzenia, korektor, edytor layoutu
+- Wzorowana na YoRadio Remote, plus rzeczy specyficzne dla AtlasCube: wydarzenia, korektor, edytor layoutu, przeglądarka podcastów (RSS + wyszukiwarka iTunes/Apple, wznawianie)
 - Osobne repozytorium z własnym README: [AtlasCube-Remote](https://github.com/marcinozog/AtlasCube-Remote/)
 
 ---
