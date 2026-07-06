@@ -143,8 +143,8 @@
 // Set TP_CLK/TP_MOSI to real pins to put the controller on a dedicated SPI3 bus.
 #define TP_CLK      -1
 #define TP_MOSI     -1
-#define TP_MISO     45
-#define TP_CS       46
+#define TP_MISO     47 //45
+#define TP_CS       48 //46
 #define TP_IRQ      -1   // PENIRQ, -1 = polled
 #endif
 
