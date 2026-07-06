@@ -9,6 +9,23 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-07-06
+
+### Added
+- **podcast:** finite-stream playback, episode title + mid-file resume
+- **sd:** add playback progress bar + folder/info show toggles on SD player screen
+- **sd:** show elapsed/total time on SD player screen (MP3/WAV duration + wall-clock position)
+
+### Changed
+- **pins:** changed default pins for XPT2046
+
+### Fixed
+- **uv:** narrow band to 150Hz–13kHz so top bar is audible + low bars gang less
+- **audio:** run file-end restore on internal-stack task to avoid flash-cache panic on audio_play's PSRAM stack
+
+### Other
+- **vu:** raise meter low edge 60→120Hz so bass bars stop ganging together
+
 ## [0.38.0] - 2026-07-05
 
 ### Added
@@ -562,7 +579,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.38.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.39.0...HEAD
+[0.39.0]: https://github.com/marcinozog/AtlasCube/compare/v0.38.0...v0.39.0
 [0.38.0]: https://github.com/marcinozog/AtlasCube/compare/v0.37.0...v0.38.0
 [0.37.0]: https://github.com/marcinozog/AtlasCube/compare/v0.36.0...v0.37.0
 [0.36.0]: https://github.com/marcinozog/AtlasCube/compare/v0.35.2...v0.36.0
