@@ -28,8 +28,9 @@ static const char *TAG = "VU_WIDGET";
                                    // with the audio decoders), so 20 fps leaves headroom
                                    // for glitch-free audio. Drop to 33 for smoother VU.
 #define VU_SAMPLE_HZ  44100.0f     // PLAYBACK_SAMPLE_RATE (fixed post-rsp)
-#define VU_FREQ_TOP   17000.0f     // clamp the top band below Nyquist so the last
-                                   // bar doesn't peak on >16 kHz codec noise
+#define VU_FREQ_TOP   13000.0f     // clamp the top band well below Nyquist: above ~13 kHz
+                                   // the small speaker and the ear both roll off and music
+                                   // has little energy, so the last bar barely moved at 17k
 #define VU_DB_FLOOR    0.0f        // peak power(dB) mapped to bar = 0
 #define VU_DB_CEIL     36.0f       // peak power(dB) mapped to bar = full height
 #define VU_ATTACK      0.95f       // smoothing when a bar rises (fast)
@@ -85,17 +86,17 @@ static void edge_to_bins(int bar, float f_lo, float f_hi)
 
 // Lay VU_BARS_MAX bars log-spaced across the audible band (f_lo … VU_FREQ_TOP),
 // decoupled from the EQ band count so the bar count is free. The low edge starts at
-// 120 Hz, not lower: at N=1024 (43 Hz/bin) the bars below ~120 Hz are only 1-2 bins
-// wide and share bins with their neighbours, so a bass tone lit 4-5 bottom bars
-// identically no matter the FFT size. Starting at 120 Hz packs the 12 bars into the
-// range the FFT can actually resolve (single-bar tones from ~300 Hz up) and the small
-// speaker can't reproduce sub-120 Hz anyway. Top is clamped below the Nyquist noise.
-// Each bar spans one equal ratio step, so spacing is even on a log (musical) axis.
+// 150 Hz, not lower: at N=1024 (43 Hz/bin) the bars below ~150 Hz are only 1-2 bins
+// wide and share bins with their neighbours, so a bass tone lit several bottom bars
+// identically no matter the FFT size. Starting at 150 Hz spreads the lowest bars a bit
+// further apart (less ganging) and the small speaker can't reproduce sub-150 Hz anyway.
+// With f_hi=13 kHz the 12 bars fall in the range both the FFT resolves and the speaker/ear
+// actually respond to. Each bar spans one equal ratio step (even spacing on a log axis).
 static void build_bins(void)
 {
     s_nbars = VU_BARS_MAX;
 
-    const float f_lo  = 120.0f;         // see note above (FFT bin resolution)
+    const float f_lo  = 150.0f;         // see note above (FFT bin resolution)
     const float f_hi  = VU_FREQ_TOP;
     const float ratio = powf(f_hi / f_lo, 1.0f / (float)s_nbars);
 
