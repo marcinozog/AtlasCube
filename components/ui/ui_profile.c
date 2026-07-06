@@ -74,7 +74,12 @@ static const ui_profile_t k_defaults = {
     .sd_folder_font            = &lv_font_montserrat_12_pl,
     .sd_info_y                 = 30,
     .sd_info_font              = &lv_font_montserrat_12_pl,
+    .sd_show_folder            = true,
+    .sd_show_info              = true,
     .sd_show_time              = false,   // no spare line on a 64px mono panel
+    .sd_show_bar               = false,
+    .sd_bar_w                  = 0,
+    .sd_bar_h                  = 0,
     .sd_show_mode_indicator    = false,
     .sd_show_clock             = false,
     .sd_show_event_indicator   = false,
@@ -245,7 +250,12 @@ static const ui_profile_t k_defaults = {
     .sd_folder_font            = &lv_font_montserrat_12_pl,
     .sd_info_y                 = 52,
     .sd_info_font              = &lv_font_montserrat_12_pl,
+    .sd_show_folder            = true,
+    .sd_show_info              = true,
     .sd_show_time              = false,   // no spare line on a 64px mono panel
+    .sd_show_bar               = false,
+    .sd_bar_w                  = 0,
+    .sd_bar_h                  = 0,
     .sd_show_mode_indicator    = false,
     .sd_show_clock             = false,
     .sd_show_event_indicator   = false,
@@ -424,7 +434,12 @@ static const ui_profile_t k_defaults = {
     .sd_folder_font            = &lv_font_montserrat_14_pl,
     .sd_info_y                 = 170,   // raised so the "elapsed/total" line below fits above the VU
     .sd_info_font              = &lv_font_montserrat_12_pl,
+    .sd_show_folder            = true,
+    .sd_show_info              = true,
     .sd_show_time              = true,
+    .sd_show_bar               = true,
+    .sd_bar_w                  = 200,
+    .sd_bar_h                  = 6,
     .sd_show_mode_indicator    = true,
     .sd_show_clock             = true,
     .sd_show_event_indicator   = true,
@@ -614,7 +629,12 @@ static const ui_profile_t k_defaults = {
     .sd_folder_font            = &lv_font_montserrat_14_pl,
     .sd_info_y                 = 100,   // raised so the "elapsed/total" line below fits above the VU
     .sd_info_font              = &lv_font_montserrat_12_pl,
+    .sd_show_folder            = true,
+    .sd_show_info              = true,
     .sd_show_time              = true,
+    .sd_show_bar               = true,
+    .sd_bar_w                  = 280,
+    .sd_bar_h                  = 6,
     .sd_show_mode_indicator    = true,
     .sd_show_clock             = true,
     .sd_show_event_indicator   = true,
@@ -797,7 +817,12 @@ static const ui_profile_t k_defaults = {
     .sd_folder_font            = &lv_font_montserrat_14_pl,
     .sd_info_y                 = 140,   // raised so the "elapsed/total" line below fits above the VU
     .sd_info_font              = &lv_font_montserrat_14_pl,
+    .sd_show_folder            = true,
+    .sd_show_info              = true,
     .sd_show_time              = true,
+    .sd_show_bar               = true,
+    .sd_bar_w                  = 420,
+    .sd_bar_h                  = 8,
     .sd_show_mode_indicator    = true,
     .sd_show_clock             = true,
     .sd_show_event_indicator   = true,
@@ -1136,7 +1161,12 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_font(obj, "sd_folder_font",            &p->sd_folder_font);
     load_i16 (obj, "sd_info_y",                 &p->sd_info_y);
     load_font(obj, "sd_info_font",              &p->sd_info_font);
+    load_bool(obj, "sd_show_folder",            &p->sd_show_folder);
+    load_bool(obj, "sd_show_info",              &p->sd_show_info);
     load_bool(obj, "sd_show_time",              &p->sd_show_time);
+    load_bool(obj, "sd_show_bar",               &p->sd_show_bar);
+    load_i16 (obj, "sd_bar_w",                  &p->sd_bar_w);
+    load_i16 (obj, "sd_bar_h",                  &p->sd_bar_h);
     load_bool(obj, "sd_show_mode_indicator",    &p->sd_show_mode_indicator);
     load_bool(obj, "sd_show_clock",             &p->sd_show_clock);
     load_bool(obj, "sd_show_event_indicator",   &p->sd_show_event_indicator);
@@ -1163,7 +1193,12 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_font(o, "sd_folder_font",            p->sd_folder_font);
     add_i16 (o, "sd_info_y",                 p->sd_info_y);
     add_font(o, "sd_info_font",              p->sd_info_font);
+    add_bool(o, "sd_show_folder",            p->sd_show_folder);
+    add_bool(o, "sd_show_info",              p->sd_show_info);
     add_bool(o, "sd_show_time",              p->sd_show_time);
+    add_bool(o, "sd_show_bar",               p->sd_show_bar);
+    add_i16 (o, "sd_bar_w",                  p->sd_bar_w);
+    add_i16 (o, "sd_bar_h",                  p->sd_bar_h);
     add_bool(o, "sd_show_mode_indicator",    p->sd_show_mode_indicator);
     add_bool(o, "sd_show_clock",             p->sd_show_clock);
     add_bool(o, "sd_show_event_indicator",   p->sd_show_event_indicator);

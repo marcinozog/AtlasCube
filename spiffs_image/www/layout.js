@@ -138,11 +138,17 @@ const SD_FIELDS = [
     { key: 'sd_title_y',    label: 'Title Y',          type: 'number' },
     { key: 'sd_title_font', label: 'Title font',       type: 'font'   },
 
+    { key: 'sd_show_folder', label: 'Show folder',     type: 'bool'   },
     { key: 'sd_folder_y',    label: 'Folder Y',        type: 'number' },
     { key: 'sd_folder_font', label: 'Folder font',     type: 'font'   },
 
+    { key: 'sd_show_info', label: 'Show info',         type: 'bool'   },
     { key: 'sd_info_y',    label: 'Info Y',            type: 'number' },
     { key: 'sd_info_font', label: 'Info font',         type: 'font'   },
+
+    { key: 'sd_show_bar',             label: 'Show progress bar', type: 'bool' },
+    { key: 'sd_bar_w',                label: 'Bar W',             type: 'number' },
+    { key: 'sd_bar_h',                label: 'Bar H',             type: 'number' },
 
     { key: 'sd_show_mode_indicator',  label: 'Show mode indic.',  type: 'bool' },
     { key: 'sd_mode_indic_x',         label: 'Mode indic. X',     type: 'number' },
@@ -545,10 +551,26 @@ function renderSd(svg) {
 
     drawLabel(svg, 0, s.sd_title_y, s.sd_title_font, 'Artist - Title',
               'title', { y: 'sd_title_y' });
-    drawLabel(svg, 0, s.sd_folder_y, s.sd_folder_font, 'Folder   3/12',
-              'folder', { y: 'sd_folder_y' });
-    drawLabel(svg, 0, s.sd_info_y, s.sd_info_font, 'VOL: 42%   SHUFFLE   REPEAT ALL',
-              'info', { y: 'sd_info_y' });
+    if (s.sd_show_folder) {
+        drawLabel(svg, 0, s.sd_folder_y, s.sd_folder_font, 'Folder   3/12',
+                  'folder', { y: 'sd_folder_y' });
+    }
+    if (s.sd_show_info) {
+        drawLabel(svg, 0, s.sd_info_y, s.sd_info_font, 'VOL: 42%   SHUFFLE   REPEAT ALL',
+                  'info', { y: 'sd_info_y' });
+    }
+
+    if (s.sd_show_bar && s.sd_bar_w > 0) {
+        // Firmware centers the bar and anchors it under the (optional) time row;
+        // approximate that here for a size/position hint (not draggable).
+        const fh = fontHeight(s.sd_info_font);
+        const timeRow = s.sd_show_time ? fh + 4 : 0;
+        const by = s.sd_info_y + fh + 4 + timeRow;
+        const bx = Math.round((state.meta.screen_w - s.sd_bar_w) / 2);
+        rect(svg, { x: bx, y: by, width: s.sd_bar_w, height: s.sd_bar_h,
+                    class: 'label-rect' });
+        tag(svg, bx + 2, by + 7, 'bar');
+    }
 
     if (s.sd_show_mode_indicator) {
         drawFreeElement(svg, {
