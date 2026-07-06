@@ -50,7 +50,13 @@ HEADER_FILE  = REPO_ROOT / "components" / "web" / "web_assets_version.h"
 # Because HTML itself is served no-cache, the browser always sees the fresh tag and
 # a changed ?v= forces a re-fetch; unchanged files keep their long cache.
 #
-# VER_STRIP removes a previously injected ?v=<12 hex> so re-runs are idempotent and
+# The stamp is injected in memory into the web/*.gz output ONLY — the www/*.html
+# source is never rewritten. web/ is gitignored, so the served files carry the
+# fresh ?v= while git stays clean (no per-build churn of every HTML file). The
+# trade-off: a raw www/ re-upload through /setup won't carry ?v=, which only costs
+# browser cache-busting on that niche path (staleness detection uses www_version.txt).
+#
+# VER_STRIP removes a previously injected ?v=<12 hex> so stamping is idempotent and
 # so the query never feeds back into the version hash. VER_INJECT matches a local
 # asset ref (not http(s):// or protocol-relative //) whose value ends in .js/.css.
 VER_STRIP  = re.compile(rb"\?v=[0-9a-f]{12}")
@@ -60,28 +66,21 @@ def stamp_html_assets(data: bytes, ver: bytes) -> bytes:
     stripped = VER_STRIP.sub(b"", data)
     return VER_INJECT.sub(lambda m: m.group(1) + m.group(2) + b"?v=" + ver + m.group(3), stripped)
 
-def inject_versions(ver: str):
-    """Rewrite www/*.html in place, stamping ?v=<ver> onto local .js/.css refs.
-    Runs before compression so the web/*.gz copies inherit the stamp, and touches
-    the source so a raw www re-upload through /setup carries it too. Only writes
-    when the bytes actually change, to avoid needless mtime churn / gz rebuilds."""
-    ver_b = ver.encode()
-    for path in sorted(SRC_DIR.rglob("*.html")):
-        raw = path.read_bytes()
-        out = stamp_html_assets(raw, ver_b)
-        if out != raw:
-            path.write_bytes(out)
-            print(f"  stamp {path.relative_to(SRC_DIR)}  (?v={ver})")
-
-def compress_file(src: Path):
+def compress_file(src: Path, version: str):
     rel = src.relative_to(SRC_DIR)
     dst = DST_DIR / (str(rel) + ".gz")
     dst.parent.mkdir(parents=True, exist_ok=True)
-    if dst.exists() and dst.stat().st_mtime >= src.stat().st_mtime:
+    # HTML is always regenerated: its ?v= stamp depends on the whole-UI hash, so a
+    # change in any .js/.css must re-stamp every HTML even though its own mtime is
+    # untouched. The gz copies are tiny, so skipping the mtime shortcut is free.
+    is_html = src.suffix == ".html"
+    if not is_html and dst.exists() and dst.stat().st_mtime >= src.stat().st_mtime:
         print(f"  skip  {rel}  (up to date)")
         return
     with open(src, "rb") as f_in:
         data = f_in.read()
+    if is_html:
+        data = stamp_html_assets(data, version.encode())
     with gzip.open(dst, "wb", compresslevel=9) as f_out:
         f_out.write(data)
     orig_kb = len(data) / 1024
@@ -174,18 +173,16 @@ def write_version(ver: str):
 def main():
     print(f"Compressing web assets from {SRC_DIR}/\n")
 
-    # Version first: it's independent of the ?v= we're about to inject (the hash
-    # normalises it away), and injecting must happen before compression so the
-    # web/*.gz copies inherit the stamped HTML.
+    # Version first: it's independent of the ?v= we stamp into the gz output (the
+    # hash normalises it away), and compress_file needs it to stamp each HTML.
     version = compute_version()
-    inject_versions(version)
 
     expected = set()
     for path in sorted(SRC_DIR.rglob("*")):
         if not path.is_file() or ".gz" in path.suffixes:
             continue
         if path.suffix in EXTENSIONS:
-            compress_file(path)
+            compress_file(path, version)
             expected.add(DST_DIR / (str(path.relative_to(SRC_DIR)) + ".gz"))
         elif path.suffix in COPY_EXTENSIONS:
             copy_file(path)
