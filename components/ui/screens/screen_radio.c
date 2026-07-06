@@ -35,6 +35,7 @@ static const char *radio_state_str(radio_state_t st)
         case RADIO_STATE_PLAYING:   return "PLAYING";
         case RADIO_STATE_BUFFERING: return "BUFFERING";
         case RADIO_STATE_ERROR:     return "ERROR";
+        case RADIO_STATE_FINISHED:  return "STOPPED";
         default:                    return "?";
     }
 }

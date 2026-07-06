@@ -16,6 +16,7 @@ static const char *TAG = "AUDIO_NET";
 
 static TaskHandle_t s_retry_task_handle = NULL;
 static int s_retry_count = 0;
+static bool s_finite = false;   // current stream is a finite episode, not radio
 
 static void on_meta(const char *meta);
 static void on_info(void);
@@ -141,6 +142,22 @@ static void on_error(int status)
 
     if (!is_open_error && !is_stream_lost) return;
 
+    // Finite stream (podcast episode): the end of the stream is success, not an
+    // anomaly. Any stream-end/loss ends playback cleanly with no retry; only a
+    // failed open still retries (episode URL may be slow/redirected on first
+    // hit). A mid-episode WiFi drop also lands here → reported as finished;
+    // Phase-2 resume (Range request) will refine this.
+    if (s_finite && is_stream_lost) {
+        ESP_LOGI(TAG, "Finite stream ended (status=%d)", status);
+        s_retry_count = 0;
+        audio_engine_mark_stopped();
+        app_state_update(&(app_state_patch_t){
+            .has_radio   = true,
+            .radio_state = RADIO_STATE_FINISHED
+        });
+        return;
+    }
+
     if (s_retry_count >= MAX_RETRIES) {
         ESP_LOGE(TAG, "Max retries reached, giving up");
         s_retry_count = 0;
@@ -228,11 +245,12 @@ void audio_net_player_init(void)
 }
 
 
-void audio_net_player_play(const char *url)
+void audio_net_player_play(const char *url, bool finite, uint32_t offset_bytes)
 {
     if (!url) return;
 
     s_retry_count = 0;
+    s_finite = finite;
 
     // Codec from URL hint; extension-less URLs (e.g. SHOUTcast host:port/;)
     // default to MP3 — the vast majority of such streams are MP3, and a
@@ -242,6 +260,10 @@ void audio_net_player_play(const char *url)
         ESP_LOGI(TAG, "No codec hint in URL, defaulting to MP3");
         codec = AUDIO_CODEC_MP3;
     }
+
+    // Byte offset for a resuming podcast (0 for radio / play-from-start). Set
+    // before the async play so the request task reads it at open time.
+    audio_engine_set_http_offset(offset_bytes);
 
     audio_engine_play(AUDIO_SRC_HTTP, codec, url, 0);
 }

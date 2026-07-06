@@ -230,9 +230,9 @@ void radio_play_file(const char *path)
 
 
 /*
-void radio_play_url(const char *url)
+void radio_play_url(const char *url, bool finite, const char *title, uint32_t offset_bytes)
 */
-void radio_play_url(const char *url)
+void radio_play_url(const char *url, bool finite, const char *title, uint32_t offset_bytes)
 {
     if (!url) {
         ESP_LOGE(TAG, "URL is NULL");
@@ -243,7 +243,7 @@ void radio_play_url(const char *url)
         return;
     }
 
-    ESP_LOGI(TAG, "Play: %s", url);
+    ESP_LOGI(TAG, "Play: %s%s", url, finite ? " (finite)" : "");
 
     app_state_update(&(app_state_patch_t){
         .has_url = true,
@@ -251,7 +251,7 @@ void radio_play_url(const char *url)
         .has_radio = true,
         .radio_state = RADIO_STATE_BUFFERING,
         .has_title = true,
-        .title = ""
+        .title = (title && title[0]) ? title : ""
     });
 
     // Only act on BT when it is actually the active source — otherwise an
@@ -269,7 +269,7 @@ void radio_play_url(const char *url)
     if (sd_player_is_active()) sd_player_stop();
     else                       sd_player_forget();
 
-    audio_net_player_play(url);
+    audio_net_player_play(url, finite, offset_bytes);
 
     app_state_update(&(app_state_patch_t){
         .has_radio = true,
@@ -295,7 +295,7 @@ void radio_play_index(int index)
     });
 
     settings_set_curr_index(index);   // save + update curr_index in state
-    radio_play_url(entry->url);           // or audio_net_player_play(entry->url)
+    radio_play_url(entry->url, false, NULL, 0);   // endless radio, name set above
 }
 
 

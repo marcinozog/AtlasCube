@@ -201,7 +201,18 @@ static esp_err_t ws_handler(httpd_req_t *req)
         if (strcmp(cmd->valuestring, "play") == 0) {
             cJSON *url = cJSON_GetObjectItem(json, "url");
             if (url && cJSON_IsString(url)) {
-                radio_play_url(url->valuestring);
+                // finite=true → podcast episode (EOF is a clean end, no retry);
+                // title → shown on screen (podcasts carry no ICY metadata);
+                // offset_bytes → resume mid-file via a Range request.
+                cJSON *finite = cJSON_GetObjectItem(json, "finite");
+                cJSON *title  = cJSON_GetObjectItem(json, "title");
+                cJSON *offset = cJSON_GetObjectItem(json, "offset_bytes");
+                uint32_t off = (offset && cJSON_IsNumber(offset) && offset->valuedouble > 0)
+                             ? (uint32_t)offset->valuedouble : 0;
+                radio_play_url(url->valuestring,
+                               cJSON_IsTrue(finite),
+                               (title && cJSON_IsString(title)) ? title->valuestring : NULL,
+                               off);
             }
             cJSON *curr_index = cJSON_GetObjectItem(json, "curr_index");
             if (curr_index && cJSON_IsNumber(curr_index)) {
@@ -429,6 +440,7 @@ static void send_full_state(void)
         case RADIO_STATE_PLAYING:   state_str = "playing"; break;
         case RADIO_STATE_BUFFERING: state_str = "buffering"; break;
         case RADIO_STATE_ERROR:     state_str = "error"; break;
+        case RADIO_STATE_FINISHED:  state_str = "finished"; break;
     }
 
     cJSON *json = cJSON_CreateObject();

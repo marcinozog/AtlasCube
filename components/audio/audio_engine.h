@@ -32,6 +32,11 @@ void audio_engine_init(void);
 void audio_engine_play(audio_src_t src, audio_codec_t codec,
                        const char *uri, uint32_t file_duration_ms);
 
+// Set the byte offset for the NEXT HTTP play, sent as a Range header to resume a
+// podcast mid-file. Call before audio_engine_play; 0 = play from the start. Only
+// affects AUDIO_SRC_HTTP. Persists across an internal codec-relink of that play.
+void audio_engine_set_http_offset(uint32_t bytes);
+
 // Synchronous teardown (stop/terminate/reset). Safe from any normal task, but
 // NOT from the event-listener task — stopping the pipeline from inside the
 // listener overflows the event queue (FreeRTOS assert).

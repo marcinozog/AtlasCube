@@ -52,6 +52,7 @@ static const char *radio_state_str(radio_state_t st)
         case RADIO_STATE_BUFFERING: return "buffering";
         case RADIO_STATE_STOPPED:   return "stopped";
         case RADIO_STATE_ERROR:     return "error";
+        case RADIO_STATE_FINISHED:  return "finished";
         default:                    return "unknown";
     }
 }
