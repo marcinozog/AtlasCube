@@ -7,6 +7,8 @@
 #include "settings.h"
 #include "wifi_manager.h"
 #include "screen_event_notification.h"
+#include "screen_update.h"
+#include "updater.h"
 #include "events_service.h"
 #include "screensavers.h"
 #include "display.h"
@@ -37,6 +39,7 @@ extern const ui_screen_t screen_mqtt;
 extern const ui_screen_t screen_ota;
 extern const ui_screen_t screen_sd_player;
 extern const ui_screen_t screen_sd_browser;
+extern const ui_screen_t screen_update;
 
 // --------------------------------------------------------------------------
 // Screen registry — order must match ui_screen_id_t
@@ -59,6 +62,7 @@ static const ui_screen_t *s_screens[SCREEN_COUNT] = {
     [SCREEN_OTA]                = &screen_ota,
     [SCREEN_SD]                 = &screen_sd_player,
     [SCREEN_SD_BROWSER]         = &screen_sd_browser,
+    [SCREEN_UPDATE]             = &screen_update,
 };
 
 // --------------------------------------------------------------------------
@@ -335,6 +339,23 @@ static void on_event_fired(const event_t *e)
     ui_event_send(&uie);
 }
 
+// Called from the updater task when a strictly newer version is found. The check
+// itself always runs (for the usage check-in); settings.update.enable only gates
+// showing the prompt. ui_navigate only posts to the event queue, so this is safe
+// off the LVGL thread.
+static void on_update_available(void)
+{
+    if (settings_get()->update.enable) ui_navigate(SCREEN_UPDATE);
+}
+
+// Called from the OTA task with download progress (0..100, -1 = failed). Forwarded
+// to SCREEN_OTA via the same event the web OTA uses. Thread-safe queue post.
+static void on_update_progress(int pct)
+{
+    ui_event_t ev = { .type = UI_EVT_OTA_PROGRESS, .ota_progress = pct };
+    ui_event_send(&ev);
+}
+
 void ui_manager_init(void)
 {
     s_event_queue = xQueueCreate(UI_EVENT_QUEUE_SIZE, sizeof(ui_event_t));
@@ -342,6 +363,8 @@ void ui_manager_init(void)
 
     app_state_subscribe(on_state_change);
     events_service_set_fire_cb(on_event_fired);
+    updater_set_notify_cb(on_update_available);
+    updater_set_progress_cb(on_update_progress);
 
     ESP_LOGI(TAG, "Initialized");
 }

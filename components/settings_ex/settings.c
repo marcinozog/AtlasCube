@@ -79,6 +79,9 @@ esp_err_t settings_init(void)
         s_settings.wifi.password[0]         = '\0';
         // Device — empty hostname = auto "atlascube-xxxx" derived at mDNS start
         s_settings.device.hostname[0]       = '\0';
+        // Auto-update — show the update prompt when a newer build is found
+        // (the boot check always runs; this only silences the SCREEN_UPDATE)
+        s_settings.update.enable            = true;
         // Screensaver
         s_settings.scrsaver.delay           = 60;
         s_settings.scrsaver.screensaver_id  = SCREENSAVER_CLOCKHANDS;
@@ -469,6 +472,14 @@ static esp_err_t load_from_file(void)
         if (cJSON_IsString(hn)) strncpy(s_settings.device.hostname, hn->valuestring, sizeof(s_settings.device.hostname) - 1);
     }
 
+    // ── UPDATE ────────────────────────────────────────────────────────────────
+    s_settings.update.enable = true;   // default on for files predating this section
+    cJSON *update_obj = cJSON_GetObjectItem(json, "update");
+    if (cJSON_IsObject(update_obj)) {
+        cJSON *en = cJSON_GetObjectItem(update_obj, "enable");
+        if (cJSON_IsBool(en)) s_settings.update.enable = cJSON_IsTrue(en);
+    }
+
     // DEBUG
     ESP_LOGI("SETTINGS", "WiFi SSID: \"%s\"", s_settings.wifi.ssid);
     ESP_LOGI("SETTINGS", "Volume: %d  BT: %d  curr_index: %d",
@@ -569,6 +580,11 @@ static esp_err_t save_to_file(void)
     cJSON *device_obj = cJSON_CreateObject();
     cJSON_AddStringToObject(device_obj, "hostname", s_settings.device.hostname);
     cJSON_AddItemToObject(json, "device", device_obj);
+
+    // update
+    cJSON *update_obj = cJSON_CreateObject();
+    cJSON_AddBoolToObject(update_obj, "enable", s_settings.update.enable);
+    cJSON_AddItemToObject(json, "update", update_obj);
 
     // screensaver
     cJSON *scrs = cJSON_CreateObject();
@@ -967,6 +983,14 @@ void settings_set_show_boot_info(bool enabled)
     if (s_settings.display.show_boot_info == enabled) return;
     s_settings.display.show_boot_info = enabled;
     save_to_file();   // read once at next boot by the splash — no live app_state push
+}
+
+void settings_set_update_enable(bool enable)
+{
+    if (s_settings.update.enable == enable) return;
+    s_settings.update.enable = enable;
+    save_to_file();   // read once at next boot by app_main before updater_start
+    ESP_LOGI("SETTINGS", "Auto-update: %s", enable ? "on" : "off");
 }
 
 void settings_set_wifi(const char *ssid, const char *password)

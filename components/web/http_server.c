@@ -152,6 +152,11 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(device_obj, "effective", mdns_effective_hostname(eff_host, sizeof(eff_host)));
     cJSON_AddItemToObject(json, "device", device_obj);
 
+    // update — on-screen update-prompt toggle (the boot check always runs)
+    cJSON *update_obj = cJSON_CreateObject();
+    cJSON_AddBoolToObject(update_obj, "enable", s->update.enable);
+    cJSON_AddItemToObject(json, "update", update_obj);
+
     // screensaver
     cJSON *scrs = cJSON_CreateObject();
     cJSON_AddNumberToObject(scrs, "delay",  s->scrsaver.delay);
@@ -518,6 +523,16 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         if (cJSON_IsString(hn)) {
             settings_set_hostname(hn->valuestring);
             mdns_service_apply_hostname();   // live, no reboot
+        }
+    }
+
+    // ── UPDATE ────────────────────────────────────────────────────────────────
+    cJSON *update_obj = cJSON_GetObjectItem(json, "update");
+    if (cJSON_IsObject(update_obj)) {
+        cJSON *en = cJSON_GetObjectItem(update_obj, "enable");
+        if (cJSON_IsBool(en)) {
+            ESP_LOGI("HTTP", "POST update.enable: %d", cJSON_IsTrue(en));
+            settings_set_update_enable(cJSON_IsTrue(en));
         }
     }
     // ─────────────────────────────────────────────────────────────────────────

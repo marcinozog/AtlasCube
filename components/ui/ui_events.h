@@ -27,7 +27,8 @@ typedef enum {
     SCREEN_SD,            // SD-card music player (now playing)
     SCREEN_SD_BROWSER,    // SD-card file browser (folders + tracks)
     SCREEN_HOME,          // unified source hub (clock face + hub_overlay).
-                          // Keep last so existing persisted screen ids stay stable.
+    SCREEN_UPDATE,        // transient "new firmware available" prompt (never persisted,
+                          // like SCREEN_OTA). Add new persisted screens BEFORE this.
     SCREEN_COUNT
 } ui_screen_id_t;
 

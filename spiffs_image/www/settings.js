@@ -237,6 +237,19 @@ function setShowBootInfo(on) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Auto-update on-screen prompt (the boot check always runs regardless)
+// ─────────────────────────────────────────────────────────────────────────────
+function setUpdateEnable(on) {
+    document.getElementById('settingsBtnUpdateOn') ?.classList.toggle('active', on);
+    document.getElementById('settingsBtnUpdateOff')?.classList.toggle('active', !on);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ update: { enable: on } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Flip display 180° (applied live — no restart)
 // ─────────────────────────────────────────────────────────────────────────────
 function setFlip(on) {
@@ -782,6 +795,10 @@ function populateForm(s) {
         const bootInfo = s.display.show_boot_info !== false;   // default on
         document.getElementById('settingsBtnBootInfoOn') ?.classList.toggle('active', bootInfo);
         document.getElementById('settingsBtnBootInfoOff')?.classList.toggle('active', !bootInfo);
+
+        const updEnable = s.update?.enable !== false;   // default on
+        document.getElementById('settingsBtnUpdateOn') ?.classList.toggle('active', updEnable);
+        document.getElementById('settingsBtnUpdateOff')?.classList.toggle('active', !updEnable);
 
         const sdScr = s.display.sd_show_screen !== false;   // default on
         document.getElementById('settingsBtnSDshow')?.classList.toggle('active', sdScr);

@@ -37,6 +37,23 @@ endif()
 
 message(STATUS "AtlasCube variant: DISPLAY=${ATLAS_DISPLAY}, TOUCH=${ATLAS_TOUCH}, FLASH=${ATLAS_FLASH}")
 
+# Variant key matching the CI release-asset name (build.yml matrix), e.g.
+# "co5300-cst816d", "ili9341-xpt2046", or bare "ssd1322" for the touch-less panel:
+# <display>-<touch>, or just <display> when there is no touch controller.
+# Exposed at runtime as FW_VARIANT so the auto-update check can request exactly
+# this variant's .bin — a foreign-variant image would brick the device. Consumed
+# through an accessor (app_fw_variant()) so the prebuilt updater lib, built once
+# ahead of time, reads it at runtime instead of baking a wrong compile-time value.
+string(TOLOWER "${ATLAS_DISPLAY}" _atlas_disp_lower)
+string(TOLOWER "${ATLAS_TOUCH}"   _atlas_touch_lower)
+if(ATLAS_TOUCH STREQUAL "NONE")
+    set(FW_VARIANT "${_atlas_disp_lower}")
+else()
+    set(FW_VARIANT "${_atlas_disp_lower}-${_atlas_touch_lower}")
+endif()
+message(STATUS "AtlasCube FW_VARIANT: ${FW_VARIANT}")
+add_compile_definitions(FW_VARIANT="${FW_VARIANT}")
+
 set(VARIANT_SDKCONFIG "${CMAKE_BINARY_DIR}/sdkconfig.variant")
 file(WRITE "${VARIANT_SDKCONFIG}"
     "# Auto-generated from main/include/defines.h — do not edit\n"

@@ -18,4 +18,5 @@ idf_component_register(
         mqtt_svc
         sdcard
         board_pins
+        updater
 )

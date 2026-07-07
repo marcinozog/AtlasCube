@@ -28,6 +28,7 @@
 #include "mqtt_config.h"
 #include "heap_report.h"
 #include "board_pins.h"
+#include "updater.h"
 
 static const char *TAG = "MAIN";
 
@@ -146,6 +147,14 @@ void app_main(void)
 
     ESP_LOGI(TAG, "System ready. WiFi mode: %s",
              wifi_get_run_mode() == WIFI_RUN_MODE_STA ? "STA" : "AP @ 192.168.4.1");
+
+    // Auto-update: background firmware-version check (STA only — needs internet).
+    // The check ALWAYS runs (its server check-in is how device usage is counted);
+    // settings.update.enable only gates whether the SCREEN_UPDATE prompt is shown
+    // — that gate lives in the UI notify callback (ui_manager on_update_available).
+    if (wifi_get_run_mode() == WIFI_RUN_MODE_STA) {
+        updater_start(app_fw_variant());
+    }
     ESP_LOGI(TAG, "app_main stack watermark: %u bytes",
              uxTaskGetStackHighWaterMark(NULL) * sizeof(StackType_t));
 

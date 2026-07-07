@@ -22,6 +22,7 @@ idf_component_register(
         "screens/screen_event_notification.c"
         "screens/screen_mqtt.c"
         "screens/screen_ota.c"
+        "screens/screen_update.c"
         "screensavers/screensaver_starfield.c"
         "screensavers/screensaver_fireworks.c"
         "screensavers/screensaver_plasma.c"
@@ -77,4 +78,5 @@ idf_component_register(
         bt_module               # hub_overlay BT source toggle + bt_play/bt_pause
         esp_app_format          # esp_app_get_description() — version on splash
         espressif__esp-dsp      # FFT for the VU spectrum widget
+        updater                 # SCREEN_UPDATE reads/acts on the auto-update lib
 )

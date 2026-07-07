@@ -658,6 +658,16 @@
                 <span>Current version</span>
                 <code id="ota_version">…</code>
             </div>
+            <div class="field-hint">
+                🔔 Show an update prompt on the device screen when a newer firmware is
+                available. The device always checks at boot — this only controls the
+                on-screen prompt.
+            </div>
+            <div class="theme-toggle" id="updateNotifyToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnUpdateOn"  onclick="setUpdateEnable(true)">✅ On</button>
+                <button class="theme-btn" id="settingsBtnUpdateOff" onclick="setUpdateEnable(false)">🚫 Off</button>
+            </div>
+            <div class="ota-divider"></div>
             <div id="www_outdated_warn" class="www-outdated-warn" style="display:none">
                 ⚠️ The web UI files don't match the firmware (left behind by an
                 app-only OTA update). Re-upload the new web UI files in the

@@ -72,6 +72,11 @@ typedef struct {
     char hostname[32];   // mDNS hostname; empty = auto "atlascube-xxxx" from MAC
 } device_settings_t;
 
+typedef struct {
+    bool enable;         // show the SCREEN_UPDATE prompt when a newer build is found;
+                         // the boot version check itself always runs regardless
+} update_settings_t;
+
 typedef struct
 {
     int  delay;            // seconds of idle before activating (0 = off)
@@ -130,6 +135,7 @@ typedef struct {
     scrsaver_settings_t  scrsaver;
     dashboard_settings_t dashboard;
     device_settings_t    device;
+    update_settings_t    update;
 } app_settings_t;
 
 esp_err_t settings_init(void);
@@ -166,6 +172,7 @@ void settings_set_sd_show_screen(bool show);
 void settings_set_radio_show_screen(bool show);
 void settings_set_wifi(const char *ssid, const char *password);
 void settings_set_hostname(const char *hostname);
+void settings_set_update_enable(bool enable);
 void settings_set_scrsaver_delay(int delay);
 void settings_set_scrsaver_id(int id);
 void settings_set_scrsaver_dim_level(int level);
