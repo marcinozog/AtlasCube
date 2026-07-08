@@ -20,16 +20,48 @@ enum { ACT_UPDATE = 0, ACT_LATER, ACT_COUNT };
 
 static lv_obj_t *s_btns[ACT_COUNT];
 static int       s_sel;                 // highlighted button (encoder navigation)
+static bool      s_fw_mode;             // true = firmware prompt, false = stale web UI
+static bool      s_updating;            // www pull in flight (buttons hidden)
+static lv_obj_t *s_hint;                // muted line, doubles as www pull status
+
+static void return_timer_cb(lv_timer_t *t)
+{
+    (void)t;
+    ui_navigate(UPDATE_RETURN_SCREEN);
+}
+
+static void set_buttons_hidden(bool hidden)
+{
+    for (int i = 0; i < ACT_COUNT; i++) {
+        if (!s_btns[i]) continue;
+        if (hidden) lv_obj_add_flag(s_btns[i], LV_OBJ_FLAG_HIDDEN);
+        else        lv_obj_clear_flag(s_btns[i], LV_OBJ_FLAG_HIDDEN);
+    }
+}
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 static void do_action(int act)
 {
+    if (s_updating) return;             // www pull in flight — ignore input
+
     switch (act) {
     case ACT_UPDATE:
-        ESP_LOGI(TAG, "user confirmed update → %s", updater_latest_version());
-        ui_navigate(SCREEN_OTA);        // reuse the OTA progress screen
-        radio_stop();                   // free internal RAM for the sustained HTTPS pull
-        updater_apply();                // spawns the download task; progress → SCREEN_OTA
+        if (s_fw_mode) {
+            ESP_LOGI(TAG, "user confirmed update → %s", updater_latest_version());
+            ui_navigate(SCREEN_OTA);    // reuse the OTA progress screen
+            radio_stop();               // free internal RAM for the sustained HTTPS pull
+            updater_apply();            // spawns the download task; progress → SCREEN_OTA
+        } else {
+            // www pull runs in place — small download, no reboot at the end, so
+            // this screen shows the progress itself (via UI_EVT_OTA_PROGRESS)
+            // instead of SCREEN_OTA whose 100% means "rebooting".
+            ESP_LOGI(TAG, "user confirmed web UI pull");
+            s_updating = true;
+            set_buttons_hidden(true);
+            if (s_hint) lv_label_set_text(s_hint, "Updating... 0%");
+            radio_stop();               // same internal-RAM headroom rule as OTA
+            updater_www_apply();
+        }
         break;
     case ACT_LATER:
     default:
@@ -88,28 +120,28 @@ static void update_create(lv_obj_t *parent)
                           LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_row(col, 10, LV_PART_MAIN);
 
-    // Two prompt modes behind the one screen: a newer firmware (actionable —
-    // Update/Later), or firmware current but the web-UI files on the www
-    // partition are stale (info only — an app update never rewrites them; the
-    // fix is a re-upload on the /setup page, so the device can just dismiss).
-    bool fw_update = updater_update_available();
+    // Two prompt modes behind the one screen: a newer firmware, or firmware
+    // current but the web-UI files on the www partition are stale (an app
+    // update never rewrites them). Both are actionable — Update either flashes
+    // the new firmware (via SCREEN_OTA) or pulls the fresh web files in place.
+    s_fw_mode = updater_update_available();
 
     lv_obj_t *title = lv_label_create(col);
-    lv_label_set_text(title, fw_update ? "NEW FIRMWARE" : "WEB UI OUTDATED");
+    lv_label_set_text(title, s_fw_mode ? "NEW FIRMWARE" : "WEB UI OUTDATED");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_24_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(title, lv_color_hex(th->text_primary), LV_PART_MAIN);
 
     lv_obj_t *ver = lv_label_create(col);
-    if (fw_update) lv_label_set_text_fmt(ver, "%s available", updater_latest_version());
+    if (s_fw_mode) lv_label_set_text_fmt(ver, "%s available", updater_latest_version());
     else           lv_label_set_text(ver, "older than firmware");
     lv_obj_set_style_text_font(ver, &lv_font_montserrat_18_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(ver, lv_color_hex(th->accent), LV_PART_MAIN);
 
-    lv_obj_t *cur = lv_label_create(col);
-    if (fw_update) lv_label_set_text_fmt(cur, "current %s", esp_app_get_description()->version);
-    else           lv_label_set_text(cur, "re-upload on the /setup page");
-    lv_obj_set_style_text_font(cur, &lv_font_montserrat_12_pl, LV_PART_MAIN);
-    lv_obj_set_style_text_color(cur, lv_color_hex(th->text_muted), LV_PART_MAIN);
+    s_hint = lv_label_create(col);
+    if (s_fw_mode) lv_label_set_text_fmt(s_hint, "current %s", esp_app_get_description()->version);
+    else           lv_label_set_text(s_hint, "downloads from atlascube.net");
+    lv_obj_set_style_text_font(s_hint, &lv_font_montserrat_12_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_hint, lv_color_hex(th->text_muted), LV_PART_MAIN);
 
     // Button row.
     lv_obj_t *row = lv_obj_create(col);
@@ -120,13 +152,10 @@ static void update_create(lv_obj_t *parent)
                           LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_top(row, 6, LV_PART_MAIN);
 
-    if (fw_update) {
-        s_btns[ACT_UPDATE] = make_button(row, "Update", ACT_UPDATE, th->accent);
-    }
-    s_btns[ACT_LATER] = make_button(row, fw_update ? "Later" : "OK", ACT_LATER,
-                                    fw_update ? th->bg_secondary : th->accent);
+    s_btns[ACT_UPDATE] = make_button(row, "Update", ACT_UPDATE, th->accent);
+    s_btns[ACT_LATER]  = make_button(row, "Later",  ACT_LATER,  th->bg_secondary);
 
-    s_sel = fw_update ? ACT_UPDATE : ACT_LATER;
+    s_sel = ACT_UPDATE;
     refresh_highlight();
     ESP_LOGI(TAG, "Created");
 }
@@ -134,20 +163,41 @@ static void update_create(lv_obj_t *parent)
 static void update_destroy(void)
 {
     for (int i = 0; i < ACT_COUNT; i++) s_btns[i] = NULL;
+    s_hint     = NULL;
+    s_updating = false;
     ESP_LOGI(TAG, "Destroyed");
 }
 
-// Encoder / button navigation for touch-less panels. Cycling skips absent
-// buttons (the www-info mode creates only OK); at least one always exists.
+// www pull progress (posted by ui_manager's progress cb; reaches this handler
+// because the screen stays active during the pull — the firmware OTA path
+// navigates to SCREEN_OTA instead and never gets here).
+static void update_on_event(const ui_event_t *ev)
+{
+    if (ev->type != UI_EVT_OTA_PROGRESS || !s_updating || !s_hint) return;
+
+    int p = ev->ota_progress;
+    if (p < 0) {                        // failed — bring the buttons back for a retry
+        s_updating = false;
+        lv_label_set_text(s_hint, "update failed - try again");
+        set_buttons_hidden(false);
+        return;
+    }
+    if (p >= 100) {                     // done — files are live (no reboot), leave shortly
+        s_updating = false;
+        lv_label_set_text(s_hint, "web UI updated");
+        lv_timer_t *t = lv_timer_create(return_timer_cb, 2000, NULL);
+        lv_timer_set_repeat_count(t, 1);   // one-shot, auto-deletes
+        return;
+    }
+    lv_label_set_text_fmt(s_hint, "Updating... %d%%", p);
+}
+
+// Encoder / button navigation for touch-less panels.
 static void update_on_input(ui_input_t input)
 {
     switch (input) {
-    case UI_INPUT_ENCODER_CW:
-        do { s_sel = (s_sel + 1) % ACT_COUNT; } while (!s_btns[s_sel]);
-        refresh_highlight(); break;
-    case UI_INPUT_ENCODER_CCW:
-        do { s_sel = (s_sel + ACT_COUNT - 1) % ACT_COUNT; } while (!s_btns[s_sel]);
-        refresh_highlight(); break;
+    case UI_INPUT_ENCODER_CW:   s_sel = (s_sel + 1) % ACT_COUNT;            refresh_highlight(); break;
+    case UI_INPUT_ENCODER_CCW:  s_sel = (s_sel + ACT_COUNT - 1) % ACT_COUNT; refresh_highlight(); break;
     case UI_INPUT_ENCODER_PRESS:
     case UI_INPUT_BTN_OK:       do_action(s_sel); break;
     default: break;
@@ -158,7 +208,7 @@ const ui_screen_t screen_update = {
     .create      = update_create,
     .destroy     = update_destroy,
     .apply_theme = NULL,
-    .on_event    = NULL,
+    .on_event    = update_on_event,
     .on_input    = update_on_input,
     .name        = "update",
 };

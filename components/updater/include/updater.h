@@ -84,6 +84,16 @@ bool updater_www_stale(const char *expected, char *ver_out, size_t ver_sz);
 // prebuilt lib.
 bool updater_www_outdated(void);
 
+// Refresh the stale web UI in place (called from SCREEN_UPDATE on user confirm,
+// after the caller stopped audio — sustained HTTPS needs the internal-RAM
+// headroom). Spawns a task that pulls the built web set for the RUNNING app's
+// release via the atlascube.net proxy (files land on /spiffs byte-for-byte,
+// www_version.txt written last so an interrupted pull stays flagged stale and
+// can be retried). No reboot: httpd serves the fresh files immediately.
+// Progress arrives via the registered progress cb (0..99 download, 100 done,
+// -1 failed). Implemented in the prebuilt lib.
+void updater_www_apply(void);
+
 #ifdef __cplusplus
 }
 #endif
