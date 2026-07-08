@@ -85,6 +85,12 @@ jobs:
           # root so they can be selected directly after extracting.
           ( cd spiffs_image/www && zip -r "$GITHUB_WORKSPACE/AtlasCube-www.zip" . )
           ls -la "$GITHUB_WORKSPACE/AtlasCube-www.zip"
+          # Compressed web/ set — byte-for-byte what CMake flashes to the www
+          # partition (pre-gzipped assets, ?v= cache-bust stamps, www_version.txt).
+          # For the planned on-device www pull: the device can store these files
+          # as-is, no on-device recompression. Built by the stamp step above.
+          ( cd spiffs_image/web && zip -r "$GITHUB_WORKSPACE/AtlasCube-web.zip" . )
+          ls -la "$GITHUB_WORKSPACE/AtlasCube-web.zip"
 
       - name: Create GitHub Release
         env:
@@ -94,4 +100,5 @@ jobs:
             --title "${{ github.ref_name }}" \
             --generate-notes \
             artifacts/*/AtlasCube-*.bin \
-            AtlasCube-www.zip
+            AtlasCube-www.zip \
+            AtlasCube-web.zip
