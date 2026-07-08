@@ -88,18 +88,26 @@ static void update_create(lv_obj_t *parent)
                           LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_row(col, 10, LV_PART_MAIN);
 
+    // Two prompt modes behind the one screen: a newer firmware (actionable —
+    // Update/Later), or firmware current but the web-UI files on the www
+    // partition are stale (info only — an app update never rewrites them; the
+    // fix is a re-upload on the /setup page, so the device can just dismiss).
+    bool fw_update = updater_update_available();
+
     lv_obj_t *title = lv_label_create(col);
-    lv_label_set_text(title, "NEW FIRMWARE");
+    lv_label_set_text(title, fw_update ? "NEW FIRMWARE" : "WEB UI OUTDATED");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_24_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(title, lv_color_hex(th->text_primary), LV_PART_MAIN);
 
     lv_obj_t *ver = lv_label_create(col);
-    lv_label_set_text_fmt(ver, "%s available", updater_latest_version());
+    if (fw_update) lv_label_set_text_fmt(ver, "%s available", updater_latest_version());
+    else           lv_label_set_text(ver, "older than firmware");
     lv_obj_set_style_text_font(ver, &lv_font_montserrat_18_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(ver, lv_color_hex(th->accent), LV_PART_MAIN);
 
     lv_obj_t *cur = lv_label_create(col);
-    lv_label_set_text_fmt(cur, "current %s", esp_app_get_description()->version);
+    if (fw_update) lv_label_set_text_fmt(cur, "current %s", esp_app_get_description()->version);
+    else           lv_label_set_text(cur, "re-upload on the /setup page");
     lv_obj_set_style_text_font(cur, &lv_font_montserrat_12_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(cur, lv_color_hex(th->text_muted), LV_PART_MAIN);
 
@@ -112,10 +120,13 @@ static void update_create(lv_obj_t *parent)
                           LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_top(row, 6, LV_PART_MAIN);
 
-    s_btns[ACT_UPDATE] = make_button(row, "Update", ACT_UPDATE, th->accent);
-    s_btns[ACT_LATER]  = make_button(row, "Later",  ACT_LATER,  th->bg_secondary);
+    if (fw_update) {
+        s_btns[ACT_UPDATE] = make_button(row, "Update", ACT_UPDATE, th->accent);
+    }
+    s_btns[ACT_LATER] = make_button(row, fw_update ? "Later" : "OK", ACT_LATER,
+                                    fw_update ? th->bg_secondary : th->accent);
 
-    s_sel = ACT_UPDATE;
+    s_sel = fw_update ? ACT_UPDATE : ACT_LATER;
     refresh_highlight();
     ESP_LOGI(TAG, "Created");
 }
@@ -126,12 +137,17 @@ static void update_destroy(void)
     ESP_LOGI(TAG, "Destroyed");
 }
 
-// Encoder / button navigation for touch-less panels.
+// Encoder / button navigation for touch-less panels. Cycling skips absent
+// buttons (the www-info mode creates only OK); at least one always exists.
 static void update_on_input(ui_input_t input)
 {
     switch (input) {
-    case UI_INPUT_ENCODER_CW:   s_sel = (s_sel + 1) % ACT_COUNT;            refresh_highlight(); break;
-    case UI_INPUT_ENCODER_CCW:  s_sel = (s_sel + ACT_COUNT - 1) % ACT_COUNT; refresh_highlight(); break;
+    case UI_INPUT_ENCODER_CW:
+        do { s_sel = (s_sel + 1) % ACT_COUNT; } while (!s_btns[s_sel]);
+        refresh_highlight(); break;
+    case UI_INPUT_ENCODER_CCW:
+        do { s_sel = (s_sel + ACT_COUNT - 1) % ACT_COUNT; } while (!s_btns[s_sel]);
+        refresh_highlight(); break;
     case UI_INPUT_ENCODER_PRESS:
     case UI_INPUT_BTN_OK:       do_action(s_sel); break;
     default: break;

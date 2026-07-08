@@ -339,8 +339,10 @@ static void on_event_fired(const event_t *e)
     ui_event_send(&uie);
 }
 
-// Called from the updater task when a strictly newer version is found. The check
-// itself always runs (for the usage check-in); settings.update.enable only gates
+// Called from the updater check task: either a strictly newer firmware exists,
+// or the firmware is current but the web-UI files are stale (SCREEN_UPDATE reads
+// the updater accessors to render the right prompt). The check itself always
+// runs (it doubles as the usage check-in); settings.update.enable only gates
 // showing the prompt. ui_navigate only posts to the event queue, so this is safe
 // off the LVGL thread.
 static void on_update_available(void)

@@ -73,8 +73,8 @@ typedef struct {
 } device_settings_t;
 
 typedef struct {
-    bool enable;         // show the SCREEN_UPDATE prompt when a newer build is found;
-                         // the boot version check itself always runs regardless
+    bool enable;         // show the SCREEN_UPDATE prompt (newer firmware found, or
+                         // web-UI files stale); the boot checks always run regardless
 } update_settings_t;
 
 typedef struct

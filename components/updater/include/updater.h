@@ -7,16 +7,20 @@
 #pragma once
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 // Called (from the updater task context) when a check finds a newer, non-skipped
-// version. The callback must be cheap and thread-safe — the UI registers one that
-// just posts a navigate to SCREEN_UPDATE. Registering here (rather than the lib
-// calling ui_navigate itself) keeps the prebuilt free of any UI dependency, so
-// the ui→updater dependency stays one-way (no circular REQUIRES).
+// version, OR — when the firmware is current — when the web-UI files on the www
+// partition are stale (see updater_www_stale). The callback must be cheap and
+// thread-safe — the UI registers one that just posts a navigate to SCREEN_UPDATE;
+// the screen reads updater_update_available()/updater_www_outdated() to render
+// the right prompt. Registering here (rather than the lib calling ui_navigate
+// itself) keeps the prebuilt free of any UI dependency, so the ui→updater
+// dependency stays one-way (no circular REQUIRES).
 typedef void (*updater_notify_cb_t)(void);
 
 // Download progress during updater_apply(): pct 0..100, or -1 on failure. Same
@@ -31,17 +35,20 @@ typedef void (*updater_progress_cb_t)(int pct);
 // flashes a foreign-variant image. Implemented in updater.c (public).
 const char *app_fw_variant(void);
 
-// Kick off a background firmware-version check (boot + periodic). Non-blocking:
-// spawns its own task, must not touch LVGL — results reach the UI over UI_EVT_*.
-// The caller passes the HW variant key (fw_variant, from app_fw_variant()); the
-// lib caches it for the check + later download. Passing it in (rather than the
-// lib calling app_fw_variant() itself) keeps the prebuilt free of cross-archive
-// back-references, so it links without any --whole-archive. Implemented in the
-// prebuilt lib.
-void updater_start(const char *fw_variant);
+// Kick off the boot background check. Non-blocking: spawns its own task, must
+// not touch LVGL — results reach the UI via the registered notify cb. The check
+// runs in two steps: firmware version against the server first; then, only when
+// the firmware is current (or the server is unreachable — the second step is
+// local), the web-UI staleness comparison. Both per-build values arrive as
+// arguments (fw_variant from app_fw_variant(), www_expected = WEB_ASSETS_VERSION
+// from components/web/web_assets_version.h) — the prebuilt cannot bake per-build
+// macros and takes no back-reference to public code, so it links without any
+// --whole-archive. Implemented in the prebuilt lib.
+void updater_start(const char *fw_variant, const char *www_expected);
 
-// Register the "update available" notification (see updater_notify_cb_t). Call
-// once at UI init, before updater_start(). Implemented in the prebuilt lib.
+// Register the "update available / web UI stale" notification (see
+// updater_notify_cb_t). Call once at UI init, before updater_start().
+// Implemented in the prebuilt lib.
 void updater_set_notify_cb(updater_notify_cb_t cb);
 
 // Register the download-progress callback (see updater_progress_cb_t). Call once
@@ -62,6 +69,20 @@ bool updater_update_available(void);
 // reboots on success; progress arrives via the registered progress cb. Implemented
 // in the prebuilt lib.
 void updater_apply(void);
+
+// Live web-UI staleness comparison: reads /spiffs/www_version.txt and compares
+// hash tokens (up to the first whitespace) against `expected`; an app-only update
+// never rewrites the www partition, so the two drift apart. Returns false when
+// `expected` is "unknown" (build without a generated stamp). `ver_out` (optional,
+// may be NULL) receives the on-partition stamp for display. Used by the boot
+// check and by /api/state (live read — a fresh /setup re-upload clears the flag
+// without a reboot). Implemented in the prebuilt lib.
+bool updater_www_stale(const char *expected, char *ver_out, size_t ver_sz);
+
+// True if the boot check found stale web-UI files while the firmware was current
+// (cached; for SCREEN_UPDATE to pick the prompt mode). Implemented in the
+// prebuilt lib.
+bool updater_www_outdated(void);
 
 #ifdef __cplusplus
 }

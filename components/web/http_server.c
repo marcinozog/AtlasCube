@@ -29,6 +29,7 @@
 #include "mqtt_config.h"
 #include "secrets.h"
 #include "sdcard.h"
+#include "updater.h"
 #include "esp_spiffs.h"
 #include "esp_vfs_fat.h"
 #include "cJSON.h"
@@ -572,27 +573,15 @@ static esp_err_t api_state_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(json, "version", esp_app_get_description()->version);
 
     // www version — the stamp on the www partition (/spiffs/www_version.txt) vs.
-    // the one this app was built with. Format is "<hash> <fw-version> <date time>";
-    // only the leading hash token decides staleness (the metadata changes across
-    // builds even for identical UI), the rest is shown so the UI can tell which
-    // side is older. They differ when an app-only OTA left the web UI behind.
-    char www_ver[80] = "";
-    FILE *vf = fopen(WEB_ROOT "/www_version.txt", "r");
-    if (vf) {
-        if (fgets(www_ver, sizeof(www_ver), vf)) {
-            www_ver[strcspn(www_ver, "\r\n")] = '\0';
-        }
-        fclose(vf);
-    }
-    // Compare hash tokens only (up to the first space) on both sides.
-    size_t dev_hash = strcspn(www_ver, " \t");
-    size_t exp_hash = strcspn(WEB_ASSETS_VERSION, " \t");
-    bool   www_match = dev_hash == exp_hash &&
-                       strncmp(www_ver, WEB_ASSETS_VERSION, dev_hash) == 0;
+    // the one this app was built with; they differ when an app-only OTA left the
+    // web UI behind. Comparison lives in updater_www_stale() (shared with the
+    // on-device boot prompt); this is a live read, so a fresh /setup re-upload
+    // clears the flag without a reboot.
+    char www_ver[80];
+    cJSON_AddBoolToObject(json, "www_outdated",
+        updater_www_stale(WEB_ASSETS_VERSION, www_ver, sizeof(www_ver)));
     cJSON_AddStringToObject(json, "www_version",  www_ver);
     cJSON_AddStringToObject(json, "www_expected", WEB_ASSETS_VERSION);
-    cJSON_AddBoolToObject(json, "www_outdated",
-        strcmp(WEB_ASSETS_VERSION, "unknown") != 0 && !www_match);
 
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);

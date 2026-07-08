@@ -22,4 +22,5 @@ idf_component_register(
         fatfs
         board_pins
         secrets
+        updater             # updater_www_stale() — shared web-UI staleness check
 )

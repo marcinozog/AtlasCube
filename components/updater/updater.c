@@ -1,7 +1,7 @@
 // Public glue for the auto-update component. The real logic (version check,
-// pull-OTA) is in the prebuilt lib/libupdater_impl.a; this file provides only
-// what must be compiled per-variant in the public build: the FW_VARIANT
-// accessor the prebuilt reads at runtime.
+// www staleness, pull-OTA) is in the prebuilt lib/libupdater_impl.a; this file
+// provides only what must be compiled per-variant in the public build: the
+// FW_VARIANT accessor the prebuilt reads at runtime.
 #include "updater.h"
 
 #ifndef FW_VARIANT
