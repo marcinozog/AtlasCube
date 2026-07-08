@@ -66,15 +66,17 @@ def stamp_html_assets(data: bytes, ver: bytes) -> bytes:
     stripped = VER_STRIP.sub(b"", data)
     return VER_INJECT.sub(lambda m: m.group(1) + m.group(2) + b"?v=" + ver + m.group(3), stripped)
 
-def compress_file(src: Path, version: str):
+def compress_file(src: Path, version: str, version_unchanged: bool):
     rel = src.relative_to(SRC_DIR)
     dst = DST_DIR / (str(rel) + ".gz")
     dst.parent.mkdir(parents=True, exist_ok=True)
-    # HTML is always regenerated: its ?v= stamp depends on the whole-UI hash, so a
-    # change in any .js/.css must re-stamp every HTML even though its own mtime is
-    # untouched. The gz copies are tiny, so skipping the mtime shortcut is free.
+    # HTML normally can't use the mtime shortcut: its ?v= stamp depends on the
+    # whole-UI hash, so a change in any .js/.css must re-stamp every HTML even
+    # though its own mtime is untouched. But when the UI hash is unchanged the
+    # stamp is byte-identical too, so an up-to-date HTML .gz can be kept as well.
     is_html = src.suffix == ".html"
-    if not is_html and dst.exists() and dst.stat().st_mtime >= src.stat().st_mtime:
+    if ((not is_html or version_unchanged)
+            and dst.exists() and dst.stat().st_mtime >= src.stat().st_mtime):
         print(f"  skip  {rel}  (up to date)")
         return
     with open(src, "rb") as f_in:
@@ -149,6 +151,23 @@ def fw_version() -> str:
         return "?"
 
 
+def stamp_is_current(ver: str) -> bool:
+    """True when both www_version.txt copies and the generated header already carry
+    `ver` as their hash token. Then nothing is rewritten: the stamp's fw-version/date
+    keep pointing at the last actual UI change, and — more importantly — the header's
+    mtime stays put, so ninja doesn't recompile components/web on every build."""
+    for f in (SRC_VERSION, DST_VERSION):
+        try:
+            if f.read_text(encoding="utf-8").split()[0] != ver:
+                return False
+        except (OSError, IndexError):
+            return False
+    try:
+        return f'"{ver} ' in HEADER_FILE.read_text(encoding="utf-8")
+    except OSError:
+        return False
+
+
 def write_version(ver: str):
     # Stamp = "<hash> <fw-version> <UTC-date>". The firmware compares ONLY the first
     # token (the hash) for staleness; the rest is human-readable context so the
@@ -176,18 +195,22 @@ def main():
     # Version first: it's independent of the ?v= we stamp into the gz output (the
     # hash normalises it away), and compress_file needs it to stamp each HTML.
     version = compute_version()
+    unchanged = stamp_is_current(version)
 
     expected = set()
     for path in sorted(SRC_DIR.rglob("*")):
         if not path.is_file() or ".gz" in path.suffixes:
             continue
         if path.suffix in EXTENSIONS:
-            compress_file(path, version)
+            compress_file(path, version, unchanged)
             expected.add(DST_DIR / (str(path.relative_to(SRC_DIR)) + ".gz"))
         elif path.suffix in COPY_EXTENSIONS:
             copy_file(path)
             expected.add(DST_DIR / path.relative_to(SRC_DIR))
-    write_version(version)
+    if unchanged:
+        print(f"  ver   www_version.txt / WEB_ASSETS_VERSION unchanged ({version})")
+    else:
+        write_version(version)
     expected.add(DST_VERSION)
     prune_stale(expected)
     print("\nDone. Flash with: idf.py build flash")
