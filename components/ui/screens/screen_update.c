@@ -78,28 +78,33 @@ static void update_create(lv_obj_t *parent)
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
 
-    lv_obj_set_flex_flow(parent, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(parent, LV_FLEX_ALIGN_CENTER,
+    // Flex goes on an inner container, never on the shared parent: layout
+    // styles survive lv_obj_clean() and would leak into the next screen.
+    lv_obj_t *col = lv_obj_create(parent);
+    lv_obj_remove_style_all(col);
+    lv_obj_set_size(col, lv_pct(100), lv_pct(100));
+    lv_obj_set_flex_flow(col, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(col, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_row(parent, 10, LV_PART_MAIN);
+    lv_obj_set_style_pad_row(col, 10, LV_PART_MAIN);
 
-    lv_obj_t *title = lv_label_create(parent);
+    lv_obj_t *title = lv_label_create(col);
     lv_label_set_text(title, "NEW FIRMWARE");
     lv_obj_set_style_text_font(title, &lv_font_montserrat_24_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(title, lv_color_hex(th->text_primary), LV_PART_MAIN);
 
-    lv_obj_t *ver = lv_label_create(parent);
+    lv_obj_t *ver = lv_label_create(col);
     lv_label_set_text_fmt(ver, "%s available", updater_latest_version());
     lv_obj_set_style_text_font(ver, &lv_font_montserrat_18_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(ver, lv_color_hex(th->accent), LV_PART_MAIN);
 
-    lv_obj_t *cur = lv_label_create(parent);
+    lv_obj_t *cur = lv_label_create(col);
     lv_label_set_text_fmt(cur, "current %s", esp_app_get_description()->version);
     lv_obj_set_style_text_font(cur, &lv_font_montserrat_12_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(cur, lv_color_hex(th->text_muted), LV_PART_MAIN);
 
     // Button row.
-    lv_obj_t *row = lv_obj_create(parent);
+    lv_obj_t *row = lv_obj_create(col);
     lv_obj_remove_style_all(row);
     lv_obj_set_size(row, lv_pct(92), LV_SIZE_CONTENT);
     lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
