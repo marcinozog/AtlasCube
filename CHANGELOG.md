@@ -9,6 +9,17 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-07-09
+
+### Added
+- **updater:** show remote www pull progress on SCREEN_UPDATE
+- **updater:** remote-triggered update via POST /api/update for Android app
+- **updater:** log fw/www update outcomes to /config/update.log
+
+### Fixed
+- **fonts:** add SD card glyph to montserrat_14_pl for mode indicator
+- **updater:** update.log www line logs hash + matched fw, not stamp metadata
+
 ## [0.40.0] - 2026-07-09
 
 ### Added
@@ -590,7 +601,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.40.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.41.0...HEAD
+[0.41.0]: https://github.com/marcinozog/AtlasCube/compare/v0.40.0...v0.41.0
 [0.40.0]: https://github.com/marcinozog/AtlasCube/compare/v0.39.0...v0.40.0
 [0.39.0]: https://github.com/marcinozog/AtlasCube/compare/v0.38.0...v0.39.0
 [0.38.0]: https://github.com/marcinozog/AtlasCube/compare/v0.37.0...v0.38.0
