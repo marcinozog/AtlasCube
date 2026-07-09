@@ -8,6 +8,7 @@
 #include "esp_partition.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 #include "radio_service.h"
 #include "ws_server.h"
 #include "settings.h"
@@ -2636,6 +2637,75 @@ static esp_err_t api_ota_backup_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/update — remote-triggered auto-update (phone app's "Update now").
+// Re-runs the release check and applies the result with NO on-screen prompt —
+// the POST is the user's confirmation (so settings.update.enable, which only
+// gates the prompt, is ignored here). The response is deferred until the
+// updater has decided, so the client knows what to watch for:
+//   {"result":"fw","latest":"vX.Y.Z"} → OTA + reboot (poll /api/state version)
+//   {"result":"www"}                  → in-place web UI pull (poll www_outdated)
+//   {"result":"none"}                 → nothing newer, or the check failed
+//   {"result":"busy"}                 → a forced check is already running
+// ─────────────────────────────────────────────────────────────────────────────
+static SemaphoreHandle_t    s_update_sem;
+static updater_force_mode_t s_update_mode;
+
+static void api_update_prep_cb(updater_force_mode_t mode)
+{
+    s_update_mode = mode;
+    if (mode == UPDATER_FORCE_FW) {
+        // Same head start as the push-OTA handler: progress screen up + audio
+        // stopped before the erase/download storm (the OTA task adds the delay
+        // that lets the first frame land).
+        ui_navigate(SCREEN_OTA);
+        radio_stop();
+    } else if (mode == UPDATER_FORCE_WWW) {
+        radio_stop();   // sustained HTTPS needs the internal-RAM headroom
+    }
+    xSemaphoreGive(s_update_sem);
+}
+
+static esp_err_t api_update_post_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "application/json");
+
+    if (!s_update_sem) s_update_sem = xSemaphoreCreateBinary();
+    if (!s_update_sem) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OOM");
+        return ESP_FAIL;
+    }
+    xSemaphoreTake(s_update_sem, 0);   // drain a stale give from a timed-out run
+
+    if (!updater_force(api_update_prep_cb)) {
+        httpd_resp_sendstr(req, "{\"result\":\"busy\"}");
+        return ESP_OK;
+    }
+
+    // The check is one short HTTPS GET (8 s client timeout) — block the httpd
+    // worker until the prep cb reports the decision, with margin on top.
+    if (xSemaphoreTake(s_update_sem, pdMS_TO_TICKS(15000)) != pdTRUE) {
+        httpd_resp_sendstr(req, "{\"result\":\"none\"}");
+        return ESP_OK;
+    }
+
+    char body[96];
+    switch (s_update_mode) {
+    case UPDATER_FORCE_FW:
+        snprintf(body, sizeof(body), "{\"result\":\"fw\",\"latest\":\"%s\"}",
+                 updater_latest_version());
+        break;
+    case UPDATER_FORCE_WWW:
+        snprintf(body, sizeof(body), "{\"result\":\"www\"}");
+        break;
+    default:
+        snprintf(body, sizeof(body), "{\"result\":\"none\"}");
+        break;
+    }
+    httpd_resp_sendstr(req, body);
+    return ESP_OK;
+}
+
 static esp_err_t api_restart_handler(httpd_req_t *req)
 {
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
@@ -2847,6 +2917,13 @@ void http_server_start(void)
         .handler = api_ota_backup_handler,
     };
     httpd_register_uri_handler(server, &api_ota_backup);
+
+    httpd_uri_t api_update = {
+        .uri     = "/api/update",
+        .method  = HTTP_POST,
+        .handler = api_update_post_handler,
+    };
+    httpd_register_uri_handler(server, &api_update);
 
     httpd_uri_t api_theme_get = {
         .uri     = "/api/theme",

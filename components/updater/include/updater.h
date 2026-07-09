@@ -84,6 +84,26 @@ bool updater_www_stale(const char *expected, char *ver_out, size_t ver_sz);
 // prebuilt lib.
 bool updater_www_outdated(void);
 
+// Remote-triggered ("forced") update — POST /api/update from the phone app. No
+// on-screen prompt: the POST is the user's confirmation, so this also ignores
+// settings.update.enable (which only gates the prompt). Re-runs the version
+// check first — on a long-running device the boot-check result may predate the
+// release the app already sees on GitHub — then applies what it finds. `prep`
+// fires from the updater task once the mode is decided, BEFORE any download
+// starts: the HTTP handler uses it to stop audio / bring up SCREEN_OTA and to
+// unblock its response. Must be cheap and thread-safe. Returns false when a
+// forced check is already in flight (caller answers "busy") or the task cannot
+// spawn. Implemented in the prebuilt lib.
+typedef enum {
+    UPDATER_FORCE_NONE = 0,   // nothing newer found, or the check failed
+    UPDATER_FORCE_FW,         // newer firmware → pull-OTA + reboot follows
+    UPDATER_FORCE_WWW,        // firmware current, web UI stale → in-place pull
+} updater_force_mode_t;
+
+typedef void (*updater_force_prep_cb_t)(updater_force_mode_t mode);
+
+bool updater_force(updater_force_prep_cb_t prep);
+
 // Refresh the stale web UI in place (called from SCREEN_UPDATE on user confirm,
 // after the caller stopped audio — sustained HTTPS needs the internal-RAM
 // headroom). Spawns a task that pulls the LATEST release's built web set via the
