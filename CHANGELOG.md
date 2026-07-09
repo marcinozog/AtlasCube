@@ -9,6 +9,17 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-07-09
+
+### Added
+- **updater:** on-device web UI pull from SCREEN_UPDATE (no reboot)
+- **updater:** flag stale web UI on SCREEN_UPDATE after boot version check
+- **updater:** on-device auto-update — boot check, SCREEN_UPDATE, pull-OTA
+
+### Fixed
+- **web:** skip HTML recompress + version stamp rewrite when UI hash unchanged
+- **ui:** update/OTA screens leaked flex layout onto shared screen object
+
 ## [0.39.0] - 2026-07-06
 
 ### Added
@@ -579,7 +590,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.39.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.40.0...HEAD
+[0.40.0]: https://github.com/marcinozog/AtlasCube/compare/v0.39.0...v0.40.0
 [0.39.0]: https://github.com/marcinozog/AtlasCube/compare/v0.38.0...v0.39.0
 [0.38.0]: https://github.com/marcinozog/AtlasCube/compare/v0.37.0...v0.38.0
 [0.37.0]: https://github.com/marcinozog/AtlasCube/compare/v0.36.0...v0.37.0
