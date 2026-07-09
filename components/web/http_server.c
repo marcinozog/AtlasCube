@@ -2661,6 +2661,9 @@ static void api_update_prep_cb(updater_force_mode_t mode)
         ui_navigate(SCREEN_OTA);
         radio_stop();
     } else if (mode == UPDATER_FORCE_WWW) {
+        // Mirror the on-screen flow: SCREEN_UPDATE renders the pull's progress
+        // (its first progress event hides the prompt buttons by itself).
+        ui_navigate(SCREEN_UPDATE);
         radio_stop();   // sustained HTTPS needs the internal-RAM headroom
     }
     xSemaphoreGive(s_update_sem);

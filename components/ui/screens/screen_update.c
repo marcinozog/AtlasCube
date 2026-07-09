@@ -173,7 +173,17 @@ static void update_destroy(void)
 // navigates to SCREEN_OTA instead and never gets here).
 static void update_on_event(const ui_event_t *ev)
 {
-    if (ev->type != UI_EVT_OTA_PROGRESS || !s_updating || !s_hint) return;
+    if (ev->type != UI_EVT_OTA_PROGRESS || !s_hint) return;
+
+    // A www pull can also start remotely (POST /api/update navigates here with
+    // the download task already running): the first progress event flips the
+    // screen into the same updating view as an on-screen confirm. Failures
+    // before that are not ours to show — leave the prompt untouched.
+    if (!s_updating) {
+        if (s_fw_mode || ev->ota_progress < 0) return;
+        s_updating = true;
+        set_buttons_hidden(true);
+    }
 
     int p = ev->ota_progress;
     if (p < 0) {                        // failed — bring the buttons back for a retry
