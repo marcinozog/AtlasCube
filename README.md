@@ -167,6 +167,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Web UI served from SPIFFS (no internet required after flash)
 - MQTT client — remote control of the radio (play/stop/volume/station) plus up to 6 configurable widgets (toggle / slider / label) on a dedicated on-device screen, driving any external MQTT device (Tasmota, zigbee2mqtt, Home Assistant, …); see [MQTT](#mqtt) below
 - OTA firmware update — upload a new app image straight from the web UI (Settings → Tools); it streams into the inactive slot, validates, and reboots, with bootloader rollback if the new image won't start. A backup/export button downloads the currently running firmware first. The web UI and your settings live in separate flash partitions, so an OTA app update never overwrites them. See [OTA updates](#ota-updates) below
+- Automatic updates — at boot the device checks for a newer release of its variant and shows an on-screen **Update / Later** prompt; firmware installs through the same dual-slot OTA, and a web UI left behind by an app-only update is refreshed in place with one press (no reboot). The prompt can be turned off in Settings → Tools. See [Automatic updates](#automatic-updates) below
 
 **Storage**
 - Optional microSD card over SDMMC (1-bit mode), wired to the build's SDMMC pins
@@ -571,7 +572,19 @@ Update the firmware over Wi-Fi from **Settings → Tools** — no USB cable, no 
 - The device stops playback during the write to free RAM and avoid flash/SPI contention.
 - **Backup first:** the *Export running firmware* button (`GET /api/ota/backup`) downloads the active slot as `atlascube-<version>.bin` — a re-flashable snapshot you can upload again to roll back manually.
 
-When a firmware update also ships new web UI, OTA leaves the `www` partition as-is — the device flags this on the **setup page** (`/setup`), which shows a *web UI out of date* banner with a one-click link to the matching `AtlasCube-www.zip` from the latest release. Extract it and upload the files there (include `www_version.txt` to clear the warning). Alternatively, edit/upload via the in-browser file editor (`/spiffs-editor.html`) or do a full `0x0` reflash.
+When a firmware update also ships new web UI, OTA leaves the `www` partition as-is — the device notices the mismatch and offers to fix it with one press via the on-device **WEB UI OUTDATED** prompt (see [Automatic updates](#automatic-updates) below). Manual fallbacks still work: the **setup page** (`/setup`) shows a *web UI out of date* banner with a one-click link to the matching `AtlasCube-www.zip` from the latest release — extract it and upload the files there (include `www_version.txt` to clear the warning) — or edit/upload via the in-browser file editor (`/spiffs-editor.html`), or do a full `0x0` reflash.
+
+---
+
+## Automatic updates
+
+The device also keeps itself current — no browser needed. On boot (Wi-Fi STA), it asks atlascube.net whether a newer release exists for its hardware variant (the request carries the variant, the running firmware version and an anonymous device id — no account, no personal data). Depending on the answer:
+
+- **Newer firmware available** → a **NEW FIRMWARE** prompt with **Update / Later** buttons appears on the device screen. Confirming downloads the app-only image for the running variant over HTTPS and installs it through the same dual-slot OTA flow as above (settings and rollback included), then reboots.
+- **Firmware current, web UI stale** → an app-only update never rewrites the `www` partition, so the web UI can lag behind. The device detects this and shows a **WEB UI OUTDATED** prompt instead; confirming pulls the fresh web files from the release package straight onto the `www` partition — in place, live, no reboot.
+- **Later** dismisses the prompt until the next boot.
+
+The on-screen prompt can be disabled in **Settings → Tools** (the boot version check itself still runs). Devices flashed before the updater shipped need one manual update (USB or the web OTA above) to pick it up; from then on they keep themselves up to date.
 
 ---
 

@@ -165,6 +165,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Web UI z SPIFFS (po wgraniu internet nie jest potrzebny)
 - Klient MQTT — zdalne sterowanie radiem (play/stop/głośność/stacja) plus do 6 konfigurowalnych widgetów (toggle / slider / label) na osobnym ekranie, do sterowania zewnętrznym sprzętem MQTT (Tasmota, zigbee2mqtt, Home Assistant…); szczegóły w [MQTT](#mqtt) niżej
 - Aktualizacja OTA — nowy obraz firmware wgrywasz prosto z Web UI (Ustawienia → Tools); trafia do nieaktywnego slotu, jest walidowany i urządzenie restartuje się do niego, z rollbackiem bootloadera gdy nowy obraz nie wstanie. Przycisk eksportu pobiera najpierw bieżący firmware. Web UI i ustawienia leżą na osobnych partycjach flasha, więc aktualizacja OTA aplikacji nigdy ich nie nadpisuje. Szczegóły w [Aktualizacje OTA](#aktualizacje-ota) niżej
+- Automatyczne aktualizacje — przy starcie urządzenie sprawdza, czy jest nowszy release jego wariantu, i pokazuje ekranowy monit **Update / Later**; firmware instaluje się tą samą dwuslotową ścieżką OTA, a web UI pozostałe po aktualizacji samej aplikacji odświeża się w miejscu jednym przyciskiem (bez restartu). Monit można wyłączyć w Ustawienia → Tools. Szczegóły w [Automatyczne aktualizacje](#automatyczne-aktualizacje) niżej
 
 **Pamięć**
 - Opcjonalna karta microSD po SDMMC (tryb 1-bit), podpięta do pinów SDMMC danego wariantu
@@ -568,7 +569,19 @@ Aktualizacja firmware przez Wi-Fi z **Ustawienia → Tools** — bez kabla USB, 
 - Urządzenie zatrzymuje odtwarzanie na czas zapisu, żeby zwolnić RAM i uniknąć kontencji na flash/SPI.
 - **Najpierw backup:** przycisk *Export running firmware* (`GET /api/ota/backup`) pobiera aktywny slot jako `atlascube-<wersja>.bin` — re-flashowalny snapshot, który można wgrać z powrotem, żeby ręcznie cofnąć aktualizację.
 
-Gdy nowy firmware niesie też nowe web UI, OTA zostawia partycję `www` bez zmian — urządzenie sygnalizuje to na **stronie setupu** (`/setup`), która pokazuje baner *web UI out of date* z linkiem jednym kliknięciem do pasującego `AtlasCube-www.zip` z najnowszego release. Rozpakuj i wgraj tam pliki (dołącz `www_version.txt`, żeby skasować ostrzeżenie). Ewentualnie edytuj/wgraj edytorem plików w przeglądarce (`/spiffs-editor.html`) albo zrób pełny reflash od `0x0`.
+Gdy nowy firmware niesie też nowe web UI, OTA zostawia partycję `www` bez zmian — urządzenie wykrywa rozjazd i samo proponuje naprawę jednym przyciskiem przez ekranowy monit **WEB UI OUTDATED** (patrz [Automatyczne aktualizacje](#automatyczne-aktualizacje) niżej). Ręczne ścieżki nadal działają: **strona setupu** (`/setup`) pokazuje baner *web UI out of date* z linkiem jednym kliknięciem do pasującego `AtlasCube-www.zip` z najnowszego release — rozpakuj i wgraj tam pliki (dołącz `www_version.txt`, żeby skasować ostrzeżenie) — albo edytuj/wgraj edytorem plików w przeglądarce (`/spiffs-editor.html`), albo zrób pełny reflash od `0x0`.
+
+---
+
+## Automatyczne aktualizacje
+
+Urządzenie potrafi też aktualizować się samo — bez przeglądarki. Przy starcie (Wi-Fi STA) pyta atlascube.net, czy istnieje nowszy release dla jego wariantu sprzętowego (zapytanie niesie wariant, bieżącą wersję firmware i anonimowy identyfikator urządzenia — bez konta, bez danych osobowych). Zależnie od odpowiedzi:
+
+- **Jest nowszy firmware** → na ekranie urządzenia pojawia się monit **NEW FIRMWARE** z przyciskami **Update / Later**. Potwierdzenie pobiera obraz samej aplikacji dla działającego wariantu przez HTTPS i instaluje go tą samą dwuslotową ścieżką OTA co wyżej (ustawienia i rollback bez zmian), po czym restartuje.
+- **Firmware aktualny, web UI stare** → aktualizacja samej aplikacji nigdy nie nadpisuje partycji `www`, więc web UI może zostać w tyle. Urządzenie to wykrywa i pokazuje monit **WEB UI OUTDATED**; potwierdzenie ściąga świeże pliki web z paczki release'u prosto na partycję `www` — w miejscu, na żywo, bez restartu.
+- **Later** odkłada monit do następnego startu.
+
+Ekranowy monit można wyłączyć w **Ustawienia → Tools** (samo sprawdzenie wersji przy starcie i tak się wykonuje). Urządzenia wgrane przed pojawieniem się updatera potrzebują jednej ręcznej aktualizacji (USB albo web-OTA wyżej), żeby go dostać; od tego momentu aktualizują się same.
 
 ---
 
