@@ -31,8 +31,21 @@ static const char *TAG = "VU_WIDGET";
 #define VU_FREQ_TOP   13000.0f     // clamp the top band well below Nyquist: above ~13 kHz
                                    // the small speaker and the ear both roll off and music
                                    // has little energy, so the last bar barely moved at 17k
-#define VU_DB_FLOOR    0.0f        // peak power(dB) mapped to bar = 0
-#define VU_DB_CEIL     36.0f       // peak power(dB) mapped to bar = full height
+// AGC: bars map relative to a slowly-tracked reference level, not a fixed dB
+// window. Broadcast streams are loudness-compressed — the absolute level differs
+// per station but barely moves within one, so a fixed window parked the bars at
+// some height and a beat shifted them by a few invisible percent. Riding the
+// recent peak keeps the loudest bar near full scale and lets beats modulate the
+// whole range regardless of how loud or compressed the station is.
+#define VU_AGC_RANGE_DB 24.0f      // window below the reference mapped to 0..1 bar
+                                   // (the sensitivity knob: smaller → more motion/dB)
+#define VU_AGC_ATTACK   0.5f       // ref rise smoothing per tick — a louder passage
+                                   // re-anchors the meter within ~3 ticks (150 ms)
+#define VU_AGC_FALL_DB  0.1f       // ref drop per tick (2 dB/s @ 20 fps): slow enough
+                                   // not to breathe with single beats, fast enough to
+                                   // recover seconds after a loud→quiet transition
+#define VU_AGC_REF_MIN  12.0f      // don't chase silence: stops the window expanding
+                                   // into idle hiss between tracks / on dead air
 #define VU_ATTACK      0.95f       // smoothing when a bar rises (fast)
 #define VU_DECAY       0.65f       // smoothing when a bar falls (higher → snappier drop,
                                    // so bars return between beats and the rhythm shows)
@@ -65,6 +78,7 @@ static int16_t *s_raw = NULL;          // newest mono window (VU_FFT_N)
 static float   *s_win = NULL;          // Hann window (VU_FFT_N)
 static float   *s_cf  = NULL;          // interleaved complex Re,Im (VU_FFT_N*2)
 static float    s_lvl[VU_BARS_MAX];    // smoothed bar levels 0..1
+static float    s_agc_ref = VU_AGC_REF_MIN; // AGC reference level in dB (FFT task only)
 static int      s_bin_lo[VU_BARS_MAX]; // FFT bin range per bar
 static int      s_bin_hi[VU_BARS_MAX];
 static uint32_t s_last_count = 0;      // audio_levels_count() at last tick
@@ -198,9 +212,11 @@ static void fft_compute(void)
     dsps_fft2r_fc32(s_cf, VU_FFT_N);
     dsps_bit_rev_fc32(s_cf, VU_FFT_N);
 
-    // Per bar: PEAK power across its bins → dB → normalised 0..1 → smoothed.
-    // Peak keeps the meter punchy (transients pop); the wide-band high-frequency
-    // bias it used to cause is handled by clamping the top band (VU_FREQ_TOP).
+    // Per bar: PEAK power across its bins → dB. Peak keeps the meter punchy
+    // (transients pop); the wide-band high-frequency bias it used to cause is
+    // handled by clamping the top band (VU_FREQ_TOP).
+    float db[VU_BARS_MAX];
+    float frame_max = -100.0f;
     for (int b = 0; b < s_nbars; b++) {
         float peak = 0.0f;
         for (int k = s_bin_lo[b]; k < s_bin_hi[b]; k++) {
@@ -208,8 +224,18 @@ static void fft_compute(void)
             float p  = re * re + im * im;
             if (p > peak) peak = p;
         }
-        float db  = 10.0f * log10f(peak + 1e-9f);   // 10·log10 of peak power
-        float lvl = (db - VU_DB_FLOOR) / (VU_DB_CEIL - VU_DB_FLOOR);
+        db[b] = 10.0f * log10f(peak + 1e-9f);   // 10·log10 of peak power
+        if (db[b] > frame_max) frame_max = db[b];
+    }
+
+    // AGC reference: rise quickly toward the loudest bar, fall slowly (see knobs).
+    if (frame_max > s_agc_ref) s_agc_ref += (frame_max - s_agc_ref) * VU_AGC_ATTACK;
+    else                       s_agc_ref -= VU_AGC_FALL_DB;
+    if (s_agc_ref < VU_AGC_REF_MIN) s_agc_ref = VU_AGC_REF_MIN;
+
+    // Map each bar into the window [ref−RANGE .. ref] → 0..1 → smoothed.
+    for (int b = 0; b < s_nbars; b++) {
+        float lvl = (db[b] - (s_agc_ref - VU_AGC_RANGE_DB)) / VU_AGC_RANGE_DB;
         if (lvl < 0.0f) lvl = 0.0f; else if (lvl > 1.0f) lvl = 1.0f;
         smooth_to(b, lvl);
     }
@@ -288,6 +314,7 @@ void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h)
         s_lvl[b] = 0.0f;
         s_hgt[b] = 1;
     }
+    s_agc_ref = VU_AGC_REF_MIN;   // re-anchor to the new programme on recreate
 
     // Bars are painted in vu_draw_cb as a single draw area, not as child objects.
     lv_obj_add_event_cb(s_cont, vu_draw_cb, LV_EVENT_DRAW_POST, NULL);
