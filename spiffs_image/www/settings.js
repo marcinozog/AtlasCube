@@ -276,6 +276,19 @@ function setInvert(on) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Time format: 12-hour AM/PM vs 24-hour (applied live — no restart)
+// ─────────────────────────────────────────────────────────────────────────────
+function setTimeAmpm(on) {
+    document.getElementById('settingsBtnTime12')?.classList.toggle('active', on);
+    document.getElementById('settingsBtnTime24')?.classList.toggle('active', !on);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { time_ampm: on } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // FPS overlay (applied live — no restart)
 // ─────────────────────────────────────────────────────────────────────────────
 function setShowFps(on) {
@@ -787,6 +800,10 @@ function populateForm(s) {
         const invert = s.display.invert === true;
         document.getElementById('settingsBtnInvertOn') ?.classList.toggle('active', invert);
         document.getElementById('settingsBtnInvertOff')?.classList.toggle('active', !invert);
+
+        const ampm = s.display.time_ampm === true;   // default 24-hour
+        document.getElementById('settingsBtnTime12')?.classList.toggle('active', ampm);
+        document.getElementById('settingsBtnTime24')?.classList.toggle('active', !ampm);
 
         const showFps = s.display.show_fps === true;   // default off
         document.getElementById('settingsBtnFpsOn') ?.classList.toggle('active', showFps);

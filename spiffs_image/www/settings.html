@@ -62,7 +62,7 @@
             <div class="field-group">
                 <label class="field-label">Flip display 180°</label>
                 <div class="field-hint">Rotate the whole screen upside-down (for inverted mounting). Applies instantly.</div>
-                <div class="theme-toggle" id="flipToggle" style="width:fit-content">
+                <div class="theme-toggle uniform" id="flipToggle" style="width:fit-content">
                     <button class="theme-btn" id="settingsBtnFlipOn"  onclick="setFlip(true)">🔄 Flipped</button>
                     <button class="theme-btn" id="settingsBtnFlipOff" onclick="setFlip(false)">⬆️ Normal</button>
                 </div>
@@ -70,15 +70,23 @@
             <div class="field-group">
                 <label class="field-label">Invert colours</label>
                 <div class="field-hint">Fixes panels that show inverted colours (e.g. yellow appears blue). Applies instantly — flip this if the colours look wrong.</div>
-                <div class="theme-toggle" id="invertToggle" style="width:fit-content">
+                <div class="theme-toggle uniform" id="invertToggle" style="width:fit-content">
                     <button class="theme-btn" id="settingsBtnInvertOn"  onclick="setInvert(true)">🌗 Inverted</button>
                     <button class="theme-btn" id="settingsBtnInvertOff" onclick="setInvert(false)">🎨 Normal</button>
                 </div>
             </div>
             <div class="field-group">
+                <label class="field-label">Time format</label>
+                <div class="field-hint">How the clock is shown on the device's home screen. Applies instantly.</div>
+                <div class="theme-toggle uniform" id="timeFmtToggle" style="width:fit-content">
+                    <button class="theme-btn" id="settingsBtnTime24" onclick="setTimeAmpm(false)">🕐 24-hour</button>
+                    <button class="theme-btn" id="settingsBtnTime12" onclick="setTimeAmpm(true)">🕐 AM/PM</button>
+                </div>
+            </div>
+            <div class="field-group">
                 <label class="field-label">FPS overlay</label>
                 <div class="field-hint">Show LVGL's on-screen FPS + CPU% counter (bottom-right). Applies instantly.</div>
-                <div class="theme-toggle" id="fpsToggle" style="width:fit-content">
+                <div class="theme-toggle uniform" id="fpsToggle" style="width:fit-content">
                     <button class="theme-btn" id="settingsBtnFpsOn"  onclick="setShowFps(true)">📊 Show</button>
                     <button class="theme-btn" id="settingsBtnFpsOff" onclick="setShowFps(false)">🚫 Hide</button>
                 </div>
@@ -90,21 +98,21 @@
             <div class="field-hint">Hidden screens are skipped when cycling screens on the device.</div>
             <div class="field-group">
                 <label class="field-label">Radio screen</label>
-                <div class="theme-toggle" id="radioScreenToggle" style="width:fit-content">
+                <div class="theme-toggle wide" id="radioScreenToggle" style="width:fit-content">
                     <button class="theme-btn" id="settingsBtnRadioShow" onclick="setDeviceRadioScreen(true)">✅ Show</button>
                     <button class="theme-btn" id="settingsBtnRadioHide" onclick="setDeviceRadioScreen(false)">❌ Hide</button>
                 </div>
             </div>
             <div class="field-group">
                 <label class="field-label">SD player screen</label>
-                <div class="theme-toggle" id="sdScreenToggle" style="width:fit-content">
+                <div class="theme-toggle wide" id="sdScreenToggle" style="width:fit-content">
                     <button class="theme-btn" id="settingsBtnSDshow" onclick="setDeviceSDScreen(true)">✅ Show</button>
                     <button class="theme-btn" id="settingsBtnSDhide" onclick="setDeviceSDScreen(false)">❌ Hide</button>
                 </div>
             </div>
             <div class="field-group">
                 <label class="field-label">Bluetooth screen</label>
-                <div class="theme-toggle" id="btScreenToggle" style="width:fit-content">
+                <div class="theme-toggle wide" id="btScreenToggle" style="width:fit-content">
                     <button class="theme-btn" id="settingsBtnBTshow" onclick="setDeviceBTScreen(true)">✅ Show</button>
                     <button class="theme-btn" id="settingsBtnBThide" onclick="setDeviceBTScreen(false)">❌ Hide</button>
                 </div>
@@ -440,7 +448,7 @@
     <section class="tab-pane" id="tab-colors" data-tab="colors">
         <div class="panel">
             <label class="field-label">Theme</label>
-            <div class="theme-toggle" id="themeToggle" style="width:fit-content">
+            <div class="theme-toggle wide" id="themeToggle" style="width:fit-content">
                 <button class="theme-btn" id="settingsBtnDark"  onclick="setDeviceTheme('dark')">🌙 Dark</button>
                 <button class="theme-btn" id="settingsBtnLight" onclick="setDeviceTheme('light')">☀️ Light</button>
             </div>

@@ -166,6 +166,13 @@ body {
     padding: 0 14px;
 }
 
+/* Equal-width variant: text-label buttons that all share one width, so toggles
+   stacked in a column (e.g. Panel Options in settings) line up neatly. */
+.theme-toggle.uniform .theme-btn {
+    width: 110px;
+    padding: 0;
+}
+
 .theme-btn.active {
     background: var(--accent);
     color: #fff;

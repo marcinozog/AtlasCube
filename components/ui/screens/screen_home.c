@@ -17,6 +17,7 @@
 #include "ui_manager.h"
 #include "ui_nav.h"
 #include "ntp_service.h"
+#include "ui_timefmt.h"
 #include "wifi_manager.h"
 #include "mdns_service.h"
 #include "lvgl.h"
@@ -36,6 +37,8 @@ static lv_obj_t  *s_strip         = NULL;
 static lv_obj_t  *s_strip_station = NULL;
 static lv_obj_t  *s_strip_title   = NULL;
 static lv_obj_t  *s_time_label    = NULL;
+static lv_obj_t  *s_ampm_label    = NULL;
+static int32_t    s_ampm_y_ofs    = 0;
 static lv_obj_t  *s_date_label    = NULL;
 static lv_obj_t  *s_netinfo_label = NULL;
 static lv_timer_t *s_clock_timer  = NULL;
@@ -84,6 +87,7 @@ static void update_clock_display(void)
 
     if (!ntp_service_is_synced()) {
         lv_label_set_text(s_time_label, "00:00");
+        if (s_ampm_label) lv_obj_add_flag(s_ampm_label, LV_OBJ_FLAG_HIDDEN);
         if (s_date_label) lv_label_set_text(s_date_label, "Syncing...");
         return;
     }
@@ -93,8 +97,22 @@ static void update_clock_display(void)
     localtime_r(&now, &t);
 
     char time_buf[12];
-    snprintf(time_buf, sizeof(time_buf), "%02d:%02d", t.tm_hour, t.tm_min);
+    const char *suffix = ui_format_time(time_buf, sizeof(time_buf), &t);
     lv_label_set_text(s_time_label, time_buf);
+
+    if (s_ampm_label) {
+        if (suffix[0]) {
+            lv_label_set_text(s_ampm_label, suffix);
+            lv_obj_clear_flag(s_ampm_label, LV_OBJ_FLAG_HIDDEN);
+            // Re-anchor on every tick: align_to is one-shot and the time
+            // label's width (and centred position) changes with its text.
+            lv_obj_update_layout(s_time_label);
+            lv_obj_align_to(s_ampm_label, s_time_label,
+                            LV_ALIGN_OUT_RIGHT_BOTTOM, 6, s_ampm_y_ofs);
+        } else {
+            lv_obj_add_flag(s_ampm_label, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
 
     if (s_date_label) {
         char date_buf[32];
@@ -180,6 +198,23 @@ static void home_create(lv_obj_t *parent)
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_time_label,
             lv_color_hex(th->text_primary), LV_PART_MAIN);
+
+        // AM/PM suffix lives in its own label: the large clock fonts are
+        // digit-only, so letters must use a text-capable (date) font. Hidden
+        // in 24h mode; positioned relative to the time label on every update.
+        const lv_font_t *tf = p->clock_time_font ? p->clock_time_font
+                                                 : &lv_font_montserrat_18_pl;
+        const lv_font_t *af = p->clock_date_font ? p->clock_date_font
+                                                 : &lv_font_montserrat_18_pl;
+        s_ampm_label = lv_label_create(parent);
+        lv_label_set_text(s_ampm_label, "");
+        lv_obj_add_flag(s_ampm_label, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_style_text_font(s_ampm_label, af, LV_PART_MAIN);
+        lv_obj_set_style_text_color(s_ampm_label,
+            lv_color_hex(th->text_secondary), LV_PART_MAIN);
+        // Align the two baselines: OUT_RIGHT_BOTTOM matches the line-box
+        // bottoms, so shift by the difference of the fonts' baseline offsets.
+        s_ampm_y_ofs = (int32_t)af->base_line - (int32_t)tf->base_line;
     }
 
     if (p->clock_show_date) {
@@ -251,6 +286,7 @@ static void home_destroy(void)
     s_root = s_strip = NULL;
     s_strip_station = s_strip_title = NULL;
     s_time_label    = s_date_label  = NULL;
+    s_ampm_label    = NULL;
     s_netinfo_label = NULL;
 
     ESP_LOGI(TAG, "Destroyed");
@@ -337,6 +373,9 @@ static void home_apply_theme(void)
     if (s_time_label)
         lv_obj_set_style_text_color(s_time_label,
             lv_color_hex(th->text_primary), LV_PART_MAIN);
+    if (s_ampm_label)
+        lv_obj_set_style_text_color(s_ampm_label,
+            lv_color_hex(th->text_secondary), LV_PART_MAIN);
     if (s_date_label)
         lv_obj_set_style_text_color(s_date_label,
             lv_color_hex(th->text_secondary), LV_PART_MAIN);

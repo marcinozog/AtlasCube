@@ -122,6 +122,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
         s->display.theme == THEME_LIGHT ? "light" : "dark");
     cJSON_AddBoolToObject(display, "flip", s->display.flip);
     cJSON_AddBoolToObject(display, "invert", s->display.invert);
+    cJSON_AddBoolToObject(display, "time_ampm", s->display.time_ampm);
     cJSON_AddBoolToObject(display, "bg_gradient", s->display.bg_gradient);
     cJSON_AddBoolToObject(display, "wallpaper_on", s->display.wallpaper_on);
     cJSON_AddStringToObject(display, "wallpaper_path", s->display.wallpaper_path);
@@ -342,6 +343,11 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             // it gets flushed (and the screen visibly updates) right away.
             ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
             ui_event_send(&ev);
+        }
+        cJSON *ta = cJSON_GetObjectItem(display, "time_ampm");
+        if (cJSON_IsBool(ta)) {
+            ESP_LOGI("HTTP", "POST time_ampm: %d", cJSON_IsTrue(ta));
+            settings_set_time_ampm(cJSON_IsTrue(ta));
         }
         cJSON *sfp = cJSON_GetObjectItem(display, "show_fps");
         if (cJSON_IsBool(sfp)) {
