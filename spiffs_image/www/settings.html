@@ -28,7 +28,7 @@
         <button type="button" class="tab-btn" data-tab="audio"       onclick="selectTab('audio')">🎚️ Audio</button>
         <button type="button" class="tab-btn" data-tab="colors"      onclick="selectTab('colors')">🎨 Theme</button>
         <button type="button" class="tab-btn" data-tab="wifi"        onclick="selectTab('wifi')">🌐 Network</button>
-        <button type="button" class="tab-btn" data-tab="ntp"         onclick="selectTab('ntp')">🕐 NTP</button>
+        <button type="button" class="tab-btn" data-tab="datetime"    onclick="selectTab('datetime')">🕐 Date &amp; Time</button>
         <button type="button" class="tab-btn" data-tab="mqtt"        onclick="selectTab('mqtt')">📨 MQTT</button>
         <button type="button" class="tab-btn" data-tab="tools"       onclick="selectTab('tools')">🛠️ Tools</button>
         <button type="button" class="tab-btn" data-tab="system"      onclick="selectTab('system')">⚙️ System</button>
@@ -73,22 +73,6 @@
                 <div class="theme-toggle uniform" id="invertToggle" style="width:fit-content">
                     <button class="theme-btn" id="settingsBtnInvertOn"  onclick="setInvert(true)">🌗 Inverted</button>
                     <button class="theme-btn" id="settingsBtnInvertOff" onclick="setInvert(false)">🎨 Normal</button>
-                </div>
-            </div>
-            <div class="field-group">
-                <label class="field-label">Time format</label>
-                <div class="field-hint">How the clock is shown on the device's home screen. Applies instantly.</div>
-                <div class="theme-toggle uniform" id="timeFmtToggle" style="width:fit-content">
-                    <button class="theme-btn" id="settingsBtnTime24" onclick="setTimeAmpm(false)">🕐 24-hour</button>
-                    <button class="theme-btn" id="settingsBtnTime12" onclick="setTimeAmpm(true)">🕐 AM/PM</button>
-                </div>
-            </div>
-            <div class="field-group">
-                <label class="field-label">Date format</label>
-                <div class="field-hint">How the date is shown on the device's home screen. Applies instantly.</div>
-                <div class="theme-toggle uniform" id="dateFmtToggle" style="width:fit-content">
-                    <button class="theme-btn" id="settingsBtnDateYmd" onclick="setDateMdy(false)">📅 YYYY-MM-DD</button>
-                    <button class="theme-btn" id="settingsBtnDateMdy" onclick="setDateMdy(true)">📅 MM/DD/YYYY</button>
                 </div>
             </div>
             <div class="field-group">
@@ -544,9 +528,25 @@
     </section>
 
     <!-- ══════════════════════════════════════════
-         NTP
+         DATE & TIME (formats + NTP sync)
     ══════════════════════════════════════════ -->
-    <section class="tab-pane" id="tab-ntp" data-tab="ntp">
+    <section class="tab-pane" id="tab-datetime" data-tab="datetime">
+        <div class="field-group">
+            <label class="field-label">Time format</label>
+            <div class="field-hint">How the clock is shown on the device's home screen. Applies instantly.</div>
+            <div class="theme-toggle uniform" id="timeFmtToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnTime24" onclick="setTimeAmpm(false)">🕐 24-hour</button>
+                <button class="theme-btn" id="settingsBtnTime12" onclick="setTimeAmpm(true)">🕐 AM/PM</button>
+            </div>
+        </div>
+        <div class="field-group">
+            <label class="field-label">Date format</label>
+            <div class="field-hint">How the date is shown on the device's home screen. Applies instantly.</div>
+            <div class="theme-toggle uniform" id="dateFmtToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnDateYmd" onclick="setDateMdy(false)">📅 YYYY-MM-DD</button>
+                <button class="theme-btn" id="settingsBtnDateMdy" onclick="setDateMdy(true)">📅 MM/DD/YYYY</button>
+            </div>
+        </div>
         <div class="field-group">
             <label class="field-label">NTP Server 1</label>
             <input type="text" id="ntp_server1" class="field-input" placeholder="pool.ntp.org" />
