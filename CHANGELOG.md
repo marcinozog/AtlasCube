@@ -9,6 +9,23 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-07-10
+
+### Added
+- **wifi:** WiFi setup reachable at runtime via Settings → System → WiFi (touch builds); STA scans without disconnecting, screen shows live SSID/IP, swipe backs out
+
+### Fixed
+- **ws:** malformed `set_eq_10` bands array crashed the device (NULL deref)
+- **ws:** cap incoming frame size at 4 KB (client-supplied length went straight to malloc)
+- **state:** long station/podcast URL could overflow the app_state log buffer (stack corruption)
+- **web:** JSON replies crash-proofed against cJSON heap exhaustion (send_json_or_500, guarded WS broadcasts)
+- **settings:** volume/brightness clamped in setters (unvalidated WS/HTTP values reached the audio engine)
+- **settings:** concurrent saves from different tasks could corrupt settings.json (now serialized)
+- **events:** a voice notification interrupting another no longer loses the source to restore
+
+### Changed
+- **www:** split System tab out of Tools, group Display panels in settings
+
 ## [0.41.0] - 2026-07-09
 
 ### Added
