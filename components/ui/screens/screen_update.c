@@ -10,6 +10,7 @@
 #include "esp_log.h"
 #include "esp_app_desc.h"
 #include <stdint.h>
+#include <string.h>
 
 static const char *TAG = "SCR_UPD";
 
@@ -137,11 +138,24 @@ static void update_create(lv_obj_t *parent)
     lv_obj_set_style_text_font(ver, &lv_font_montserrat_18_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(ver, lv_color_hex(th->accent), LV_PART_MAIN);
 
+    const char *cur = esp_app_get_description()->version;
+
     s_hint = lv_label_create(col);
-    if (s_fw_mode) lv_label_set_text_fmt(s_hint, "current %s", esp_app_get_description()->version);
+    if (s_fw_mode) lv_label_set_text_fmt(s_hint, "current %s", cur);
     else           lv_label_set_text(s_hint, "downloads from atlascube.net");
     lv_obj_set_style_text_font(s_hint, &lv_font_montserrat_12_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_hint, lv_color_hex(th->text_muted), LV_PART_MAIN);
+
+    // A git-describe suffix ("-dirty", "-N-g<hash>") means the running firmware
+    // was built from source, not a release tag — installing the official image
+    // discards those code changes (settings/NVS/www survive an app-only OTA).
+    if (s_fw_mode && strchr(cur, '-')) {
+        lv_obj_t *warn = lv_label_create(col);
+        lv_label_set_text(warn, "self-built firmware\nupdate will replace your changes");
+        lv_obj_set_style_text_font(warn, &lv_font_montserrat_12_pl, LV_PART_MAIN);
+        lv_obj_set_style_text_color(warn, lv_color_hex(th->accent), LV_PART_MAIN);
+        lv_obj_set_style_text_align(warn, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    }
 
     // Button row.
     lv_obj_t *row = lv_obj_create(col);
