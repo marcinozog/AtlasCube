@@ -234,25 +234,34 @@ void wifi_manager_scan_start(void)
 {
     if (s_scan_busy) { ESP_LOGW(TAG, "Scan already in progress"); return; }
 
-    // We're provisioning now: stop auto-reconnecting to any previously-configured
-    // AP so the scan isn't fighting a connect/retry loop (relevant when we fell
-    // back to AP after a failed STA attempt — that STA netif already exists).
-    s_sta_autoconnect = false;
+    if (s_run_mode == WIFI_RUN_MODE_STA) {
+        // Reconfiguration scan (Settings → WiFi while connected): STA can scan
+        // without disconnecting — it just hops off-channel briefly (a streaming
+        // radio may stall for a moment). Keep the connection and autoconnect
+        // untouched; a network switch happens via save + restart, not here.
+        ESP_LOGI(TAG, "Scan: STA mode — scanning without disconnecting");
+    } else {
+        // Provisioning path (AP mode): stop auto-reconnecting to any
+        // previously-configured AP so the scan isn't fighting a connect/retry
+        // loop (relevant when we fell back to AP after a failed STA attempt —
+        // that STA netif already exists).
+        s_sta_autoconnect = false;
 
-    // Scanning needs a STA interface. In AP-only mode bring one up (the AP stays
-    // online) and switch to APSTA.
-    if (!s_sta_netif_up) {
-        ESP_LOGI(TAG, "Scan: bringing up STA interface (AP stays up)");
-        esp_netif_create_default_wifi_sta();
-        s_sta_netif_up = true;
+        // Scanning needs a STA interface. In AP-only mode bring one up (the AP
+        // stays online) and switch to APSTA.
+        if (!s_sta_netif_up) {
+            ESP_LOGI(TAG, "Scan: bringing up STA interface (AP stays up)");
+            esp_netif_create_default_wifi_sta();
+            s_sta_netif_up = true;
+        }
+        wifi_mode_t mode = WIFI_MODE_NULL;
+        esp_wifi_get_mode(&mode);
+        if (mode != WIFI_MODE_APSTA) {
+            if (esp_wifi_set_mode(WIFI_MODE_APSTA) != ESP_OK)
+                ESP_LOGE(TAG, "Scan: set APSTA failed");
+        }
+        esp_wifi_disconnect();   // cancel any stale/ongoing STA connect attempt
     }
-    wifi_mode_t mode = WIFI_MODE_NULL;
-    esp_wifi_get_mode(&mode);
-    if (mode != WIFI_MODE_APSTA) {
-        if (esp_wifi_set_mode(WIFI_MODE_APSTA) != ESP_OK)
-            ESP_LOGE(TAG, "Scan: set APSTA failed");
-    }
-    esp_wifi_disconnect();   // cancel any stale/ongoing STA connect attempt
 
     s_scan_count = 0;
     s_scan_busy  = true;

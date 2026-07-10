@@ -445,13 +445,23 @@ static void wifi_create(lv_obj_t *parent)
 
     // ── Status / hint line ───────────────────────────────────────────────────
     s_status = lv_label_create(parent);
-    // Startup hint: show the AP-mode connection data (browser fallback) and tell
-    // the user the knob starts a scan. Overwritten with progress once scanning.
-    lv_label_set_text_fmt(s_status,
-                          "AP mode - browser setup: http://192.168.4.1\n"
-                          "WiFi \"%s\"  pass: %s\n"
-                          "or press the knob to scan networks",
-                          wifi_get_ap_ssid(), wifi_get_ap_pass());
+    // Startup hint, overwritten with progress once scanning. In STA mode
+    // (entered from Settings → System → WiFi) show the live connection instead
+    // of the AP provisioning data, which would be misleading here.
+    if (wifi_get_run_mode() == WIFI_RUN_MODE_STA) {
+        char ip[16];
+        lv_label_set_text_fmt(s_status,
+                              "Connected to \"%s\"  IP: %s\n"
+                              "Scan to switch network, swipe to go back",
+                              settings_get()->wifi.ssid,
+                              wifi_get_ip(ip, sizeof(ip)));
+    } else {
+        lv_label_set_text_fmt(s_status,
+                              "AP mode - browser setup: http://192.168.4.1\n"
+                              "WiFi \"%s\"  pass: %s\n"
+                              "or press the knob to scan networks",
+                              wifi_get_ap_ssid(), wifi_get_ap_pass());
+    }
     lv_label_set_long_mode(s_status, LV_LABEL_LONG_WRAP);
     lv_obj_set_width(s_status, LV_PCT(96));
     lv_obj_set_style_text_font(s_status, p->wifi_hint_font, LV_PART_MAIN);
@@ -547,6 +557,14 @@ static void wifi_on_input(ui_input_t input)
             break;
         case UI_INPUT_ENCODER_LONG_PRESS:
             scan_btn_cb(NULL);
+            break;
+        case UI_INPUT_SWIPE_LEFT:
+        case UI_INPUT_SWIPE_RIGHT:
+            // Entered from the Settings menu → swipe backs out. During boot
+            // provisioning (AP mode) this screen is the only destination, so
+            // the gesture is ignored there.
+            if (wifi_get_run_mode() == WIFI_RUN_MODE_STA)
+                ui_navigate(SCREEN_SETTINGS);
             break;
         default:
             break;

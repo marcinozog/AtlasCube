@@ -1,4 +1,5 @@
 #include "screen_settings.h"
+#include "sdkconfig.h"   // CONFIG_TOUCH_NONE gates the WiFi menu entry
 #include "app_state.h"
 #include "settings.h"
 #include "theme.h"
@@ -147,6 +148,13 @@ static const row_desc_t SEC_SCREENS[] = {
 };
 
 static const row_desc_t SEC_SYSTEM[] = {
+#if !CONFIG_TOUCH_NONE
+    // Interactive WiFi setup (scan → pick → keyboard) — reachable at runtime so
+    // the network can be switched while connected. No-touch panels compile the
+    // static AP-info variant of that screen, which would mislead in STA mode,
+    // so they don't get the entry (web portal covers them).
+    { .title = "WiFi",    .kind = RK_SCREEN, .screen = SCREEN_WIFI },
+#endif
     { .title = "Restart", .kind = RK_ACTION, .action = act_restart, .on_txt = "Press >" },
 };
 
