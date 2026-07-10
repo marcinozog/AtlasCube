@@ -1,6 +1,8 @@
 #include "app_state.h"
 #include "theme.h"
 #include "esp_log.h"
+#include <stdarg.h>
+#include <stdio.h>
 #include <string.h>
 
 static app_state_cb_t s_cbs[APP_STATE_MAX_SUBSCRIBERS];
@@ -33,6 +35,23 @@ static void notify(void)
     for (int i = 0; i < s_cb_count; i++) {
         if (s_cbs[i]) s_cbs[i]();
     }
+}
+
+// Log-line appender: snprintf returns the length that *would* have been
+// written, so a plain `n += snprintf(...)` can push the offset past the buffer
+// once a long field (e.g. url) truncates — then `size - n` underflows and the
+// next call writes out of bounds. Returns the new offset, clamped to size-1.
+static int buf_append(char *buf, size_t size, int n, const char *fmt, ...)
+{
+    if (n < 0 || (size_t)n >= size - 1) return (int)size - 1;
+    va_list ap;
+    va_start(ap, fmt);
+    int r = vsnprintf(buf + n, size - n, fmt, ap);
+    va_end(ap);
+    if (r < 0) return n;
+    n += r;
+    if ((size_t)n > size - 1) n = (int)size - 1;
+    return n;
 }
 
 void app_state_update(const app_state_patch_t *patch)
@@ -179,42 +198,42 @@ void app_state_update(const app_state_patch_t *patch)
 
     char buf[256];
     int n = 0;
-    if (patch->has_radio)             n += snprintf(buf + n, sizeof(buf) - n, " radio=%d", s_state.radio_state);
-    if (patch->has_screen)            n += snprintf(buf + n, sizeof(buf) - n, " screen=%d", s_state.screen);
-    if (patch->has_display_brightness) n += snprintf(buf + n, sizeof(buf) - n, " brightness=%d", s_state.brightness);
-    if (patch->has_bt_enable)         n += snprintf(buf + n, sizeof(buf) - n, " bt_enable=%d", s_state.bt_enable);
-    if (patch->has_bt_auto_switch)    n += snprintf(buf + n, sizeof(buf) - n, " bt_auto_switch=%d", s_state.bt_auto_switch);
-    if (patch->has_bt_state)          n += snprintf(buf + n, sizeof(buf) - n, " bt_connected=%d", s_state.bt_state);
-    if (patch->has_bt_volume)         n += snprintf(buf + n, sizeof(buf) - n, " bt_volume=%d", s_state.bt_volume);
-    if (patch->has_bt_vol_sync)       n += snprintf(buf + n, sizeof(buf) - n, " bt_vol_sync=%d", s_state.bt_vol_sync);
-    if (patch->has_bt_title)          n += snprintf(buf + n, sizeof(buf) - n, " bt_title=%s", s_state.bt_title);
-    if (patch->has_bt_artist)         n += snprintf(buf + n, sizeof(buf) - n, " bt_artist=%s", s_state.bt_artist);
-    if (patch->has_bt_duration_ms)    n += snprintf(buf + n, sizeof(buf) - n, " bt_duration=%dms", s_state.bt_duration_ms);
-    if (patch->has_bt_position_s)     n += snprintf(buf + n, sizeof(buf) - n, " bt_pos=%ds", s_state.bt_position_s);
-    if (patch->has_bt_codec)          n += snprintf(buf + n, sizeof(buf) - n, " bt_codec=%s", s_state.bt_codec);
-    if (patch->has_bt_sample_rate)    n += snprintf(buf + n, sizeof(buf) - n, " bt_sr=%d", s_state.bt_sample_rate);
-    if (patch->has_bt_bits)           n += snprintf(buf + n, sizeof(buf) - n, " bt_bits=%d", s_state.bt_bits);
-    if (patch->has_volume)            n += snprintf(buf + n, sizeof(buf) - n, " volume=%d", s_state.volume);
-    if (patch->has_eq)                n += snprintf(buf + n, sizeof(buf) - n, " eq=*");
-    if (patch->has_eq_enabled)        n += snprintf(buf + n, sizeof(buf) - n, " eq_enabled=%d", s_state.eq_enabled);
-    if (patch->has_curr_index)        n += snprintf(buf + n, sizeof(buf) - n, " curr_index=%d", s_state.curr_index);
-    if (patch->has_url)               n += snprintf(buf + n, sizeof(buf) - n, " url=%s", s_state.url);
-    if (patch->has_station_name)      n += snprintf(buf + n, sizeof(buf) - n, " station=%s", s_state.station_name);
-    if (patch->has_title)             n += snprintf(buf + n, sizeof(buf) - n, " title=%s", s_state.title);
-    if (patch->has_audio_info)        n += snprintf(buf + n, sizeof(buf) - n, " audio=%luHz/%db/%dch/%lubps/fmt%d",
+    if (patch->has_radio)             n = buf_append(buf, sizeof(buf), n, " radio=%d", s_state.radio_state);
+    if (patch->has_screen)            n = buf_append(buf, sizeof(buf), n, " screen=%d", s_state.screen);
+    if (patch->has_display_brightness) n = buf_append(buf, sizeof(buf), n, " brightness=%d", s_state.brightness);
+    if (patch->has_bt_enable)         n = buf_append(buf, sizeof(buf), n, " bt_enable=%d", s_state.bt_enable);
+    if (patch->has_bt_auto_switch)    n = buf_append(buf, sizeof(buf), n, " bt_auto_switch=%d", s_state.bt_auto_switch);
+    if (patch->has_bt_state)          n = buf_append(buf, sizeof(buf), n, " bt_connected=%d", s_state.bt_state);
+    if (patch->has_bt_volume)         n = buf_append(buf, sizeof(buf), n, " bt_volume=%d", s_state.bt_volume);
+    if (patch->has_bt_vol_sync)       n = buf_append(buf, sizeof(buf), n, " bt_vol_sync=%d", s_state.bt_vol_sync);
+    if (patch->has_bt_title)          n = buf_append(buf, sizeof(buf), n, " bt_title=%s", s_state.bt_title);
+    if (patch->has_bt_artist)         n = buf_append(buf, sizeof(buf), n, " bt_artist=%s", s_state.bt_artist);
+    if (patch->has_bt_duration_ms)    n = buf_append(buf, sizeof(buf), n, " bt_duration=%dms", s_state.bt_duration_ms);
+    if (patch->has_bt_position_s)     n = buf_append(buf, sizeof(buf), n, " bt_pos=%ds", s_state.bt_position_s);
+    if (patch->has_bt_codec)          n = buf_append(buf, sizeof(buf), n, " bt_codec=%s", s_state.bt_codec);
+    if (patch->has_bt_sample_rate)    n = buf_append(buf, sizeof(buf), n, " bt_sr=%d", s_state.bt_sample_rate);
+    if (patch->has_bt_bits)           n = buf_append(buf, sizeof(buf), n, " bt_bits=%d", s_state.bt_bits);
+    if (patch->has_volume)            n = buf_append(buf, sizeof(buf), n, " volume=%d", s_state.volume);
+    if (patch->has_eq)                n = buf_append(buf, sizeof(buf), n, " eq=*");
+    if (patch->has_eq_enabled)        n = buf_append(buf, sizeof(buf), n, " eq_enabled=%d", s_state.eq_enabled);
+    if (patch->has_curr_index)        n = buf_append(buf, sizeof(buf), n, " curr_index=%d", s_state.curr_index);
+    if (patch->has_url)               n = buf_append(buf, sizeof(buf), n, " url=%s", s_state.url);
+    if (patch->has_station_name)      n = buf_append(buf, sizeof(buf), n, " station=%s", s_state.station_name);
+    if (patch->has_title)             n = buf_append(buf, sizeof(buf), n, " title=%s", s_state.title);
+    if (patch->has_audio_info)        n = buf_append(buf, sizeof(buf), n, " audio=%luHz/%db/%dch/%lubps/fmt%d",
                                                     (unsigned long)s_state.sample_rate, s_state.bits, s_state.channels,
                                                     (unsigned long)s_state.bitrate, s_state.codec_fmt);
-    if (patch->has_time_synced)       n += snprintf(buf + n, sizeof(buf) - n, " time_synced=%d", s_state.time_synced);
-    if (patch->has_theme)             n += snprintf(buf + n, sizeof(buf) - n, " theme=%d", s_state.theme);
-    if (patch->has_bg_gradient)       n += snprintf(buf + n, sizeof(buf) - n, " bg_gradient=%d", s_state.bg_gradient);
-    if (patch->has_wallpaper_on)      n += snprintf(buf + n, sizeof(buf) - n, " wallpaper_on=%d", s_state.wallpaper_on);
-    if (patch->has_scrsaver_delay)    n += snprintf(buf + n, sizeof(buf) - n, " scrsaver_delay=%d", s_state.scrsaver_delay);
-    if (patch->has_scrsaver_id)       n += snprintf(buf + n, sizeof(buf) - n, " scrsaver_id=%d", s_state.scrsaver_id);
-    if (patch->has_sd_active)         n += snprintf(buf + n, sizeof(buf) - n, " sd_active=%d", s_state.sd_active);
-    if (patch->has_sd_index)          n += snprintf(buf + n, sizeof(buf) - n, " sd_index=%d", s_state.sd_index);
-    if (patch->has_sd_count)          n += snprintf(buf + n, sizeof(buf) - n, " sd_count=%d", s_state.sd_count);
-    if (patch->has_sd_track)          n += snprintf(buf + n, sizeof(buf) - n, " sd_track=%s", s_state.sd_track);
-    if (patch->has_sd_show_screen)    n += snprintf(buf + n, sizeof(buf) - n, " sd_show_screen=%d", s_state.sd_show_screen);
+    if (patch->has_time_synced)       n = buf_append(buf, sizeof(buf), n, " time_synced=%d", s_state.time_synced);
+    if (patch->has_theme)             n = buf_append(buf, sizeof(buf), n, " theme=%d", s_state.theme);
+    if (patch->has_bg_gradient)       n = buf_append(buf, sizeof(buf), n, " bg_gradient=%d", s_state.bg_gradient);
+    if (patch->has_wallpaper_on)      n = buf_append(buf, sizeof(buf), n, " wallpaper_on=%d", s_state.wallpaper_on);
+    if (patch->has_scrsaver_delay)    n = buf_append(buf, sizeof(buf), n, " scrsaver_delay=%d", s_state.scrsaver_delay);
+    if (patch->has_scrsaver_id)       n = buf_append(buf, sizeof(buf), n, " scrsaver_id=%d", s_state.scrsaver_id);
+    if (patch->has_sd_active)         n = buf_append(buf, sizeof(buf), n, " sd_active=%d", s_state.sd_active);
+    if (patch->has_sd_index)          n = buf_append(buf, sizeof(buf), n, " sd_index=%d", s_state.sd_index);
+    if (patch->has_sd_count)          n = buf_append(buf, sizeof(buf), n, " sd_count=%d", s_state.sd_count);
+    if (patch->has_sd_track)          n = buf_append(buf, sizeof(buf), n, " sd_track=%s", s_state.sd_track);
+    if (patch->has_sd_show_screen)    n = buf_append(buf, sizeof(buf), n, " sd_show_screen=%d", s_state.sd_show_screen);
 
     if (n > 0) {
         ESP_LOGI("STATE", "Updated:%s", buf);

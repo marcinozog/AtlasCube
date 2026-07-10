@@ -28,6 +28,8 @@ static int clamp_clock_size(int s)
     return (s == 72 || s == 80 || s == 96 || s == 120) ? s : 96;
 }
 
+static int clampi(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
 
 /*
 esp_err_t settings_init(void)
@@ -706,6 +708,9 @@ esp_err_t       settings_save(void)       { return save_to_file(); }
 
 void settings_set_volume(int volume)
 {
+    // Clamp at the setter so every path (WS JSON, HTTP, MQTT, encoder) is
+    // covered — plain-cmd and MQTT validate on their own, WS/HTTP did not.
+    volume = clampi(volume, 0, 100);
     s_settings.audio.volume = volume;
     audio_engine_set_volume(volume);
     app_state_update(&(app_state_patch_t){ .has_volume = true, .volume = volume });
@@ -764,13 +769,12 @@ void settings_set_screen(ui_screen_id_t screen)
 
 void settings_set_brightness(int brightness)
 {
+    brightness = clampi(brightness, 0, 100);
     s_settings.display.brightness = brightness;
     app_state_update(&(app_state_patch_t) {.has_display_brightness = true, .display_brightness = brightness});
     display_set_backlight(s_settings.display.brightness);
     save_to_file();
 }
-
-static int clampi(int v, int lo, int hi) { return v < lo ? lo : (v > hi ? hi : v); }
 
 void settings_set_night_schedule(const dim_schedule_t *ns)
 {
@@ -881,6 +885,7 @@ void settings_set_bt_vol_sync(bool on)
 
 void settings_set_bt_volume(int volume)
 {
+    volume = clampi(volume, 0, 100);
     s_settings.bluetooth.volume = volume;
     app_state_update(&(app_state_patch_t){ .has_bt_volume = true, .bt_volume = volume });
     bt_set_volume(volume);

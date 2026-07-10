@@ -235,11 +235,12 @@ static esp_err_t ws_handler(httpd_req_t *req)
         else if (strcmp(cmd->valuestring, "set_eq_10") == 0) {
             cJSON *bands = cJSON_GetObjectItem(json, "bands");
 
-            if (cJSON_IsArray(bands)) {
+            if (cJSON_IsArray(bands) && cJSON_GetArraySize(bands) == 10) {
                 int vals[10];
 
                 for (int i = 0; i < 10; i++) {
-                    vals[i] = cJSON_GetArrayItem(bands, i)->valueint;
+                    cJSON *item = cJSON_GetArrayItem(bands, i);
+                    vals[i] = cJSON_IsNumber(item) ? item->valueint : 0;
                 }
 
                 settings_set_eq_10(vals);
