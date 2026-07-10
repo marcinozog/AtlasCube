@@ -179,13 +179,19 @@ void radio_play_notification(const char *filename, int volume)
     snprintf(path, sizeof(path), "%s/voice/%s", SD_MOUNT_POINT, filename);
 
     app_state_t *s = app_state_get();
-    s_notif_was_bt     = s->bt_enable;
-    s_notif_was_radio  = (s->radio_state == RADIO_STATE_PLAYING ||
-                          s->radio_state == RADIO_STATE_BUFFERING);
-    s_notif_was_sd     = sd_player_is_active();
-    s_notif_prev_index  = s->curr_index;
-    s_notif_prev_volume = s->volume;
-    s_notif_active = true;
+    // A notification interrupting another notification must not re-capture the
+    // "previous source" — it would record the notification state itself (radio
+    // already stopped, volume overridden) and the original source would never
+    // be restored. Keep the first capture; this WAV just replaces the audio.
+    if (!s_notif_active) {
+        s_notif_was_bt     = s->bt_enable;
+        s_notif_was_radio  = (s->radio_state == RADIO_STATE_PLAYING ||
+                              s->radio_state == RADIO_STATE_BUFFERING);
+        s_notif_was_sd     = sd_player_is_active();
+        s_notif_prev_index  = s->curr_index;
+        s_notif_prev_volume = s->volume;
+        s_notif_active = true;
+    }
 
     ESP_LOGI(TAG, "Voice notification: %s (vol=%d, was_radio=%d, was_bt=%d, was_sd=%d)",
              path, volume, s_notif_was_radio, s_notif_was_bt, s_notif_was_sd);

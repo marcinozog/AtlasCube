@@ -4,6 +4,8 @@
 #include <string.h>
 #include <fcntl.h>      // open()
 #include <unistd.h>     // read/write/close/lseek
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "esp_log.h"
 #include "audio_engine.h"
 #include "app_state.h"
@@ -21,6 +23,12 @@ static esp_err_t save_to_file(void);
 
 static app_settings_t s_settings;
 
+// Serializes save_to_file(): setters run on many tasks (httpd, WS, BT UART,
+// esp_timer volume-ramp) and two concurrent open(O_TRUNC)+write on the same
+// file would interleave into a corrupt settings.json. Also makes the JSON
+// build see a consistent s_settings snapshot. Created first in settings_init.
+static SemaphoreHandle_t s_save_mtx;
+
 // Photo-clock font size must be one of the compiled digit fonts; snap anything
 // else to the 96 default.
 static int clamp_clock_size(int s)
@@ -36,6 +44,8 @@ esp_err_t settings_init(void)
 */
 esp_err_t settings_init(void)
 {
+    if (!s_save_mtx) s_save_mtx = xSemaphoreCreateMutex();
+
     theme_load_from_file();   // separate file /config/theme.json (color palettes)
 
     if (load_from_file() != ESP_OK) {
@@ -508,7 +518,7 @@ static esp_err_t load_from_file(void)
 /*
 static esp_err_t save_to_file(void)
 */
-static esp_err_t save_to_file(void)
+static esp_err_t save_to_file_locked(void)
 {
     cJSON *json = cJSON_CreateObject();
 
@@ -656,6 +666,14 @@ static esp_err_t save_to_file(void)
         return ESP_FAIL;
     }
     return ESP_OK;
+}
+
+static esp_err_t save_to_file(void)
+{
+    if (s_save_mtx) xSemaphoreTake(s_save_mtx, portMAX_DELAY);
+    esp_err_t rc = save_to_file_locked();
+    if (s_save_mtx) xSemaphoreGive(s_save_mtx);
+    return rc;
 }
 
 

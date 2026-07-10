@@ -17,6 +17,11 @@ static const char *TAG = "WS";
 
 #define MAX_WS_CLIENTS 8
 
+// Largest accepted incoming frame. The biggest legitimate command (play with a
+// long podcast URL + title) is well under 1 KB; the length is client-supplied,
+// so without a cap a rogue frame could malloc megabytes out of the heap.
+#define WS_MAX_FRAME_LEN 4096
+
 
 static void broadcast_task(void *arg);
 static void send_full_state(void);
@@ -161,6 +166,14 @@ static esp_err_t ws_handler(httpd_req_t *req)
 
     esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 0);   // get length
     if (ret != ESP_OK) return ret;
+
+    if (ws_pkt.len > WS_MAX_FRAME_LEN) {
+        // Returning an error makes httpd close the socket; ws_on_close frees
+        // the client slot.
+        ESP_LOGW(TAG, "WS frame too large (%u bytes) — dropping client",
+                 (unsigned)ws_pkt.len);
+        return ESP_FAIL;
+    }
 
     ws_pkt.payload = malloc(ws_pkt.len + 1);
     if (!ws_pkt.payload) return ESP_ERR_NO_MEM;
