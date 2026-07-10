@@ -39,6 +39,7 @@ typedef struct {
     bool            flip;            // rotate the whole screen 180° (applied live via display_set_flip)
     bool            invert;          // invert panel colours (INVON/INVOFF); XOR over the driver baseline — applied live
     bool            time_ampm;       // clock in 12-hour AM/PM format (false = 24-hour)
+    bool            date_mdy;        // date as MM/DD/YYYY (false = YYYY-MM-DD)
     bool            bg_gradient;     // dithered gradient background on/off
     bool            wallpaper_on;       // SD wallpaper background on/off (wins over gradient)
     char            wallpaper_path[64]; // full path to a panel-sized RGB565 .bin on SD
@@ -165,6 +166,7 @@ void settings_set_theme(ui_theme_t theme);
 void settings_set_flip(bool enabled);
 void settings_set_invert(bool enabled);
 void settings_set_time_ampm(bool enabled);
+void settings_set_date_mdy(bool enabled);
 void settings_set_show_fps(bool enabled);
 void settings_set_bg_gradient(bool enabled);
 void settings_set_wallpaper(bool on, const char *path);

@@ -115,10 +115,10 @@ static void update_clock_display(void)
     }
 
     if (s_date_label) {
-        char date_buf[32];
+        char date_buf[32], date_part[16];
         static const char *days[] = {"Sun","Mon","Tue","Wed","Thu","Fri","Sat"};
-        snprintf(date_buf, sizeof(date_buf), "%s  %04d-%02d-%02d",
-                 days[t.tm_wday], t.tm_year + 1900, t.tm_mon + 1, t.tm_mday);
+        ui_format_date(date_part, sizeof(date_part), &t);
+        snprintf(date_buf, sizeof(date_buf), "%s  %s", days[t.tm_wday], date_part);
         lv_label_set_text(s_date_label, date_buf);
     }
 }

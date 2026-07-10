@@ -123,6 +123,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddBoolToObject(display, "flip", s->display.flip);
     cJSON_AddBoolToObject(display, "invert", s->display.invert);
     cJSON_AddBoolToObject(display, "time_ampm", s->display.time_ampm);
+    cJSON_AddBoolToObject(display, "date_mdy", s->display.date_mdy);
     cJSON_AddBoolToObject(display, "bg_gradient", s->display.bg_gradient);
     cJSON_AddBoolToObject(display, "wallpaper_on", s->display.wallpaper_on);
     cJSON_AddStringToObject(display, "wallpaper_path", s->display.wallpaper_path);
@@ -348,6 +349,11 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         if (cJSON_IsBool(ta)) {
             ESP_LOGI("HTTP", "POST time_ampm: %d", cJSON_IsTrue(ta));
             settings_set_time_ampm(cJSON_IsTrue(ta));
+        }
+        cJSON *dm = cJSON_GetObjectItem(display, "date_mdy");
+        if (cJSON_IsBool(dm)) {
+            ESP_LOGI("HTTP", "POST date_mdy: %d", cJSON_IsTrue(dm));
+            settings_set_date_mdy(cJSON_IsTrue(dm));
         }
         cJSON *sfp = cJSON_GetObjectItem(display, "show_fps");
         if (cJSON_IsBool(sfp)) {

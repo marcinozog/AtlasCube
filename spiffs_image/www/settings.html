@@ -84,6 +84,14 @@
                 </div>
             </div>
             <div class="field-group">
+                <label class="field-label">Date format</label>
+                <div class="field-hint">How the date is shown on the device's home screen. Applies instantly.</div>
+                <div class="theme-toggle uniform" id="dateFmtToggle" style="width:fit-content">
+                    <button class="theme-btn" id="settingsBtnDateYmd" onclick="setDateMdy(false)">📅 YYYY-MM-DD</button>
+                    <button class="theme-btn" id="settingsBtnDateMdy" onclick="setDateMdy(true)">📅 MM/DD/YYYY</button>
+                </div>
+            </div>
+            <div class="field-group">
                 <label class="field-label">FPS overlay</label>
                 <div class="field-hint">Show LVGL's on-screen FPS + CPU% counter (bottom-right). Applies instantly.</div>
                 <div class="theme-toggle uniform" id="fpsToggle" style="width:fit-content">

@@ -289,6 +289,19 @@ function setTimeAmpm(on) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Date format: MM/DD/YYYY vs YYYY-MM-DD (applied live — no restart)
+// ─────────────────────────────────────────────────────────────────────────────
+function setDateMdy(on) {
+    document.getElementById('settingsBtnDateMdy')?.classList.toggle('active', on);
+    document.getElementById('settingsBtnDateYmd')?.classList.toggle('active', !on);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { date_mdy: on } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // FPS overlay (applied live — no restart)
 // ─────────────────────────────────────────────────────────────────────────────
 function setShowFps(on) {
@@ -804,6 +817,10 @@ function populateForm(s) {
         const ampm = s.display.time_ampm === true;   // default 24-hour
         document.getElementById('settingsBtnTime12')?.classList.toggle('active', ampm);
         document.getElementById('settingsBtnTime24')?.classList.toggle('active', !ampm);
+
+        const mdy = s.display.date_mdy === true;     // default YYYY-MM-DD
+        document.getElementById('settingsBtnDateMdy')?.classList.toggle('active', mdy);
+        document.getElementById('settingsBtnDateYmd')?.classList.toggle('active', !mdy);
 
         const showFps = s.display.show_fps === true;   // default off
         document.getElementById('settingsBtnFpsOn') ?.classList.toggle('active', showFps);

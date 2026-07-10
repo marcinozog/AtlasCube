@@ -16,6 +16,13 @@ extern "C" {
  */
 const char *ui_format_time(char *buf, size_t buf_len, const struct tm *t);
 
+/**
+ * Format the date into buf honouring settings.display.date_mdy:
+ * "YYYY-MM-DD" (default) or "MM/DD/YYYY". Day-of-week is not included —
+ * callers that want it prepend it themselves.
+ */
+void ui_format_date(char *buf, size_t buf_len, const struct tm *t);
+
 #ifdef __cplusplus
 }
 #endif

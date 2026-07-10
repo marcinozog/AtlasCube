@@ -61,6 +61,7 @@ esp_err_t settings_init(void)
         s_settings.display.flip             = false;
         s_settings.display.invert           = false;
         s_settings.display.time_ampm        = false;
+        s_settings.display.date_mdy         = false;
         s_settings.display.bg_gradient      = true;
         s_settings.display.wallpaper_on     = false;
         s_settings.display.wallpaper_path[0] = '\0';
@@ -244,6 +245,8 @@ static esp_err_t load_from_file(void)
         s_settings.display.invert = cJSON_IsBool(iv) ? cJSON_IsTrue(iv) : false;
         cJSON *ta = cJSON_GetObjectItem(display, "time_ampm");
         s_settings.display.time_ampm = cJSON_IsBool(ta) ? cJSON_IsTrue(ta) : false;
+        cJSON *dm = cJSON_GetObjectItem(display, "date_mdy");
+        s_settings.display.date_mdy = cJSON_IsBool(dm) ? cJSON_IsTrue(dm) : false;
         cJSON *bg = cJSON_GetObjectItem(display, "bg_gradient");
         s_settings.display.bg_gradient = cJSON_IsBool(bg) ? cJSON_IsTrue(bg) : true;
         cJSON *wp = cJSON_GetObjectItem(display, "wallpaper_on");
@@ -549,6 +552,7 @@ static esp_err_t save_to_file_locked(void)
     cJSON_AddBoolToObject(display, "flip", s_settings.display.flip);
     cJSON_AddBoolToObject(display, "invert", s_settings.display.invert);
     cJSON_AddBoolToObject(display, "time_ampm", s_settings.display.time_ampm);
+    cJSON_AddBoolToObject(display, "date_mdy", s_settings.display.date_mdy);
     cJSON_AddBoolToObject(display, "bg_gradient", s_settings.display.bg_gradient);
     cJSON_AddBoolToObject(display, "wallpaper_on", s_settings.display.wallpaper_on);
     cJSON_AddStringToObject(display, "wallpaper_path", s_settings.display.wallpaper_path);
@@ -962,6 +966,16 @@ void settings_set_time_ampm(bool enabled)
     // touching them here (same reasoning as show_fps).
     if (s_settings.display.time_ampm == enabled) return;
     s_settings.display.time_ampm = enabled;
+    ui_event_t ev = { .type = UI_EVT_STATE_CHANGED };
+    ui_event_send(&ev);
+    save_to_file();
+}
+
+void settings_set_date_mdy(bool enabled)
+{
+    // Same LVGL-task rule as time_ampm: refresh via event, not directly.
+    if (s_settings.display.date_mdy == enabled) return;
+    s_settings.display.date_mdy = enabled;
     ui_event_t ev = { .type = UI_EVT_STATE_CHANGED };
     ui_event_send(&ev);
     save_to_file();
