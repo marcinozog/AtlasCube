@@ -18,6 +18,8 @@
 </header>
 
 <main class="card">
+    <a href="/index.html" class="back-link">← Back to Radio</a>
+
     <!-- Tab navigation -->
     <nav class="tab-nav" id="settingsTabNav" role="tablist">
         <button type="button" class="tab-btn" data-tab="display"     onclick="selectTab('display')">🖥️ Display</button>
@@ -29,6 +31,7 @@
         <button type="button" class="tab-btn" data-tab="ntp"         onclick="selectTab('ntp')">🕐 NTP</button>
         <button type="button" class="tab-btn" data-tab="mqtt"        onclick="selectTab('mqtt')">📨 MQTT</button>
         <button type="button" class="tab-btn" data-tab="tools"       onclick="selectTab('tools')">🛠️ Tools</button>
+        <button type="button" class="tab-btn" data-tab="system"      onclick="selectTab('system')">⚙️ System</button>
     </nav>
 
     <!-- ══════════════════════════════════════════
@@ -55,75 +58,79 @@
         </div>
 
         <div class="panel">
-            <label class="field-label">Flip display 180°</label>
-            <div class="field-hint">Rotate the whole screen upside-down (for inverted mounting). Applies instantly.</div>
-            <div class="theme-toggle" id="flipToggle" style="width:fit-content">
-                <button class="theme-btn" id="settingsBtnFlipOn"  onclick="setFlip(true)">🔄 Flipped</button>
-                <button class="theme-btn" id="settingsBtnFlipOff" onclick="setFlip(false)">⬆️ Normal</button>
+            <div class="panel-label">PANEL OPTIONS</div>
+            <div class="field-group">
+                <label class="field-label">Flip display 180°</label>
+                <div class="field-hint">Rotate the whole screen upside-down (for inverted mounting). Applies instantly.</div>
+                <div class="theme-toggle" id="flipToggle" style="width:fit-content">
+                    <button class="theme-btn" id="settingsBtnFlipOn"  onclick="setFlip(true)">🔄 Flipped</button>
+                    <button class="theme-btn" id="settingsBtnFlipOff" onclick="setFlip(false)">⬆️ Normal</button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label class="field-label">Invert colours</label>
+                <div class="field-hint">Fixes panels that show inverted colours (e.g. yellow appears blue). Applies instantly — flip this if the colours look wrong.</div>
+                <div class="theme-toggle" id="invertToggle" style="width:fit-content">
+                    <button class="theme-btn" id="settingsBtnInvertOn"  onclick="setInvert(true)">🌗 Inverted</button>
+                    <button class="theme-btn" id="settingsBtnInvertOff" onclick="setInvert(false)">🎨 Normal</button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label class="field-label">FPS overlay</label>
+                <div class="field-hint">Show LVGL's on-screen FPS + CPU% counter (bottom-right). Applies instantly.</div>
+                <div class="theme-toggle" id="fpsToggle" style="width:fit-content">
+                    <button class="theme-btn" id="settingsBtnFpsOn"  onclick="setShowFps(true)">📊 Show</button>
+                    <button class="theme-btn" id="settingsBtnFpsOff" onclick="setShowFps(false)">🚫 Hide</button>
+                </div>
             </div>
         </div>
 
         <div class="panel">
-            <label class="field-label">Invert colours</label>
-            <div class="field-hint">Fixes panels that show inverted colours (e.g. yellow appears blue). Applies instantly — flip this if the colours look wrong.</div>
-            <div class="theme-toggle" id="invertToggle" style="width:fit-content">
-                <button class="theme-btn" id="settingsBtnInvertOn"  onclick="setInvert(true)">🌗 Inverted</button>
-                <button class="theme-btn" id="settingsBtnInvertOff" onclick="setInvert(false)">🎨 Normal</button>
+            <div class="panel-label">VISIBLE SCREENS</div>
+            <div class="field-hint">Hidden screens are skipped when cycling screens on the device.</div>
+            <div class="field-group">
+                <label class="field-label">Radio screen</label>
+                <div class="theme-toggle" id="radioScreenToggle" style="width:fit-content">
+                    <button class="theme-btn" id="settingsBtnRadioShow" onclick="setDeviceRadioScreen(true)">✅ Show</button>
+                    <button class="theme-btn" id="settingsBtnRadioHide" onclick="setDeviceRadioScreen(false)">❌ Hide</button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label class="field-label">SD player screen</label>
+                <div class="theme-toggle" id="sdScreenToggle" style="width:fit-content">
+                    <button class="theme-btn" id="settingsBtnSDshow" onclick="setDeviceSDScreen(true)">✅ Show</button>
+                    <button class="theme-btn" id="settingsBtnSDhide" onclick="setDeviceSDScreen(false)">❌ Hide</button>
+                </div>
+            </div>
+            <div class="field-group">
+                <label class="field-label">Bluetooth screen</label>
+                <div class="theme-toggle" id="btScreenToggle" style="width:fit-content">
+                    <button class="theme-btn" id="settingsBtnBTshow" onclick="setDeviceBTScreen(true)">✅ Show</button>
+                    <button class="theme-btn" id="settingsBtnBThide" onclick="setDeviceBTScreen(false)">❌ Hide</button>
+                </div>
             </div>
         </div>
 
         <div class="panel">
-            <label class="field-label">FPS overlay</label>
-            <div class="field-hint">Show LVGL's on-screen FPS + CPU% counter (bottom-right). Applies instantly.</div>
-            <div class="theme-toggle" id="fpsToggle" style="width:fit-content">
-                <button class="theme-btn" id="settingsBtnFpsOn"  onclick="setShowFps(true)">📊 Show</button>
-                <button class="theme-btn" id="settingsBtnFpsOff" onclick="setShowFps(false)">🚫 Hide</button>
+            <div class="panel-label">BOOT &amp; SPLASH</div>
+            <div class="field-group">
+                <label class="field-label">Boot info on splash (version + IP, STA only)</label>
+                <div class="theme-toggle" id="bootInfoToggle" style="width:fit-content">
+                    <button class="theme-btn" id="settingsBtnBootInfoOn"  onclick="setShowBootInfo(true)">✅ On</button>
+                    <button class="theme-btn" id="settingsBtnBootInfoOff" onclick="setShowBootInfo(false)">🚫 Off</button>
+                </div>
             </div>
-        </div>
-
-        <div class="panel">
-            <label class="field-label">Show/hide Bluetooth screen</label>
-            <div class="theme-toggle" id="btScreenToggle" style="width:fit-content">
-                <button class="theme-btn" id="settingsBtnBTshow" onclick="setDeviceBTScreen(true)">✅ Show</button>
-                <button class="theme-btn" id="settingsBtnBThide" onclick="setDeviceBTScreen(false)">❌ Hide</button>
+            <div class="field-group">
+                <label class="field-label">Splash logo</label>
+                <div class="field-hint">Custom logo from the SD card (LVGL RGB565 <code>.bin</code>, any size — auto-fit to the panel). Requires an SD card; empty = built-in logo.</div>
+                <div style="margin:6px 0">
+                    <span style="opacity:.7">File:</span>
+                    <span id="logoPath" style="font-family:monospace;font-size:12px">(built-in)</span>
+                </div>
+                <button class="btn-secondary" onclick="openLogoBrowser()">📂 Choose file…</button>
+                <button class="btn-secondary" onclick="resetLogo()">↺ Built-in</button>
+                <div id="logoBrowser" style="display:none;margin-top:8px"></div>
             </div>
-        </div>
-
-        <div class="panel">
-            <label class="field-label">Show/hide SD player screen</label>
-            <div class="theme-toggle" id="sdScreenToggle" style="width:fit-content">
-                <button class="theme-btn" id="settingsBtnSDshow" onclick="setDeviceSDScreen(true)">✅ Show</button>
-                <button class="theme-btn" id="settingsBtnSDhide" onclick="setDeviceSDScreen(false)">❌ Hide</button>
-            </div>
-        </div>
-
-        <div class="panel">
-            <label class="field-label">Show/hide Radio screen</label>
-            <div class="theme-toggle" id="radioScreenToggle" style="width:fit-content">
-                <button class="theme-btn" id="settingsBtnRadioShow" onclick="setDeviceRadioScreen(true)">✅ Show</button>
-                <button class="theme-btn" id="settingsBtnRadioHide" onclick="setDeviceRadioScreen(false)">❌ Hide</button>
-            </div>
-        </div>
-
-
-        <div class="panel">
-            <label class="field-label">Boot info on splash (version + IP, STA only)</label>
-            <div class="theme-toggle" id="bootInfoToggle" style="width:fit-content">
-                <button class="theme-btn" id="settingsBtnBootInfoOn"  onclick="setShowBootInfo(true)">✅ On</button>
-                <button class="theme-btn" id="settingsBtnBootInfoOff" onclick="setShowBootInfo(false)">🚫 Off</button>
-            </div>
-        </div>
-
-        <div class="panel">
-            <label class="field-label">Splash logo</label>
-            <div class="field-hint">Custom logo from the SD card (LVGL RGB565 <code>.bin</code>, any size — auto-fit to the panel). Requires an SD card; empty = built-in logo.</div>
-            <div style="margin:6px 0">
-                <span style="opacity:.7">File:</span>
-                <span id="logoPath" style="font-family:monospace;font-size:12px">(built-in)</span>
-            </div>
-            <button class="btn-secondary" onclick="openLogoBrowser()">📂 Choose file…</button>
-            <button class="btn-secondary" onclick="resetLogo()">↺ Built-in</button>
-            <div id="logoBrowser" style="display:none;margin-top:8px"></div>
         </div>
 
         <div class="panel">
@@ -630,20 +637,16 @@
     ══════════════════════════════════════════ -->
     <section class="tab-pane" id="tab-tools" data-tab="tools">
         <div class="panel">
-            <label class="field-label">File manager (SPIFFS ⇄ SD)</label>
-            <a href="/manager.html" class="tool-btn tool-link" style="width:fit-content;padding:8px 14px">🗂 Open file manager</a>
-        </div>
-        <div class="panel">
-            <label class="field-label">SPIFFS file editor</label>
-            <a href="/spiffs-editor.html" class="tool-btn tool-link" style="width:fit-content;padding:8px 14px">📝 Open SPIFFS editor</a>
-        </div>
-        <div class="panel">
-            <label class="field-label">SD card file editor</label>
-            <a href="/sd-editor.html" class="tool-btn tool-link" style="width:fit-content;padding:8px 14px">💾 Open SD editor</a>
+            <div class="panel-label">FILE TOOLS</div>
+            <div class="tools-grid">
+                <a href="/manager.html" class="tool-btn tool-link">🗂 File manager (SPIFFS ⇄ SD)</a>
+                <a href="/spiffs-editor.html" class="tool-btn tool-link">📝 SPIFFS file editor</a>
+                <a href="/sd-editor.html" class="tool-btn tool-link">💾 SD card file editor</a>
+            </div>
         </div>
 
         <div class="panel">
-            <label class="field-label">Hardware pin setup</label>
+            <div class="panel-label">HARDWARE</div>
             <div class="field-hint">
                 Remap GPIO pins for display / touch / SD / encoder / Bluetooth, stored on the
                 device. Advanced — wrong pins can blank the display (recoverable here).
@@ -651,7 +654,12 @@
             </div>
             <a href="/setup" class="tool-btn tool-link" style="width:fit-content;padding:8px 14px">🔌 Open pin setup</a>
         </div>
+    </section>
 
+    <!-- ══════════════════════════════════════════
+         System — firmware update, web UI files, backup & restore
+    ══════════════════════════════════════════ -->
+    <section class="tab-pane" id="tab-system" data-tab="system">
         <div class="panel ota-panel">
             <label class="field-label">⬆️ Firmware update (OTA)</label>
             <div class="ota-version-row">
@@ -745,13 +753,7 @@
         </div>
     </section>
 
-    <!-- ── Toolbar ── -->
-    <div class="toolbar">
-        <a href="/index.html" class="tool-btn tool-link">📻 Radio</a>
-        <a href="/sd-player.html" class="tool-btn tool-link">🎵 SD Player</a>
-        <a href="/bt.html" class="tool-btn tool-link">🔵 Bluetooth</a>
-        <a href="/events.html" class="tool-btn tool-link">🗓 Events</a>
-    </div>
+    <a href="/index.html" class="back-link" style="margin:18px 0 0">← Back to Radio</a>
 
 </main>
 

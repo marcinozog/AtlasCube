@@ -484,6 +484,17 @@ input[type="range"]::-webkit-slider-thumb:hover {
 
 .tool-link { text-decoration: none; }
 
+/* Tools tab — grid of page links */
+.tools-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+}
+
+.tools-grid .tool-btn {
+    padding: 10px 14px;
+}
+
 /* ════════════════════════════════════════════════
    MODALS
    ════════════════════════════════════════════════ */

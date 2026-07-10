@@ -164,8 +164,8 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - NTP z konfigurowalną strefą czasową
 - Web UI z SPIFFS (po wgraniu internet nie jest potrzebny)
 - Klient MQTT — zdalne sterowanie radiem (play/stop/głośność/stacja) plus do 6 konfigurowalnych widgetów (toggle / slider / label) na osobnym ekranie, do sterowania zewnętrznym sprzętem MQTT (Tasmota, zigbee2mqtt, Home Assistant…); szczegóły w [MQTT](#mqtt) niżej
-- Aktualizacja OTA — nowy obraz firmware wgrywasz prosto z Web UI (Ustawienia → Tools); trafia do nieaktywnego slotu, jest walidowany i urządzenie restartuje się do niego, z rollbackiem bootloadera gdy nowy obraz nie wstanie. Przycisk eksportu pobiera najpierw bieżący firmware. Web UI i ustawienia leżą na osobnych partycjach flasha, więc aktualizacja OTA aplikacji nigdy ich nie nadpisuje. Szczegóły w [Aktualizacje OTA](#aktualizacje-ota) niżej
-- Automatyczne aktualizacje — przy starcie urządzenie sprawdza, czy jest nowszy release jego wariantu, i pokazuje ekranowy monit **Update / Later**; firmware instaluje się tą samą dwuslotową ścieżką OTA, a web UI pozostałe po aktualizacji samej aplikacji odświeża się w miejscu jednym przyciskiem (bez restartu). Monit można wyłączyć w Ustawienia → Tools. Szczegóły w [Automatyczne aktualizacje](#automatyczne-aktualizacje) niżej
+- Aktualizacja OTA — nowy obraz firmware wgrywasz prosto z Web UI (Ustawienia → System); trafia do nieaktywnego slotu, jest walidowany i urządzenie restartuje się do niego, z rollbackiem bootloadera gdy nowy obraz nie wstanie. Przycisk eksportu pobiera najpierw bieżący firmware. Web UI i ustawienia leżą na osobnych partycjach flasha, więc aktualizacja OTA aplikacji nigdy ich nie nadpisuje. Szczegóły w [Aktualizacje OTA](#aktualizacje-ota) niżej
+- Automatyczne aktualizacje — przy starcie urządzenie sprawdza, czy jest nowszy release jego wariantu, i pokazuje ekranowy monit **Update / Later**; firmware instaluje się tą samą dwuslotową ścieżką OTA, a web UI pozostałe po aktualizacji samej aplikacji odświeża się w miejscu jednym przyciskiem (bez restartu). Monit można wyłączyć w Ustawienia → System. Szczegóły w [Automatyczne aktualizacje](#automatyczne-aktualizacje) niżej
 
 **Pamięć**
 - Opcjonalna karta microSD po SDMMC (tryb 1-bit), podpięta do pinów SDMMC danego wariantu
@@ -547,7 +547,7 @@ mqtt:
 
 ## Aktualizacje OTA
 
-Aktualizacja firmware przez Wi-Fi z **Ustawienia → Tools** — bez kabla USB, bez esptool. Strona pokazuje bieżącą wersję, przyjmuje obraz firmware, streamuje go do urządzenia i restartuje do nowego. Postęp jest pokazywany też na ekranie urządzenia.
+Aktualizacja firmware przez Wi-Fi z **Ustawienia → System** — bez kabla USB, bez esptool. Strona pokazuje bieżącą wersję, przyjmuje obraz firmware, streamuje go do urządzenia i restartuje do nowego. Postęp jest pokazywany też na ekranie urządzenia.
 
 **Co rusza:**
 
@@ -581,7 +581,7 @@ Urządzenie potrafi też aktualizować się samo — bez przeglądarki. Przy sta
 - **Firmware aktualny, web UI stare** → aktualizacja samej aplikacji nigdy nie nadpisuje partycji `www`, więc web UI może zostać w tyle. Urządzenie to wykrywa i pokazuje monit **WEB UI OUTDATED**; potwierdzenie ściąga świeże pliki web z paczki release'u prosto na partycję `www` — w miejscu, na żywo, bez restartu.
 - **Later** odkłada monit do następnego startu.
 
-Ekranowy monit można wyłączyć w **Ustawienia → Tools** (samo sprawdzenie wersji przy starcie i tak się wykonuje). Urządzenia wgrane przed pojawieniem się updatera potrzebują jednej ręcznej aktualizacji (USB albo web-OTA wyżej), żeby go dostać; od tego momentu aktualizują się same.
+Ekranowy monit można wyłączyć w **Ustawienia → System** (samo sprawdzenie wersji przy starcie i tak się wykonuje). Urządzenia wgrane przed pojawieniem się updatera potrzebują jednej ręcznej aktualizacji (USB albo web-OTA wyżej), żeby go dostać; od tego momentu aktualizują się same.
 
 ---
 

@@ -166,14 +166,14 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - NTP time sync with configurable timezone
 - Web UI served from SPIFFS (no internet required after flash)
 - MQTT client — remote control of the radio (play/stop/volume/station) plus up to 6 configurable widgets (toggle / slider / label) on a dedicated on-device screen, driving any external MQTT device (Tasmota, zigbee2mqtt, Home Assistant, …); see [MQTT](#mqtt) below
-- OTA firmware update — upload a new app image straight from the web UI (Settings → Tools); it streams into the inactive slot, validates, and reboots, with bootloader rollback if the new image won't start. A backup/export button downloads the currently running firmware first. The web UI and your settings live in separate flash partitions, so an OTA app update never overwrites them. See [OTA updates](#ota-updates) below
-- Automatic updates — at boot the device checks for a newer release of its variant and shows an on-screen **Update / Later** prompt; firmware installs through the same dual-slot OTA, and a web UI left behind by an app-only update is refreshed in place with one press (no reboot). The prompt can be turned off in Settings → Tools. See [Automatic updates](#automatic-updates) below
+- OTA firmware update — upload a new app image straight from the web UI (Settings → System); it streams into the inactive slot, validates, and reboots, with bootloader rollback if the new image won't start. A backup/export button downloads the currently running firmware first. The web UI and your settings live in separate flash partitions, so an OTA app update never overwrites them. See [OTA updates](#ota-updates) below
+- Automatic updates — at boot the device checks for a newer release of its variant and shows an on-screen **Update / Later** prompt; firmware installs through the same dual-slot OTA, and a web UI left behind by an app-only update is refreshed in place with one press (no reboot). The prompt can be turned off in Settings → System. See [Automatic updates](#automatic-updates) below
 
 **Storage**
 - Optional microSD card over SDMMC (1-bit mode), wired to the build's SDMMC pins
 - Web **SD file manager** (Settings → Tools) — browse folders, create directories, upload, rename, and delete files straight from the browser (LVGL `.bin` images preview inline); the Android app can push files too
 - Web **SPIFFS ⇄ SD backup/restore** (Settings → Tools) — a separate dual-pane manager that copies files between the device's SPIFFS and the SD card: back up configs / web UI to the card and restore them later. Client-side, copy-only
-- Web **Settings & stations backup** (Settings → Tools) — one-click *Export settings* downloads every user file on the config partition (settings, theme, events, MQTT, layout, station list) as a single `.json`, and *Import settings* restores it. No SD card needed; layout-independent, so a backup survives a partition change (e.g. before a full USB flash that erases user data). Wi-Fi/MQTT passwords are stored separately and are not included
+- Web **Settings & stations backup** (Settings → System) — one-click *Export settings* downloads every user file on the config partition (settings, theme, events, MQTT, layout, station list) as a single `.json`, and *Import settings* restores it. No SD card needed; layout-independent, so a backup survives a partition change (e.g. before a full USB flash that erases user data). Wi-Fi/MQTT passwords are stored separately and are not included
 - Backs the photo-frame slides, voice-notification clips, local music for the SD player, plus the optional screen wallpaper and custom boot splash logo; more on-card content (e.g. station logos) is on the roadmap
 
 **Android app** *(beta)*
@@ -550,7 +550,7 @@ mqtt:
 
 ## OTA updates
 
-Update the firmware over Wi-Fi from **Settings → Tools** — no USB cable, no esptool. The page shows the running version, takes a firmware image, streams it to the device, and reboots into it. Progress is mirrored on the device screen.
+Update the firmware over Wi-Fi from **Settings → System** — no USB cable, no esptool. The page shows the running version, takes a firmware image, streams it to the device, and reboots into it. Progress is mirrored on the device screen.
 
 **What it touches:**
 
@@ -584,7 +584,7 @@ The device also keeps itself current — no browser needed. On boot (Wi-Fi STA),
 - **Firmware current, web UI stale** → an app-only update never rewrites the `www` partition, so the web UI can lag behind. The device detects this and shows a **WEB UI OUTDATED** prompt instead; confirming pulls the fresh web files from the release package straight onto the `www` partition — in place, live, no reboot.
 - **Later** dismisses the prompt until the next boot.
 
-The on-screen prompt can be disabled in **Settings → Tools** (the boot version check itself still runs). Devices flashed before the updater shipped need one manual update (USB or the web OTA above) to pick it up; from then on they keep themselves up to date.
+The on-screen prompt can be disabled in **Settings → System** (the boot version check itself still runs). Devices flashed before the updater shipped need one manual update (USB or the web OTA above) to pick it up; from then on they keep themselves up to date.
 
 ---
 
