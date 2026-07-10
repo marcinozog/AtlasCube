@@ -76,6 +76,24 @@ extern void ws_set_server(httpd_handle_t server);
 #endif
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Send a heap JSON string produced by cJSON_Print* and free it. A NULL string
+// (cJSON ran out of heap while building the reply) becomes a clean 500 —
+// without this, httpd_resp_sendstr(req, NULL) crashes in strlen(). Extra
+// headers (Cache-Control etc.) must be set by the caller before this call.
+// ─────────────────────────────────────────────────────────────────────────────
+static esp_err_t send_json_or_500(httpd_req_t *req, char *str)
+{
+    if (!str) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "JSON build failed");
+        return ESP_FAIL;
+    }
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, str);
+    free(str);
+    return ESP_OK;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/settings  — returns full JSON with current settings state
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t api_settings_get_handler(httpd_req_t *req)
@@ -201,12 +219,8 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
 
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -587,11 +601,8 @@ static esp_err_t api_state_get_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
 
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -634,11 +645,8 @@ static esp_err_t api_theme_get_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
 
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -759,11 +767,8 @@ static esp_err_t api_playlist_get_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(arr);
     cJSON_Delete(arr);
 
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1079,11 +1084,8 @@ static esp_err_t api_events_get_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(arr);
     cJSON_Delete(arr);
 
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1137,10 +1139,7 @@ static esp_err_t api_events_post_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(out);
     cJSON_Delete(out);
 
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1262,10 +1261,7 @@ static esp_err_t api_events_put_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(out);
     cJSON_Delete(out);
 
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1324,11 +1320,8 @@ static esp_err_t api_ui_profile_meta_get_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
 
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 static esp_err_t api_ui_profile_clock_get_handler(httpd_req_t *req)
@@ -1338,11 +1331,8 @@ static esp_err_t api_ui_profile_clock_get_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(clock);
     cJSON_Delete(clock);
 
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 static esp_err_t api_ui_profile_clock_post_handler(httpd_req_t *req)
@@ -1378,11 +1368,8 @@ static esp_err_t api_ui_profile_bt_get_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(bt);
     cJSON_Delete(bt);
 
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 static esp_err_t api_ui_profile_bt_post_handler(httpd_req_t *req)
@@ -1417,11 +1404,8 @@ static esp_err_t api_ui_profile_radio_get_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(radio);
     cJSON_Delete(radio);
 
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 static esp_err_t api_ui_profile_radio_post_handler(httpd_req_t *req)
@@ -1456,11 +1440,8 @@ static esp_err_t api_ui_profile_sd_get_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(sd);
     cJSON_Delete(sd);
 
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 static esp_err_t api_ui_profile_sd_post_handler(httpd_req_t *req)
@@ -1545,11 +1526,8 @@ static esp_err_t api_mqtt_get_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
 
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 static void copy_str_field(char *dst, size_t dst_sz, const char *src)
@@ -1718,11 +1696,8 @@ static esp_err_t api_files_get_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(arr);
     cJSON_Delete(arr);
 
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 // GET /api/spiffs  → { total, used, free } bytes of the SPIFFS partition
@@ -1738,11 +1713,8 @@ static esp_err_t api_spiffs_get_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(o);
     cJSON_Delete(o);
 
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 static esp_err_t api_files_put_handler(httpd_req_t *req)
@@ -1903,10 +1875,7 @@ static esp_err_t api_files_put_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(o);
     cJSON_Delete(o);
 
-    httpd_resp_set_type(req, "application/json");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2013,11 +1982,8 @@ static esp_err_t api_sd_info_handler(httpd_req_t *req)
     char *str = cJSON_PrintUnformatted(o);
     cJSON_Delete(o);
 
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 // GET /api/sd/list?path=/dir  → { path, entries:[{name,dir,size}] }
@@ -2060,11 +2026,8 @@ static esp_err_t api_sd_list_handler(httpd_req_t *req)
 
     char *str = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
-    httpd_resp_set_type(req, "application/json");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
-    httpd_resp_sendstr(req, str);
-    free(str);
-    return ESP_OK;
+    return send_json_or_500(req, str);
 }
 
 // GET /api/sd/file?path=/dir/name  → streams the file as an attachment

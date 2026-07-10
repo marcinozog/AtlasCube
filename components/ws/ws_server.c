@@ -486,12 +486,13 @@ static void send_full_state(void)
     cJSON *eq = cJSON_CreateIntArray(s->eq, 10);
     cJSON_AddItemToObject(json, "eq", eq);
 
+    // NULL on heap exhaustion — skip the broadcast rather than strlen(NULL).
     char *str = cJSON_PrintUnformatted(json);
-
-    ws_broadcast(str, strlen(str));
-
+    if (str) {
+        ws_broadcast(str, strlen(str));
+        free(str);
+    }
     cJSON_Delete(json);
-    free(str);
 }
 
 
@@ -533,10 +534,11 @@ void ws_send_bt_log(const char *line)
     cJSON_AddStringToObject(json, "type", "bt_log");
     cJSON_AddStringToObject(json, "data", line);
 
+    // NULL on heap exhaustion — skip the broadcast rather than strlen(NULL).
     char *str = cJSON_PrintUnformatted(json);
-
-    ws_broadcast(str, strlen(str));
-
+    if (str) {
+        ws_broadcast(str, strlen(str));
+        free(str);
+    }
     cJSON_Delete(json);
-    free(str);
 }
