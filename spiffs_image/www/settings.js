@@ -254,10 +254,37 @@ function selectWallpaper(relPath) {
 // from — the device fetches directly from the service (nothing is re-hosted),
 // and the firmware only ever sees the final URL.
 let netWpTimer = null;
+let netWpPanelW = 0, netWpPanelH = 0;   // panel size for the {w}/{h} preview
+
+// Panel dimensions come from the layout-editor meta endpoint; the preview
+// line stays empty until they arrive.
+function loadNetWpMeta() {
+    fetch('/api/ui/profile/meta').then(r => r.json()).then(m => {
+        netWpPanelW = m.screen_w || 0;
+        netWpPanelH = m.screen_h || 0;
+        updateNetWpResolved();
+    }).catch(console.error);
+}
+
+// Show what the device will actually request: the URL with {w}/{h} expanded,
+// or a note that a placeholder-less URL is fetched as-is and scaled on-device.
+function updateNetWpResolved() {
+    const el  = document.getElementById('netWpResolved');
+    const url = document.getElementById('netWpUrl').value.trim();
+    if (!url || !netWpPanelW) { el.textContent = ''; return; }
+    if (url.includes('{w}') || url.includes('{h}')) {
+        el.textContent = '→ ' + url.replaceAll('{w}', netWpPanelW)
+                                   .replaceAll('{h}', netWpPanelH);
+    } else {
+        el.textContent = '→ fetched as-is, scaled to ' + netWpPanelW + '×' +
+                         netWpPanelH + ' on the device';
+    }
+}
 
 function netWpPresetChanged() {
     const v = document.getElementById('netWpPreset').value;
     if (v) document.getElementById('netWpUrl').value = v;   // '' = Custom: keep what's typed
+    updateNetWpResolved();
 }
 
 // The URL field is the single source of truth; the select just mirrors it
@@ -268,6 +295,7 @@ function syncNetWpPreset() {
     const sel = document.getElementById('netWpPreset');
     const match = Array.from(sel.options).find(o => o.value && o.value === url);
     sel.value = match ? match.value : '';
+    updateNetWpResolved();
 }
 
 // Persist URL + auto-refresh mode/time in one patch; the firmware re-arms its
@@ -1608,3 +1636,4 @@ initTabs();
 loadSettings();
 loadColors();
 loadMqtt();
+loadNetWpMeta();

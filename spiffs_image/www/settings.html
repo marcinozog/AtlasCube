@@ -173,25 +173,25 @@
 
         <div class="panel">
             <label class="field-label">Internet wallpaper</label>
-            <div class="field-hint">Fetch a photo over HTTP(S) and convert it on the device into the
-                screen background (kept in RAM until reboot; a playing radio stream pauses during
-                the download). The photo is downloaded by the device straight from the selected
-                service, on that service's own terms. <code>{w}</code>/<code>{h}</code> in the URL
-                are replaced with the panel size; NASA APOD API links are resolved automatically
-                (DEMO_KEY is rate-limited — a free personal key from api.nasa.gov lifts that).</div>
+            <div class="field-hint">The device downloads a photo straight from the selected service
+                (on that service's own terms) and uses it as the screen background, kept in RAM
+                until reboot. A playing radio stream pauses during the download. NASA APOD API
+                links are resolved automatically (DEMO_KEY is rate-limited — a free personal key
+                from api.nasa.gov lifts that).</div>
             <select id="netWpPreset" class="field-input" style="width:100%;margin-top:6px"
                     onchange="netWpPresetChanged()">
                 <option value="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY">NASA — Astronomy Picture of the Day</option>
                 <option value="https://picsum.photos/{w}/{h}">Lorem Picsum — random photo</option>
                 <option value="https://loremflickr.com/{w}/{h}">LoremFlickr — random photo</option>
                 <option value="https://loremflickr.com/{w}/{h}/nature">LoremFlickr — keyword (edit URL)</option>
-                <option value="https://cataas.com/cat">Cataas — random cat</option>
+                <option value="https://cataas.com/cat?width={w}&amp;height={h}">Cataas — random cat</option>
                 <option value="https://placedog.net/{w}/{h}">PlaceDog — random dog</option>
                 <option value="">Custom URL…</option>
             </select>
             <input type="text" id="netWpUrl" class="field-input" style="width:100%;margin-top:6px"
                    value="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY"
                    oninput="syncNetWpPreset()" />
+            <div id="netWpResolved" class="field-hint" style="font-family:monospace;overflow-wrap:anywhere"></div>
             <div style="margin-top:8px">
                 <button class="btn-secondary" onclick="fetchNetWallpaper()">🌍 Fetch now</button>
                 <button class="btn-secondary" onclick="saveNetWallpaper()">💾 Save to SD</button>
