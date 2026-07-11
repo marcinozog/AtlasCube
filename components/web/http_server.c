@@ -381,6 +381,17 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             ESP_LOGI("HTTP", "POST wallpaper: on=%d path=%s", on, path);
             settings_set_wallpaper(on, path);
         }
+        // Any explicit background choice (gradient/solid/SD wallpaper) evicts a
+        // fetched internet wallpaper — it would otherwise outrank all of them
+        // until reboot. The BG_CHANGED post is unconditional because the
+        // setters above only notify when the stored values actually changed
+        // (re-picking the already-active mode must still clear the net image).
+        if (cJSON_IsBool(wp) || cJSON_IsString(wpp) ||
+            cJSON_IsBool(cJSON_GetObjectItem(display, "bg_gradient"))) {
+            net_wallpaper_dismiss();
+            ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
+            ui_event_send(&ev);
+        }
         cJSON *wurl = cJSON_GetObjectItem(display, "wallpaper_url");
         cJSON *wfm  = cJSON_GetObjectItem(display, "wallpaper_fetch_mode");
         cJSON *wfh  = cJSON_GetObjectItem(display, "wallpaper_fetch_hour");

@@ -35,6 +35,7 @@ static int  s_panel_w, s_panel_h;
 static portMUX_TYPE   s_mux = portMUX_INITIALIZER_UNLOCKED;
 static uint16_t      *s_pending;
 static int            s_pending_w, s_pending_h;
+static bool           s_dismiss;   // drop the image at the next commit (user picked another bg)
 
 static uint16_t      *s_active_buf;      // buffer behind s_img, owned here
 static lv_image_dsc_t s_img;
@@ -387,8 +388,26 @@ void net_wallpaper_commit(void)
     taskENTER_CRITICAL(&s_mux);
     uint16_t *p = s_pending;
     int w = s_pending_w, h = s_pending_h;
+    bool dismiss = s_dismiss;
     s_pending = NULL;
+    s_dismiss = false;
     taskEXIT_CRITICAL(&s_mux);
+
+    // An explicit background choice outranks everything, including a fetch
+    // that happened to finish in the meantime — drop both image and pending.
+    if (dismiss) {
+        if (p) heap_caps_free(p);
+        if (s_have) {
+            lv_image_cache_drop(&s_img);
+            s_have = false;
+        }
+        if (s_active_buf) {
+            heap_caps_free(s_active_buf);
+            s_active_buf = NULL;
+        }
+        ESP_LOGI(TAG, "wallpaper dismissed");
+        return;
+    }
     if (!p) return;
 
     if (s_have) lv_image_cache_drop(&s_img);
@@ -414,4 +433,11 @@ void net_wallpaper_set_done_cb(void (*cb)(bool ok))
 void net_wallpaper_set_start_cb(void (*cb)(void))
 {
     s_start_cb = cb;
+}
+
+void net_wallpaper_dismiss(void)
+{
+    taskENTER_CRITICAL(&s_mux);
+    s_dismiss = true;
+    taskEXIT_CRITICAL(&s_mux);
 }

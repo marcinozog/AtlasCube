@@ -27,8 +27,17 @@ const lv_image_dsc_t *net_wallpaper_image(void);
 
 // Adopt the buffer of a finished fetch: drop the LVGL cache entry for the
 // previous image and free it. Call only from the LVGL task — ui_background
-// does, on UI_EVT_BG_CHANGED. No-op when nothing is pending.
+// does, on UI_EVT_BG_CHANGED. No-op when nothing is pending (or consumes a
+// pending dismiss, see below).
 void net_wallpaper_commit(void);
+
+// Drop the fetched wallpaper so the configured background (gradient/solid/SD
+// wallpaper) shows again — the net image otherwise outranks them until reboot.
+// Safe from any task: only marks the request; the actual free happens on the
+// LVGL task inside the next net_wallpaper_commit(). The caller must trigger
+// that commit by posting UI_EVT_BG_CHANGED (http_server does, on an explicit
+// background choice).
+void net_wallpaper_dismiss(void);
 
 // Fired from the fetch task when a download+decode finished (ok) or failed.
 // The UI uses it to post UI_EVT_BG_CHANGED over to the LVGL task.
