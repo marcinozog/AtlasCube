@@ -216,6 +216,16 @@ function netWpPresetChanged() {
     if (v) document.getElementById('netWpUrl').value = v;   // '' = Custom: keep what's typed
 }
 
+// The URL field is the single source of truth; the select just mirrors it
+// (matching preset, or "Custom URL…" otherwise — same behaviour as the
+// Android app). Fired on URL edits and after settings load.
+function syncNetWpPreset() {
+    const url = document.getElementById('netWpUrl').value.trim();
+    const sel = document.getElementById('netWpPreset');
+    const match = Array.from(sel.options).find(o => o.value && o.value === url);
+    sel.value = match ? match.value : '';
+}
+
 // Persist URL + auto-refresh mode/time in one patch; the firmware re-arms its
 // scheduler on this POST. Fired by the mode select and the time picker.
 function saveNetWpSchedule() {
@@ -860,6 +870,7 @@ function populateForm(s) {
 
         if (s.display.wallpaper_url)
             document.getElementById('netWpUrl').value = s.display.wallpaper_url;
+        syncNetWpPreset();
         const wfMode = s.display.wallpaper_fetch_mode || 0;
         document.getElementById('netWpMode').value = String(wfMode);
         const wfTime = document.getElementById('netWpTime');
