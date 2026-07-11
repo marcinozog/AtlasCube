@@ -206,7 +206,15 @@ function selectWallpaper(relPath) {
 // ── Internet wallpaper (test) ────────────────────────────────────────────────
 // POST the URL, then poll /api/wallpaper/status until the fetch task settles.
 // On success the device repaints itself (UI_EVT_BG_CHANGED) — nothing else to do.
+// The preset list lives in settings.html: plain bookmarks the user can pick
+// from — the device fetches directly from the service (nothing is re-hosted),
+// and the firmware only ever sees the final URL.
 let netWpTimer = null;
+
+function netWpPresetChanged() {
+    const v = document.getElementById('netWpPreset').value;
+    if (v) document.getElementById('netWpUrl').value = v;   // '' = Custom: keep what's typed
+}
 
 function fetchNetWallpaper() {
     const url = document.getElementById('netWpUrl').value.trim();
