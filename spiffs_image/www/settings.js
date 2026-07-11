@@ -203,6 +203,34 @@ function selectWallpaper(relPath) {
     postDisplay({ wallpaper_on: true, wallpaper_path: fullPath });
 }
 
+// ── Internet wallpaper (test) ────────────────────────────────────────────────
+// POST the URL, then poll /api/wallpaper/status until the fetch task settles.
+// On success the device repaints itself (UI_EVT_BG_CHANGED) — nothing else to do.
+let netWpTimer = null;
+
+function fetchNetWallpaper() {
+    const url = document.getElementById('netWpUrl').value.trim();
+    const st  = document.getElementById('netWpStatus');
+    if (!url) return;
+    st.textContent = 'starting…';
+    fetch('/api/wallpaper/fetch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+    }).then(r => r.json()).then(j => {
+        if (j.result !== 'started') { st.textContent = j.result; return; }
+        pollNetWallpaper();
+    }).catch(() => { st.textContent = 'request failed'; });
+}
+
+function pollNetWallpaper() {
+    clearTimeout(netWpTimer);
+    fetch('/api/wallpaper/status').then(r => r.json()).then(j => {
+        document.getElementById('netWpStatus').textContent = j.status;
+        if (j.status === 'busy') netWpTimer = setTimeout(pollNetWallpaper, 1000);
+    }).catch(console.error);
+}
+
 // ── Splash-logo picker ──────────────────────────────────────────────────────────
 function openLogoBrowser() {
     const box = document.getElementById('logoBrowser');

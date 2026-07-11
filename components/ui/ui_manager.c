@@ -11,6 +11,7 @@
 #include "updater.h"
 #include "events_service.h"
 #include "screensavers.h"
+#include "net_wallpaper.h"
 #include "display.h"
 #include "lvgl.h"
 #include "display/lv_display_private.h"   // disp->perf_label for apply_fps_overlay()
@@ -358,6 +359,16 @@ static void on_update_progress(int pct)
     ui_event_send(&ev);
 }
 
+// A net-wallpaper fetch finished on its own task. Adoption of the new buffer
+// (net_wallpaper_commit) must run on the LVGL task, so ride the same event the
+// SD wallpaper uses — its handler calls ui_background_reload_wallpaper().
+static void on_net_wallpaper_done(bool ok)
+{
+    if (!ok) return;
+    ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
+    ui_event_send(&ev);
+}
+
 void ui_manager_init(void)
 {
     s_event_queue = xQueueCreate(UI_EVENT_QUEUE_SIZE, sizeof(ui_event_t));
@@ -367,6 +378,7 @@ void ui_manager_init(void)
     events_service_set_fire_cb(on_event_fired);
     updater_set_notify_cb(on_update_available);
     updater_set_progress_cb(on_update_progress);
+    net_wallpaper_set_done_cb(on_net_wallpaper_done);
 
     ESP_LOGI(TAG, "Initialized");
 }

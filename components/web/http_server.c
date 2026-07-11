@@ -31,6 +31,7 @@
 #include "secrets.h"
 #include "sdcard.h"
 #include "updater.h"
+#include "net_wallpaper.h"
 #include "esp_spiffs.h"
 #include "esp_vfs_fat.h"
 #include "cJSON.h"
@@ -2684,6 +2685,46 @@ static esp_err_t api_update_post_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/wallpaper/fetch {url:"..."} — start an async internet-wallpaper
+// fetch (net_wallpaper: download + on-device JPEG→RGB565 for this panel).
+// GET  /api/wallpaper/status — poll it: "idle"/"busy"/"ok" or an error message.
+// ─────────────────────────────────────────────────────────────────────────────
+static esp_err_t api_wallpaper_fetch_handler(httpd_req_t *req)
+{
+    char buf[600];
+    int len = httpd_req_recv(req, buf, sizeof(buf) - 1);
+    if (len <= 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "No body");
+        return ESP_FAIL;
+    }
+    buf[len] = '\0';
+
+    cJSON *json = cJSON_Parse(buf);
+    const cJSON *url = json ? cJSON_GetObjectItem(json, "url") : NULL;
+    if (!cJSON_IsString(url) || !url->valuestring[0]) {
+        cJSON_Delete(json);
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing url");
+        return ESP_FAIL;
+    }
+
+    bool started = net_wallpaper_fetch(url->valuestring, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+    cJSON_Delete(json);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, started ? "{\"result\":\"started\"}" : "{\"result\":\"busy\"}");
+    return ESP_OK;
+}
+
+static esp_err_t api_wallpaper_status_handler(httpd_req_t *req)
+{
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddStringToObject(json, "status", net_wallpaper_status());
+    char *str = cJSON_PrintUnformatted(json);
+    cJSON_Delete(json);
+    return send_json_or_500(req, str);
+}
+
 static esp_err_t api_restart_handler(httpd_req_t *req)
 {
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
@@ -2797,7 +2838,7 @@ void http_server_start(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn      = httpd_uri_match_wildcard;
-    config.max_uri_handlers  = 48;
+    config.max_uri_handlers  = 52;
     // WS handlers run on this task and chain deep: cJSON_Parse of the inbound
     // payload → radio/settings play path → send_full_state (cJSON build of the
     // whole state). The 4 KB HTTPD default overflows on that path (e.g. an
@@ -2902,6 +2943,20 @@ void http_server_start(void)
         .handler = api_update_post_handler,
     };
     httpd_register_uri_handler(server, &api_update);
+
+    httpd_uri_t api_wallpaper_fetch = {
+        .uri     = "/api/wallpaper/fetch",
+        .method  = HTTP_POST,
+        .handler = api_wallpaper_fetch_handler,
+    };
+    httpd_register_uri_handler(server, &api_wallpaper_fetch);
+
+    httpd_uri_t api_wallpaper_status = {
+        .uri     = "/api/wallpaper/status",
+        .method  = HTTP_GET,
+        .handler = api_wallpaper_status_handler,
+    };
+    httpd_register_uri_handler(server, &api_wallpaper_status);
 
     httpd_uri_t api_theme_get = {
         .uri     = "/api/theme",

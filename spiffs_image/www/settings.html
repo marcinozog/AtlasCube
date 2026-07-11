@@ -464,6 +464,20 @@
             </div>
         </div>
 
+        <div class="panel">
+            <label class="field-label">Internet wallpaper (test)</label>
+            <div class="field-hint">Fetch a photo over HTTP(S) and convert it on the device into the
+                screen background (kept in RAM until reboot; a playing radio stream pauses during
+                the download). NASA APOD API links are resolved automatically;
+                <code>{w}</code>/<code>{h}</code> in the URL are replaced with the panel size.</div>
+            <input type="text" id="netWpUrl" class="field-input" style="width:100%;margin-top:6px"
+                   value="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY" />
+            <div style="margin-top:8px">
+                <button class="btn-secondary" onclick="fetchNetWallpaper()">🌍 Fetch now</button>
+                <span id="netWpStatus" style="margin-left:8px;opacity:.7"></span>
+            </div>
+        </div>
+
         <div class="field-group">
             <label class="field-label">Editing palette</label>
             <nav class="tab-nav" role="tablist" style="margin:6px 0 0">

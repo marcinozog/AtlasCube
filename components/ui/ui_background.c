@@ -3,6 +3,7 @@
 #include "theme.h"             // ui_theme_t, theme_current(), theme_get()
 #include "settings.h"          // settings_get()->display.bg_gradient
 #include "sdcard.h"            // SD_MOUNT_POINT
+#include "net_wallpaper.h"     // internet-fetched wallpaper (PSRAM only)
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include <stdint.h>
@@ -100,6 +101,7 @@ static bool load_wallpaper(void)
 // descriptor); UI_EVT_BG_CHANGED is dispatched there.
 void ui_background_reload_wallpaper(void)
 {
+    net_wallpaper_commit();   // adopt a finished internet fetch, if any (LVGL task)
     if (s_wp_loaded) lv_image_cache_drop(&s_wp_img);
     s_wp_tried  = false;
     s_wp_loaded = false;
@@ -196,6 +198,18 @@ void ui_background_apply(lv_obj_t *obj)
 {
     const ui_theme_t t = theme_current();
     const app_settings_t *st = settings_get();
+
+    // Internet wallpaper (PSRAM only, via /api/wallpaper/fetch): exists only
+    // after an explicit user fetch, so it outranks both the SD wallpaper and
+    // the gradient until the next reboot.
+    const lv_image_dsc_t *net_wp = net_wallpaper_image();
+    if (net_wp) {
+        lv_obj_set_style_bg_image_src(obj, net_wp, LV_PART_MAIN);
+        lv_obj_set_style_bg_image_tiled(obj, false, LV_PART_MAIN);
+        lv_obj_set_style_bg_image_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
+        return;
+    }
 
     // Wallpaper (test): if a valid full-screen .bin is on the SD card, it wins
     // over the gradient entirely.

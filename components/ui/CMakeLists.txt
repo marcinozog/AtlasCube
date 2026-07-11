@@ -80,4 +80,5 @@ idf_component_register(
         esp_app_format          # esp_app_get_description() — version on splash
         espressif__esp-dsp      # FFT for the VU spectrum widget
         updater                 # SCREEN_UPDATE reads/acts on the auto-update lib
+        net_wallpaper           # internet wallpaper (ui_background + done cb)
 )
