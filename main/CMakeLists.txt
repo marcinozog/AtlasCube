@@ -19,4 +19,5 @@ idf_component_register(
         sdcard
         board_pins
         updater
+        net_wallpaper
 )

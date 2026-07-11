@@ -65,6 +65,10 @@ esp_err_t settings_init(void)
         s_settings.display.bg_gradient      = true;
         s_settings.display.wallpaper_on     = false;
         s_settings.display.wallpaper_path[0] = '\0';
+        s_settings.display.wallpaper_url[0] = '\0';
+        s_settings.display.wallpaper_fetch_mode = 0;
+        s_settings.display.wallpaper_fetch_hour = 4;
+        s_settings.display.wallpaper_fetch_min  = 0;
         s_settings.display.logo_path[0]     = '\0';
         s_settings.display.show_boot_info   = true;
         s_settings.display.sd_show_screen   = true;
@@ -256,6 +260,17 @@ static esp_err_t load_from_file(void)
         if (cJSON_IsString(wpp))
             strncpy(s_settings.display.wallpaper_path, wpp->valuestring,
                     sizeof(s_settings.display.wallpaper_path) - 1);
+        cJSON *wurl = cJSON_GetObjectItem(display, "wallpaper_url");
+        s_settings.display.wallpaper_url[0] = '\0';
+        if (cJSON_IsString(wurl))
+            strncpy(s_settings.display.wallpaper_url, wurl->valuestring,
+                    sizeof(s_settings.display.wallpaper_url) - 1);
+        cJSON *wfm = cJSON_GetObjectItem(display, "wallpaper_fetch_mode");
+        s_settings.display.wallpaper_fetch_mode = cJSON_IsNumber(wfm) ? wfm->valueint : 0;
+        cJSON *wfh = cJSON_GetObjectItem(display, "wallpaper_fetch_hour");
+        s_settings.display.wallpaper_fetch_hour = cJSON_IsNumber(wfh) ? wfh->valueint : 4;
+        cJSON *wfn = cJSON_GetObjectItem(display, "wallpaper_fetch_min");
+        s_settings.display.wallpaper_fetch_min = cJSON_IsNumber(wfn) ? wfn->valueint : 0;
         cJSON *lgp = cJSON_GetObjectItem(display, "logo_path");
         s_settings.display.logo_path[0] = '\0';
         if (cJSON_IsString(lgp))
@@ -556,6 +571,10 @@ static esp_err_t save_to_file_locked(void)
     cJSON_AddBoolToObject(display, "bg_gradient", s_settings.display.bg_gradient);
     cJSON_AddBoolToObject(display, "wallpaper_on", s_settings.display.wallpaper_on);
     cJSON_AddStringToObject(display, "wallpaper_path", s_settings.display.wallpaper_path);
+    cJSON_AddStringToObject(display, "wallpaper_url", s_settings.display.wallpaper_url);
+    cJSON_AddNumberToObject(display, "wallpaper_fetch_mode", s_settings.display.wallpaper_fetch_mode);
+    cJSON_AddNumberToObject(display, "wallpaper_fetch_hour", s_settings.display.wallpaper_fetch_hour);
+    cJSON_AddNumberToObject(display, "wallpaper_fetch_min",  s_settings.display.wallpaper_fetch_min);
     cJSON_AddStringToObject(display, "logo_path", s_settings.display.logo_path);
     cJSON_AddBoolToObject(display, "show_boot_info", s_settings.display.show_boot_info);
     cJSON_AddBoolToObject(display, "sd_show_screen", s_settings.display.sd_show_screen);
@@ -1018,6 +1037,29 @@ void settings_set_wallpaper(bool on, const char *path)
     // letting ui_manager detect the path change and reload the wallpaper live.
     app_state_update(&(app_state_patch_t){ .has_wallpaper_on = true,
                                            .wallpaper_on = s_settings.display.wallpaper_on });
+    save_to_file();
+}
+
+void settings_set_wallpaper_fetch(const char *url, int mode, int hour, int min)
+{
+    const char *u = url ? url : "";
+    if (mode < 0 || mode > 2)  mode = 0;
+    if (hour < 0 || hour > 23) hour = 0;
+    if (min  < 0 || min  > 59) min  = 0;
+
+    if (strcmp(s_settings.display.wallpaper_url, u) == 0 &&
+        s_settings.display.wallpaper_fetch_mode == mode &&
+        s_settings.display.wallpaper_fetch_hour == hour &&
+        s_settings.display.wallpaper_fetch_min  == min) {
+        return;
+    }
+    s_settings.display.wallpaper_url[0] = '\0';
+    strncpy(s_settings.display.wallpaper_url, u, sizeof(s_settings.display.wallpaper_url) - 1);
+    s_settings.display.wallpaper_fetch_mode = mode;
+    s_settings.display.wallpaper_fetch_hour = hour;
+    s_settings.display.wallpaper_fetch_min  = min;
+    // No app_state push — nothing on-device reacts live; the caller re-arms the
+    // scheduler (net_wallpaper_sched_update) after this returns.
     save_to_file();
 }
 

@@ -216,10 +216,26 @@ function netWpPresetChanged() {
     if (v) document.getElementById('netWpUrl').value = v;   // '' = Custom: keep what's typed
 }
 
+// Persist URL + auto-refresh mode/time in one patch; the firmware re-arms its
+// scheduler on this POST. Fired by the mode select and the time picker.
+function saveNetWpSchedule() {
+    const mode = parseInt(document.getElementById('netWpMode').value, 10) || 0;
+    const timeEl = document.getElementById('netWpTime');
+    timeEl.style.display = (mode === 2) ? '' : 'none';
+    const [h, m] = (timeEl.value || '04:00').split(':').map(Number);
+    postDisplay({
+        wallpaper_url:        document.getElementById('netWpUrl').value.trim(),
+        wallpaper_fetch_mode: mode,
+        wallpaper_fetch_hour: h,
+        wallpaper_fetch_min:  m
+    });
+}
+
 function fetchNetWallpaper() {
     const url = document.getElementById('netWpUrl').value.trim();
     const st  = document.getElementById('netWpStatus');
     if (!url) return;
+    postDisplay({ wallpaper_url: url });   // keep the scheduled URL in sync
     st.textContent = 'starting…';
     fetch('/api/wallpaper/fetch', {
         method: 'POST',
@@ -841,6 +857,17 @@ function populateForm(s) {
         document.getElementById('wallpaperPicker').style.display = isWall ? '' : 'none';
         const wpEl = document.getElementById('wallpaperPath');
         if (wpEl) wpEl.textContent = s.display.wallpaper_path || '(none)';
+
+        if (s.display.wallpaper_url)
+            document.getElementById('netWpUrl').value = s.display.wallpaper_url;
+        const wfMode = s.display.wallpaper_fetch_mode || 0;
+        document.getElementById('netWpMode').value = String(wfMode);
+        const wfTime = document.getElementById('netWpTime');
+        wfTime.style.display = (wfMode === 2) ? '' : 'none';
+        const p2 = n => String(n === undefined ? 0 : n).padStart(2, '0');
+        wfTime.value = p2(s.display.wallpaper_fetch_hour === undefined ? 4
+                          : s.display.wallpaper_fetch_hour) + ':' +
+                       p2(s.display.wallpaper_fetch_min);
 
         const flip = s.display.flip === true;
         document.getElementById('settingsBtnFlipOn') ?.classList.toggle('active', flip);

@@ -43,6 +43,10 @@ typedef struct {
     bool            bg_gradient;     // dithered gradient background on/off
     bool            wallpaper_on;       // SD wallpaper background on/off (wins over gradient)
     char            wallpaper_path[64]; // full path to a panel-sized RGB565 .bin on SD
+    char            wallpaper_url[192]; // internet-wallpaper source URL ("" = none; {w}/{h} ok)
+    int             wallpaper_fetch_mode; // auto refresh: 0=off, 1=once after boot, 2=daily
+    int             wallpaper_fetch_hour; // daily fetch time (mode 2 only)
+    int             wallpaper_fetch_min;
     char            logo_path[64];      // full path to a splash logo .bin on SD ("" = built-in)
     bool            show_boot_info;  // version + IP overlay on the splash (STA only)
     bool            sd_show_screen;  // show/hide SD player screen in the nav ring
@@ -170,6 +174,10 @@ void settings_set_date_mdy(bool enabled);
 void settings_set_show_fps(bool enabled);
 void settings_set_bg_gradient(bool enabled);
 void settings_set_wallpaper(bool on, const char *path);
+// Internet-wallpaper auto-refresh config. Persists only — re-arming the
+// scheduler is the caller's job (net_wallpaper_sched_update()); settings_ex
+// must not depend on net_wallpaper.
+void settings_set_wallpaper_fetch(const char *url, int mode, int hour, int min);
 void settings_set_logo_path(const char *path);
 void settings_set_show_boot_info(bool enabled);
 void settings_set_sd_show_screen(bool show);

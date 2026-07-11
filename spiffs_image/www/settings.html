@@ -465,7 +465,7 @@
         </div>
 
         <div class="panel">
-            <label class="field-label">Internet wallpaper (test)</label>
+            <label class="field-label">Internet wallpaper</label>
             <div class="field-hint">Fetch a photo over HTTP(S) and convert it on the device into the
                 screen background (kept in RAM until reboot; a playing radio stream pauses during
                 the download). The photo is downloaded by the device straight from the selected
@@ -487,6 +487,22 @@
             <div style="margin-top:8px">
                 <button class="btn-secondary" onclick="fetchNetWallpaper()">🌍 Fetch now</button>
                 <span id="netWpStatus" style="margin-left:8px;opacity:.7"></span>
+            </div>
+            <div style="margin-top:10px">
+                <label class="field-label" style="font-size:12px">Auto refresh</label>
+                <div style="margin-top:4px">
+                    <select id="netWpMode" class="field-input" style="width:auto"
+                            onchange="saveNetWpSchedule()">
+                        <option value="0">Off (manual only)</option>
+                        <option value="1">Once after boot</option>
+                        <option value="2">Daily at:</option>
+                    </select>
+                    <input type="time" id="netWpTime" class="field-input"
+                           style="width:120px;display:none" value="04:00"
+                           onchange="saveNetWpSchedule()" />
+                </div>
+                <div class="field-hint">Uses the URL above (saved together with the schedule).
+                    A playing radio stream is paused for the few seconds of the download.</div>
             </div>
         </div>
 

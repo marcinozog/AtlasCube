@@ -1,4 +1,5 @@
 #include "net_wallpaper.h"
+#include "net_wallpaper_sched.h"
 #include "app_state.h"
 #include "radio_service.h"
 #include "esp_http_client.h"
@@ -342,6 +343,7 @@ static void fetch_task(void *arg)
     if (ok) s_status = "ok";                 // errors were set where they occurred
     s_busy = false;
     if (s_done_cb) s_done_cb(ok);
+    net_wallpaper_sched_fetch_done(ok);      // scheduler retry/re-arm hook
     vTaskDelete(NULL);
 }
 

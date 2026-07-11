@@ -32,6 +32,7 @@
 #include "sdcard.h"
 #include "updater.h"
 #include "net_wallpaper.h"
+#include "net_wallpaper_sched.h"
 #include "esp_spiffs.h"
 #include "esp_vfs_fat.h"
 #include "cJSON.h"
@@ -128,6 +129,10 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddBoolToObject(display, "bg_gradient", s->display.bg_gradient);
     cJSON_AddBoolToObject(display, "wallpaper_on", s->display.wallpaper_on);
     cJSON_AddStringToObject(display, "wallpaper_path", s->display.wallpaper_path);
+    cJSON_AddStringToObject(display, "wallpaper_url", s->display.wallpaper_url);
+    cJSON_AddNumberToObject(display, "wallpaper_fetch_mode", s->display.wallpaper_fetch_mode);
+    cJSON_AddNumberToObject(display, "wallpaper_fetch_hour", s->display.wallpaper_fetch_hour);
+    cJSON_AddNumberToObject(display, "wallpaper_fetch_min",  s->display.wallpaper_fetch_min);
     cJSON_AddStringToObject(display, "logo_path", s->display.logo_path);
     cJSON_AddBoolToObject(display, "show_boot_info", s->display.show_boot_info);
     cJSON_AddBoolToObject(display, "sd_show_screen", s->display.sd_show_screen);
@@ -375,6 +380,22 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
                                                    : cur->display.wallpaper_path;
             ESP_LOGI("HTTP", "POST wallpaper: on=%d path=%s", on, path);
             settings_set_wallpaper(on, path);
+        }
+        cJSON *wurl = cJSON_GetObjectItem(display, "wallpaper_url");
+        cJSON *wfm  = cJSON_GetObjectItem(display, "wallpaper_fetch_mode");
+        cJSON *wfh  = cJSON_GetObjectItem(display, "wallpaper_fetch_hour");
+        cJSON *wfn  = cJSON_GetObjectItem(display, "wallpaper_fetch_min");
+        if (cJSON_IsString(wurl) || cJSON_IsNumber(wfm) ||
+            cJSON_IsNumber(wfh)  || cJSON_IsNumber(wfn)) {
+            app_settings_t *cur = settings_get();
+            const char *url = cJSON_IsString(wurl) ? wurl->valuestring
+                                                   : cur->display.wallpaper_url;
+            int mode = cJSON_IsNumber(wfm) ? wfm->valueint : cur->display.wallpaper_fetch_mode;
+            int hour = cJSON_IsNumber(wfh) ? wfh->valueint : cur->display.wallpaper_fetch_hour;
+            int min  = cJSON_IsNumber(wfn) ? wfn->valueint : cur->display.wallpaper_fetch_min;
+            ESP_LOGI("HTTP", "POST wallpaper_fetch: mode=%d %02d:%02d url=%s", mode, hour, min, url);
+            settings_set_wallpaper_fetch(url, mode, hour, min);
+            net_wallpaper_sched_update();   // re-arm the auto-refresh one-shot
         }
         cJSON *lgp = cJSON_GetObjectItem(display, "logo_path");
         if (cJSON_IsString(lgp)) {
