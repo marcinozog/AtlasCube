@@ -198,6 +198,31 @@ static uint16_t *decode_to_panel(uint8_t *jpg, int len, int pw, int ph)
              (int)cinfo.image_height, cinfo.progressive_mode ? " progressive" : "",
              pw, ph);
 
+    // A progressive (or any multi-scan) JPEG buffers the whole image's DCT
+    // coefficients across scans — the one hard size limit on this device
+    // (~1.5 MP with 8 MB PSRAM; baseline decodes line-by-line at any size).
+    // Estimate the need up front and fail with a readable message instead of
+    // jmemmgr's cryptic backing-store error.
+    if (jpeg_has_multiple_scans(&cinfo)) {
+        size_t coef = 0;
+        for (int c = 0; c < cinfo.num_components; c++) {
+            const jpeg_component_info *comp = &cinfo.comp_info[c];
+            size_t cols = ((size_t)cinfo.image_width  * comp->h_samp_factor
+                           / cinfo.max_h_samp_factor + 7) / 8 + 1;
+            size_t rows = ((size_t)cinfo.image_height * comp->v_samp_factor
+                           / cinfo.max_v_samp_factor + 7) / 8 + 1;
+            coef += cols * rows * (DCTSIZE2 * sizeof(JCOEF));
+        }
+        const size_t free_psram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
+        if (coef + 1024 * 1024 > free_psram) {   // same 1 MB headroom as jmem_esp
+            set_err("progressive %ux%u too big: needs ~%u MB, ~%u MB free",
+                    (unsigned)cinfo.image_width, (unsigned)cinfo.image_height,
+                    (unsigned)((coef + 512 * 1024) / (1024 * 1024)),
+                    (unsigned)(free_psram / (1024 * 1024)));
+            longjmp(jerr.jb, 1);
+        }
+    }
+
     // Pick the smallest N/8 whose output still covers the panel ("cover", not
     // "fit"); N>8 upscales a source that is smaller than the panel, capped at
     // the library's 2x so a tiny image degrades to a letterbox, not to mush.
