@@ -22,6 +22,8 @@ const CLOCK_FIELDS = [
     { key: 'clock_panel_w', label: 'Panel W',  type: 'number' },
     { key: 'clock_panel_h', label: 'Panel H',  type: 'number' },
 
+    { key: 'clock_label_bg',  label: 'Label bg plate', type: 'bool' },
+
     { key: 'clock_show_time', label: 'Show time',     type: 'bool' },
     { key: 'clock_time_x',    label: 'Time X',        type: 'number' },
     { key: 'clock_time_y',    label: 'Time Y',        type: 'number' },

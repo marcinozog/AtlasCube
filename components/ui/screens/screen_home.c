@@ -74,6 +74,26 @@ static lv_obj_t *make_panel(lv_obj_t *parent, int x, int y, int w, int h, uint32
     return p;
 }
 
+// Semi-transparent rounded plate behind a label so it stays readable on a
+// busy wallpaper. Labels are LV_SIZE_CONTENT, so the plate tracks the text.
+// Plate colour is the theme's screen background: text colours are picked to
+// contrast with it, so the plate restores that contrast on any wallpaper.
+// Idempotent — called again from home_apply_theme() on a theme change.
+// No-op when disabled in the profile (clock_label_bg); a runtime toggle takes
+// effect on the next screen rebuild.
+static void label_scrim(lv_obj_t *lbl)
+{
+    if (!ui_profile_get()->clock_label_bg) return;
+    lv_obj_set_style_bg_color(lbl,
+        lv_color_hex(theme_get()->bg_primary), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(lbl, LV_OPA_50, LV_PART_MAIN);
+    lv_obj_set_style_radius(lbl, 8, LV_PART_MAIN);
+    // Big digit fonts already carry vertical slack in their line box, so keep
+    // vertical padding minimal — a tall plate makes clock and date overlap.
+    lv_obj_set_style_pad_hor(lbl, 6, LV_PART_MAIN);
+    lv_obj_set_style_pad_ver(lbl, 1, LV_PART_MAIN);
+}
+
 static bool clock_is_large_font(void)
 {
     const ui_profile_t *p = ui_profile_get();
@@ -169,6 +189,7 @@ static void netinfo_update(void)
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_netinfo_label,
             lv_color_hex(th->text_muted), LV_PART_MAIN);
+        label_scrim(s_netinfo_label);
     }
 
     char ip[16];
@@ -198,6 +219,7 @@ static void home_create(lv_obj_t *parent)
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_time_label,
             lv_color_hex(th->text_primary), LV_PART_MAIN);
+        label_scrim(s_time_label);
 
         // AM/PM suffix lives in its own label: the large clock fonts are
         // digit-only, so letters must use a text-capable (date) font. Hidden
@@ -212,6 +234,7 @@ static void home_create(lv_obj_t *parent)
         lv_obj_set_style_text_font(s_ampm_label, af, LV_PART_MAIN);
         lv_obj_set_style_text_color(s_ampm_label,
             lv_color_hex(th->text_secondary), LV_PART_MAIN);
+        label_scrim(s_ampm_label);
         // Align the two baselines: OUT_RIGHT_BOTTOM matches the line-box
         // bottoms, so shift by the difference of the fonts' baseline offsets.
         s_ampm_y_ofs = (int32_t)af->base_line - (int32_t)tf->base_line;
@@ -226,6 +249,7 @@ static void home_create(lv_obj_t *parent)
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_date_label,
             lv_color_hex(th->text_secondary), LV_PART_MAIN);
+        label_scrim(s_date_label);
     }
 
     s_clock_timer = lv_timer_create(clock_timer_cb, 60 * 1000, NULL);
@@ -370,18 +394,26 @@ static void home_apply_theme(void)
     if (!s_root) return;
     const ui_theme_colors_t *th = theme_get();
 
-    if (s_time_label)
+    if (s_time_label) {
         lv_obj_set_style_text_color(s_time_label,
             lv_color_hex(th->text_primary), LV_PART_MAIN);
-    if (s_ampm_label)
+        label_scrim(s_time_label);
+    }
+    if (s_ampm_label) {
         lv_obj_set_style_text_color(s_ampm_label,
             lv_color_hex(th->text_secondary), LV_PART_MAIN);
-    if (s_date_label)
+        label_scrim(s_ampm_label);
+    }
+    if (s_date_label) {
         lv_obj_set_style_text_color(s_date_label,
             lv_color_hex(th->text_secondary), LV_PART_MAIN);
-    if (s_netinfo_label)
+        label_scrim(s_date_label);
+    }
+    if (s_netinfo_label) {
         lv_obj_set_style_text_color(s_netinfo_label,
             lv_color_hex(th->text_muted), LV_PART_MAIN);
+        label_scrim(s_netinfo_label);
+    }
 
     if (s_strip) {
         lv_obj_set_style_bg_color(s_strip, lv_color_hex(th->bg_secondary), LV_PART_MAIN);

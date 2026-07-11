@@ -102,6 +102,10 @@ typedef struct {
     const lv_font_t *clock_date_font;
     bool             clock_show_date;
 
+    // Semi-transparent theme-coloured plate behind the clock labels (time,
+    // AM/PM, date, netinfo) so they stay readable on a wallpaper background.
+    bool             clock_label_bg;
+
     // Network info (IP + "<hostname>.local") — a clock screen element, toggled
     // and positioned in the layout editor like the date/strip.
     bool             clock_show_netinfo;
