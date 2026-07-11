@@ -257,6 +257,21 @@ function fetchNetWallpaper() {
     }).catch(() => { st.textContent = 'request failed'; });
 }
 
+// Persist the fetched wallpaper on the SD card (/sdcard/wallpapers/saved/…);
+// the file then shows up in the regular SD-wallpaper picker. Background
+// settings are untouched — this only collects the image.
+function saveNetWallpaper() {
+    const st = document.getElementById('netWpStatus');
+    st.textContent = 'saving…';
+    fetch('/api/wallpaper/save', { method: 'POST' })
+        .then(r => r.json())
+        .then(j => {
+            st.textContent = (j.result === 'ok') ? ('saved: ' + j.path)
+                                                 : (j.error || 'save failed');
+        })
+        .catch(() => { st.textContent = 'request failed'; });
+}
+
 function pollNetWallpaper() {
     clearTimeout(netWpTimer);
     fetch('/api/wallpaper/status').then(r => r.json()).then(j => {

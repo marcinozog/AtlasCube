@@ -13,4 +13,5 @@ idf_component_register(
         app_state           # radio playing? capture index before the stop
         services            # radio_stop / radio_play_index + ntp_service_is_synced
         settings_ex         # scheduler reads wallpaper_url/fetch_mode/hour/min
+        sdcard              # save-to-SD writes the fetched image as a .bin
 )

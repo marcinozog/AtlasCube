@@ -2,6 +2,11 @@
 #include "net_wallpaper_sched.h"
 #include "app_state.h"
 #include "radio_service.h"
+#include "sdcard.h"
+#include "esp_timer.h"
+#include <sys/stat.h>
+#include <time.h>
+#include <unistd.h>
 #include "esp_http_client.h"
 #include "esp_crt_bundle.h"
 #include "esp_heap_caps.h"
@@ -9,6 +14,7 @@
 #include "cJSON.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -40,6 +46,23 @@ static bool           s_dismiss;   // drop the image at the next commit (user pi
 static uint16_t      *s_active_buf;      // buffer behind s_img, owned here
 static lv_image_dsc_t s_img;
 static bool           s_have;
+
+// Guards the LIFETIME of s_active_buf between the LVGL task (commit frees or
+// replaces it) and the httpd task (save-to-SD snapshots it). Held only for
+// pointer swaps and one ~434 KB memcpy — never across SD I/O.
+static SemaphoreHandle_t s_buf_lock;
+
+static SemaphoreHandle_t buf_lock(void)
+{
+    if (!s_buf_lock) {
+        SemaphoreHandle_t m = xSemaphoreCreateMutex();
+        taskENTER_CRITICAL(&s_mux);
+        if (!s_buf_lock) { s_buf_lock = m; m = NULL; }
+        taskEXIT_CRITICAL(&s_mux);
+        if (m) vSemaphoreDelete(m);   // lost the creation race
+    }
+    return s_buf_lock;
+}
 
 static void (*s_done_cb)(bool ok);
 static void (*s_start_cb)(void);
@@ -397,6 +420,7 @@ void net_wallpaper_commit(void)
     // that happened to finish in the meantime — drop both image and pending.
     if (dismiss) {
         if (p) heap_caps_free(p);
+        xSemaphoreTake(buf_lock(), portMAX_DELAY);
         if (s_have) {
             lv_image_cache_drop(&s_img);
             s_have = false;
@@ -405,11 +429,13 @@ void net_wallpaper_commit(void)
             heap_caps_free(s_active_buf);
             s_active_buf = NULL;
         }
+        xSemaphoreGive(s_buf_lock);
         ESP_LOGI(TAG, "wallpaper dismissed");
         return;
     }
     if (!p) return;
 
+    xSemaphoreTake(buf_lock(), portMAX_DELAY);
     if (s_have) lv_image_cache_drop(&s_img);
     if (s_active_buf) heap_caps_free(s_active_buf);
     s_active_buf = p;
@@ -422,7 +448,87 @@ void net_wallpaper_commit(void)
     s_img.data_size     = (uint32_t)w * h * 2;
     s_img.data          = (const uint8_t *)p;
     s_have = true;
+    xSemaphoreGive(s_buf_lock);
     ESP_LOGI(TAG, "wallpaper committed (%dx%d)", w, h);
+}
+
+// ── Save to SD ───────────────────────────────────────────────────────────────
+// LVGL v9 .bin header, byte-compatible with scripts/img2lvgl.py output and the
+// SD-wallpaper/photo-screensaver loaders (see ui_background.c).
+typedef struct __attribute__((packed)) {
+    uint8_t  magic;      // 0x19
+    uint8_t  cf;         // 0x12 = RGB565
+    uint16_t flags;
+    uint16_t w;
+    uint16_t h;
+    uint16_t stride;
+    uint16_t reserved;
+} sd_bin_header_t;
+
+#define SAVE_DIR "/sdcard/wallpapers/saved"
+
+bool net_wallpaper_save_to_sd(char *out_path, size_t out_cap, const char **err)
+{
+    *err = NULL;
+    // Also closes the buffer-swap race: a new image can only be committed at
+    // the tail of a fetch, and no fetch is running past this check.
+    if (s_busy) { *err = "fetch in progress"; return false; }
+    if (sdcard_init() != ESP_OK || !sdcard_is_mounted()) { *err = "no SD card"; return false; }
+
+    // Snapshot under the buffer lock (one fast memcpy), then write the file
+    // from the copy with no lock held — the SD write takes ~a second.
+    xSemaphoreTake(buf_lock(), portMAX_DELAY);
+    if (!s_have) {
+        xSemaphoreGive(s_buf_lock);
+        *err = "no wallpaper fetched";
+        return false;
+    }
+    const int w = s_img.header.w, h = s_img.header.h;
+    const size_t bytes = (size_t)w * h * 2;
+    uint16_t *copy = heap_caps_malloc(bytes, MALLOC_CAP_SPIRAM);
+    if (copy) memcpy(copy, s_active_buf, bytes);
+    xSemaphoreGive(s_buf_lock);
+    if (!copy) { *err = "no PSRAM"; return false; }
+
+    mkdir("/sdcard/wallpapers", 0775);   // EEXIST is fine for both levels
+    mkdir(SAVE_DIR, 0775);
+
+    time_t now = time(NULL);
+    struct tm lt;
+    localtime_r(&now, &lt);
+    if (lt.tm_year + 1900 >= 2020) {
+        snprintf(out_path, out_cap, SAVE_DIR "/net_%04d%02d%02d_%02d%02d%02d.bin",
+                 lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday,
+                 lt.tm_hour, lt.tm_min, lt.tm_sec);
+    } else {   // clock not NTP-synced yet — fall back to a boot-unique stamp
+        snprintf(out_path, out_cap, SAVE_DIR "/net_%08lx.bin",
+                 (unsigned long)(esp_timer_get_time() / 1000));
+    }
+
+    FILE *fp = fopen(out_path, "wb");
+    if (!fp) {
+        heap_caps_free(copy);
+        *err = "create failed";
+        return false;
+    }
+    sd_bin_header_t hdr = {
+        .magic  = 0x19,
+        .cf     = 0x12,
+        .w      = (uint16_t)w,
+        .h      = (uint16_t)h,
+        .stride = (uint16_t)(w * 2),
+    };
+    bool ok = fwrite(&hdr, sizeof(hdr), 1, fp) == 1 &&
+              fwrite(copy, 2, (size_t)w * h, fp) == (size_t)w * h;
+    fclose(fp);
+    heap_caps_free(copy);
+    if (!ok) {
+        unlink(out_path);   // don't leave a truncated .bin behind
+        *err = "write failed";
+        return false;
+    }
+    ESP_LOGI(TAG, "wallpaper saved to %s", out_path);
+    return true;
 }
 
 void net_wallpaper_set_done_cb(void (*cb)(bool ok))

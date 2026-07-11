@@ -2757,6 +2757,26 @@ static esp_err_t api_wallpaper_status_handler(httpd_req_t *req)
     return send_json_or_500(req, str);
 }
 
+// POST /api/wallpaper/save — persist the fetched image as an LVGL .bin under
+// /sdcard/wallpapers/saved/, without touching the background settings.
+static esp_err_t api_wallpaper_save_handler(httpd_req_t *req)
+{
+    char path[96];
+    const char *err = NULL;
+    httpd_resp_set_type(req, "application/json");
+    if (net_wallpaper_save_to_sd(path, sizeof(path), &err)) {
+        char body[144];
+        snprintf(body, sizeof(body), "{\"result\":\"ok\",\"path\":\"%s\"}", path);
+        httpd_resp_sendstr(req, body);
+    } else {
+        char body[144];
+        snprintf(body, sizeof(body), "{\"result\":\"error\",\"error\":\"%s\"}",
+                 err ? err : "unknown");
+        httpd_resp_sendstr(req, body);
+    }
+    return ESP_OK;
+}
+
 static esp_err_t api_restart_handler(httpd_req_t *req)
 {
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
@@ -2989,6 +3009,13 @@ void http_server_start(void)
         .handler = api_wallpaper_status_handler,
     };
     httpd_register_uri_handler(server, &api_wallpaper_status);
+
+    httpd_uri_t api_wallpaper_save = {
+        .uri     = "/api/wallpaper/save",
+        .method  = HTTP_POST,
+        .handler = api_wallpaper_save_handler,
+    };
+    httpd_register_uri_handler(server, &api_wallpaper_save);
 
     httpd_uri_t api_theme_get = {
         .uri     = "/api/theme",
