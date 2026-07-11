@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 static const char *TAG = "UI_BG";
 
@@ -36,6 +37,33 @@ static uint16_t      *s_wp_buf    = NULL;
 static lv_image_dsc_t s_wp_img;
 static bool           s_wp_loaded = false;
 static bool           s_wp_tried  = false;   // load attempted (success or not)
+
+// Descriptor to display for the internet wallpaper: the pristine original when
+// dim is off, otherwise a dimmed PSRAM copy (built in net_dimmed()), rebuilt
+// when the source image or the dim value changes. net_wallpaper's own buffer is
+// never touched, so save-to-SD always writes the original and dim stays fully
+// reversible.
+static uint16_t      *s_net_dim_buf = NULL;
+static lv_image_dsc_t s_net_dim_img;
+static const uint8_t *s_net_dim_src = NULL;   // source data of the current copy
+static int            s_net_dim_pct = -1;
+
+// Darken an RGB565 buffer in place by dim_pct percent (0-80). Applied once at
+// load/copy time so the displayed wallpaper carries the dim baked in — no
+// per-frame blending. Sources (the SD file, net_wallpaper's buffer) stay
+// pristine, so save-to-SD and a later lower dim never lose brightness.
+static void dim_rgb565(uint16_t *px, size_t n, int dim_pct)
+{
+    if (dim_pct <= 0) return;
+    const uint32_t f = (uint32_t)(100 - dim_pct) * 256 / 100;   // 8.8 fixed point
+    for (size_t i = 0; i < n; i++) {
+        uint16_t c = px[i];
+        uint16_t r = (uint16_t)((((c >> 11) & 0x1F) * f) >> 8);
+        uint16_t g = (uint16_t)((((c >> 5)  & 0x3F) * f) >> 8);
+        uint16_t b = (uint16_t)((( c        & 0x1F) * f) >> 8);
+        px[i] = (uint16_t)((r << 11) | (g << 5) | b);
+    }
+}
 
 // Read the wallpaper .bin into PSRAM once. Returns true if a valid, correctly
 // sized image is now in s_wp_img. Failures (off / no SD / no file / wrong size)
@@ -84,6 +112,10 @@ static bool load_wallpaper(void)
     fclose(fp);
     if (got != (size_t)H) { ESP_LOGW(TAG, "wallpaper short read (%u/%d rows)", (unsigned)got, H); return false; }
 
+    // Dim changes ride UI_EVT_BG_CHANGED → reload_wallpaper() → fresh re-read
+    // from the file, so dimming in place here is always applied exactly once.
+    dim_rgb565(s_wp_buf, (size_t)W * H, st->display.wallpaper_dim);
+
     s_wp_img.header.magic  = LV_IMAGE_HEADER_MAGIC;
     s_wp_img.header.cf     = LV_COLOR_FORMAT_RGB565;
     s_wp_img.header.w      = W;
@@ -105,6 +137,9 @@ void ui_background_reload_wallpaper(void)
     if (s_wp_loaded) lv_image_cache_drop(&s_wp_img);
     s_wp_tried  = false;
     s_wp_loaded = false;
+    // Invalidate the dimmed net-wallpaper copy: a new fetch may land at the
+    // same PSRAM address, so the data pointer alone can't be trusted as a key.
+    s_net_dim_src = NULL;
 }
 
 // Vertical gradient endpoints (top → bottom). The colours live in the per-theme
@@ -194,6 +229,30 @@ static void build_bg_image(int idx, ui_theme_t t)
     s_built[idx]     = true;
 }
 
+static const lv_image_dsc_t *net_dimmed(const lv_image_dsc_t *src)
+{
+    const int dim = settings_get()->display.wallpaper_dim;
+    if (dim <= 0) return src;
+    // The fetch path decodes to exactly the panel size; anything else would
+    // also break the bg fit, so just show it undimmed rather than overrun.
+    if (src->header.w != DISPLAY_WIDTH || src->header.h != DISPLAY_HEIGHT) return src;
+    if (s_net_dim_src == src->data && s_net_dim_pct == dim) return &s_net_dim_img;
+
+    const size_t n = (size_t)DISPLAY_WIDTH * DISPLAY_HEIGHT;
+    if (!s_net_dim_buf) {
+        s_net_dim_buf = heap_caps_malloc(n * 2, MALLOC_CAP_SPIRAM);
+        if (!s_net_dim_buf) { ESP_LOGE(TAG, "net dim buffer alloc failed"); return src; }
+    }
+    lv_image_cache_drop(&s_net_dim_img);
+    memcpy(s_net_dim_buf, src->data, n * 2);
+    dim_rgb565(s_net_dim_buf, n, dim);
+    s_net_dim_img      = *src;
+    s_net_dim_img.data = (const uint8_t *)s_net_dim_buf;
+    s_net_dim_src      = src->data;
+    s_net_dim_pct      = dim;
+    return &s_net_dim_img;
+}
+
 void ui_background_apply(lv_obj_t *obj)
 {
     const ui_theme_t t = theme_current();
@@ -204,7 +263,7 @@ void ui_background_apply(lv_obj_t *obj)
     // the gradient until the next reboot.
     const lv_image_dsc_t *net_wp = net_wallpaper_image();
     if (net_wp) {
-        lv_obj_set_style_bg_image_src(obj, net_wp, LV_PART_MAIN);
+        lv_obj_set_style_bg_image_src(obj, net_dimmed(net_wp), LV_PART_MAIN);
         lv_obj_set_style_bg_image_tiled(obj, false, LV_PART_MAIN);
         lv_obj_set_style_bg_image_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);

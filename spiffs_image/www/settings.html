@@ -171,6 +171,20 @@
                 <button class="btn-secondary" onclick="openWallpaperBrowser()">📂 Choose file…</button>
                 <div id="wallpaperBrowser" style="display:none;margin-top:8px"></div>
             </div>
+            <div style="margin-top:12px">
+                <div class="slider-row">
+                    <span class="slider-label">🌒 Wallpaper brightness</span>
+                    <span id="wp_dim_value" class="slider-value">100%</span>
+                </div>
+                <!-- UI shows brightness (right = brighter, like the panel Brightness
+                     slider); the firmware setting is the inverse (wallpaper_dim). -->
+                <input type="range" min="20" max="100" step="5" value="100" id="wp_dim_slider"
+                       oninput="document.getElementById('wp_dim_value').textContent = this.value + '%'"
+                       onchange="setWallpaperDim(100 - this.value)" />
+                <div class="field-hint">Lower it to darken the wallpaper (both SD and internet) so
+                    on-screen text stays readable. Gradient/solid backgrounds are not affected.
+                    100% = original image.</div>
+            </div>
         </div>
 
         <div class="panel">
@@ -185,7 +199,7 @@
                 <option value="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY">NASA — Astronomy Picture of the Day</option>
                 <option value="https://picsum.photos/{w}/{h}">Lorem Picsum — random photo</option>
                 <option value="https://loremflickr.com/{w}/{h}">LoremFlickr — random photo</option>
-                <option value="https://loremflickr.com/{w}/{h}/nature">LoremFlickr — keyword (edit URL)</option>
+                <option value="https://loremflickr.com/{w}/{h}/cosmos">LoremFlickr — keyword (edit URL)</option>
                 <option value="https://cataas.com/cat?width={w}&amp;height={h}">Cataas — random cat</option>
                 <option value="https://placedog.net/{w}/{h}">PlaceDog — random dog</option>
                 <option value="">Custom URL…</option>

@@ -160,6 +160,10 @@ function postDisplay(patch) {
     }).catch(console.error);
 }
 
+function setWallpaperDim(v) {
+    postDisplay({ wallpaper_dim: parseInt(v, 10) || 0 });
+}
+
 // Folder of the currently selected file (mount-relative), or '/' if none.
 function sdDirOf(fullText) {
     if (fullText && fullText.startsWith(SD_MOUNT + '/')) {
@@ -954,6 +958,11 @@ function populateForm(s) {
         document.getElementById('wallpaperPicker').style.display = isWall ? '' : 'none';
         const wpEl = document.getElementById('wallpaperPath');
         if (wpEl) wpEl.textContent = s.display.wallpaper_path || '(none)';
+        // Slider shows brightness (100 - dim): right = brighter, like the
+        // panel Brightness slider.
+        const wpBright = 100 - (s.display.wallpaper_dim || 0);
+        document.getElementById('wp_dim_slider').value = wpBright;
+        document.getElementById('wp_dim_value').textContent = wpBright + '%';
 
         if (s.display.wallpaper_url)
             document.getElementById('netWpUrl').value = s.display.wallpaper_url;

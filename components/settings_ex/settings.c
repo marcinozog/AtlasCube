@@ -65,6 +65,7 @@ esp_err_t settings_init(void)
         s_settings.display.bg_gradient      = true;
         s_settings.display.wallpaper_on     = false;
         s_settings.display.wallpaper_path[0] = '\0';
+        s_settings.display.wallpaper_dim    = 0;
         s_settings.display.wallpaper_url[0] = '\0';
         s_settings.display.wallpaper_fetch_mode = 0;
         s_settings.display.wallpaper_fetch_hour = 4;
@@ -260,6 +261,9 @@ static esp_err_t load_from_file(void)
         if (cJSON_IsString(wpp))
             strncpy(s_settings.display.wallpaper_path, wpp->valuestring,
                     sizeof(s_settings.display.wallpaper_path) - 1);
+        cJSON *wpd = cJSON_GetObjectItem(display, "wallpaper_dim");
+        int wpdim = cJSON_IsNumber(wpd) ? wpd->valueint : 0;
+        s_settings.display.wallpaper_dim = (wpdim < 0) ? 0 : (wpdim > 80) ? 80 : wpdim;
         cJSON *wurl = cJSON_GetObjectItem(display, "wallpaper_url");
         s_settings.display.wallpaper_url[0] = '\0';
         if (cJSON_IsString(wurl))
@@ -571,6 +575,7 @@ static esp_err_t save_to_file_locked(void)
     cJSON_AddBoolToObject(display, "bg_gradient", s_settings.display.bg_gradient);
     cJSON_AddBoolToObject(display, "wallpaper_on", s_settings.display.wallpaper_on);
     cJSON_AddStringToObject(display, "wallpaper_path", s_settings.display.wallpaper_path);
+    cJSON_AddNumberToObject(display, "wallpaper_dim", s_settings.display.wallpaper_dim);
     cJSON_AddStringToObject(display, "wallpaper_url", s_settings.display.wallpaper_url);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_mode", s_settings.display.wallpaper_fetch_mode);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_hour", s_settings.display.wallpaper_fetch_hour);
@@ -1035,6 +1040,19 @@ void settings_set_wallpaper(bool on, const char *path)
     if (!changed) return;
     // Always push (even on a path-only change): notify() fires unconditionally,
     // letting ui_manager detect the path change and reload the wallpaper live.
+    app_state_update(&(app_state_patch_t){ .has_wallpaper_on = true,
+                                           .wallpaper_on = s_settings.display.wallpaper_on });
+    save_to_file();
+}
+
+void settings_set_wallpaper_dim(int pct)
+{
+    if (pct < 0)  pct = 0;
+    if (pct > 80) pct = 80;
+    if (s_settings.display.wallpaper_dim == pct) return;
+    s_settings.display.wallpaper_dim = pct;
+    // Dim lives in settings only (like wallpaper_path); push the unchanged
+    // wallpaper_on so app_state notifies and ui_manager spots the new value.
     app_state_update(&(app_state_patch_t){ .has_wallpaper_on = true,
                                            .wallpaper_on = s_settings.display.wallpaper_on });
     save_to_file();

@@ -84,6 +84,7 @@ static ui_theme_t     s_prev_theme    = THEME_DARK;
 static bool           s_prev_bg_gradient = true;
 static bool           s_prev_wallpaper_on = false;
 static char           s_prev_wallpaper_path[64] = "";
+static int            s_prev_wallpaper_dim = 0;
 
 // Screensaver overlay — runs on top of an existing screen.
 // While active, the underlying s_active widgets are torn down but s_active /
@@ -132,12 +133,15 @@ static void on_state_change(void)
         return;
     }
 
-    // Wallpaper toggle or path change → reapply the shared background. The path
-    // lives in settings (not app_state), so compare it directly here.
+    // Wallpaper toggle, path or dim change → reapply the shared background. The
+    // path and dim live in settings (not app_state), so compare them directly.
     const char *wp_path = settings_get()->display.wallpaper_path;
+    const int   wp_dim  = settings_get()->display.wallpaper_dim;
     if (s->wallpaper_on != s_prev_wallpaper_on ||
+        wp_dim != s_prev_wallpaper_dim ||
         strcmp(wp_path, s_prev_wallpaper_path) != 0) {
         s_prev_wallpaper_on = s->wallpaper_on;
+        s_prev_wallpaper_dim = wp_dim;
         strncpy(s_prev_wallpaper_path, wp_path, sizeof(s_prev_wallpaper_path) - 1);
         s_prev_wallpaper_path[sizeof(s_prev_wallpaper_path) - 1] = '\0';
         ui_event_t ev = { .type = UI_EVT_BG_CHANGED };

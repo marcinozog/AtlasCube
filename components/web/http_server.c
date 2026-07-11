@@ -128,6 +128,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddBoolToObject(display, "date_mdy", s->display.date_mdy);
     cJSON_AddBoolToObject(display, "bg_gradient", s->display.bg_gradient);
     cJSON_AddBoolToObject(display, "wallpaper_on", s->display.wallpaper_on);
+    cJSON_AddNumberToObject(display, "wallpaper_dim", s->display.wallpaper_dim);
     cJSON_AddStringToObject(display, "wallpaper_path", s->display.wallpaper_path);
     cJSON_AddStringToObject(display, "wallpaper_url", s->display.wallpaper_url);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_mode", s->display.wallpaper_fetch_mode);
@@ -370,6 +371,14 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         if (cJSON_IsBool(bg)) {
             ESP_LOGI("HTTP", "POST bg_gradient: %d", cJSON_IsTrue(bg));
             settings_set_bg_gradient(cJSON_IsTrue(bg));
+        }
+        // Dim is intentionally outside the eviction condition below: changing
+        // it must re-shade the current wallpaper (incl. a fetched internet
+        // one), not evict it. The setter notifies → BG_CHANGED → re-dim.
+        cJSON *wpd = cJSON_GetObjectItem(display, "wallpaper_dim");
+        if (cJSON_IsNumber(wpd)) {
+            ESP_LOGI("HTTP", "POST wallpaper_dim: %d", wpd->valueint);
+            settings_set_wallpaper_dim(wpd->valueint);
         }
         cJSON *wp  = cJSON_GetObjectItem(display, "wallpaper_on");
         cJSON *wpp = cJSON_GetObjectItem(display, "wallpaper_path");

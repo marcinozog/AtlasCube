@@ -43,6 +43,7 @@ typedef struct {
     bool            bg_gradient;     // dithered gradient background on/off
     bool            wallpaper_on;       // SD wallpaper background on/off (wins over gradient)
     char            wallpaper_path[64]; // full path to a panel-sized RGB565 .bin on SD
+    int             wallpaper_dim;      // darken wallpaper by 0-80% (SD + internet; gradient unaffected)
     char            wallpaper_url[192]; // internet-wallpaper source URL ("" = none; {w}/{h} ok)
     int             wallpaper_fetch_mode; // auto refresh: 0=off, 1=once after boot, 2=daily
     int             wallpaper_fetch_hour; // daily fetch time (mode 2 only)
@@ -174,6 +175,7 @@ void settings_set_date_mdy(bool enabled);
 void settings_set_show_fps(bool enabled);
 void settings_set_bg_gradient(bool enabled);
 void settings_set_wallpaper(bool on, const char *path);
+void settings_set_wallpaper_dim(int pct);   // clamped to 0-80
 // Internet-wallpaper auto-refresh config. Persists only — re-arming the
 // scheduler is the caller's job (net_wallpaper_sched_update()); settings_ex
 // must not depend on net_wallpaper.
