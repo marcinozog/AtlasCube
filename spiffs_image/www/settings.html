@@ -495,14 +495,15 @@
                             onchange="saveNetWpSchedule()">
                         <option value="0">Off (manual only)</option>
                         <option value="1">Once after boot</option>
-                        <option value="2">Daily at:</option>
+                        <option value="2">After boot + daily at:</option>
                     </select>
                     <input type="time" id="netWpTime" class="field-input"
                            style="width:120px;display:none" value="04:00"
                            onchange="saveNetWpSchedule()" />
                 </div>
                 <div class="field-hint">Uses the URL above (saved together with the schedule).
-                    A playing radio stream is paused for the few seconds of the download.</div>
+                    The wallpaper lives in RAM only, so both auto modes re-fetch it ~30 s after
+                    every boot. A playing radio stream is paused for the few seconds of the download.</div>
             </div>
         </div>
 

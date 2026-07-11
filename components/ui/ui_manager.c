@@ -12,6 +12,7 @@
 #include "events_service.h"
 #include "screensavers.h"
 #include "net_wallpaper.h"
+#include "net_fetch_overlay_widget.h"
 #include "display.h"
 #include "lvgl.h"
 #include "display/lv_display_private.h"   // disp->perf_label for apply_fps_overlay()
@@ -359,14 +360,23 @@ static void on_update_progress(int pct)
     ui_event_send(&ev);
 }
 
-// A net-wallpaper fetch finished on its own task. Adoption of the new buffer
-// (net_wallpaper_commit) must run on the LVGL task, so ride the same event the
-// SD wallpaper uses — its handler calls ui_background_reload_wallpaper().
+// Net-wallpaper fetch lifecycle, both hooks fire on the fetch task. The status
+// pill (net_fetch_overlay) is pure widget work → UI_EVT_NET_WP; adoption of a
+// new buffer (net_wallpaper_commit) additionally rides UI_EVT_BG_CHANGED,
+// whose handler calls ui_background_reload_wallpaper().
+static void on_net_wallpaper_started(void)
+{
+    ui_event_t ev = { .type = UI_EVT_NET_WP, .net_wp_state = 1 };
+    ui_event_send(&ev);
+}
+
 static void on_net_wallpaper_done(bool ok)
 {
-    if (!ok) return;
-    ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
+    ui_event_t ev = { .type = UI_EVT_NET_WP, .net_wp_state = ok ? 0 : -1 };
     ui_event_send(&ev);
+    if (!ok) return;
+    ui_event_t bg = { .type = UI_EVT_BG_CHANGED };
+    ui_event_send(&bg);
 }
 
 void ui_manager_init(void)
@@ -379,6 +389,7 @@ void ui_manager_init(void)
     updater_set_notify_cb(on_update_available);
     updater_set_progress_cb(on_update_progress);
     net_wallpaper_set_done_cb(on_net_wallpaper_done);
+    net_wallpaper_set_start_cb(on_net_wallpaper_started);
 
     ESP_LOGI(TAG, "Initialized");
 }
@@ -537,6 +548,11 @@ void ui_manager_run(void)
             }
             if (ev.type == UI_EVT_FPS_CHANGED) {
                 apply_fps_overlay();
+                continue;
+            }
+            if (ev.type == UI_EVT_NET_WP) {
+                if (ev.net_wp_state == 1) net_fetch_overlay_show();
+                else                      net_fetch_overlay_done(ev.net_wp_state == 0);
                 continue;
             }
             if (ev.type == UI_EVT_EVENT_FIRED) {

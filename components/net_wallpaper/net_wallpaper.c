@@ -41,6 +41,7 @@ static lv_image_dsc_t s_img;
 static bool           s_have;
 
 static void (*s_done_cb)(bool ok);
+static void (*s_start_cb)(void);
 
 static void set_err(const char *fmt, ...)
 {
@@ -326,6 +327,7 @@ static void fetch_task(void *arg)
     char url[URL_MAX];
     expand_url(s_url, url, sizeof(url), s_panel_w, s_panel_h);
     ESP_LOGI(TAG, "fetching %s", url);
+    if (s_start_cb) s_start_cb();            // UI pill: explain the coming silence
 
     // Stop a playing radio stream for the duration: its (possibly TLS) socket
     // plus ours is exactly the two-HTTPS-sessions pattern that used to starve
@@ -407,4 +409,9 @@ void net_wallpaper_commit(void)
 void net_wallpaper_set_done_cb(void (*cb)(bool ok))
 {
     s_done_cb = cb;
+}
+
+void net_wallpaper_set_start_cb(void (*cb)(void))
+{
+    s_start_cb = cb;
 }

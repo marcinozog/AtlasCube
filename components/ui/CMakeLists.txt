@@ -43,6 +43,7 @@ idf_component_register(
         "widgets/controls_overlay_widget.c"
         "widgets/hub_overlay_widget.c"
         "widgets/vol_overlay_widget.c"
+        "widgets/net_fetch_overlay_widget.c"
         "widgets/vu_widget.c"
         "fonts/lv_font_montserrat_8_pl.c"
         "fonts/lv_font_montserrat_10_pl.c"

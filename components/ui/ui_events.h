@@ -52,6 +52,7 @@ typedef enum {
     UI_EVT_OTA_PROGRESS,     // firmware update progress (0..100, or -1 = failed)
     UI_EVT_WIFI_SCAN_DONE,   // async WiFi scan finished — results ready in wifi_manager
     UI_EVT_FPS_CHANGED,      // settings.display.show_fps toggled — show/hide perf monitor
+    UI_EVT_NET_WP,           // internet-wallpaper fetch lifecycle (net_wp_state payload)
 } ui_event_type_t;
 
 // --------------------------------------------------------------------------
@@ -95,6 +96,7 @@ typedef struct {
         ui_input_t input;          // UI_EVT_INPUT
         ui_event_info_t event_info;// UI_EVT_EVENT_FIRED
         int ota_progress;          // UI_EVT_OTA_PROGRESS: 0..100, or -1 = failed
+        int net_wp_state;          // UI_EVT_NET_WP: 1 = started, 0 = ok, -1 = failed
     };
 } ui_event_t;
 

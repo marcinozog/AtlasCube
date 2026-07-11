@@ -34,6 +34,11 @@ void net_wallpaper_commit(void);
 // The UI uses it to post UI_EVT_BG_CHANGED over to the LVGL task.
 void net_wallpaper_set_done_cb(void (*cb)(bool ok));
 
+// Fired from the fetch task right before the transfer starts (and before a
+// playing radio stream is stopped) — the UI shows its "Updating wallpaper"
+// pill from this, so the sudden silence is explained on screen.
+void net_wallpaper_set_start_cb(void (*cb)(void));
+
 #ifdef __cplusplus
 }
 #endif
