@@ -201,7 +201,11 @@ function renderBinBrowser(box, d, onSelect) {
         const parent = path.replace(/\/[^/]+\/?$/, '') || '/';
         addRow('📁 ..', () => browseBin(box, parent, onSelect));
     }
-    (d.entries || []).forEach(e => {
+    // Directories first, then files, each group alphabetically.
+    const entries = (d.entries || []).slice().sort((a, b) =>
+        (!!b.dir - !!a.dir) ||
+        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+    entries.forEach(e => {
         const full = (path.endsWith('/') ? path : path + '/') + e.name;
         if (e.dir) { addRow('📁 ' + e.name, () => browseBin(box, full, onSelect)); return; }
         if (!e.name.toLowerCase().endsWith('.bin')) return;
