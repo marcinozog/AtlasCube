@@ -26,7 +26,6 @@
         <button type="button" class="tab-btn" data-tab="night"       onclick="selectTab('night')">🔅 Dim &amp; Wake</button>
         <button type="button" class="tab-btn" data-tab="screensaver" onclick="selectTab('screensaver')">🌀 Screensaver</button>
         <button type="button" class="tab-btn" data-tab="audio"       onclick="selectTab('audio')">🎚️ Audio</button>
-        <button type="button" class="tab-btn" data-tab="colors"      onclick="selectTab('colors')">🎨 Theme</button>
         <button type="button" class="tab-btn" data-tab="wifi"        onclick="selectTab('wifi')">🌐 Network</button>
         <button type="button" class="tab-btn" data-tab="datetime"    onclick="selectTab('datetime')">🕐 Date &amp; Time</button>
         <button type="button" class="tab-btn" data-tab="mqtt"        onclick="selectTab('mqtt')">📨 MQTT</button>
@@ -35,9 +34,15 @@
     </nav>
 
     <!-- ══════════════════════════════════════════
-         Display
+         Display (panel options + theme, background & custom palettes)
     ══════════════════════════════════════════ -->
     <section class="tab-pane" id="tab-display" data-tab="display">
+        <nav class="tab-nav" id="displaySubNav" role="tablist">
+            <button type="button" class="tab-btn" data-sub="panel" onclick="selectDisplaySub('panel')">🖥️ Panel</button>
+            <button type="button" class="tab-btn" data-sub="theme" onclick="selectDisplaySub('theme')">🎨 Theme</button>
+        </nav>
+
+        <div class="sub-pane" data-sub="panel">
         <div class="panel">
             <div class="panel-label">SHOW DEVICE SCREEN</div>
             <div class="screen-switcher">
@@ -137,6 +142,98 @@
             <label class="field-label">Screen layout editor</label>
             <a href="/layout.html" class="tool-btn tool-link" style="width:fit-content;padding:8px 14px">🖼️ Open Layout Editor</a>
         </div>
+        </div><!-- /sub-pane panel -->
+
+        <div class="sub-pane" data-sub="theme">
+        <div class="panel">
+            <label class="field-label">Theme</label>
+            <div class="theme-toggle wide" id="themeToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnDark"  onclick="setDeviceTheme('dark')">🌙 Dark</button>
+                <button class="theme-btn" id="settingsBtnLight" onclick="setDeviceTheme('light')">☀️ Light</button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <label class="field-label">Background</label>
+            <div class="theme-toggle wide" id="bgGradientToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnBgGrad"  onclick="setBackground('gradient')">🌈 Gradient</button>
+                <button class="theme-btn" id="settingsBtnBgSolid" onclick="setBackground('solid')">⬛ Solid</button>
+                <button class="theme-btn" id="settingsBtnBgWall"  onclick="setBackground('wallpaper')">🖼️ Wallpaper</button>
+            </div>
+            <div id="wallpaperPicker" style="display:none;margin-top:10px">
+                <div class="field-hint">Pick a panel-sized RGB565 <code>.bin</code> from the SD card (same format as photo-frame slides).</div>
+                <div style="margin:6px 0">
+                    <span style="opacity:.7">File:</span>
+                    <span id="wallpaperPath" style="font-family:monospace;font-size:12px">(none)</span>
+                </div>
+                <button class="btn-secondary" onclick="openWallpaperBrowser()">📂 Choose file…</button>
+                <div id="wallpaperBrowser" style="display:none;margin-top:8px"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <label class="field-label">Internet wallpaper</label>
+            <div class="field-hint">Fetch a photo over HTTP(S) and convert it on the device into the
+                screen background (kept in RAM until reboot; a playing radio stream pauses during
+                the download). The photo is downloaded by the device straight from the selected
+                service, on that service's own terms. <code>{w}</code>/<code>{h}</code> in the URL
+                are replaced with the panel size; NASA APOD API links are resolved automatically
+                (DEMO_KEY is rate-limited — a free personal key from api.nasa.gov lifts that).</div>
+            <select id="netWpPreset" class="field-input" style="width:100%;margin-top:6px"
+                    onchange="netWpPresetChanged()">
+                <option value="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY">NASA — Astronomy Picture of the Day</option>
+                <option value="https://picsum.photos/{w}/{h}">Lorem Picsum — random photo</option>
+                <option value="https://loremflickr.com/{w}/{h}">LoremFlickr — random photo</option>
+                <option value="https://loremflickr.com/{w}/{h}/nature">LoremFlickr — keyword (edit URL)</option>
+                <option value="https://cataas.com/cat">Cataas — random cat</option>
+                <option value="https://placedog.net/{w}/{h}">PlaceDog — random dog</option>
+                <option value="">Custom URL…</option>
+            </select>
+            <input type="text" id="netWpUrl" class="field-input" style="width:100%;margin-top:6px"
+                   value="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY"
+                   oninput="syncNetWpPreset()" />
+            <div style="margin-top:8px">
+                <button class="btn-secondary" onclick="fetchNetWallpaper()">🌍 Fetch now</button>
+                <button class="btn-secondary" onclick="saveNetWallpaper()">💾 Save to SD</button>
+                <span id="netWpStatus" style="margin-left:8px;opacity:.7"></span>
+            </div>
+            <div style="margin-top:10px">
+                <label class="field-label" style="font-size:12px">Auto refresh</label>
+                <div style="margin-top:4px">
+                    <select id="netWpMode" class="field-input" style="width:auto"
+                            onchange="saveNetWpSchedule()">
+                        <option value="0">Off (manual only)</option>
+                        <option value="1">Once after boot</option>
+                        <option value="2">After boot + daily at:</option>
+                    </select>
+                    <input type="time" id="netWpTime" class="field-input"
+                           style="width:120px;display:none" value="04:00"
+                           onchange="saveNetWpSchedule()" />
+                </div>
+                <div class="field-hint">Uses the URL above (saved together with the schedule).
+                    The wallpaper lives in RAM only, so both auto modes re-fetch it ~30 s after
+                    every boot. A playing radio stream is paused for the few seconds of the download.</div>
+            </div>
+        </div>
+
+        <div class="field-group">
+            <label class="field-label">Editing palette</label>
+            <nav class="tab-nav" role="tablist" style="margin:6px 0 0">
+                <button type="button" class="tab-btn active" id="palTabDark"  onclick="selectPaletteTab('dark')">🌙 Dark</button>
+                <button type="button" class="tab-btn"        id="palTabLight" onclick="selectPaletteTab('light')">☀️ Light</button>
+            </nav>
+            <div class="field-hint">Changes apply instantly on the device display.</div>
+        </div>
+
+        <div class="panel">
+            <div id="colorGrid"></div>
+            <div class="color-actions">
+                <button id="colors_save_btn" onclick="saveColors()">💾 Save palette</button>
+                <button id="colors_reset_btn" class="btn-secondary" onclick="resetColors()">↺ Reset to defaults</button>
+            </div>
+            <div id="colors_status" class="save-status"></div>
+        </div>
+        </div><!-- /sub-pane theme -->
     </section>
 
     <!-- ══════════════════════════════════════════
@@ -431,100 +528,6 @@
                 <button class="theme-btn" id="settingsBtnAutoSwitchOff" onclick="setBtAutoSwitch(false)">❌ Off</button>
             </div>
             <div class="field-hint">When on, starting Bluetooth playback stops the radio and starting the radio pauses the phone, switching the audio source automatically.</div>
-        </div>
-    </section>
-
-    <!-- ══════════════════════════════════════════
-         Theme (display theme, background & custom palettes)
-    ══════════════════════════════════════════ -->
-    <section class="tab-pane" id="tab-colors" data-tab="colors">
-        <div class="panel">
-            <label class="field-label">Theme</label>
-            <div class="theme-toggle wide" id="themeToggle" style="width:fit-content">
-                <button class="theme-btn" id="settingsBtnDark"  onclick="setDeviceTheme('dark')">🌙 Dark</button>
-                <button class="theme-btn" id="settingsBtnLight" onclick="setDeviceTheme('light')">☀️ Light</button>
-            </div>
-        </div>
-
-        <div class="panel">
-            <label class="field-label">Background</label>
-            <div class="theme-toggle wide" id="bgGradientToggle" style="width:fit-content">
-                <button class="theme-btn" id="settingsBtnBgGrad"  onclick="setBackground('gradient')">🌈 Gradient</button>
-                <button class="theme-btn" id="settingsBtnBgSolid" onclick="setBackground('solid')">⬛ Solid</button>
-                <button class="theme-btn" id="settingsBtnBgWall"  onclick="setBackground('wallpaper')">🖼️ Wallpaper</button>
-            </div>
-            <div id="wallpaperPicker" style="display:none;margin-top:10px">
-                <div class="field-hint">Pick a panel-sized RGB565 <code>.bin</code> from the SD card (same format as photo-frame slides).</div>
-                <div style="margin:6px 0">
-                    <span style="opacity:.7">File:</span>
-                    <span id="wallpaperPath" style="font-family:monospace;font-size:12px">(none)</span>
-                </div>
-                <button class="btn-secondary" onclick="openWallpaperBrowser()">📂 Choose file…</button>
-                <div id="wallpaperBrowser" style="display:none;margin-top:8px"></div>
-            </div>
-        </div>
-
-        <div class="panel">
-            <label class="field-label">Internet wallpaper</label>
-            <div class="field-hint">Fetch a photo over HTTP(S) and convert it on the device into the
-                screen background (kept in RAM until reboot; a playing radio stream pauses during
-                the download). The photo is downloaded by the device straight from the selected
-                service, on that service's own terms. <code>{w}</code>/<code>{h}</code> in the URL
-                are replaced with the panel size; NASA APOD API links are resolved automatically
-                (DEMO_KEY is rate-limited — a free personal key from api.nasa.gov lifts that).</div>
-            <select id="netWpPreset" class="field-input" style="width:100%;margin-top:6px"
-                    onchange="netWpPresetChanged()">
-                <option value="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY">NASA — Astronomy Picture of the Day</option>
-                <option value="https://picsum.photos/{w}/{h}">Lorem Picsum — random photo</option>
-                <option value="https://loremflickr.com/{w}/{h}">LoremFlickr — random photo</option>
-                <option value="https://loremflickr.com/{w}/{h}/nature">LoremFlickr — keyword (edit URL)</option>
-                <option value="https://cataas.com/cat">Cataas — random cat</option>
-                <option value="https://placedog.net/{w}/{h}">PlaceDog — random dog</option>
-                <option value="">Custom URL…</option>
-            </select>
-            <input type="text" id="netWpUrl" class="field-input" style="width:100%;margin-top:6px"
-                   value="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY"
-                   oninput="syncNetWpPreset()" />
-            <div style="margin-top:8px">
-                <button class="btn-secondary" onclick="fetchNetWallpaper()">🌍 Fetch now</button>
-                <button class="btn-secondary" onclick="saveNetWallpaper()">💾 Save to SD</button>
-                <span id="netWpStatus" style="margin-left:8px;opacity:.7"></span>
-            </div>
-            <div style="margin-top:10px">
-                <label class="field-label" style="font-size:12px">Auto refresh</label>
-                <div style="margin-top:4px">
-                    <select id="netWpMode" class="field-input" style="width:auto"
-                            onchange="saveNetWpSchedule()">
-                        <option value="0">Off (manual only)</option>
-                        <option value="1">Once after boot</option>
-                        <option value="2">After boot + daily at:</option>
-                    </select>
-                    <input type="time" id="netWpTime" class="field-input"
-                           style="width:120px;display:none" value="04:00"
-                           onchange="saveNetWpSchedule()" />
-                </div>
-                <div class="field-hint">Uses the URL above (saved together with the schedule).
-                    The wallpaper lives in RAM only, so both auto modes re-fetch it ~30 s after
-                    every boot. A playing radio stream is paused for the few seconds of the download.</div>
-            </div>
-        </div>
-
-        <div class="field-group">
-            <label class="field-label">Editing palette</label>
-            <nav class="tab-nav" role="tablist" style="margin:6px 0 0">
-                <button type="button" class="tab-btn active" id="palTabDark"  onclick="selectPaletteTab('dark')">🌙 Dark</button>
-                <button type="button" class="tab-btn"        id="palTabLight" onclick="selectPaletteTab('light')">☀️ Light</button>
-            </nav>
-            <div class="field-hint">Changes apply instantly on the device display.</div>
-        </div>
-
-        <div class="panel">
-            <div id="colorGrid"></div>
-            <div class="color-actions">
-                <button id="colors_save_btn" onclick="saveColors()">💾 Save palette</button>
-                <button id="colors_reset_btn" class="btn-secondary" onclick="resetColors()">↺ Reset to defaults</button>
-            </div>
-            <div id="colors_status" class="save-status"></div>
         </div>
     </section>
 

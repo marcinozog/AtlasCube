@@ -998,6 +998,10 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
 .tab-pane { display: none; }
 .tab-pane.active { display: block; }
 
+/* Nested sub-tabs inside a tab pane (Display → Panel / Theme) */
+.sub-pane { display: none; }
+.sub-pane.active { display: block; }
+
 /* settings theme toggle reuse .theme-toggle / .theme-btn */
 
 /* ════════════════════════════════════════════════
