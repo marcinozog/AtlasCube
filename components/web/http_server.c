@@ -3328,6 +3328,8 @@ static esp_err_t api_weather_get_handler(httpd_req_t *req)
     weather_get(&data);
     cJSON *json = cJSON_CreateObject();
     cJSON_AddBoolToObject(json, "enabled", cfg.enabled);
+    cJSON_AddNumberToObject(json, "provider", cfg.provider);
+    cJSON_AddStringToObject(json, "api_key", cfg.api_key);
     cJSON_AddNumberToObject(json, "latitude", cfg.latitude);
     cJSON_AddNumberToObject(json, "longitude", cfg.longitude);
     cJSON_AddNumberToObject(json, "refresh_min", cfg.refresh_min);
@@ -3356,6 +3358,13 @@ static esp_err_t api_weather_post_handler(httpd_req_t *req)
     weather_get_config(&cfg);
     cJSON *v = cJSON_GetObjectItem(json, "enabled");
     if (cJSON_IsBool(v)) cfg.enabled = cJSON_IsTrue(v);
+    v = cJSON_GetObjectItem(json, "provider");
+    if (cJSON_IsNumber(v)) cfg.provider = v->valueint;
+    v = cJSON_GetObjectItem(json, "api_key");
+    if (cJSON_IsString(v)) {
+        strncpy(cfg.api_key, v->valuestring, sizeof(cfg.api_key) - 1);
+        cfg.api_key[sizeof(cfg.api_key) - 1] = '\0';
+    }
     v = cJSON_GetObjectItem(json, "latitude");
     if (cJSON_IsNumber(v)) cfg.latitude = (float)v->valuedouble;
     v = cJSON_GetObjectItem(json, "longitude");

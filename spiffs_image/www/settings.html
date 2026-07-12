@@ -744,9 +744,24 @@
                 <button class="theme-btn" id="weatherBtnOff" onclick="setWeatherEnabled(false)">❌ Off</button>
             </div>
             <div class="field-hint">Shows current conditions on the device's home screen.
-                Data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
-                (no API key needed). Widget position is set in the
-                <a href="/layout.html">layout editor</a>.</div>
+                Widget position is set in the <a href="/layout.html">layout editor</a>.</div>
+        </div>
+
+        <div class="panel">
+            <label class="field-label">Provider</label>
+            <select id="weather_provider" class="field-input" style="width:280px"
+                    onchange="onWeatherProvider()">
+                <option value="0">Open-Meteo (no API key)</option>
+                <option value="1">OpenWeatherMap (API key required)</option>
+            </select>
+        </div>
+        <div class="panel" id="weather_key_panel" style="display:none">
+            <label class="field-label">OpenWeatherMap API key</label>
+            <input type="text" id="weather_api_key" class="field-input"
+                   placeholder="e.g. 1a2b3c…" autocomplete="off" />
+            <div class="field-hint">Get a free key at
+                <a href="https://openweathermap.org/api" target="_blank" rel="noopener">openweathermap.org</a>.
+                Stored in weather.json, so it exports with the rest of the configuration.</div>
         </div>
 
         <div class="panel">

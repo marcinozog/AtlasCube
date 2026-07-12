@@ -8,6 +8,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +19,9 @@
 
 static const char *TAG = "WEATHER";
 static SemaphoreHandle_t s_lock;
-static weather_config_t s_config = { .enabled = false, .latitude = 52.2297f,
+static weather_config_t s_config = { .enabled = false,
+                                     .provider = WEATHER_PROVIDER_OPEN_METEO,
+                                     .latitude = 52.2297f,
                                      .longitude = 21.0122f, .refresh_min = 30 };
 static weather_data_t s_data;
 static weather_update_cb_t s_update_cb;
@@ -30,6 +33,14 @@ static void unlock(void) { xSemaphoreGive(s_lock); }
 
 static void config_normalize(weather_config_t *c)
 {
+    if (c->provider != WEATHER_PROVIDER_OPENWEATHERMAP)
+        c->provider = WEATHER_PROVIDER_OPEN_METEO;
+    // Keys are plain alphanumeric — dropping anything else keeps the
+    // fprintf-built JSON and the request URL safe.
+    char *w = c->api_key;
+    for (const char *r = c->api_key; *r; ++r)
+        if (isalnum((unsigned char)*r)) *w++ = *r;
+    *w = '\0';
     if (c->latitude < -90.0f) c->latitude = -90.0f;
     if (c->latitude > 90.0f) c->latitude = 90.0f;
     if (c->longitude < -180.0f) c->longitude = -180.0f;
@@ -42,7 +53,7 @@ static void config_load(void)
 {
     FILE *f = fopen(WEATHER_CONFIG_FILE, "r");
     if (!f) return;
-    char buf[256];
+    char buf[384];
     size_t n = fread(buf, 1, sizeof(buf) - 1, f);
     fclose(f);
     buf[n] = '\0';
@@ -50,6 +61,13 @@ static void config_load(void)
     if (!root) return;
     cJSON *v = cJSON_GetObjectItem(root, "enabled");
     if (cJSON_IsBool(v)) s_config.enabled = cJSON_IsTrue(v);
+    v = cJSON_GetObjectItem(root, "provider");
+    if (cJSON_IsNumber(v)) s_config.provider = v->valueint;
+    v = cJSON_GetObjectItem(root, "api_key");
+    if (cJSON_IsString(v)) {
+        strncpy(s_config.api_key, v->valuestring, sizeof(s_config.api_key) - 1);
+        s_config.api_key[sizeof(s_config.api_key) - 1] = '\0';
+    }
     v = cJSON_GetObjectItem(root, "latitude");
     if (cJSON_IsNumber(v)) s_config.latitude = (float)v->valuedouble;
     v = cJSON_GetObjectItem(root, "longitude");
@@ -64,18 +82,15 @@ static esp_err_t config_save(const weather_config_t *c)
 {
     FILE *f = fopen(WEATHER_CONFIG_FILE, "w");
     if (!f) return ESP_FAIL;
-    int n = fprintf(f, "{\"enabled\":%s,\"latitude\":%.5f,\"longitude\":%.5f,\"refresh_min\":%d}\n",
-                    c->enabled ? "true" : "false", c->latitude, c->longitude, c->refresh_min);
+    int n = fprintf(f, "{\"enabled\":%s,\"provider\":%d,\"api_key\":\"%s\",\"latitude\":%.5f,\"longitude\":%.5f,\"refresh_min\":%d}\n",
+                    c->enabled ? "true" : "false", c->provider, c->api_key,
+                    c->latitude, c->longitude, c->refresh_min);
     fclose(f);
     return n > 0 ? ESP_OK : ESP_FAIL;
 }
 
-static esp_err_t http_get(const weather_config_t *cfg, char *body, size_t cap)
+static esp_err_t http_get(const char *url, char *body, size_t cap)
 {
-    char url[256];
-    snprintf(url, sizeof(url),
-             "https://api.open-meteo.com/v1/forecast?latitude=%.5f&longitude=%.5f&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day",
-             cfg->latitude, cfg->longitude);
     esp_http_client_config_t hc = {
         .url = url, .timeout_ms = 12000, .crt_bundle_attach = esp_crt_bundle_attach,
         .keep_alive_enable = true,
@@ -112,15 +127,8 @@ static bool num(cJSON *root, const char *name, double *out)
     return true;
 }
 
-static bool fetch(weather_data_t *out, const weather_config_t *cfg)
+static bool parse_open_meteo(cJSON *root, weather_data_t *out)
 {
-    char *body = malloc(WEATHER_BODY_CAP);
-    if (!body) return false;
-    esp_err_t err = http_get(cfg, body, WEATHER_BODY_CAP);
-    if (err != ESP_OK) { free(body); return false; }
-    cJSON *root = cJSON_Parse(body);
-    free(body);
-    if (!root) return false;
     cJSON *current = cJSON_GetObjectItem(root, "current");
     double temp, apparent, humidity, code, is_day;
     bool ok = cJSON_IsObject(current)
@@ -135,6 +143,75 @@ static bool fetch(weather_data_t *out, const weather_config_t *cfg)
             .weather_code = (int)code, .is_day = is_day != 0,
             .updated_us = esp_timer_get_time() };
     }
+    return ok;
+}
+
+// OpenWeatherMap condition ids → the WMO codes the rest of the stack speaks
+// (weather_widget.c condition() and weatherCondition() in settings.js).
+static int owm_to_wmo(int id)
+{
+    if (id >= 200 && id < 300) return 95;   // thunderstorm
+    if (id >= 300 && id < 400) return 51;   // drizzle
+    if (id == 511)             return 66;   // freezing rain
+    if (id >= 520 && id < 600) return 80;   // shower rain
+    if (id >= 500 && id < 520) return 61;   // rain
+    if (id >= 600 && id < 700) return 71;   // snow
+    if (id >= 700 && id < 800) return 45;   // mist / fog / atmosphere
+    if (id == 800)             return 0;    // clear
+    if (id == 801 || id == 802) return 1;   // few / scattered clouds
+    return 3;                               // 803 / 804 — overcast
+}
+
+static bool parse_owm(cJSON *root, weather_data_t *out)
+{
+    cJSON *main_o = cJSON_GetObjectItem(root, "main");
+    cJSON *w_arr  = cJSON_GetObjectItem(root, "weather");
+    cJSON *w0     = cJSON_IsArray(w_arr) ? cJSON_GetArrayItem(w_arr, 0) : NULL;
+    cJSON *sys_o  = cJSON_GetObjectItem(root, "sys");
+    double temp, feels, humidity, id, dt, sunrise, sunset;
+    bool ok = cJSON_IsObject(main_o) && cJSON_IsObject(w0)
+           && num(main_o, "temp", &temp)
+           && num(main_o, "feels_like", &feels)
+           && num(main_o, "humidity", &humidity)
+           && num(w0, "id", &id)
+           && num(root, "dt", &dt);
+    if (!ok) return false;
+    bool day = true;
+    if (cJSON_IsObject(sys_o) && num(sys_o, "sunrise", &sunrise)
+                              && num(sys_o, "sunset", &sunset))
+        day = dt >= sunrise && dt < sunset;
+    *out = (weather_data_t){ .valid = true, .temperature_c = (float)temp,
+        .apparent_temperature_c = (float)feels, .humidity_pct = (int)humidity,
+        .weather_code = owm_to_wmo((int)id), .is_day = day,
+        .updated_us = esp_timer_get_time() };
+    return true;
+}
+
+static bool fetch(weather_data_t *out, const weather_config_t *cfg)
+{
+    char url[256];
+    bool owm = cfg->provider == WEATHER_PROVIDER_OPENWEATHERMAP;
+    if (owm) {
+        if (!cfg->api_key[0]) {
+            ESP_LOGW(TAG, "OpenWeatherMap API key not set");
+            return false;
+        }
+        snprintf(url, sizeof(url),
+                 "https://api.openweathermap.org/data/2.5/weather?lat=%.5f&lon=%.5f&units=metric&appid=%s",
+                 cfg->latitude, cfg->longitude, cfg->api_key);
+    } else {
+        snprintf(url, sizeof(url),
+                 "https://api.open-meteo.com/v1/forecast?latitude=%.5f&longitude=%.5f&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day",
+                 cfg->latitude, cfg->longitude);
+    }
+    char *body = malloc(WEATHER_BODY_CAP);
+    if (!body) return false;
+    esp_err_t err = http_get(url, body, WEATHER_BODY_CAP);
+    if (err != ESP_OK) { free(body); return false; }
+    cJSON *root = cJSON_Parse(body);
+    free(body);
+    if (!root) return false;
+    bool ok = owm ? parse_owm(root, out) : parse_open_meteo(root, out);
     cJSON_Delete(root);
     return ok;
 }

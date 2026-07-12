@@ -4,8 +4,15 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+typedef enum {
+    WEATHER_PROVIDER_OPEN_METEO     = 0,   // no API key needed
+    WEATHER_PROVIDER_OPENWEATHERMAP = 1,   // needs api_key
+} weather_provider_t;
+
 typedef struct {
     bool  enabled;
+    int   provider;          // weather_provider_t
+    char  api_key[64];       // OpenWeatherMap key — plain config, exports with it
     float latitude;
     float longitude;
     int   refresh_min;       // clamped to 5..240

@@ -1253,6 +1253,12 @@ function setWeatherEnabled(t) {
     document.getElementById('weatherBtnOff')?.classList.toggle('active', !t);
 }
 
+function onWeatherProvider() {
+    const owm = document.getElementById('weather_provider')?.value === '1';
+    const panel = document.getElementById('weather_key_panel');
+    if (panel) panel.style.display = owm ? '' : 'none';
+}
+
 // Mirrors condition() in weather_widget.c (WMO weather codes).
 function weatherCondition(code) {
     if (code === 0) return 'Clear';
@@ -1273,6 +1279,9 @@ async function loadWeather() {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const c = await r.json();
         setWeatherEnabled(!!c.enabled);
+        setVal('weather_provider', c.provider || 0);
+        setVal('weather_api_key',  c.api_key || '');
+        onWeatherProvider();
         setVal('weather_lat',     c.latitude);
         setVal('weather_lon',     c.longitude);
         setVal('weather_refresh', c.refresh_min || 30);
@@ -1292,6 +1301,8 @@ async function saveWeather() {
 
     const enabled = document.getElementById('weatherBtnOn')?.classList.contains('active') || false;
     const get = id => document.getElementById(id)?.value ?? '';
+    const provider = parseInt(get('weather_provider'), 10) || 0;
+    const apiKey = get('weather_api_key').trim();
     const lat = parseFloat(get('weather_lat'));
     const lon = parseFloat(get('weather_lon'));
     let refresh = parseInt(get('weather_refresh'), 10);
@@ -1302,8 +1313,13 @@ async function saveWeather() {
         btn.disabled = false;
         return;
     }
+    if (enabled && provider === 1 && !apiKey) {
+        showWeatherStatus('❌ OpenWeatherMap needs an API key.', 'error');
+        btn.disabled = false;
+        return;
+    }
 
-    const payload = { enabled, refresh_min: refresh };
+    const payload = { enabled, provider, api_key: apiKey, refresh_min: refresh };
     if (!isNaN(lat)) payload.latitude = lat;
     if (!isNaN(lon)) payload.longitude = lon;
 
