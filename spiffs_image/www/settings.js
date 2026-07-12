@@ -663,6 +663,8 @@ function onScreensaverStyleChange() {
     if (pp) pp.style.display = style === 'photo' ? '' : 'none';
     const dp = document.getElementById('dim_panel');
     if (dp) dp.style.display = style === 'dim' ? '' : 'none';
+    const mp = document.getElementById('mqtt_scrs_panel');
+    if (mp) mp.style.display = style === 'mqtt' ? '' : 'none';
 }
 
 function onDashboardValueTypeChange() {
