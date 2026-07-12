@@ -9,6 +9,42 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-07-12
+
+### Added
+- **events:** stop-playback option for playback schedules (station -1 sentinel)
+- **setup:** hide/dim pin sections not matching compiled drivers + show-all toggle
+- **setup:** hide pin sections not matching compiled drivers + show-all toggle
+- **setup:** hide touch/LCD pin sections not matching compiled drivers
+- **web:** hint + link to MQTT tab when MQTT screensaver style selected
+- **ui:** wallpaper dim 0-80% baked at load (SD + internet, pristine sources) + web slider
+- **web:** move Screen layout editor panel to top of Display/Panel + add hint
+- **ui:** theme-aware bg plates under home clock labels + clock_label_bg profile toggle
+- **web:** live resolved-URL preview for internet wallpaper + readable field hints
+- **ui:** save fetched internet wallpaper to SD
+- **ui:** on-screen status pill during internet-wallpaper fetch
+- **ui:** scheduled internet-wallpaper refresh (on-boot/daily) + persisted source URL
+- **web:** internet wallpaper source presets (APOD/picsum/LoremFlickr/Cataas/PlaceDog)
+- **ui:** internet wallpaper — on-device fetch + vendored libjpeg decode (progressive JPEG OK)
+- **ui:** MM/DD/YYYY date format option + NTP tab reworked into Date & Time
+- **ui:** optional MM/DD/YYYY date format on home screen + web toggle
+- **ui:** optional 12-hour AM/PM clock format on home screen + web toggle
+- **ui:** warn self-built (-dirty) firmware on update prompt that changes will be replaced
+- **ui:** VU meter AGC — bars track programme level instead of fixed dB window
+
+### Changed
+- **web:** merge Theme tab into Display as Panel/Theme sub-tabs
+
+### Fixed
+- **ui:** radio VU at bottom edge, state line above (all VU profiles)
+- **web:** events list sorted by next occurrence instead of random id
+- **ui:** SD VU at bottom edge, folder above (all VU profiles)
+- **web:** settings export/import bundles only .json config files
+- **web:** sort directories first in wallpaper/logo SD file picker
+- **ui:** explicit background choice evicts the fetched internet wallpaper
+- **web:** wallpaper preset select mirrors the URL field (match Android behaviour)
+- **ui:** readable error for progressive JPEGs exceeding PSRAM (coef-size pre-check)
+
 ## [0.42.0] - 2026-07-10
 
 ### Added
@@ -618,7 +654,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.41.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.43.0...HEAD
+[0.43.0]: https://github.com/marcinozog/AtlasCube/compare/v0.42.0...v0.43.0
 [0.41.0]: https://github.com/marcinozog/AtlasCube/compare/v0.40.0...v0.41.0
 [0.40.0]: https://github.com/marcinozog/AtlasCube/compare/v0.39.0...v0.40.0
 [0.39.0]: https://github.com/marcinozog/AtlasCube/compare/v0.38.0...v0.39.0
