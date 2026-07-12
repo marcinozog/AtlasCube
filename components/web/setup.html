@@ -111,6 +111,7 @@
                font-size: 12.5px; line-height: 1.5; }
   .conflicts.visible { display: block; }
   .conflicts b { color: #fff; }
+  .btn-row { display: flex; gap: 10px; }
 </style>
 </head>
 <body>
@@ -139,6 +140,19 @@
   </form>
   <button type="button" id="wifiChangeBtn" class="ghost" style="display:none">Change Wi-Fi network</button>
   <div class="status" id="wifiStatus"></div>
+
+  <h2>Device settings</h2>
+  <p class="hint">Backup / restore <code>settings.json</code> together with the pin map
+     as a single file — import it here after a web flash to re-provision the device in
+     one step. The Wi-Fi <strong>password</strong> is not included (it is stored
+     separately, outside <code>settings.json</code>) — set Wi-Fi above. A full power
+     cycle is needed after import.</p>
+  <div class="btn-row">
+    <button type="button" id="cfgImportBtn">Import from file</button>
+    <button type="button" id="cfgExportBtn" class="ghost">Export to file</button>
+  </div>
+  <input type="file" id="cfgImportFile" accept=".json" style="display:none">
+  <div class="status" id="cfgStatus"></div>
 
   <h2>Firmware update (OTA)</h2>
   <p class="fw-version" id="otaVer" style="text-align:left;margin:0 0 10px"></p>
@@ -197,11 +211,10 @@
   <button type="button" id="pinsShowAllBtn" class="ghost" style="display:none">Show all sections</button>
   <div id="pinsGrid"></div>
   <div class="conflicts" id="pinsConflicts"></div>
-  <button type="button" id="pinsBtn" disabled>Save pins &amp; restart</button>
-  <button type="button" id="pinsResetBtn" class="ghost">Reset pins to defaults</button>
-  <button type="button" id="pinsExportBtn" class="ghost">Export pins to file</button>
-  <button type="button" id="pinsImportBtn" class="ghost">Import pins from file</button>
-  <input type="file" id="pinsImportFile" accept=".json" style="display:none">
+  <div class="btn-row">
+    <button type="button" id="pinsBtn" disabled>Save pins &amp; restart</button>
+    <button type="button" id="pinsResetBtn" class="ghost">Reset to defaults</button>
+  </div>
   <div class="status" id="pinsStatus"></div>
 
   <a href="/" class="home-link">← Back to AtlasCube</a>
@@ -731,71 +744,156 @@
     }
   });
 
-  // ── Export / import pin map (client-side only, no firmware round-trip) ───────
-  // Export: snapshot the current inputs plus a _meta block (driver + firmware),
-  // so an import can flag a map that was saved for a different board.
-  document.getElementById('pinsExportBtn').addEventListener('click', function () {
-    if (!pinKeys.length) { show('pinsStatus', 'No pins loaded to export.', true); return; }
-    var pins = {};
-    pinKeys.forEach(function (k) {
-      var v = parseInt(document.getElementById('pin_' + k).value, 10);
-      if (!isNaN(v)) pins[k] = v;
-    });
-    var data = {
-      _meta: {
-        app: 'AtlasCube', kind: 'pinmap',
+  // ── Device settings export / import (settings.json + pin map, one file) ─────
+  // Uses only existing endpoints: GET /settings.json (raw config file, so the
+  // format is exactly what the firmware loader reads), PUT /api/files/…?root=config
+  // to write it back, and GET/POST /api/pins for the pin map. No firmware changes.
+  document.getElementById('cfgExportBtn').addEventListener('click', async function () {
+    var btn = this;
+    btn.disabled = true;
+    show('cfgStatus', 'Collecting settings…', false);
+    try {
+      var sr = await fetch('/settings.json', { cache: 'no-store' });
+      if (!sr.ok) throw new Error('settings.json not readable (HTTP ' + sr.status +
+                                  ') — save any setting once, then export');
+      var data = await sr.json();
+
+      var pinsOk = false;
+      try {
+        var pr = await fetch('/api/pins', { cache: 'no-store' });
+        if (pr.ok) {
+          var pd = await pr.json();
+          if (pd && typeof pd.pins === 'object') { data.pins = pd.pins; pinsOk = true; }
+        }
+      } catch (_) { /* export settings without pins */ }
+
+      data._meta = {
+        app: 'AtlasCube', kind: 'settings',
         driver: g_driver, firmware: g_version,
         exported: new Date().toISOString()
-      },
-      pins: pins
-    };
-    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    var url  = URL.createObjectURL(blob);
-    var a = document.createElement('a');
-    a.href = url; a.download = 'atlascube-pins.json';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    show('pinsStatus', 'Pins exported to atlascube-pins.json.', false);
+      };
+
+      var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      var url  = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'atlascube-settings.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      show('cfgStatus', 'Exported to atlascube-settings.json' +
+           (pinsOk ? ' (settings + pins).' : ' — pin map unavailable, settings only.'),
+           !pinsOk);
+    } catch (err) {
+      show('cfgStatus', 'Export failed: ' + err.message, true);
+    }
+    btn.disabled = false;
   });
 
-  // Import: only fills the inputs — the user still clicks "Save pins & restart".
-  document.getElementById('pinsImportBtn').addEventListener('click', function () {
-    document.getElementById('pinsImportFile').click();
+  document.getElementById('cfgImportBtn').addEventListener('click', function () {
+    document.getElementById('cfgImportFile').click();
   });
-  document.getElementById('pinsImportFile').addEventListener('change', function () {
+  document.getElementById('cfgImportFile').addEventListener('change', function () {
     var input = this;
     var file  = input.files[0];
     if (!file) return;
     var reader = new FileReader();
-    reader.onload = function () {
+    reader.onload = async function () {
       input.value = '';   // allow re-selecting the same file later
       var data;
       try { data = JSON.parse(reader.result); }
-      catch (e) { show('pinsStatus', 'Import failed: not valid JSON.', true); return; }
-
-      // Accept both our wrapped format and a bare { key: gpio } object.
-      var pins = (data && typeof data.pins === 'object') ? data.pins : data;
-      if (!pins || typeof pins !== 'object') {
-        show('pinsStatus', 'Import failed: no pin map found in the file.', true); return;
+      catch (e) { show('cfgStatus', 'Import failed: not valid JSON.', true); return; }
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        show('cfgStatus', 'Import failed: not a settings object.', true); return;
       }
-      var meta = data && data._meta;
-      if (meta && meta.driver && g_driver && meta.driver !== g_driver &&
+
+      // A bare pin map (legacy atlascube-pins.json content or a hand-made
+      // { key: gpio } object) has only numeric values — route it to /api/pins
+      // instead of clobbering settings.json with it.
+      var bareKeys = Object.keys(data).filter(function (k) { return k !== '_meta'; });
+      if (!data.pins && bareKeys.length &&
+          bareKeys.every(function (k) { return typeof data[k] === 'number'; })) {
+        var bm = data._meta;
+        delete data._meta;
+        data = { _meta: bm, pins: data };
+      }
+
+      // Split the wrapper: everything except _meta/pins is the settings.json body.
+      var meta = data._meta, pins = data.pins;
+      delete data._meta;
+      delete data.pins;
+
+      if (pins && typeof pins !== 'object') pins = null;
+      if (pins && meta && meta.driver && g_driver && meta.driver !== g_driver &&
           !confirm('This file was exported for driver "' + meta.driver +
                    '", but this firmware uses "' + g_driver + '".\n\nImport anyway?')) {
         return;
       }
 
-      var applied = 0, skipped = 0;
-      pinKeys.forEach(function (k) {
-        if (!(k in pins)) return;
-        var v = parseInt(pins[k], 10);
-        if (!isNaN(v)) { document.getElementById('pin_' + k).value = v; applied++; }
-      });
-      Object.keys(pins).forEach(function (k) { if (pinKeys.indexOf(k) === -1) skipped++; });
-      validatePins();
-      show('pinsStatus', 'Imported ' + applied + ' pin' + (applied === 1 ? '' : 's') +
-           (skipped ? ', ' + skipped + ' unknown key' + (skipped === 1 ? '' : 's') + ' ignored' : '') +
-           '. Review the values, then "Save pins & restart".', false);
+      // Hard-validate the pin map before touching the device (same rules as the
+      // grid): reserved/invalid GPIOs and duplicates block the whole import.
+      if (pins) {
+        var bad = [], owners = {};
+        Object.keys(pins).forEach(function (k) {
+          var v = parseInt(pins[k], 10);
+          if (isNaN(v)) return;
+          var pv = pinValidity(v);
+          if (pv.level === 'bad') bad.push(k + '=' + v + ' (' + pv.msg + ')');
+          if (v >= 0) (owners[v] = owners[v] || []).push(k);
+        });
+        Object.keys(owners).forEach(function (n) {
+          if (owners[n].length > 1)
+            bad.push('GPIO ' + n + ' shared by ' + owners[n].join(' + '));
+        });
+        if (bad.length) {
+          show('cfgStatus', 'Import blocked — fix the pin map in the file first: ' +
+               bad.join('; '), true);
+          return;
+        }
+      }
+
+      var hasSettings = Object.keys(data).length > 0;
+      if (!hasSettings && !pins) {
+        show('cfgStatus', 'Import failed: nothing to apply in the file.', true); return;
+      }
+
+      show('cfgStatus', 'Importing…', false);
+      try {
+        if (hasSettings) {
+          var r = await fetch('/api/files/settings.json?root=config', {
+            method: 'PUT',
+            body: JSON.stringify(data, null, 2)
+          });
+          if (!r.ok) throw new Error('settings upload failed (HTTP ' + r.status + ')');
+        }
+        if (pins) {
+          var body = {};
+          Object.keys(pins).forEach(function (k) {
+            var v = parseInt(pins[k], 10);
+            if (!isNaN(v)) body[k] = v;
+          });
+          var r2 = await fetch('/api/pins', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          if (!r2.ok) throw new Error('pin map save failed (HTTP ' + r2.status + ')');
+          // Mirror the saved values into the pins grid below so it matches NVS.
+          Object.keys(body).forEach(function (k) {
+            var inp = document.getElementById('pin_' + k);
+            if (inp) inp.value = body[k];
+          });
+          if (pinKeys.length) validatePins();
+        }
+        show('cfgStatus', '✓ Imported' +
+             (hasSettings ? ' settings' : '') +
+             (hasSettings && pins ? ' +' : '') +
+             (pins ? ' pins' : '') +
+             '. Power-cycle the device to apply.', false);
+        alert('Import done.\n\nUnplug and replug the device (full power cycle) to ' +
+              'apply the imported settings' + (pins ? ' and pins' : '') + '. Changes ' +
+              'made on the device before the power cycle may overwrite the import.');
+      } catch (err) {
+        show('cfgStatus', 'Import failed: ' + err.message, true);
+      }
     };
     reader.readAsText(file);
   });
