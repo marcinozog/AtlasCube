@@ -1572,8 +1572,11 @@ async function exportSettings() {
     btn.disabled = true;
     showStatusEl('cfg_export_status', 'Reading config files…', '');
     try {
-        const list = await (await fetch('/api/files?root=config', { cache: 'no-store' })).json();
-        if (!Array.isArray(list) || !list.length) {
+        const all = await (await fetch('/api/files?root=config', { cache: 'no-store' })).json();
+        // Only .json config files belong in a backup — skip runtime leftovers
+        // like playlist.csv or update.log that live on the same partition.
+        const list = Array.isArray(all) ? all.filter(f => /\.json$/i.test(f.name)) : [];
+        if (!list.length) {
             showStatusEl('cfg_export_status', 'Nothing to export.', 'error');
             return;
         }
@@ -1620,7 +1623,9 @@ async function importSettings() {
         showStatusEl('cfg_import_status', '❌ Not an AtlasCube settings backup', 'error');
         return;
     }
-    const names = Object.keys(bundle.files);
+    // Same .json-only rule as export: old backups may carry playlist.csv or
+    // update.log — don't restore those onto the config partition.
+    const names = Object.keys(bundle.files).filter(n => /\.json$/i.test(n));
     if (!names.length) { showStatusEl('cfg_import_status', '❌ Backup is empty', 'error'); return; }
 
     btn.disabled = true;
