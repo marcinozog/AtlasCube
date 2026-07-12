@@ -183,6 +183,7 @@
      and native-USB (19/20) pins are flagged but allowed; 43/44 are the UART0
      console (avoid unless you don't need serial logging). Saved values take effect
      after the restart.</p>
+  <button type="button" id="pinsShowAllBtn" class="ghost" style="display:none">Show all sections</button>
   <div id="pinsGrid"></div>
   <div class="conflicts" id="pinsConflicts"></div>
   <button type="button" id="pinsBtn" disabled>Save pins &amp; restart</button>
@@ -556,51 +557,66 @@
     { title: 'Bluetooth module', keys: ['bt_pin','bt_tx','bt_rx'] }
   ];
 
-  fetch('/api/pins', { cache: 'no-store' })
-    .then(function (r) { return r.json(); })
-    .then(function (d) {
-      g_driver = d.driver || '';
-      document.getElementById('pinsDriver').textContent =
-        'Display driver in this firmware: ' + (d.driver || '?');
-      var grid = document.getElementById('pinsGrid');
+  // Filled from /api/pins; renderPins() re-runs on the show-all toggle.
+  var g_pinsData = null;
+  var g_showAll = new URLSearchParams(location.search).has('all');
 
-      function addRow(k) {
-        pinKeys.push(k);
-        var row = document.createElement('div');
-        row.className = 'pin-row';
-        var lab = document.createElement('label');
-        lab.textContent = k;
-        lab.setAttribute('for', 'pin_' + k);
-        var inp = document.createElement('input');
-        inp.type = 'number'; inp.min = '-1'; inp.max = '48'; inp.step = '1';
-        inp.id = 'pin_' + k; inp.value = d.pins[k];
-        inp.addEventListener('input', validatePins);
-        var note = document.createElement('span');
-        note.className = 'pin-note'; note.id = 'note_' + k;
-        row.appendChild(lab); row.appendChild(inp); row.appendChild(note);
-        grid.appendChild(row);
+  function renderPins() {
+    var d = g_pinsData;
+    var grid = document.getElementById('pinsGrid');
+
+    // Keep unsaved edits across a toggle: fold current input values back into
+    // the data before rebuilding the grid.
+    pinKeys.forEach(function (k) {
+      var inp = document.getElementById('pin_' + k);
+      if (inp) {
+        var v = parseInt(inp.value, 10);
+        if (!isNaN(v)) d.pins[k] = v;
       }
+    });
+    pinKeys = [];
+    grid.innerHTML = '';
 
-      function addSection(title, keys, note) {
-        var present = keys.filter(function (k) { return k in d.pins; });
-        if (!present.length) return;
-        var h = document.createElement('div');
-        h.className = 'pin-section';
-        h.textContent = title;
-        grid.appendChild(h);
-        if (note) {
-          var n = document.createElement('div');
-          n.className = 'pin-section-note';
-          n.innerHTML = note;
-          grid.appendChild(n);
-        }
-        present.forEach(addRow);
+    function addRow(k) {
+      pinKeys.push(k);
+      var row = document.createElement('div');
+      row.className = 'pin-row';
+      var lab = document.createElement('label');
+      lab.textContent = k;
+      lab.setAttribute('for', 'pin_' + k);
+      var inp = document.createElement('input');
+      inp.type = 'number'; inp.min = '-1'; inp.max = '48'; inp.step = '1';
+      inp.id = 'pin_' + k; inp.value = d.pins[k];
+      inp.addEventListener('input', validatePins);
+      var note = document.createElement('span');
+      note.className = 'pin-note'; note.id = 'note_' + k;
+      row.appendChild(lab); row.appendChild(inp); row.appendChild(note);
+      grid.appendChild(row);
+    }
+
+    function addSection(title, keys, note) {
+      var present = keys.filter(function (k) { return k in d.pins; });
+      if (!present.length) return;
+      var h = document.createElement('div');
+      h.className = 'pin-section';
+      h.textContent = title;
+      grid.appendChild(h);
+      if (note) {
+        var n = document.createElement('div');
+        n.className = 'pin-section-note';
+        n.innerHTML = note;
+        grid.appendChild(n);
       }
+      present.forEach(addRow);
+    }
 
-      // Hide sections irrelevant to this binary's compiled drivers. Their keys
-      // still count as "placed" so they don't resurface under Other. Firmware
-      // predating the "touch" field shows both touch sections.
-      var hide = {};
+    // Hide sections irrelevant to this binary's compiled drivers. Their keys
+    // still count as "placed" so they don't resurface under Other. Firmware
+    // predating the "touch" field shows both touch sections. The show-all
+    // toggle (or opening /setup?all=1) disables the hiding — for eyeballing
+    // every section while testing a single variant.
+    var hide = {};
+    if (!g_showAll) {
       if (d.touch === 'XPT2046') {
         hide['Touch (I2C)'] = 1;
       } else if (d.touch === 'FT6336U' || d.touch === 'CST816D') {
@@ -614,18 +630,39 @@
       } else if (['ILI9341','ST7796','ILI9488','SSD1322'].indexOf(d.driver) >= 0) {
         hide['QSPI LCD'] = 1;
       }
+    }
 
-      var placed = {};
-      PIN_SECTIONS.forEach(function (s) {
-        s.keys.forEach(function (k) { placed[k] = 1; });
-        if (hide[s.title]) return;
-        addSection(s.title, s.keys, s.note);
-      });
-      // Any key the firmware exposes that we don't know about yet.
-      var leftover = Object.keys(d.pins).filter(function (k) { return !placed[k]; });
-      addSection('Other', leftover);
+    var placed = {};
+    PIN_SECTIONS.forEach(function (s) {
+      s.keys.forEach(function (k) { placed[k] = 1; });
+      if (hide[s.title]) return;
+      addSection(s.title, s.keys, s.note);
+    });
+    // Any key the firmware exposes that we don't know about yet.
+    var leftover = Object.keys(d.pins).filter(function (k) { return !placed[k]; });
+    addSection('Other', leftover);
 
-      validatePins();   // also enables the button when the loaded map is clean
+    document.getElementById('pinsShowAllBtn').textContent =
+      g_showAll ? 'Hide unused sections' : 'Show all sections';
+
+    validatePins();   // also enables the button when the loaded map is clean
+  }
+
+  document.getElementById('pinsShowAllBtn').addEventListener('click', function () {
+    g_showAll = !g_showAll;
+    renderPins();
+  });
+
+  fetch('/api/pins', { cache: 'no-store' })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      g_pinsData = d;
+      g_driver = d.driver || '';
+      document.getElementById('pinsDriver').textContent =
+        'Display driver in this firmware: ' + (d.driver || '?') +
+        (d.touch ? ' · touch: ' + d.touch : '');
+      document.getElementById('pinsShowAllBtn').style.display = '';
+      renderPins();
     })
     .catch(function () {
       document.getElementById('pinsDriver').textContent = 'Pin config unavailable.';
