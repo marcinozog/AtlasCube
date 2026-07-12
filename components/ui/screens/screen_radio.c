@@ -9,6 +9,7 @@
 #include "now_playing_widget.h"
 #include "mode_indicator_widget.h"
 #include "event_indicator_widget.h"
+#include "weather_widget.h"
 #include "controls_overlay_widget.h"
 #include "vol_overlay_widget.h"
 #include "vu_widget.h"
@@ -87,6 +88,10 @@ static void radio_create(lv_obj_t *parent)
     if (p->radio_show_vu) {
         vu_widget_create(parent, p->radio_vu_x, p->radio_vu_y, p->radio_vu_w, p->radio_vu_h);
     }
+    if (p->radio_show_weather) {
+        weather_widget_create(parent, p->radio_weather_x, p->radio_weather_y,
+                              p->radio_weather_w, p->radio_weather_font);
+    }
 
     s_label_state = lv_label_create(parent);
     lv_label_set_text(s_label_state, "");
@@ -116,6 +121,7 @@ static void radio_destroy(void)
     controls_overlay_destroy();
     vol_overlay_hide();
     vu_widget_destroy();
+    weather_widget_destroy();
     now_playing_widget_destroy();
     mode_indicator_destroy();
     event_indicator_destroy();
@@ -138,6 +144,9 @@ static void radio_on_event(const ui_event_t *ev)
             break;
         case UI_EVT_TITLE_CHANGED:
             now_playing_widget_update();
+            break;
+        case UI_EVT_WEATHER_UPDATE:
+            weather_widget_update();
             break;
         case UI_EVT_RADIO_STATE:
             if (s_label_state)

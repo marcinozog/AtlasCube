@@ -12,6 +12,7 @@
 #include "events_service.h"
 #include "screensavers.h"
 #include "net_wallpaper.h"
+#include "weather.h"
 #include "net_fetch_overlay_widget.h"
 #include "display.h"
 #include "lvgl.h"
@@ -385,6 +386,12 @@ static void on_net_wallpaper_started(void)
     ui_event_send(&ev);
 }
 
+static void on_weather_update(void)
+{
+    ui_event_t ev = { .type = UI_EVT_WEATHER_UPDATE };
+    ui_event_send(&ev);
+}
+
 static void on_net_wallpaper_done(bool ok)
 {
     ui_event_t ev = { .type = UI_EVT_NET_WP, .net_wp_state = ok ? 0 : -1 };
@@ -406,6 +413,7 @@ void ui_manager_init(void)
     net_wallpaper_set_done_cb(on_net_wallpaper_done);
     net_wallpaper_set_start_cb(on_net_wallpaper_started);
 
+    weather_set_update_cb(on_weather_update);
     ESP_LOGI(TAG, "Initialized");
 }
 

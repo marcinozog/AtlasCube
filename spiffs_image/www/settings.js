@@ -1245,6 +1245,98 @@ async function saveMqtt() {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Weather — home-screen widget config, fetched/saved via /api/weather.
+// ─────────────────────────────────────────────────────────────────────────────
+function setWeatherEnabled(t) {
+    document.getElementById('weatherBtnOn') ?.classList.toggle('active', t);
+    document.getElementById('weatherBtnOff')?.classList.toggle('active', !t);
+}
+
+// Mirrors condition() in weather_widget.c (WMO weather codes).
+function weatherCondition(code) {
+    if (code === 0) return 'Clear';
+    if (code <= 2) return 'Partly cloudy';
+    if (code === 3) return 'Cloudy';
+    if (code === 45 || code === 48) return 'Fog';
+    if (code >= 51 && code <= 67) return 'Rain';
+    if (code >= 71 && code <= 77) return 'Snow';
+    if (code >= 80 && code <= 82) return 'Showers';
+    if (code >= 85 && code <= 86) return 'Snow showers';
+    if (code >= 95) return 'Storm';
+    return 'Weather';
+}
+
+async function loadWeather() {
+    try {
+        const r = await fetch('/api/weather', { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const c = await r.json();
+        setWeatherEnabled(!!c.enabled);
+        setVal('weather_lat',     c.latitude);
+        setVal('weather_lon',     c.longitude);
+        setVal('weather_refresh', c.refresh_min || 30);
+        const now = document.getElementById('weather_now');
+        if (now) now.innerText = c.valid
+            ? Math.round(c.temperature_c) + '°C, ' + weatherCondition(c.weather_code) +
+              ', humidity ' + c.humidity_pct + '%'
+            : (c.enabled ? 'No data yet — fetch pending or failed.' : 'Disabled.');
+    } catch (e) {
+        console.error('loadWeather', e);
+    }
+}
+
+async function saveWeather() {
+    const btn = document.getElementById('weather_save_btn');
+    btn.disabled = true;
+
+    const enabled = document.getElementById('weatherBtnOn')?.classList.contains('active') || false;
+    const get = id => document.getElementById(id)?.value ?? '';
+    const lat = parseFloat(get('weather_lat'));
+    const lon = parseFloat(get('weather_lon'));
+    let refresh = parseInt(get('weather_refresh'), 10);
+    if (isNaN(refresh)) refresh = 30;
+
+    if (enabled && (isNaN(lat) || isNaN(lon))) {
+        showWeatherStatus('❌ Latitude and longitude are required.', 'error');
+        btn.disabled = false;
+        return;
+    }
+
+    const payload = { enabled, refresh_min: refresh };
+    if (!isNaN(lat)) payload.latitude = lat;
+    if (!isNaN(lon)) payload.longitude = lon;
+
+    try {
+        const r = await fetch('/api/weather', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        showWeatherStatus(enabled ? '✅ Saved. Fetching weather…' : '✅ Saved.', 'ok');
+        // The device re-fetches within seconds of a config change — refresh the
+        // readout once the request had time to finish (12s HTTP timeout).
+        if (enabled) { setTimeout(loadWeather, 5000); setTimeout(loadWeather, 15000); }
+        else loadWeather();
+    } catch (e) {
+        showWeatherStatus('❌ ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+let _weatherStatusTimer = null;
+function showWeatherStatus(msg, type) {
+    const el = document.getElementById('weather_status');
+    if (!el) return;
+    el.innerText = msg;
+    el.className = 'save-status' + (type ? ' ' + type : '');
+    clearTimeout(_weatherStatusTimer);
+    if (type === 'ok') _weatherStatusTimer = setTimeout(
+        () => { el.innerText = ''; el.className = 'save-status'; }, 4000);
+}
+
 let _mqttStatusTimer = null;
 function showMqttStatus(msg, type) {
     const el = document.getElementById('mqtt_status');
@@ -1655,4 +1747,5 @@ initTabs();
 loadSettings();
 loadColors();
 loadMqtt();
+loadWeather();
 loadNetWpMeta();

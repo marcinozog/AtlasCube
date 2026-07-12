@@ -20,4 +20,5 @@ idf_component_register(
         board_pins
         updater
         net_wallpaper
+        weather
 )

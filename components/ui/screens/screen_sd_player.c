@@ -10,6 +10,7 @@
 #include "clock_widget.h"
 #include "mode_indicator_widget.h"
 #include "event_indicator_widget.h"
+#include "weather_widget.h"
 #include "vu_widget.h"
 #include "app_state.h"
 #include "settings.h"
@@ -212,6 +213,10 @@ static void sd_player_screen_create(lv_obj_t *parent)
     if (p->sd_show_vu) {
         vu_widget_create(parent, p->sd_vu_x, p->sd_vu_y, p->sd_vu_w, p->sd_vu_h);
     }
+    if (p->sd_show_weather) {
+        weather_widget_create(parent, p->sd_weather_x, p->sd_weather_y,
+                              p->sd_weather_w, p->sd_weather_font);
+    }
 
     refresh_from_state();
 
@@ -226,6 +231,7 @@ static void sd_player_screen_destroy(void)
     controls_overlay_destroy();
     vol_overlay_hide();
     vu_widget_destroy();
+    weather_widget_destroy();
     mode_indicator_destroy();
     event_indicator_destroy();
     clock_widget_destroy();
@@ -249,6 +255,9 @@ static void sd_player_on_event(const ui_event_t *ev)
             break;
         case UI_EVT_TITLE_CHANGED:
             refresh_from_state();
+            break;
+        case UI_EVT_WEATHER_UPDATE:
+            weather_widget_update();
             break;
         default:
             break;

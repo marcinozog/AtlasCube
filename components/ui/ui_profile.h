@@ -128,6 +128,11 @@ typedef struct {
     int16_t          clock_calendar_y;
     int16_t          clock_calendar_w;         // label width for scroll (0 → full width)
     const lv_font_t *clock_calendar_font;
+    bool             clock_show_weather;
+    int16_t          clock_weather_x;
+    int16_t          clock_weather_y;
+    int16_t          clock_weather_w;
+    const lv_font_t *clock_weather_font;
 
     // screen_radio — absolute LCD coordinates (top-left origin)
     int16_t          radio_np_x;               // now-playing widget (station + title labels)
@@ -158,6 +163,11 @@ typedef struct {
     int16_t          radio_vu_y;
     int16_t          radio_vu_w;
     int16_t          radio_vu_h;
+    bool             radio_show_weather;
+    int16_t          radio_weather_x;
+    int16_t          radio_weather_y;
+    int16_t          radio_weather_w;
+    const lv_font_t *radio_weather_font;
 
     // screen_sd_player — absolute LCD coordinates (top-left origin). The three
     // text rows are horizontally centered (Y only). Mirrors screen_radio.
@@ -190,6 +200,11 @@ typedef struct {
     int16_t          sd_vu_y;
     int16_t          sd_vu_w;
     int16_t          sd_vu_h;
+    bool             sd_show_weather;
+    int16_t          sd_weather_x;
+    int16_t          sd_weather_y;
+    int16_t          sd_weather_w;
+    const lv_font_t *sd_weather_font;
 
     // screen_playlist
     int16_t          playlist_header_h;

@@ -40,6 +40,7 @@ idf_component_register(
         "widgets/mode_indicator_widget.c"
         "widgets/event_indicator_widget.c"
         "widgets/calendar_widget.c"
+        "widgets/weather_widget.c"
         "widgets/controls_overlay_widget.c"
         "widgets/hub_overlay_widget.c"
         "widgets/vol_overlay_widget.c"
@@ -82,4 +83,5 @@ idf_component_register(
         espressif__esp-dsp      # FFT for the VU spectrum widget
         updater                 # SCREEN_UPDATE reads/acts on the auto-update lib
         net_wallpaper           # internet wallpaper (ui_background + done cb)
+        weather
 )

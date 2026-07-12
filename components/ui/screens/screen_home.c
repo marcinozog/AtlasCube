@@ -3,6 +3,7 @@
 #include "mode_indicator_widget.h"
 #include "event_indicator_widget.h"
 #include "calendar_widget.h"
+#include "weather_widget.h"
 #include "hub_overlay_widget.h"
 #include "vol_overlay_widget.h"
 #include "app_state.h"
@@ -267,6 +268,10 @@ static void home_create(lv_obj_t *parent)
         calendar_widget_create(parent, p->clock_calendar_x, p->clock_calendar_y,
                                p->clock_calendar_w, p->clock_calendar_font);
     }
+    if (p->clock_show_weather) {
+        weather_widget_create(parent, p->clock_weather_x, p->clock_weather_y,
+                              p->clock_weather_w, p->clock_weather_font);
+    }
 
     if (p->clock_show_strip) {
         s_strip = make_panel(parent, p->clock_strip_x, p->clock_strip_y,
@@ -305,6 +310,7 @@ static void home_destroy(void)
     vol_overlay_hide();
 
     calendar_widget_destroy();
+    weather_widget_destroy();
     event_indicator_destroy();
     mode_indicator_destroy();
     s_root = s_strip = NULL;
@@ -326,10 +332,14 @@ static void home_on_event(const ui_event_t *ev)
             mode_indicator_update();
             event_indicator_update();
             calendar_widget_update();
+            weather_widget_update();
             hub_overlay_set_mode(home_ctrl_mode());
             break;
         case UI_EVT_TITLE_CHANGED:
             strip_update();
+            break;
+        case UI_EVT_WEATHER_UPDATE:
+            weather_widget_update();
             break;
         default:
             break;

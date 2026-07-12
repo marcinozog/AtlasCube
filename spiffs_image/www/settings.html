@@ -32,6 +32,7 @@
         <button type="button" class="tab-btn" data-tab="wifi"        onclick="selectTab('wifi')">🌐 Network</button>
         <button type="button" class="tab-btn" data-tab="datetime"    onclick="selectTab('datetime')">🕐 Date &amp; Time</button>
         <button type="button" class="tab-btn" data-tab="mqtt"        onclick="selectTab('mqtt')">📨 MQTT</button>
+        <button type="button" class="tab-btn" data-tab="weather"     onclick="selectTab('weather')">🌦️ Weather</button>
         <button type="button" class="tab-btn" data-tab="tools"       onclick="selectTab('tools')">🛠️ Tools</button>
         <button type="button" class="tab-btn" data-tab="system"      onclick="selectTab('system')">⚙️ System</button>
     </nav>
@@ -730,6 +731,48 @@
 
         <button id="mqtt_save_btn" onclick="saveMqtt()">💾 Save MQTT</button>
         <div id="mqtt_status" class="save-status"></div>
+    </section>
+
+    <!-- ══════════════════════════════════════════
+         Weather (home-screen widget, Open-Meteo)
+    ══════════════════════════════════════════ -->
+    <section class="tab-pane" id="tab-weather" data-tab="weather">
+        <div class="panel">
+            <label class="field-label">Weather widget</label>
+            <div class="theme-toggle" id="weatherEnabledToggle" style="width:fit-content">
+                <button class="theme-btn" id="weatherBtnOn"  onclick="setWeatherEnabled(true)">✅ On</button>
+                <button class="theme-btn" id="weatherBtnOff" onclick="setWeatherEnabled(false)">❌ Off</button>
+            </div>
+            <div class="field-hint">Shows current conditions on the device's home screen.
+                Data: <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
+                (no API key needed). Widget position is set in the
+                <a href="/layout.html">layout editor</a>.</div>
+        </div>
+
+        <div class="panel">
+            <label class="field-label">Latitude</label>
+            <input type="number" id="weather_lat" class="field-input" min="-90" max="90"
+                   step="0.0001" placeholder="52.2297" style="width:180px" />
+        </div>
+        <div class="panel">
+            <label class="field-label">Longitude</label>
+            <input type="number" id="weather_lon" class="field-input" min="-180" max="180"
+                   step="0.0001" placeholder="21.0122" style="width:180px" />
+            <div class="field-hint">Right-click your location in Google Maps to copy the coordinates.</div>
+        </div>
+        <div class="panel">
+            <label class="field-label">Refresh interval (minutes)</label>
+            <input type="number" id="weather_refresh" class="field-input" min="5" max="240"
+                   placeholder="30" style="width:140px" />
+        </div>
+
+        <div class="panel">
+            <label class="field-label">Current data</label>
+            <div id="weather_now" class="field-hint">—</div>
+        </div>
+
+        <button id="weather_save_btn" onclick="saveWeather()">💾 Save Weather</button>
+        <div id="weather_status" class="save-status"></div>
     </section>
 
     <!-- ══════════════════════════════════════════

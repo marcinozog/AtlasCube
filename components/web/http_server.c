@@ -33,6 +33,7 @@
 #include "updater.h"
 #include "net_wallpaper.h"
 #include "net_wallpaper_sched.h"
+#include "weather.h"
 #include "esp_spiffs.h"
 #include "esp_vfs_fat.h"
 #include "cJSON.h"
@@ -60,6 +61,9 @@
 #endif
 
 extern void ws_set_server(httpd_handle_t server);
+
+static esp_err_t api_weather_get_handler(httpd_req_t *req);
+static esp_err_t api_weather_post_handler(httpd_req_t *req);
 
 // Compile-time display driver label — lets the setup page warn if the wrong
 // binary was flashed (driver is fixed in the image; pins are not).
@@ -3189,6 +3193,15 @@ void http_server_start(void)
     };
     httpd_register_uri_handler(server, &api_ui_reset);
 
+    httpd_uri_t api_weather_get = {
+        .uri = "/api/weather", .method = HTTP_GET, .handler = api_weather_get_handler,
+    };
+    httpd_register_uri_handler(server, &api_weather_get);
+    httpd_uri_t api_weather_post = {
+        .uri = "/api/weather", .method = HTTP_POST, .handler = api_weather_post_handler,
+    };
+    httpd_register_uri_handler(server, &api_weather_post);
+
     // ── MQTT ──────────────────────────────────────────────────────────────────
     httpd_uri_t api_mqtt_get = {
         .uri     = "/api/mqtt",
@@ -3301,4 +3314,60 @@ void http_server_start(void)
     httpd_register_uri_handler(server, &file_uri);
 
     ESP_LOGI("HTTP", "Server started");
+}
+
+// ---------------------------------------------------------------------------
+// WEATHER WIDGET CONFIGURATION
+// ---------------------------------------------------------------------------
+
+static esp_err_t api_weather_get_handler(httpd_req_t *req)
+{
+    weather_config_t cfg;
+    weather_data_t data;
+    weather_get_config(&cfg);
+    weather_get(&data);
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddBoolToObject(json, "enabled", cfg.enabled);
+    cJSON_AddNumberToObject(json, "latitude", cfg.latitude);
+    cJSON_AddNumberToObject(json, "longitude", cfg.longitude);
+    cJSON_AddNumberToObject(json, "refresh_min", cfg.refresh_min);
+    cJSON_AddBoolToObject(json, "valid", data.valid);
+    if (data.valid) {
+        cJSON_AddNumberToObject(json, "temperature_c", data.temperature_c);
+        cJSON_AddNumberToObject(json, "humidity_pct", data.humidity_pct);
+        cJSON_AddNumberToObject(json, "weather_code", data.weather_code);
+    }
+    char *out = cJSON_PrintUnformatted(json);
+    cJSON_Delete(json);
+    return send_json_or_500(req, out);
+}
+
+static esp_err_t api_weather_post_handler(httpd_req_t *req)
+{
+    char *buf = NULL;
+    if (read_body(req, &buf, 512) != ESP_OK) return ESP_FAIL;
+    cJSON *json = cJSON_Parse(buf);
+    free(buf);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+    weather_config_t cfg;
+    weather_get_config(&cfg);
+    cJSON *v = cJSON_GetObjectItem(json, "enabled");
+    if (cJSON_IsBool(v)) cfg.enabled = cJSON_IsTrue(v);
+    v = cJSON_GetObjectItem(json, "latitude");
+    if (cJSON_IsNumber(v)) cfg.latitude = (float)v->valuedouble;
+    v = cJSON_GetObjectItem(json, "longitude");
+    if (cJSON_IsNumber(v)) cfg.longitude = (float)v->valuedouble;
+    v = cJSON_GetObjectItem(json, "refresh_min");
+    if (cJSON_IsNumber(v)) cfg.refresh_min = v->valueint;
+    cJSON_Delete(json);
+    if (weather_set_config(&cfg) != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Could not save weather settings");
+        return ESP_FAIL;
+    }
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true}");
+    return ESP_OK;
 }

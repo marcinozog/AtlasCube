@@ -24,4 +24,5 @@ idf_component_register(
         secrets
         updater             # updater_www_stale() — shared web-UI staleness check
         net_wallpaper       # /api/wallpaper endpoints
+        weather
 )

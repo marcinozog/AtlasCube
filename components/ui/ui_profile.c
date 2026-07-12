@@ -47,6 +47,8 @@ static const ui_profile_t k_defaults = {
     .clock_mode_indic_y        = 8,
     .clock_event_indic_x       = 90,
     .clock_event_indic_y       = 8,
+    .clock_show_weather        = false,   // no spare line on a 64px mono panel
+    .clock_weather_font        = &lv_font_montserrat_12_pl,
 
     .radio_np_x                = 10,
     .radio_np_y                = 35,
@@ -67,6 +69,8 @@ static const ui_profile_t k_defaults = {
     .radio_clock_font          = &lv_font_montserrat_18_pl,
     .radio_event_indic_x       = 90,
     .radio_event_indic_y       = 8,
+    .radio_show_weather        = false,
+    .radio_weather_font        = &lv_font_montserrat_12_pl,
 
     .sd_title_y                = 35,
     .sd_title_font             = &lv_font_montserrat_14_pl,
@@ -90,6 +94,8 @@ static const ui_profile_t k_defaults = {
     .sd_clock_font             = &lv_font_montserrat_18_pl,
     .sd_event_indic_x          = 90,
     .sd_event_indic_y          = 8,
+    .sd_show_weather           = false,
+    .sd_weather_font           = &lv_font_montserrat_12_pl,
 
     .playlist_header_h         = 14,
     .playlist_item_h           = 12,
@@ -223,6 +229,8 @@ static const ui_profile_t k_defaults = {
     .clock_mode_indic_y        = 4,
     .clock_event_indic_x       = 216,
     .clock_event_indic_y       = 4,
+    .clock_show_weather        = false,   // no spare line on a 64px mono panel
+    .clock_weather_font        = &lv_font_montserrat_12_pl,
 
     .radio_np_x                = 10,
     .radio_np_y                = 1,
@@ -243,6 +251,8 @@ static const ui_profile_t k_defaults = {
     .radio_clock_font          = &lv_font_montserrat_18_pl,
     .radio_event_indic_x       = 216,
     .radio_event_indic_y       = 4,
+    .radio_show_weather        = false,
+    .radio_weather_font        = &lv_font_montserrat_12_pl,
 
     .sd_title_y                = 1,
     .sd_title_font             = &lv_font_montserrat_14_pl,
@@ -266,6 +276,8 @@ static const ui_profile_t k_defaults = {
     .sd_clock_font             = &lv_font_montserrat_18_pl,
     .sd_event_indic_x          = 216,
     .sd_event_indic_y          = 4,
+    .sd_show_weather           = false,
+    .sd_weather_font           = &lv_font_montserrat_12_pl,
 
     .playlist_header_h         = 16,
     .playlist_item_h           = 14,
@@ -402,6 +414,11 @@ static const ui_profile_t k_defaults = {
     .clock_mode_indic_y        = 1,
     .clock_event_indic_x       = 150,
     .clock_event_indic_y       = 1,
+    .clock_show_weather        = true,    // label hides itself until data is valid
+    .clock_weather_x           = 0,
+    .clock_weather_y           = 174,     // below netinfo, above the strip
+    .clock_weather_w           = 240,
+    .clock_weather_font        = &lv_font_montserrat_12_pl,
 
     // Radio: Station info and large volume slider
     .radio_np_x                = 10,
@@ -428,6 +445,11 @@ static const ui_profile_t k_defaults = {
     .radio_vu_y                = 238,
     .radio_vu_w                = 238,
     .radio_vu_h                = 58,
+    .radio_show_weather        = false,
+    .radio_weather_x           = 0,
+    .radio_weather_y           = 3,       // top-left row, clear of the centered clock
+    .radio_weather_w           = 120,
+    .radio_weather_font        = &lv_font_montserrat_12_pl,
 
     .sd_title_y                = 60,
     .sd_title_font             = &lv_font_montserrat_14_pl,
@@ -456,6 +478,11 @@ static const ui_profile_t k_defaults = {
     .sd_vu_y                   = 238,
     .sd_vu_w                   = 238,
     .sd_vu_h                   = 58,
+    .sd_show_weather           = false,
+    .sd_weather_x              = 0,
+    .sd_weather_y              = 3,       // top-left row, clear of the centered clock
+    .sd_weather_w              = 120,
+    .sd_weather_font           = &lv_font_montserrat_12_pl,
 
     // Playlist: We use the screen height for more list items
     .playlist_header_h         = 45,
@@ -598,6 +625,11 @@ static const ui_profile_t k_defaults = {
     .clock_mode_indic_y        = 2,
     .clock_event_indic_x       = 282,
     .clock_event_indic_y       = 2,
+    .clock_show_weather        = true,    // label hides itself until data is valid
+    .clock_weather_x           = 0,
+    .clock_weather_y           = 4,       // top row, clear of the indicators at x>=282
+    .clock_weather_w           = 270,
+    .clock_weather_font        = &lv_font_montserrat_12_pl,
 
     
     .radio_np_x                = 10,
@@ -624,6 +656,11 @@ static const ui_profile_t k_defaults = {
     .radio_vu_y                = 182,
     .radio_vu_w                = 318,
     .radio_vu_h                = 58,
+    .radio_show_weather        = false,
+    .radio_weather_x           = 0,
+    .radio_weather_y           = 2,       // top-left row, clear of the centered clock
+    .radio_weather_w           = 120,
+    .radio_weather_font        = &lv_font_montserrat_12_pl,
 
     .sd_title_y                = 64,
     .sd_title_font             = &lv_font_montserrat_14_pl,
@@ -652,6 +689,11 @@ static const ui_profile_t k_defaults = {
     .sd_vu_y                   = 182,
     .sd_vu_w                   = 318,
     .sd_vu_h                   = 58,
+    .sd_show_weather           = false,
+    .sd_weather_x              = 0,
+    .sd_weather_y              = 2,       // top-left row, clear of the centered clock
+    .sd_weather_w              = 120,
+    .sd_weather_font           = &lv_font_montserrat_12_pl,
 
     .playlist_header_h         = 26,
     .playlist_item_h           = 28,
@@ -787,6 +829,11 @@ static const ui_profile_t k_defaults = {
     .clock_mode_indic_y        = 4,
     .clock_event_indic_x       = 424,
     .clock_event_indic_y       = 4,
+    .clock_show_weather        = true,    // label hides itself until data is valid
+    .clock_weather_x           = 0,
+    .clock_weather_y           = 216,     // below netinfo, above the strip
+    .clock_weather_w           = 480,
+    .clock_weather_font        = &lv_font_montserrat_14_pl,
 
 
     .radio_np_x                = 5,
@@ -813,6 +860,11 @@ static const ui_profile_t k_defaults = {
     .radio_vu_y                = 248,
     .radio_vu_w                = 478,
     .radio_vu_h                = 72,
+    .radio_show_weather        = false,
+    .radio_weather_x           = 0,
+    .radio_weather_y           = 4,       // top-left row, clear of the centered clock
+    .radio_weather_w           = 160,
+    .radio_weather_font        = &lv_font_montserrat_14_pl,
 
     .sd_title_y                = 85,
     .sd_title_font             = &lv_font_montserrat_14_pl,
@@ -841,6 +893,11 @@ static const ui_profile_t k_defaults = {
     .sd_vu_y                   = 248,
     .sd_vu_w                   = 478,
     .sd_vu_h                   = 72,
+    .sd_show_weather           = false,
+    .sd_weather_x              = 0,
+    .sd_weather_y              = 4,       // top-left row, clear of the centered clock
+    .sd_weather_w              = 160,
+    .sd_weather_font           = &lv_font_montserrat_14_pl,
 
     .playlist_header_h         = 34,
     .playlist_item_h           = 38,
@@ -1059,6 +1116,11 @@ static void load_clock(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "clock_calendar_y",           &p->clock_calendar_y);
     load_i16 (obj, "clock_calendar_w",           &p->clock_calendar_w);
     load_font(obj, "clock_calendar_font",        &p->clock_calendar_font);
+    load_bool(obj, "clock_show_weather",         &p->clock_show_weather);
+    load_i16 (obj, "clock_weather_x",            &p->clock_weather_x);
+    load_i16 (obj, "clock_weather_y",            &p->clock_weather_y);
+    load_i16 (obj, "clock_weather_w",            &p->clock_weather_w);
+    load_font(obj, "clock_weather_font",         &p->clock_weather_font);
 }
 
 static void load_bt(const cJSON *obj, ui_profile_t *p)
@@ -1124,6 +1186,11 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_vu_y",                 &p->radio_vu_y);
     load_i16 (obj, "radio_vu_w",                 &p->radio_vu_w);
     load_i16 (obj, "radio_vu_h",                 &p->radio_vu_h);
+    load_bool(obj, "radio_show_weather",         &p->radio_show_weather);
+    load_i16 (obj, "radio_weather_x",            &p->radio_weather_x);
+    load_i16 (obj, "radio_weather_y",            &p->radio_weather_y);
+    load_i16 (obj, "radio_weather_w",            &p->radio_weather_w);
+    load_font(obj, "radio_weather_font",         &p->radio_weather_font);
 }
 
 static cJSON *dump_radio(const ui_profile_t *p)
@@ -1153,6 +1220,11 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_vu_y",                 p->radio_vu_y);
     add_i16 (o, "radio_vu_w",                 p->radio_vu_w);
     add_i16 (o, "radio_vu_h",                 p->radio_vu_h);
+    add_bool(o, "radio_show_weather",         p->radio_show_weather);
+    add_i16 (o, "radio_weather_x",            p->radio_weather_x);
+    add_i16 (o, "radio_weather_y",            p->radio_weather_y);
+    add_i16 (o, "radio_weather_w",            p->radio_weather_w);
+    add_font(o, "radio_weather_font",         p->radio_weather_font);
     return o;
 }
 
@@ -1186,6 +1258,11 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "sd_vu_y",                   &p->sd_vu_y);
     load_i16 (obj, "sd_vu_w",                   &p->sd_vu_w);
     load_i16 (obj, "sd_vu_h",                   &p->sd_vu_h);
+    load_bool(obj, "sd_show_weather",           &p->sd_show_weather);
+    load_i16 (obj, "sd_weather_x",              &p->sd_weather_x);
+    load_i16 (obj, "sd_weather_y",              &p->sd_weather_y);
+    load_i16 (obj, "sd_weather_w",              &p->sd_weather_w);
+    load_font(obj, "sd_weather_font",           &p->sd_weather_font);
 }
 
 static cJSON *dump_sd(const ui_profile_t *p)
@@ -1218,6 +1295,11 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_vu_y",                   p->sd_vu_y);
     add_i16 (o, "sd_vu_w",                   p->sd_vu_w);
     add_i16 (o, "sd_vu_h",                   p->sd_vu_h);
+    add_bool(o, "sd_show_weather",           p->sd_show_weather);
+    add_i16 (o, "sd_weather_x",              p->sd_weather_x);
+    add_i16 (o, "sd_weather_y",              p->sd_weather_y);
+    add_i16 (o, "sd_weather_w",              p->sd_weather_w);
+    add_font(o, "sd_weather_font",           p->sd_weather_font);
     return o;
 }
 
@@ -1299,6 +1381,11 @@ static cJSON *dump_clock(const ui_profile_t *p)
     add_i16 (o, "clock_calendar_y",           p->clock_calendar_y);
     add_i16 (o, "clock_calendar_w",           p->clock_calendar_w);
     add_font(o, "clock_calendar_font",        p->clock_calendar_font);
+    add_bool(o, "clock_show_weather",         p->clock_show_weather);
+    add_i16 (o, "clock_weather_x",            p->clock_weather_x);
+    add_i16 (o, "clock_weather_y",            p->clock_weather_y);
+    add_i16 (o, "clock_weather_w",            p->clock_weather_w);
+    add_font(o, "clock_weather_font",         p->clock_weather_font);
     return o;
 }
 

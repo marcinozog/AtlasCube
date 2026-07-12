@@ -22,7 +22,7 @@ const CLOCK_FIELDS = [
     { key: 'clock_panel_w', label: 'Panel W',  type: 'number' },
     { key: 'clock_panel_h', label: 'Panel H',  type: 'number' },
 
-    { key: 'clock_label_bg',  label: 'Label bg plate', type: 'bool' },
+    { key: 'clock_label_bg',  label: 'Time/date/netinfo labels background', type: 'bool' },
 
     { key: 'clock_show_time', label: 'Show time',     type: 'bool' },
     { key: 'clock_time_x',    label: 'Time X',        type: 'number' },
@@ -62,6 +62,11 @@ const CLOCK_FIELDS = [
     { key: 'clock_calendar_y',    label: 'Calendar Y',     type: 'number' },
     { key: 'clock_calendar_w',    label: 'Calendar W',     type: 'number' },
     { key: 'clock_calendar_font', label: 'Calendar font',  type: 'font'   },
+    { key: 'clock_show_weather', label: 'Show weather', type: 'bool' },
+    { key: 'clock_weather_x', label: 'Weather X', type: 'number' },
+    { key: 'clock_weather_y', label: 'Weather Y', type: 'number' },
+    { key: 'clock_weather_w', label: 'Weather W', type: 'number' },
+    { key: 'clock_weather_font', label: 'Weather font', type: 'font' },
 ];
 
 const BT_FIELDS = [
@@ -134,6 +139,11 @@ const RADIO_FIELDS = [
     { key: 'radio_vu_y',                 label: 'VU Y',              type: 'number' },
     { key: 'radio_vu_w',                 label: 'VU W',              type: 'number' },
     { key: 'radio_vu_h',                 label: 'VU H',              type: 'number' },
+    { key: 'radio_show_weather', label: 'Show weather', type: 'bool' },
+    { key: 'radio_weather_x', label: 'Weather X', type: 'number' },
+    { key: 'radio_weather_y', label: 'Weather Y', type: 'number' },
+    { key: 'radio_weather_w', label: 'Weather W', type: 'number' },
+    { key: 'radio_weather_font', label: 'Weather font', type: 'font' },
 ];
 
 const SD_FIELDS = [
@@ -168,6 +178,11 @@ const SD_FIELDS = [
     { key: 'sd_vu_y',                 label: 'VU Y',              type: 'number' },
     { key: 'sd_vu_w',                 label: 'VU W',              type: 'number' },
     { key: 'sd_vu_h',                 label: 'VU H',              type: 'number' },
+    { key: 'sd_show_weather', label: 'Show weather', type: 'bool' },
+    { key: 'sd_weather_x', label: 'Weather X', type: 'number' },
+    { key: 'sd_weather_y', label: 'Weather Y', type: 'number' },
+    { key: 'sd_weather_w', label: 'Weather W', type: 'number' },
+    { key: 'sd_weather_font', label: 'Weather font', type: 'font' },
 ];
 
 // ── Sections registry ──────────────────────────────────────────────────────
