@@ -77,6 +77,23 @@ body {
     color: var(--accent);
 }
 
+.logo-stack {
+    display: flex;
+    flex-direction: column;
+}
+
+.logo-link {
+    font-size: 10px;
+    color: var(--text-dim, #555);
+    letter-spacing: .14em;
+    text-decoration: none;
+    width: fit-content;
+}
+
+.logo-link:hover {
+    color: var(--accent);
+}
+
 .fw-version {
     font-size: 11px;
     color: var(--text-dim, #555);
