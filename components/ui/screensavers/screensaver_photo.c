@@ -99,13 +99,33 @@ static inline int spd(int base)
 
 static unsigned s_cfg_gen = 0;   // last applied settings_photo_generation()
 
+// Normalize the configured folder: the VFS mount prefix must be exactly
+// SD_MOUNT_POINT (case-sensitive, with a leading slash), while the rest of the
+// path FATFS matches case-insensitively — so fix up "SDCARD/SLIDES" & co.
+static void normalize_dir(char *dst, size_t dst_sz, const char *src)
+{
+    while (*src == ' ') src++;
+    char tmp[64];
+    snprintf(tmp, sizeof(tmp), "%s%s", (*src == '/') ? "" : "/", src);
+    size_t n = strlen(tmp);
+    while (n > 1 && (tmp[n - 1] == ' ' || tmp[n - 1] == '/')) tmp[--n] = '\0';
+
+    const size_t mp_len = strlen(SD_MOUNT_POINT);
+    if (strncasecmp(tmp, SD_MOUNT_POINT, mp_len) == 0 &&
+        (tmp[mp_len] == '\0' || tmp[mp_len] == '/')) {
+        snprintf(dst, dst_sz, "%s%s", SD_MOUNT_POINT, tmp + mp_len);
+    } else {
+        strncpy(dst, tmp, dst_sz - 1);
+        dst[dst_sz - 1] = '\0';
+    }
+}
+
 // (Re)load photo config from settings_ex into the local state.
 static void load_config(void)
 {
     app_settings_t *st = settings_get();
     const char *dir = st->scrsaver.photo_dir[0] ? st->scrsaver.photo_dir : PHOTO_DIR_DEFAULT;
-    s_dir[0] = '\0';
-    strncpy(s_dir, dir, sizeof(s_dir) - 1);
+    normalize_dir(s_dir, sizeof(s_dir), dir);
     s_order      = st->scrsaver.photo_order ? ORDER_RANDOM : ORDER_SEQUENTIAL;
     s_hold_ms    = (int64_t)st->scrsaver.photo_hold_s * 1000;
     s_effect_cfg = st->scrsaver.photo_effect;
