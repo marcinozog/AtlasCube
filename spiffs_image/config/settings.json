@@ -36,7 +36,8 @@
   "scrsaver": {
     "delay": 120,
     "id": "clockhands",
-    "dim_level": 20
+    "dim_level": 20,
+    "block_when_playing": 0
   },
   "dashboard": {
     "title": "USD/PLN",

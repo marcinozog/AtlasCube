@@ -88,6 +88,7 @@ typedef struct
 {
     int  delay;            // seconds of idle before activating (0 = off)
     int  screensaver_id;   // screensaver_id_t (see screensavers.h)
+    int  block_when_playing; // 1 = never auto-activate while audio is playing
 
     // dim screensaver (SCREENSAVER_DIM) — backlight level applied while idle
     int  dim_level;        // 0–100
@@ -189,6 +190,7 @@ void settings_set_hostname(const char *hostname);
 void settings_set_update_enable(bool enable);
 void settings_set_scrsaver_delay(int delay);
 void settings_set_scrsaver_id(int id);
+void settings_set_scrsaver_block_play(int on);
 void settings_set_scrsaver_dim_level(int level);
 void settings_set_photo(const char *dir, int order, int hold_s, int effect, int speed,
                         int clock, int clock_size);

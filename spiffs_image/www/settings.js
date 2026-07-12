@@ -696,6 +696,7 @@ async function saveScreensaverTab() {
             delay,
             id: get('scrs_id').value,
             dim_level: parseInt(get('scrs_dim_level')?.value, 10) || 0,
+            block_when_playing: get('scrs_block_play')?.checked ? 1 : 0,
             photo: {
                 dir:    (get('photo_dir')?.value ?? '').trim(),
                 order:  parseInt(get('photo_order')?.value, 10)  || 0,
@@ -1070,6 +1071,8 @@ function populateForm(s) {
         setVal('scrs_delay', s.scrsaver.delay ?? 60);
         const sel = document.getElementById('scrs_id');
         if (sel) sel.value = s.scrsaver.id || 'clockhands';
+        const bwp = document.getElementById('scrs_block_play');
+        if (bwp) bwp.checked = !!(s.scrsaver.block_when_playing ?? 0);
         const dlv = s.scrsaver.dim_level ?? 20;
         setVal('scrs_dim_level', dlv);
         const dlvLbl = document.getElementById('scrs_dim_level_value');

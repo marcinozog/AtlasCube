@@ -99,6 +99,15 @@ static bool       s_ss_dim        = false;
 static uint8_t    s_ss_dim_saved  = 100;   // brightness to restore on wake
 static lv_obj_t  *s_ss_catcher    = NULL;  // transparent wake catcher on top
 
+static bool playback_active(const app_state_t *st)
+{
+    if (st->radio_state == RADIO_STATE_PLAYING ||
+        st->radio_state == RADIO_STATE_BUFFERING) return true;
+    if (st->sd_active && !st->sd_paused)          return true;
+    if (st->bt_playing)                           return true;
+    return false;
+}
+
 static bool can_auto_screensaver_from(ui_screen_id_t id)
 {
     if (id >= SCREEN_COUNT)              return false;
@@ -591,7 +600,8 @@ void ui_manager_run(void)
         if (!s_ss_overlay) {
             const app_state_t *st = app_state_get();
             if (st->scrsaver_delay > 0
-                && can_auto_screensaver_from(s_active_id))
+                && can_auto_screensaver_from(s_active_id)
+                && !(st->scrsaver_block_play && playback_active(st)))
             {
                 int64_t idle_s = (esp_timer_get_time() - s_last_input_us) / 1000000;
                 if (idle_s >= st->scrsaver_delay) {
@@ -599,6 +609,14 @@ void ui_manager_run(void)
                              idle_s, st->scrsaver_id);
                     activate_screensaver(st->scrsaver_id);
                 }
+            }
+        } else {
+            // Remote playback start (web, app, schedule, BT play) wakes the
+            // screen when the block-while-playing option is on.
+            const app_state_t *st = app_state_get();
+            if (st->scrsaver_block_play && playback_active(st)) {
+                ESP_LOGI(TAG, "screensaver dismiss: playback started");
+                dismiss_screensaver();
             }
         }
 

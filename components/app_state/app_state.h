@@ -56,6 +56,7 @@ typedef struct {
     bool wallpaper_on;          // SD wallpaper background on/off (wins over gradient)
     int  scrsaver_delay;        // Idle seconds before activation (0 = off)
     int  scrsaver_id;           // screensaver_id_t (see screensavers.h)
+    bool scrsaver_block_play;   // Don't auto-activate while audio is playing
     bool sd_active;             // SD music player is the active source
     int  sd_index;              // Current track in the scanned queue
     int  sd_count;              // Tracks in the queue
@@ -152,6 +153,8 @@ typedef struct {
     int  scrsaver_delay;
     bool has_scrsaver_id;
     int  scrsaver_id;
+    bool has_scrsaver_block_play;
+    bool scrsaver_block_play;
 
     bool has_sd_active;
     bool sd_active;

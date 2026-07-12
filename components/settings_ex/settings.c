@@ -105,6 +105,7 @@ esp_err_t settings_init(void)
         s_settings.scrsaver.delay           = 60;
         s_settings.scrsaver.screensaver_id  = SCREENSAVER_CLOCKHANDS;
         s_settings.scrsaver.dim_level       = 20;
+        s_settings.scrsaver.block_when_playing = 0;
         // Photo-frame screensaver
         s_settings.scrsaver.photo_dir[0]    = '\0';
         strncpy(s_settings.scrsaver.photo_dir, "/sdcard/slides", sizeof(s_settings.scrsaver.photo_dir) - 1);
@@ -362,6 +363,7 @@ static esp_err_t load_from_file(void)
 
     // ── SCREENSAVER ───────────────────────────────────────────────────────────
     s_settings.scrsaver.dim_level = 20;   // overridden below if present
+    s_settings.scrsaver.block_when_playing = 0;
     // Photo-frame defaults — overridden below if a "photo" object is present.
     s_settings.scrsaver.photo_dir[0] = '\0';
     strncpy(s_settings.scrsaver.photo_dir, "/sdcard/slides", sizeof(s_settings.scrsaver.photo_dir) - 1);
@@ -389,6 +391,8 @@ static esp_err_t load_from_file(void)
             int v = dlv->valueint;
             s_settings.scrsaver.dim_level = v < 0 ? 0 : (v > 100 ? 100 : v);
         }
+        cJSON *bwp = cJSON_GetObjectItem(scrs, "block_when_playing");
+        if (cJSON_IsNumber(bwp)) s_settings.scrsaver.block_when_playing = bwp->valueint ? 1 : 0;
         cJSON *ph = cJSON_GetObjectItem(scrs, "photo");
         if (cJSON_IsObject(ph)) {
             cJSON *pd  = cJSON_GetObjectItem(ph, "dir");
@@ -634,6 +638,7 @@ static esp_err_t save_to_file_locked(void)
     cJSON *scrs = cJSON_CreateObject();
     cJSON_AddNumberToObject(scrs, "delay",  s_settings.scrsaver.delay);
     cJSON_AddNumberToObject(scrs, "dim_level", s_settings.scrsaver.dim_level);
+    cJSON_AddNumberToObject(scrs, "block_when_playing", s_settings.scrsaver.block_when_playing);
     cJSON_AddStringToObject(scrs, "id",
         screensaver_name(s_settings.scrsaver.screensaver_id));
     cJSON *photo = cJSON_CreateObject();
@@ -747,6 +752,7 @@ void settings_apply(void)
         .has_radio_show_screen  = true, .radio_show_screen = s_settings.display.radio_show_screen,
         .has_scrsaver_delay     = true, .scrsaver_delay  = s_settings.scrsaver.delay,
         .has_scrsaver_id        = true, .scrsaver_id     = s_settings.scrsaver.screensaver_id,
+        .has_scrsaver_block_play = true, .scrsaver_block_play = s_settings.scrsaver.block_when_playing != 0,
     };
     memcpy(patch.eq, s_settings.audio.eq, sizeof(patch.eq));
     app_state_update(&patch);
@@ -1142,6 +1148,17 @@ void settings_set_scrsaver_id(int id)
     s_settings.scrsaver.screensaver_id = id;
     app_state_update(&(app_state_patch_t){
         .has_scrsaver_id = true, .scrsaver_id = id
+    });
+    save_to_file();
+}
+
+void settings_set_scrsaver_block_play(int on)
+{
+    on = on ? 1 : 0;
+    if (s_settings.scrsaver.block_when_playing == on) return;
+    s_settings.scrsaver.block_when_playing = on;
+    app_state_update(&(app_state_patch_t){
+        .has_scrsaver_block_play = true, .scrsaver_block_play = on != 0
     });
     save_to_file();
 }

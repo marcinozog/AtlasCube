@@ -174,8 +174,9 @@ void app_state_update(const app_state_patch_t *patch)
     if (patch->has_bg_gradient) s_state.bg_gradient = patch->bg_gradient;
     if (patch->has_wallpaper_on) s_state.wallpaper_on = patch->wallpaper_on;
 
-    if (patch->has_scrsaver_delay)  s_state.scrsaver_delay  = patch->scrsaver_delay;
-    if (patch->has_scrsaver_id)     s_state.scrsaver_id     = patch->scrsaver_id;
+    if (patch->has_scrsaver_delay)      s_state.scrsaver_delay      = patch->scrsaver_delay;
+    if (patch->has_scrsaver_id)         s_state.scrsaver_id         = patch->scrsaver_id;
+    if (patch->has_scrsaver_block_play) s_state.scrsaver_block_play = patch->scrsaver_block_play;
 
     if (patch->has_sd_active) s_state.sd_active = patch->sd_active;
     if (patch->has_sd_index)  s_state.sd_index  = patch->sd_index;
@@ -229,6 +230,7 @@ void app_state_update(const app_state_patch_t *patch)
     if (patch->has_wallpaper_on)      n = buf_append(buf, sizeof(buf), n, " wallpaper_on=%d", s_state.wallpaper_on);
     if (patch->has_scrsaver_delay)    n = buf_append(buf, sizeof(buf), n, " scrsaver_delay=%d", s_state.scrsaver_delay);
     if (patch->has_scrsaver_id)       n = buf_append(buf, sizeof(buf), n, " scrsaver_id=%d", s_state.scrsaver_id);
+    if (patch->has_scrsaver_block_play) n = buf_append(buf, sizeof(buf), n, " scrsaver_block_play=%d", s_state.scrsaver_block_play);
     if (patch->has_sd_active)         n = buf_append(buf, sizeof(buf), n, " sd_active=%d", s_state.sd_active);
     if (patch->has_sd_index)          n = buf_append(buf, sizeof(buf), n, " sd_index=%d", s_state.sd_index);
     if (patch->has_sd_count)          n = buf_append(buf, sizeof(buf), n, " sd_count=%d", s_state.sd_count);
