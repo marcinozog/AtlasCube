@@ -77,6 +77,20 @@ extern void ws_set_server(httpd_handle_t server);
   #define DISPLAY_DRIVER_NAME "unknown"
 #endif
 
+// Compile-time touch driver label — lets the setup page hide the pin section
+// of the touch bus this binary can't use (I2C vs SPI/XPT2046).
+#if defined(CONFIG_TOUCH_FT6336U)
+  #define TOUCH_DRIVER_NAME "FT6336U"
+#elif defined(CONFIG_TOUCH_CST816D)
+  #define TOUCH_DRIVER_NAME "CST816D"
+#elif defined(CONFIG_TOUCH_XPT2046)
+  #define TOUCH_DRIVER_NAME "XPT2046"
+#elif defined(CONFIG_TOUCH_NONE)
+  #define TOUCH_DRIVER_NAME "NONE"
+#else
+  #define TOUCH_DRIVER_NAME "unknown"
+#endif
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Send a heap JSON string produced by cJSON_Print* and free it. A NULL string
 // (cJSON ran out of heap while building the reply) becomes a clean 500 —
@@ -2797,14 +2811,15 @@ static esp_err_t api_restart_handler(httpd_req_t *req)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/pins — current runtime pin map + the binary's display driver.
-// Returns { "driver": "ST7796", "pins": { "lcd_mosi": 39, ... } }. Built from
+// GET /api/pins — current runtime pin map + the binary's display/touch drivers.
+// Returns { "driver": "ST7796", "touch": "FT6336U", "pins": { ... } }. Built from
 // board_pins' own key list, so it auto-tracks new pins without edits here.
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t api_pins_get_handler(httpd_req_t *req)
 {
     cJSON *root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "driver", DISPLAY_DRIVER_NAME);
+    cJSON_AddStringToObject(root, "touch", TOUCH_DRIVER_NAME);
     cJSON *pins = cJSON_AddObjectToObject(root, "pins");
     for (size_t i = 0; i < board_pins_count(); i++) {
         cJSON_AddNumberToObject(pins, board_pins_key(i), board_pins_get(i));

@@ -535,9 +535,10 @@
     bt_rx:    'UART RX <- module TX'
   };
 
-  // Display order + grouping. Only keys actually returned by /api/pins are shown,
-  // so an SPI build skips the qspi_* group and vice-versa. Unknown (future) keys
-  // fall through to an "Other" section so nothing ever goes missing.
+  // Display order + grouping. /api/pins always returns every key (-1 = unused),
+  // so sections are hidden by the "driver"/"touch" fields instead: the LCD and
+  // touch groups the compiled binary can't use are skipped. Unknown (future)
+  // keys fall through to an "Other" section so nothing ever goes missing.
   var PIN_SECTIONS = [
     { title: 'SPI LCD',          keys: ['lcd_mosi','lcd_clk','lcd_cs','lcd_dc','lcd_rst','lcd_led'] },
     { title: 'QSPI LCD',         keys: ['qspi_cs','qspi_clk','qspi_d0','qspi_d1','qspi_d2','qspi_d3','qspi_rst'] },
@@ -596,9 +597,28 @@
         present.forEach(addRow);
       }
 
+      // Hide sections irrelevant to this binary's compiled drivers. Their keys
+      // still count as "placed" so they don't resurface under Other. Firmware
+      // predating the "touch" field shows both touch sections.
+      var hide = {};
+      if (d.touch === 'XPT2046') {
+        hide['Touch (I2C)'] = 1;
+      } else if (d.touch === 'FT6336U' || d.touch === 'CST816D') {
+        hide['Touch (SPI/XPT2046)'] = 1;
+      } else if (d.touch === 'NONE') {
+        hide['Touch (I2C)'] = 1;
+        hide['Touch (SPI/XPT2046)'] = 1;
+      }
+      if (d.driver === 'CO5300') {
+        hide['SPI LCD'] = 1;
+      } else if (['ILI9341','ST7796','ILI9488','SSD1322'].indexOf(d.driver) >= 0) {
+        hide['QSPI LCD'] = 1;
+      }
+
       var placed = {};
       PIN_SECTIONS.forEach(function (s) {
         s.keys.forEach(function (k) { placed[k] = 1; });
+        if (hide[s.title]) return;
         addSection(s.title, s.keys, s.note);
       });
       // Any key the firmware exposes that we don't know about yet.
