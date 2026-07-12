@@ -355,9 +355,10 @@ function render() {
         return;
     }
 
+    const now = new Date();   // one snapshot so the whole sort agrees on "now"
     shown
         .slice()
-        .sort(sortByNextOccurrence)
+        .sort((a, b) => sortByNextOccurrence(a, b, now))
         .forEach(ev => list.appendChild(makeRow(ev)));
 }
 
@@ -419,10 +420,65 @@ function formatDate(ev) {
     return d;
 }
 
-function sortByNextOccurrence(a, b) {
-    // Simple order: disabled last, rest by id (stable).
+// Timestamp (ms) of the event's next trigger after `now`. One-time events
+// already in the past keep their original (past) timestamp — the comparator
+// parks those at the end.
+function nextOccurrence(ev, now) {
+    const at = (y, mo, d) => new Date(y, mo - 1, d, ev.hour, ev.minute).getTime();
+    const nowTs = now.getTime();
+    switch (ev.recurrence) {
+        case 'daily': {
+            let ts = at(now.getFullYear(), now.getMonth() + 1, now.getDate());
+            if (ts <= nowTs) ts += 24 * 3600 * 1000;
+            return ts;
+        }
+        case 'weekly': {
+            // Fires on the weekday of the base date.
+            const wd = new Date(ev.year, ev.month - 1, ev.day).getDay();
+            const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            for (let i = 0; i < 8; i++) {
+                if (d.getDay() === wd) {
+                    const ts = at(d.getFullYear(), d.getMonth() + 1, d.getDate());
+                    if (ts > nowTs) return ts;
+                }
+                d.setDate(d.getDate() + 1);
+            }
+            return nowTs;   // unreachable — a week always contains the weekday
+        }
+        case 'monthly': {
+            // Skip months too short for the day (day 31 → Date rolls over, so
+            // a rolled-over candidate no longer matches ev.day).
+            for (let i = 0; i < 24; i++) {
+                const cand = new Date(now.getFullYear(), now.getMonth() + i,
+                                      ev.day, ev.hour, ev.minute);
+                if (cand.getDate() === ev.day && cand.getTime() > nowTs)
+                    return cand.getTime();
+            }
+            return nowTs;
+        }
+        case 'yearly': {
+            // The loop only matters for Feb 29 — otherwise this or next year hits.
+            for (let i = 0; i < 8; i++) {
+                const cand = new Date(now.getFullYear() + i, ev.month - 1,
+                                      ev.day, ev.hour, ev.minute);
+                if (cand.getDate() === ev.day && cand.getTime() > nowTs)
+                    return cand.getTime();
+            }
+            return nowTs;
+        }
+        default:   // one-time: the exact date, past or not
+            return at(ev.year, ev.month, ev.day);
+    }
+}
+
+function sortByNextOccurrence(a, b, now) {
+    // Disabled last; before them one-time events already in the past; the rest
+    // ascending by their next trigger (soonest first).
     if (a.enabled !== b.enabled) return a.enabled ? -1 : 1;
-    return a.id.localeCompare(b.id);
+    const ta = nextOccurrence(a, now), tb = nextOccurrence(b, now);
+    const pastA = ta <= now.getTime(), pastB = tb <= now.getTime();
+    if (pastA !== pastB) return pastA ? 1 : -1;
+    return ta - tb;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
