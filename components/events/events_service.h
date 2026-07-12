@@ -19,6 +19,10 @@ extern "C" {
 #define EVENT_TITLE_LEN     64
 #define EVENT_SOUND_LEN     128     // SD path (rel. to card root) or /voice WAV, '\0' incl.
 
+// EV_SCHEDULE `station` sentinel: with an empty `sound`, stop whatever is
+// playing at the scheduled time instead of starting a source.
+#define EVENT_STATION_STOP  (-1)
+
 typedef enum {
     EV_BIRTHDAY = 0,
     EV_NAMEDAY,
@@ -59,7 +63,8 @@ typedef struct {
     bool               enabled;
 
     // EV_SCHEDULE with an empty `sound`: 0-based index into the playlist
-    // (resolved at fire time via playlist_get()).
+    // (resolved at fire time via playlist_get()), or EVENT_STATION_STOP to
+    // stop playback instead of starting it.
     int                station;
 
     // EV_VOICE / EV_SCHEDULE: 0..100, applied via settings_set_volume() at fire

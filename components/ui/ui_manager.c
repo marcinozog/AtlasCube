@@ -325,8 +325,10 @@ static void dismiss_screensaver(void)
 static void on_event_fired(const event_t *e)
 {
     // Scheduled playback isn't a notification — it just starts a source. Surface
-    // the matching player screen instead of the fullscreen event toast.
+    // the matching player screen instead of the fullscreen event toast. A stop
+    // schedule surfaces nothing — the current screen shows the stopped state.
     if (e->type == EV_SCHEDULE) {
+        if (!e->sound[0] && e->station == EVENT_STATION_STOP) return;
         ui_event_t nav = {
             .type      = UI_EVT_NAVIGATE,
             .screen_id = e->sound[0] ? SCREEN_SD : SCREEN_RADIO,

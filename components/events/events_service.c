@@ -293,6 +293,13 @@ static void fire_event(const event_t *e)
         // Scheduled playback: start the configured source as if the user pressed
         // play at this time — no "ringtone"/toast semantics. The UI surfaces the
         // player screen instead of a notification (see ui_manager on_event_fired).
+        if (!e->sound[0] && e->station == EVENT_STATION_STOP) {
+            // Stop schedule: same as the user pressing Stop (radio or SD
+            // player). Volume is left untouched — nothing is starting.
+            radio_stop();
+            if (s_fire_cb) s_fire_cb(e);
+            return;
+        }
         settings_set_volume(e->volume);
         if (e->sound[0]) {
             // SD source: path relative to the card root. A file plays that track

@@ -1071,9 +1071,11 @@ static const char *event_validate(const event_t *e)
     if (e->hour < 0   || e->hour > 23)                       return "hour out of range";
     if (e->minute < 0 || e->minute > 59)                     return "minute out of range";
     if (e->type < 0 || e->type >= EV_TYPE_COUNT)             return "type invalid";
-    // Playback from the playlist (empty sound) needs a valid station; an SD
-    // path is validated lazily at fire time (the card may be absent now).
-    if (e->type == EV_SCHEDULE && e->sound[0] == '\0') {
+    // Playback from the playlist (empty sound) needs a valid station — unless
+    // it's the stop sentinel, which needs no source at all. An SD path is
+    // validated lazily at fire time (the card may be absent now).
+    if (e->type == EV_SCHEDULE && e->sound[0] == '\0' &&
+        e->station != EVENT_STATION_STOP) {
         int n = playlist_get_count();
         if (n <= 0)                            return "playlist empty";
         if (e->station < 0 || e->station >= n) return "station out of range";

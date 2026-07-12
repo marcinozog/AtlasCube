@@ -72,15 +72,17 @@ function evTypeChanged() {
     const sched   = isScheduleTab();
     const type    = sched ? 'schedule' : document.getElementById('ev_type').value;
     const isVoice = type === 'voice';
-    const src     = document.getElementById('ev_source').value;   // radio | sd
+    const src     = document.getElementById('ev_source').value;   // radio | sd | stop
     const schedRadio = sched && src === 'radio';
     const schedSd    = sched && src === 'sd';
+    const schedStop  = sched && src === 'stop';
 
     document.getElementById('ev_type_group').style.display    = sched ? 'none' : '';
     document.getElementById('ev_source_group').style.display  = sched ? '' : 'none';
     document.getElementById('ev_station_group').style.display = schedRadio ? '' : 'none';
     document.getElementById('ev_sdpath_group').style.display  = schedSd ? '' : 'none';
-    document.getElementById('ev_volume_group').style.display  = (isVoice || sched) ? '' : 'none';
+    // A stop schedule starts nothing, so the volume slider is meaningless there.
+    document.getElementById('ev_volume_group').style.display  = (isVoice || (sched && !schedStop)) ? '' : 'none';
     document.getElementById('ev_sound_group').style.display   = isVoice ? '' : 'none';
 }
 
@@ -367,12 +369,16 @@ function makeRow(ev) {
     const timeStr = `${pad2(ev.hour)}:${pad2(ev.minute)}`;
     const recStr  = REC_LABEL[ev.recurrence] || ev.recurrence;
 
+    const isStopSched = ev.type === 'schedule' && !ev.sound && (ev.station ?? 0) < 0;
+
     let extra = '';
     if (ev.type === 'voice') {
         extra = ` · 🗣️ ${escapeHtml(ev.sound || '(no audio)')} · 🔊 ${ev.volume ?? 0}`;
     } else if (ev.type === 'schedule') {
         if (ev.sound) {
             extra = ` · 💾 ${escapeHtml(ev.sound)} · 🔊 ${ev.volume ?? 0}`;
+        } else if (isStopSched) {
+            extra = ' · ⏹ stop playback';
         } else {
             const st = stations[ev.station];
             const name = st ? st.name : `#${ev.station}`;
@@ -381,7 +387,7 @@ function makeRow(ev) {
     }
 
     row.innerHTML = `
-        <div class="ev-icon">${TYPE_ICON[ev.type] || '•'}</div>
+        <div class="ev-icon">${isStopSched ? '⏹' : (TYPE_ICON[ev.type] || '•')}</div>
         <div class="ev-info">
             <div class="ev-title">${escapeHtml(ev.title)}</div>
             <div class="ev-meta">${dateStr} · ${timeStr}${extra}</div>
@@ -462,13 +468,14 @@ function evEdit(id) {
     document.getElementById('ev_cancel_btn').style.display = '';
 
     document.getElementById('ev_type').value     = ev.type;
-    document.getElementById('ev_source').value   = ev.sound ? 'sd' : 'radio';
+    document.getElementById('ev_source').value   =
+        ev.sound ? 'sd' : ((ev.station ?? 0) < 0 ? 'stop' : 'radio');
     document.getElementById('ev_title').value    = ev.title;
     document.getElementById('ev_date').value     = `${ev.year}-${pad2(ev.month)}-${pad2(ev.day)}`;
     document.getElementById('ev_time').value     = `${pad2(ev.hour)}:${pad2(ev.minute)}`;
     document.getElementById('ev_recurrence').value = ev.recurrence;
     document.getElementById('ev_enabled').checked = !!ev.enabled;
-    document.getElementById('ev_station').value = String(ev.station ?? 0);
+    document.getElementById('ev_station').value = String(Math.max(ev.station ?? 0, 0));
     document.getElementById('ev_sdpath').value = ev.type === 'schedule' ? (ev.sound || '') : '';
     const vol = ev.volume ?? 50;
     document.getElementById('ev_volume').value = String(vol);
@@ -495,8 +502,12 @@ function formToEvent() {
 
     const sched   = isScheduleTab();
     const type    = sched ? 'schedule' : document.getElementById('ev_type').value;
-    const source  = document.getElementById('ev_source').value;   // radio | sd
-    const station = parseInt(document.getElementById('ev_station').value, 10) || 0;
+    const source  = document.getElementById('ev_source').value;   // radio | sd | stop
+    // station -1 = stop sentinel (with empty sound): the firmware stops playback
+    // at the scheduled time instead of starting a source.
+    const station = (sched && source === 'stop')
+        ? -1
+        : parseInt(document.getElementById('ev_station').value, 10) || 0;
     let   volume  = parseInt(document.getElementById('ev_volume').value, 10);
     if (isNaN(volume)) volume = 50;
     if (volume < 0)   volume = 0;

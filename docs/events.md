@@ -6,7 +6,8 @@ stored as JSON, edited via the web UI, fired at a scheduled time by a
 background scheduler. Notification = buzzer pattern (or a TTS voice clip
 for `voice`) + a fullscreen LVGL screen with an encoder "dismiss" button.
 A `schedule` event instead starts audio playback (radio station or an SD
-file/folder) and surfaces the player screen — no toast. Plus a small
+file/folder) and surfaces the player screen — or stops playback, when set
+to the stop source — no toast. Plus a small
 indicator on selected screens showing how many events are still pending
 today. A `calendar` event is a **read-only mirror of the phone calendar**
 (bulk-synced from the Android app): it never fires and isn't counted — it
@@ -42,7 +43,7 @@ only feeds the Home-screen calendar widget (see
 | `hour`, `minute` | int | Trigger time (local TZ) |
 | `recurrence` | enum | `none` / `daily` / `weekly` / `monthly` / `yearly` |
 | `enabled` | bool | `false` excludes the event from firing and from the 🔔 counter |
-| `station` | int | `EV_SCHEDULE` with empty `sound`: 0-based playlist index to start at trigger time |
+| `station` | int | `EV_SCHEDULE` with empty `sound`: 0-based playlist index to start at trigger time, or `EVENT_STATION_STOP` (-1) to stop playback instead |
 | `volume` | int | `EV_SCHEDULE` / `EV_VOICE`: 0..100, applied via `settings_set_volume()` at fire time so playback starts at a predictable level |
 | `sound` | `char[128]` | `EV_VOICE`: WAV filename under `/voice`. `EV_SCHEDULE`: SD file/folder path relative to the card root (empty → play `station`) |
 
@@ -156,7 +157,10 @@ Two actions:
   buzzer, no toast — `on_event_fired` navigates to `SCREEN_RADIO` / `SCREEN_SD`
   instead (see below). The stream/track keeps playing; stop it like any
   regular playback. Out-of-range `station` or missing SD → logged warning,
-  silent.
+  silent. `station == EVENT_STATION_STOP` (-1) with empty `sound` is the
+  **stop schedule**: `radio_stop()` (same as the user's Stop button — silences
+  radio or SD player), volume untouched, no navigation. Pairing a start and a
+  stop schedule gives e.g. a 07:00–08:00 daily wake-up.
 
 Buzzer patterns live in the shared melody registry
 [components/buzzer/melodies.c](../components/buzzer/melodies.c) (also used by
