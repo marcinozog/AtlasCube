@@ -249,9 +249,72 @@ body {
 }
 
 .discover-link {
-    display: inline-block;
-    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    width: 100%;
+    margin-top: 12px;
+    padding: 11px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: linear-gradient(100deg, rgba(0,170,255,.12), rgba(0,170,255,.03));
+    color: var(--text);
     text-decoration: none;
+    transition: border-color .18s, background .18s, transform .18s;
+}
+
+.discover-link:hover {
+    border-color: var(--accent);
+    background: linear-gradient(100deg, rgba(0,170,255,.22), rgba(0,170,255,.07));
+    transform: translateY(-1px);
+}
+
+.discover-link:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.discover-link-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 31px;
+    width: 31px;
+    height: 31px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    color: var(--accent);
+    font-size: 15px;
+    box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.discover-link-copy {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.discover-link-title {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .035em;
+}
+
+.discover-link-subtitle {
+    color: var(--text-dim);
+    font-size: 11px;
+}
+
+.discover-link-arrow {
+    color: var(--accent);
+    font-size: 19px;
+    line-height: 1;
+    transition: transform .18s;
+}
+
+.discover-link:hover .discover-link-arrow { transform: translateX(3px); }
 }
 
 /* ── Screen switcher ── */

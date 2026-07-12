@@ -162,21 +162,78 @@
 .rb-search {
     margin-bottom: 14px;
     border-bottom: 1px solid var(--border);
-    padding-bottom: 10px;
+    padding-bottom: 14px;
 }
 
 .rb-toggle {
-    background: transparent;
-    border: none;
-    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: linear-gradient(100deg, rgba(0,170,255,.12), rgba(0,170,255,.03));
+    color: var(--text);
     font-family: 'Chakra Petch', sans-serif;
-    font-size: 13px;
-    font-weight: 600;
+    text-align: left;
     cursor: pointer;
-    padding: 2px 0;
+    transition: border-color .18s, background .18s, transform .18s;
 }
-.rb-toggle:hover      { color: var(--accent); }
-.rb-toggle-dim        { font-weight: 400; color: var(--text-label); }
+
+.rb-toggle:hover {
+    border-color: var(--accent);
+    background: linear-gradient(100deg, rgba(0,170,255,.22), rgba(0,170,255,.07));
+    transform: translateY(-1px);
+}
+
+.rb-toggle:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.rb-toggle-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 31px;
+    width: 31px;
+    height: 31px;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    color: var(--accent);
+    font-size: 15px;
+    box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.rb-toggle-copy {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.rb-toggle-title {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .035em;
+}
+
+.rb-toggle-dim {
+    color: var(--text-dim);
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.rb-toggle-arrow {
+    color: var(--accent);
+    font-size: 19px;
+    line-height: 1;
+    transition: transform .18s;
+}
+
+.rb-toggle:hover .rb-toggle-arrow { transform: translateX(3px); }
 
 .rb-panel { margin-top: 10px; }
 

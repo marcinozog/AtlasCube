@@ -341,8 +341,10 @@ let rbResults = [];   // last search results, [{name, url, codec, bitrate, count
 
 function rbTogglePanel() {
     const panel = document.getElementById('rb_panel');
+    const toggle = document.querySelector('.rb-toggle');
     panel.hidden = !panel.hidden;
     document.getElementById('rb_arrow').textContent = panel.hidden ? '▸' : '▾';
+    toggle.setAttribute('aria-expanded', String(!panel.hidden));
     if (!panel.hidden) document.getElementById('rb_query').focus();
 }
 

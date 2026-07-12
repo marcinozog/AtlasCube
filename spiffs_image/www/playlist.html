@@ -28,8 +28,13 @@
 
     <div class="panel">
         <div class="rb-search">
-            <button class="rb-toggle" onclick="rbTogglePanel()">
-                <span id="rb_arrow">▸</span> 🌍 Add stations from the online directory <span class="rb-toggle-dim">(radio-browser.info)</span>
+            <button class="rb-toggle" type="button" onclick="rbTogglePanel()" aria-controls="rb_panel" aria-expanded="false">
+                <span class="rb-toggle-icon" aria-hidden="true">◉</span>
+                <span class="rb-toggle-copy">
+                    <span class="rb-toggle-title">Discover stations</span>
+                    <span class="rb-toggle-dim">Browse the radio-browser.info directory</span>
+                </span>
+                <span id="rb_arrow" class="rb-toggle-arrow" aria-hidden="true">▸</span>
             </button>
             <div id="rb_panel" class="rb-panel" hidden>
                 <div class="rb-form">
