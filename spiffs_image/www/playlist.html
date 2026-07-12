@@ -27,12 +27,9 @@
     <div class="section-title">📻 Playlist editor</div>
 
     <div class="panel">
-        <div class="pl-hint">Drag ⠿ to reorder. Click ☆ to mark favorite (pinned to top). Max <span id="pl_max">64</span> stations.</div>
-        <div id="pl_list" class="pl-list"></div>
-
         <div class="rb-search">
             <button class="rb-toggle" onclick="rbTogglePanel()">
-                <span id="rb_arrow">▸</span> 🔍 Search stations <span class="rb-toggle-dim">(radio-browser.info)</span>
+                <span id="rb_arrow">▸</span> 🌍 Add stations from the online directory <span class="rb-toggle-dim">(radio-browser.info)</span>
             </button>
             <div id="rb_panel" class="rb-panel" hidden>
                 <div class="rb-form">
@@ -50,6 +47,9 @@
                 <div id="rb_status" class="rb-status"></div>
             </div>
         </div>
+
+        <div class="pl-hint">Drag ⠿ to reorder. Click ☆ to mark favorite (pinned to top). Max <span id="pl_max">64</span> stations.</div>
+        <div id="pl_list" class="pl-list"></div>
 
         <div class="pl-actions">
             <button class="btn-secondary" onclick="plAddRow()">➕ Add station</button>

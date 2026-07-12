@@ -160,9 +160,9 @@
 /* ── Station search (radio-browser.info) ───────── */
 
 .rb-search {
-    margin-top: 14px;
-    border-top: 1px solid var(--border);
-    padding-top: 10px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
 }
 
 .rb-toggle {

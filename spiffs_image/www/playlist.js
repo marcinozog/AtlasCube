@@ -465,3 +465,4 @@ function rbSetStatus(text, cls) {
 // Init
 // ─────────────────────────────────────────────────────────────────────────────
 plLoad();
+if (location.hash === '#search') rbTogglePanel();   // deep-link from index.html

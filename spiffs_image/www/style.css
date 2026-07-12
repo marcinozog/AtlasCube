@@ -248,6 +248,12 @@ body {
     text-transform: uppercase;
 }
 
+.discover-link {
+    display: inline-block;
+    margin-top: 10px;
+    text-decoration: none;
+}
+
 /* ── Screen switcher ── */
 .screen-switcher {
     display: flex;
