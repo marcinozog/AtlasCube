@@ -431,7 +431,7 @@ static const ui_profile_t k_defaults = {
 
     .sd_title_y                = 60,
     .sd_title_font             = &lv_font_montserrat_14_pl,
-    .sd_folder_y               = 278,
+    .sd_folder_y               = 216,
     .sd_folder_font            = &lv_font_montserrat_14_pl,
     .sd_info_y                 = 170,   // raised so the "elapsed/total" line below fits above the VU
     .sd_info_font              = &lv_font_montserrat_12_pl,
@@ -453,7 +453,7 @@ static const ui_profile_t k_defaults = {
     .sd_event_indic_y          = 3,
     .sd_show_vu                = true,
     .sd_vu_x                   = 1,
-    .sd_vu_y                   = 212,
+    .sd_vu_y                   = 238,
     .sd_vu_w                   = 238,
     .sd_vu_h                   = 58,
 
@@ -627,7 +627,7 @@ static const ui_profile_t k_defaults = {
 
     .sd_title_y                = 64,
     .sd_title_font             = &lv_font_montserrat_14_pl,
-    .sd_folder_y               = 209,
+    .sd_folder_y               = 160,
     .sd_folder_font            = &lv_font_montserrat_14_pl,
     .sd_info_y                 = 100,   // raised so the "elapsed/total" line below fits above the VU
     .sd_info_font              = &lv_font_montserrat_12_pl,
@@ -649,7 +649,7 @@ static const ui_profile_t k_defaults = {
     .sd_event_indic_y          = 2,
     .sd_show_vu                = true,
     .sd_vu_x                   = 1,
-    .sd_vu_y                   = 146,
+    .sd_vu_y                   = 182,
     .sd_vu_w                   = 318,
     .sd_vu_h                   = 58,
 
@@ -816,7 +816,7 @@ static const ui_profile_t k_defaults = {
 
     .sd_title_y                = 85,
     .sd_title_font             = &lv_font_montserrat_14_pl,
-    .sd_folder_y               = 278,
+    .sd_folder_y               = 226,
     .sd_folder_font            = &lv_font_montserrat_14_pl,
     .sd_info_y                 = 140,   // raised so the "elapsed/total" line below fits above the VU
     .sd_info_font              = &lv_font_montserrat_14_pl,
@@ -838,7 +838,7 @@ static const ui_profile_t k_defaults = {
     .sd_event_indic_y          = 4,
     .sd_show_vu                = true,
     .sd_vu_x                   = 1,
-    .sd_vu_y                   = 196,
+    .sd_vu_y                   = 248,
     .sd_vu_w                   = 478,
     .sd_vu_h                   = 72,
 
