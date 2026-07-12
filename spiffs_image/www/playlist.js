@@ -326,6 +326,142 @@ function clearDragHints() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Station search — radio-browser.info
+// ─────────────────────────────────────────────────────────────────────────────
+// Docs ask clients not to hardcode one mirror; `all.` is a round-robin DNS
+// entry, the named mirrors below are fallbacks in case it is down.
+const RB_HOSTS = [
+    'all.api.radio-browser.info',
+    'de1.api.radio-browser.info',
+    'fi1.api.radio-browser.info',
+];
+const RB_LIMIT = 30;
+
+let rbResults = [];   // last search results, [{name, url, codec, bitrate, country}, ...]
+
+function rbTogglePanel() {
+    const panel = document.getElementById('rb_panel');
+    panel.hidden = !panel.hidden;
+    document.getElementById('rb_arrow').textContent = panel.hidden ? '▸' : '▾';
+    if (!panel.hidden) document.getElementById('rb_query').focus();
+}
+
+async function rbSearch() {
+    const query = document.getElementById('rb_query').value.trim();
+    if (!query) return;
+    const by  = document.getElementById('rb_by').value;   // name | tag | country
+    const btn = document.getElementById('rb_search_btn');
+
+    btn.disabled = true;
+    rbSetStatus('Searching…', '');
+    document.getElementById('rb_results').innerHTML = '';
+
+    const params = `${by}=${encodeURIComponent(query)}` +
+                   `&limit=${RB_LIMIT}&hidebroken=true&order=clickcount&reverse=true`;
+
+    let list = null, lastErr = null;
+    for (const host of RB_HOSTS) {
+        try {
+            const res = await fetch(`https://${host}/json/stations/search?${params}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            list = await res.json();
+            break;
+        } catch (e) {
+            lastErr = e;
+        }
+    }
+    btn.disabled = false;
+
+    if (!list) {
+        rbSetStatus('Search failed: ' + (lastErr ? lastErr.message : 'no server reachable'), 'error');
+        return;
+    }
+
+    let tooLong = 0;
+    rbResults = list
+        .map(st => ({
+            // url_resolved has .pls/.m3u playlists already resolved to the stream
+            name:    (st.name || '').trim().slice(0, PL_NAME_MAX),
+            url:     (st.url_resolved || st.url || '').trim(),
+            codec:   (st.codec || '?').toUpperCase(),
+            bitrate: st.bitrate | 0,
+            country: st.countrycode || '',
+        }))
+        .filter(st => {
+            if (!st.name || !st.url) return false;
+            if (st.url.length > PL_URL_MAX) { tooLong++; return false; }
+            return true;
+        });
+
+    rbRenderResults();
+
+    if (rbResults.length === 0) {
+        rbSetStatus('No stations found', 'error');
+    } else {
+        let msg = `${rbResults.length} stations`;
+        if (tooLong) msg += ` (${tooLong} skipped — URL too long)`;
+        rbSetStatus(msg, '');
+    }
+}
+
+function rbRenderResults() {
+    const box = document.getElementById('rb_results');
+    box.innerHTML = '';
+
+    syncFromDom();
+    const existing = new Set(stations.map(s => (s.url || '').trim()));
+
+    rbResults.forEach((st, i) => {
+        const row = document.createElement('div');
+        // Device decodes MP3/AAC — dim the rest, but leave them addable
+        const supported = st.codec === 'MP3' || st.codec.startsWith('AAC');
+        row.className = 'rb-row' + (supported ? '' : ' rb-unsupported');
+        if (!supported) row.title = 'Codec may not be supported by the device';
+
+        const added = existing.has(st.url);
+        const meta  = `${st.codec}${st.bitrate ? ' ' + st.bitrate + 'k' : ''}` +
+                      `${st.country ? ' · ' + st.country : ''}`;
+        row.innerHTML = `
+            <span class="rb-name" title="${escapeAttr(st.url)}">${escapeAttr(st.name)}</span>
+            <span class="rb-meta">${escapeAttr(meta)}</span>
+            <button class="rb-add${added ? ' added' : ''}" ${added ? 'disabled' : ''}
+                    onclick="rbAdd(${i}, this)">${added ? '✓' : '➕'}</button>
+        `;
+        box.appendChild(row);
+    });
+}
+
+function rbAdd(i, btn) {
+    const st = rbResults[i];
+    if (!st) return;
+
+    syncFromDom();
+    if (stations.length >= PL_MAX) {
+        rbSetStatus(`Max ${PL_MAX} stations reached`, 'error');
+        return;
+    }
+    if (stations.some(s => (s.url || '').trim() === st.url)) {
+        btn.disabled = true;
+        btn.textContent = '✓';
+        btn.classList.add('added');
+        return;
+    }
+
+    stations.push({ name: st.name, url: st.url, favorite: false });
+    render();
+    btn.disabled = true;
+    btn.textContent = '✓';
+    btn.classList.add('added');
+    rbSetStatus(`✓ "${st.name}" added — Save & Apply to keep it`, 'ok');
+}
+
+function rbSetStatus(text, cls) {
+    const el = document.getElementById('rb_status');
+    el.textContent = text;
+    el.className   = 'rb-status' + (cls ? ' ' + cls : '');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────────────────────────────────────
 plLoad();

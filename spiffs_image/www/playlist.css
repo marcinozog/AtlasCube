@@ -157,6 +157,105 @@
     border-color: var(--accent);
 }
 
+/* ── Station search (radio-browser.info) ───────── */
+
+.rb-search {
+    margin-top: 14px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+}
+
+.rb-toggle {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'Chakra Petch', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 2px 0;
+}
+.rb-toggle:hover      { color: var(--accent); }
+.rb-toggle-dim        { font-weight: 400; color: var(--text-label); }
+
+.rb-panel { margin-top: 10px; }
+
+.rb-form {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.rb-form .rb-by    { width: 110px; flex: none; }
+.rb-form .rb-query { flex: 1; min-width: 160px; }
+
+.rb-results {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 40vh;
+    overflow-y: auto;
+    margin-top: 10px;
+    padding-right: 4px;
+}
+.rb-results::-webkit-scrollbar       { width: 4px; }
+.rb-results::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.rb-row {
+    display: grid;
+    grid-template-columns: 1fr auto 28px;
+    gap: 8px;
+    align-items: center;
+    background: var(--bg-station);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 5px 8px;
+}
+.rb-row.rb-unsupported .rb-name,
+.rb-row.rb-unsupported .rb-meta { opacity: .45; }
+
+.rb-name {
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.rb-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    white-space: nowrap;
+}
+
+.rb-add {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: var(--radius-sm);
+    padding: 4px 6px;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 1;
+}
+.rb-add:hover:not(:disabled) {
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
+}
+.rb-add.added {
+    color: var(--green);
+    border-color: var(--green);
+    cursor: default;
+}
+
+.rb-status {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+}
+.rb-status.ok    { color: var(--green); }
+.rb-status.error { color: var(--red); }
+
 .pl-meta {
     margin-top: 10px;
     font-size: 12px;
