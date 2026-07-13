@@ -302,6 +302,7 @@ function setFormValue(key, val) {
 
 const SCALE = 2;
 const HANDLE_SIZE = 4;
+let clipSeq = 0;   // unique clipPath ids within one renderSvg() pass
 
 function renderSvg() {
     const svg = document.getElementById('lcd');
@@ -678,9 +679,22 @@ function drawFreeElement(svg, opts) {
     tag(svg, opts.x + 2, opts.y + 7, opts.label);
 
     if (opts.text) {
+        // Clip the sample text to the box — the firmware clips widget content
+        // the same way, so overflow would misrepresent the on-device look.
+        const cid = 'el_clip_' + (clipSeq++);
+        const cp = document.createElementNS(SVG_NS, 'clipPath');
+        cp.setAttribute('id', cid);
+        const cr = document.createElementNS(SVG_NS, 'rect');
+        cr.setAttribute('x', opts.x);
+        cr.setAttribute('y', opts.y);
+        cr.setAttribute('width', opts.w);
+        cr.setAttribute('height', opts.h);
+        cp.appendChild(cr);
+        svg.appendChild(cp);
         text(svg, opts.x + opts.w / 2, opts.y + opts.h * 0.78, opts.text, {
             'font-size': Math.min(opts.textSize, opts.h),
             'text-anchor': 'middle',
+            'clip-path': 'url(#' + cid + ')',
         });
     }
 
