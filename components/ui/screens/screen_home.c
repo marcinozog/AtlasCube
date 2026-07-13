@@ -256,6 +256,10 @@ static void home_create(lv_obj_t *parent)
     if (p->clock_show_strip) {
         s_strip = make_panel(parent, p->clock_strip_x, p->clock_strip_y,
                              p->clock_strip_w, p->clock_strip_h, th->bg_secondary);
+        int strip_opa = p->clock_strip_bg_opa;
+        if (strip_opa < 0) strip_opa = 0;
+        if (strip_opa > 100) strip_opa = 100;
+        lv_obj_set_style_bg_opa(s_strip, (strip_opa * 255) / 100, LV_PART_MAIN);
 
         s_strip_station = lv_label_create(s_strip);
         lv_label_set_long_mode(s_strip_station, LV_LABEL_LONG_SCROLL_CIRCULAR);

@@ -42,6 +42,7 @@ const CLOCK_FIELDS = [
     { key: 'clock_strip_y',    label: 'Strip Y',      type: 'number' },
     { key: 'clock_strip_w',    label: 'Strip W',      type: 'number' },
     { key: 'clock_strip_h',    label: 'Strip H',      type: 'number' },
+    { key: 'clock_strip_bg_opa', label: 'Strip BG opacity %', type: 'number', min: 0, max: 100, default: 100 },
     { key: 'clock_strip_label_w',         label: 'Strip label W',  type: 'number' },
     { key: 'clock_strip_station_y',       label: 'Station Y',      type: 'number' },
     { key: 'clock_strip_title_y',         label: 'Title Y',        type: 'number' },
@@ -192,7 +193,7 @@ const FORM_GROUPS = {
         { title: 'Time', enabledBy: 'clock_show_time', fields: ['clock_show_time', 'clock_time_x', 'clock_time_y', 'clock_time_font'] },
         { title: 'Date', enabledBy: 'clock_show_date', fields: ['clock_show_date', 'clock_date_x', 'clock_date_y', 'clock_date_font'] },
         { title: 'Network info', enabledBy: 'clock_show_netinfo', fields: ['clock_show_netinfo', 'clock_netinfo_x', 'clock_netinfo_y', 'clock_netinfo_font'] },
-        { title: 'Station strip', enabledBy: 'clock_show_strip', fields: ['clock_show_strip', 'clock_strip_x', 'clock_strip_y', 'clock_strip_w', 'clock_strip_h', 'clock_strip_label_w', 'clock_strip_station_y', 'clock_strip_title_y', 'clock_strip_station_font', 'clock_strip_title_font'] },
+        { title: 'Station strip', enabledBy: 'clock_show_strip', fields: ['clock_show_strip', 'clock_strip_x', 'clock_strip_y', 'clock_strip_w', 'clock_strip_h', 'clock_strip_bg_opa', 'clock_strip_label_w', 'clock_strip_station_y', 'clock_strip_title_y', 'clock_strip_station_font', 'clock_strip_title_font'] },
         { title: 'Mode indicator', enabledBy: 'clock_show_mode_indicator', fields: ['clock_show_mode_indicator', 'clock_mode_indic_x', 'clock_mode_indic_y'] },
         { title: 'Event indicator', enabledBy: 'clock_show_event_indicator', fields: ['clock_show_event_indicator', 'clock_event_indic_x', 'clock_event_indic_y'] },
         { title: 'Calendar', enabledBy: 'clock_show_calendar', fields: ['clock_show_calendar', 'clock_calendar_x', 'clock_calendar_y', 'clock_calendar_w', 'clock_calendar_font'] },
@@ -347,9 +348,15 @@ function buildFormRow(field, data, group, details) {
     if (field.type === 'number') {
         input = document.createElement('input');
         input.type = 'number';
-        input.value = data[field.key] ?? 0;
+        input.value = data[field.key] ?? field.default ?? 0;
+        if (field.min !== undefined) input.min = field.min;
+        if (field.max !== undefined) input.max = field.max;
         input.addEventListener('input', () => {
-            data[field.key] = parseInt(input.value, 10) | 0;
+            let value = parseInt(input.value, 10) | 0;
+            if (field.min !== undefined) value = Math.max(field.min, value);
+            if (field.max !== undefined) value = Math.min(field.max, value);
+            input.value = value;
+            data[field.key] = value;
             refreshGroup(details, group, data);
             renderSvg();
         });
@@ -529,6 +536,7 @@ function renderClock(svg) {
         drawFreeElement(svg, {
             x: sx, y: sy, w: sw, h: sh,
             label: 'strip', cls: 'panel',
+            fillOpacity: clamp(c.clock_strip_bg_opa ?? 100, 0, 100) / 100,
             fields: { x: 'clock_strip_x', y: 'clock_strip_y',
                       w: 'clock_strip_w', h: 'clock_strip_h' },
         });
@@ -795,6 +803,7 @@ function drawFreeElement(svg, opts) {
         x: opts.x, y: opts.y, width: opts.w, height: opts.h,
         class: `${opts.cls} ${placeholderClass(opts.label)}`,
     });
+    if (opts.fillOpacity !== undefined) r.style.fillOpacity = opts.fillOpacity;
     setupMove(r, svg, opts.fields);
 
     tag(svg, opts.x + 2, opts.y + 7, opts.label);

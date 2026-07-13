@@ -27,6 +27,7 @@ static const ui_profile_t k_defaults = {
     .clock_strip_y             = 44,
     .clock_strip_w             = 128,
     .clock_strip_h             = 20,
+    .clock_strip_bg_opa        = 100,
     .clock_strip_label_w       = 124,
     .clock_strip_station_y     = 2,
     .clock_strip_title_y       = 10,
@@ -209,6 +210,7 @@ static const ui_profile_t k_defaults = {
     .clock_strip_y             = 33,
     .clock_strip_w             = 256,
     .clock_strip_h             = 30,
+    .clock_strip_bg_opa        = 100,
     .clock_strip_label_w       = 252,
     .clock_strip_station_y     = 2,
     .clock_strip_title_y       = 12,
@@ -389,6 +391,7 @@ static const ui_profile_t k_defaults = {
     .clock_strip_y             = 193,
     .clock_strip_w             = 240,
     .clock_strip_h             = 103,
+    .clock_strip_bg_opa        = 100,
     .clock_strip_label_w       = 220,
     .clock_strip_station_y     = 10,
     .clock_strip_title_y       = 40,
@@ -599,6 +602,7 @@ static const ui_profile_t k_defaults = {
     .clock_strip_y             = 178,
     .clock_strip_w             = 320,
     .clock_strip_h             = 62,
+    .clock_strip_bg_opa        = 100,
     .clock_strip_label_w       = 296,
     .clock_strip_station_y     = 8,
     .clock_strip_title_y       = 32,
@@ -802,6 +806,7 @@ static const ui_profile_t k_defaults = {
     .clock_strip_y             = 238,
     .clock_strip_w             = 480,
     .clock_strip_h             = 82,
+    .clock_strip_bg_opa        = 100,
     .clock_strip_label_w       = 444,
     .clock_strip_station_y     = 10,
     .clock_strip_title_y       = 42,
@@ -1083,6 +1088,9 @@ static void load_clock(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "clock_strip_y",              &p->clock_strip_y);
     load_i16 (obj, "clock_strip_w",              &p->clock_strip_w);
     load_i16 (obj, "clock_strip_h",              &p->clock_strip_h);
+    load_i16 (obj, "clock_strip_bg_opa",         &p->clock_strip_bg_opa);
+    if (p->clock_strip_bg_opa < 0) p->clock_strip_bg_opa = 0;
+    if (p->clock_strip_bg_opa > 100) p->clock_strip_bg_opa = 100;
     load_i16 (obj, "clock_strip_label_w",        &p->clock_strip_label_w);
     load_i16 (obj, "clock_strip_station_y",      &p->clock_strip_station_y);
     load_i16 (obj, "clock_strip_title_y",        &p->clock_strip_title_y);
@@ -1347,6 +1355,7 @@ static cJSON *dump_clock(const ui_profile_t *p)
     add_i16 (o, "clock_strip_y",              p->clock_strip_y);
     add_i16 (o, "clock_strip_w",              p->clock_strip_w);
     add_i16 (o, "clock_strip_h",              p->clock_strip_h);
+    add_i16 (o, "clock_strip_bg_opa",         p->clock_strip_bg_opa);
     add_i16 (o, "clock_strip_label_w",        p->clock_strip_label_w);
     add_i16 (o, "clock_strip_station_y",      p->clock_strip_station_y);
     add_i16 (o, "clock_strip_title_y",        p->clock_strip_title_y);
