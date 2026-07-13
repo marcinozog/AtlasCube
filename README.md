@@ -611,3 +611,12 @@ Architecture and design notes in [`docs/`](docs/):
 ## License
 
 MIT
+
+### Third-party fonts
+
+The UI ships glyphs from the following fonts, converted to LVGL bitmap format
+(`components/ui/fonts/*.c`):
+
+- **Montserrat** — © The Montserrat Project Authors, [SIL OFL 1.1](https://openfontlicense.org)
+- **Font Awesome 5 Free** — © Fonticons, Inc., [SIL OFL 1.1](https://openfontlicense.org) (fonts) / [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (icons)
+- **Weather Icons** — © [Erik Flowers](https://erikflowers.github.io/weather-icons/), [SIL OFL 1.1](https://openfontlicense.org)

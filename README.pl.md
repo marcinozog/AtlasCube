@@ -608,3 +608,12 @@ Notatki architektury i decyzji projektowych w [`docs/`](docs/):
 ## Licencja
 
 MIT
+
+### Czcionki firm trzecich
+
+UI zawiera glify poniższych czcionek, przekonwertowane do bitmapowego formatu
+LVGL (`components/ui/fonts/*.c`):
+
+- **Montserrat** — © The Montserrat Project Authors, [SIL OFL 1.1](https://openfontlicense.org)
+- **Font Awesome 5 Free** — © Fonticons, Inc., [SIL OFL 1.1](https://openfontlicense.org) (czcionki) / [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (ikony)
+- **Weather Icons** — © [Erik Flowers](https://erikflowers.github.io/weather-icons/), [SIL OFL 1.1](https://openfontlicense.org)

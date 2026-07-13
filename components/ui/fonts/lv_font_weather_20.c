@@ -1,4 +1,8 @@
 /*******************************************************************************
+ * Weather Icons — Copyright (c) Erik Flowers (erikflowers.github.io/weather-icons),
+ * licensed under the SIL Open Font License 1.1 (https://openfontlicense.org).
+ * Converted to LVGL bitmap format; glyph subset listed in Opts below.
+ *
  * Size: 20 px
  * Bpp: 4
  * Opts: --font weathericons-regular-webfont.ttf --size 20 --bpp 4 --range 0xF002,0xF00D,0xF013,0xF014,0xF019,0xF01A,0xF01B,0xF01E,0xF02E,0xF086 --format lvgl --no-compress -o lv_font_weather_20.c
