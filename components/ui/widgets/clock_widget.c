@@ -1,6 +1,7 @@
 #include "clock_widget.h"
 #include "theme.h"
 #include "fonts/ui_fonts.h"
+#include "ui_timefmt.h"
 #include "ntp_service.h"
 #include "esp_log.h"
 #include <time.h>
@@ -25,9 +26,12 @@ static void update_display(void)
     struct tm t;
     localtime_r(&now, &t);
 
-    char time_buf[12];
-    snprintf(time_buf, sizeof(time_buf), "%02d:%02d", t.tm_hour, t.tm_min);
-    lv_label_set_text(s_label_time, time_buf);
+    // Unlike the home screen's big digit-only fonts, this widget's fonts are
+    // text-capable, so the AM/PM suffix can live in the same label.
+    char time_buf[12], out[20];
+    const char *suffix = ui_format_time(time_buf, sizeof(time_buf), &t);
+    snprintf(out, sizeof(out), "%s%s%s", time_buf, suffix[0] ? " " : "", suffix);
+    lv_label_set_text(s_label_time, out);
 }
 
 static void timer_cb(lv_timer_t *timer)
