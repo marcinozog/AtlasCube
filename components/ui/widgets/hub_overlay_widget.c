@@ -12,6 +12,7 @@
 #include "radio_service.h"       // radio_play_index / radio_stop
 #include "sd_player.h"
 #include "bt.h"                  // bt_play / bt_pause (AVRCP transport)
+#include "net_wallpaper.h"       // net_wallpaper_fetch
 #include "fonts/ui_fonts.h"
 #include "lvgl.h"
 #include "esp_log.h"
@@ -21,8 +22,8 @@ static const char *TAG = "HUB_OVL";
 #define AUTOHIDE_MS 2500          // a touch longer than controls_overlay: more buttons to read
 
 // Buttons in creation = encoder-navigation order:
-//   vol-  prev  play  next  vol+   source  playlist  sd  settings
-#define HUB_BTN_COUNT 9
+//   vol-  prev  play  next  vol+   source  playlist  sd  settings  wallpaper
+#define HUB_BTN_COUNT 10
 #define HUB_FOCUS_DEFAULT 2          // play (center) — first focus when shown
 
 static lv_obj_t   *s_parent   = NULL;
@@ -37,7 +38,7 @@ static controls_overlay_mode_t s_mode = CTRL_OVL_MODE_RADIO;
 // Button identifiers — transport (cross-equivalent) + action row.
 typedef enum {
     BTN_VOL_UP, BTN_VOL_DN, BTN_PREV, BTN_NEXT, BTN_PLAY,
-    BTN_SOURCE, BTN_PLAYLIST, BTN_SD, BTN_SETTINGS,
+    BTN_SOURCE, BTN_PLAYLIST, BTN_WALLPAPER, BTN_SD, BTN_SETTINGS,
 } btn_id_t;
 
 #define BTN_EVT_SHORT   (1u << 0)   // LV_EVENT_SHORT_CLICKED
@@ -197,10 +198,19 @@ static void btn_clicked_cb(lv_event_t *e)
             break;
         }
 
-        // Action row → jump to the source lists / settings. Navigation tears down
-        // this screen (and the overlay) so no timer reset is needed afterwards.
+        // Action row: navigate to source lists/settings or fetch the configured
+        // internet wallpaper. Navigation tears down this screen (and the overlay).
         case BTN_PLAYLIST: screen_playlist_set_return(SCREEN_HOME);
                            ui_navigate(SCREEN_PLAYLIST);   return;
+        case BTN_WALLPAPER: {
+            const char *url = settings_get()->display.wallpaper_url;
+            if (!url[0]) {
+                ESP_LOGW(TAG, "Wallpaper fetch skipped: no URL configured");
+            } else if (!net_wallpaper_fetch(url, DISPLAY_WIDTH, DISPLAY_HEIGHT)) {
+                ESP_LOGW(TAG, "Wallpaper fetch not started: %s", net_wallpaper_status());
+            }
+            break;
+        }
         case BTN_SD:       screen_sd_browser_set_return(SCREEN_HOME);
                            ui_navigate(SCREEN_SD_BROWSER); return;
         case BTN_SETTINGS: screen_settings_set_return(SCREEN_HOME);
@@ -310,18 +320,20 @@ void hub_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
     s_btns[4] = make_btn(s_overlay, LV_SYMBOL_PLUS,  BTN_VOL_UP,  2 * step, -row_y, sz, btn_bg, gscale,
         BTN_EVT_SHORT | BTN_EVT_REPEAT);
 
-    // Row 2 — actions: source  playlist  sd  settings (4 buttons, centered).
+    // Row 2 — actions: source  playlist  sd  settings  wallpaper.
     // The source button's glyph tracks the active source (see source_update).
-    lv_obj_t *src_btn = make_btn(s_overlay, LV_SYMBOL_AUDIO, BTN_SOURCE, -3 * step / 2, row_y,
+    lv_obj_t *src_btn = make_btn(s_overlay, LV_SYMBOL_AUDIO, BTN_SOURCE, -2 * step, row_y,
         sz, act_bg, gscale, BTN_EVT_SHORT);
     s_btns[5]    = src_btn;
     s_source_lbl = lv_obj_get_child(src_btn, 0);
     source_update();
-    s_btns[6] = make_btn(s_overlay, LV_SYMBOL_LIST,      BTN_PLAYLIST, -1 * step / 2, row_y, sz, act_bg, gscale,
+    s_btns[6] = make_btn(s_overlay, LV_SYMBOL_LIST,      BTN_PLAYLIST, -1 * step, row_y, sz, act_bg, gscale,
         BTN_EVT_SHORT);
-    s_btns[7] = make_btn(s_overlay, LV_SYMBOL_SD_CARD,   BTN_SD,        1 * step / 2, row_y, sz, act_bg, gscale,
+    s_btns[7] = make_btn(s_overlay, LV_SYMBOL_SD_CARD,   BTN_SD,         0, row_y, sz, act_bg, gscale,
         BTN_EVT_SHORT);
-    s_btns[8] = make_btn(s_overlay, LV_SYMBOL_SETTINGS,  BTN_SETTINGS,  3 * step / 2, row_y, sz, act_bg, gscale,
+    s_btns[8] = make_btn(s_overlay, LV_SYMBOL_SETTINGS,  BTN_SETTINGS,   1 * step, row_y, sz, act_bg, gscale,
+        BTN_EVT_SHORT);
+    s_btns[9] = make_btn(s_overlay, LV_SYMBOL_IMAGE,  BTN_WALLPAPER,  2 * step, row_y, sz, act_bg, gscale,
         BTN_EVT_SHORT);
 
     ESP_LOGI(TAG, "Created (btn=%dpx, step=%dpx)", sz, step);

@@ -10,12 +10,12 @@ extern "C" {
 // tap-to-show, auto-hiding modal dim layer, but it carries two rows of buttons:
 //
 //   row 1 (transport, source-aware):  vol-  prev  play/stop  next  vol+
-//   row 2 (actions / navigation):     source(BT)  playlist  sd  settings
+//   row 2 (actions / navigation):     source(BT)  playlist  sd  settings  wallpaper
 //
 // The transport row drives whichever audio source is active (same per-mode logic
 // as controls_overlay). The action row jumps to the source lists: playlist (pick
 // a station → radio), the SD browser (pick a file → SD) and the BT screen, plus
-// settings — so all three sources stay reachable from one screen.
+// settings; its center button fetches the configured internet wallpaper.
 //
 // Self-laying-out from DISPLAY_WIDTH/HEIGHT (no ui_profile fields), like
 // controls_overlay. The owning screen passes the active source as `mode`.
