@@ -88,7 +88,7 @@ void weather_widget_create(lv_obj_t *parent, int16_t x, int16_t y, int16_t w,
     uint8_t opa = plate_opa();
     if (opa > 0) {
         lv_obj_set_style_bg_opa(s_pill, opa, LV_PART_MAIN);
-        lv_obj_set_style_radius(s_pill, 8, LV_PART_MAIN);
+        lv_obj_set_style_radius(s_pill, LV_RADIUS_CIRCLE, LV_PART_MAIN);
         lv_obj_set_style_pad_hor(s_pill, 6, LV_PART_MAIN);
         lv_obj_set_style_pad_ver(s_pill, 0, LV_PART_MAIN);
     }
