@@ -125,8 +125,9 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Gesty swipe — w poziomie krążą po pierścieniu głównym (hub ↔ bt ↔ radio ↔ sd ↔ mqtt, pomijając ukryte ekrany), w górę otwierają ustawienia (hub) albo listę źródła (radio→playlista, SD→przeglądarka); rozpoznawane przez LVGL na zwykłym indevie wskaźnika, bez kombinowania per kontroler
 - Nakładka sterująca — tap w ekran otwiera sterowanie odtwarzaniem (play/stop, vol±, prev/next), znika po chwili bezczynności; nakładka huba dokłada przyciski źródło/playlista/sd/ustawienia
 - Wskaźnik VU — opcjonalny widget na ekranie radia pokazujący spektrum FFT liczone na żywo z wyjścia audio; pozycję ustawiasz w edytorze layoutu
-- Konfigurowalny layout (pozycje widgetów w JSON-ie)
-- Tło ekranu — do wyboru gradient, jednolity kolor lub **tapeta z karty SD** (`.bin` RGB565 w rozmiarze panelu, wspólna dla wszystkich ekranów), ustawiane w web UI
+- Widget pogody — opcjonalna bieżąca temperatura i warunki na ekranie głównym, z ikonami zależnymi od pogody oraz dnia/nocy; do wyboru Open-Meteo bez klucza lub OpenWeatherMap (wymaga klucza API), ze współrzędnymi i interwałem odświeżania ustawianymi w Ustawienia → Pogoda
+- Konfigurowalny layout — pozycje i wygląd widgetów ustawiasz w wizualnym edytorze webowym (zapis w JSON-ie); opcjonalne tła dopasowane do motywu i regulowana przezroczystość utrzymują czytelność etykiet, widgetu pogody i informacji o stacji na tapetach
+- Tło ekranu — do wyboru gradient, jednolity kolor, **tapeta z karty SD** (`.bin` RGB565 w rozmiarze panelu) albo JPEG pobierany bezpośrednio z internetowego URL-a. W web UI dostępne są presety, odświeżanie przy starcie lub codziennie, zapis na SD i przyciemnienie 0–80%
 - Własne logo splash — wrzuć na kartę SD plik `.bin` RGB565 w rozmiarze panelu, żeby podmienić wbudowane logo (auto-skalowanie; gdy brak pliku, wraca do wbudowanego)
 - Opcjonalne ekrany per źródło w pierścieniu głównym — pokazujesz albo chowasz ekrany Radio, odtwarzacza SD i Bluetooth z web UI (hub główny zostaje, więc pierścień nigdy nie jest pusty)
 - Obrót 180° i inwersja kolorów — odwrócenie całego ekranu (przy montażu „do góry nogami") albo inwersja kolorów panelu (naprawia partie, gdzie np. żółty wychodzi niebieski); oba przełączniki w web UI, działają na żywo, bez restartu
@@ -141,7 +142,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 
 **Wygaszacz Fotoramka**
 - Zamienia urządzenie w cyfrową ramkę na zdjęcia — przewija obrazy z karty microSD
-- Zdjęcia są wcześniej konwertowane do binarnego formatu RGB565 LVGL w rozmiarze panelu (przez aplikację na Androida albo skrypt [`scripts/img2lvgl.py`](scripts/img2lvgl.py)) i wgrywane na kartę — na urządzeniu **nie ma dekodera JPG/PNG**, więc nawet duże zdjęcia nie kosztują dodatkowego RAM-u firmware'u
+- Slajdy są wcześniej konwertowane do binarnego formatu RGB565 LVGL w rozmiarze panelu (przez aplikację na Androida albo skrypt [`scripts/img2lvgl.py`](scripts/img2lvgl.py)) i wgrywane na kartę. Fotoramka celowo nie dekoduje slajdów JPG/PNG (dekoder JPEG służy tylko tapetom internetowym), więc nawet duże slajdy nie wymagają dodatkowego RAM-u podczas dekodowania
 - Konfiguracja z web UI albo z aplikacji na Androida: **folder źródłowy**, **kolejność** (po kolei / losowo), **czas na slajd**, **efekt** i **prędkość** odsłaniania
 - Wolne wczytywanie z SD jest tu zamienione w przejście: każde nowe zdjęcie **„wywołuje się" na poprzednim** wybranym efektem — **od góry**, **od boku**, **dissolve**, **interlaced** (retro: blokowy podgląd → ostrość) albo **losowo na slajd**
 - Renderuje do dwóch pełnoekranowych buforów w PSRAM i odświeża tylko zmieniony fragment w każdym ticku, więc jest lekkie nawet przy grającym radiu

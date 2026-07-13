@@ -127,8 +127,9 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Swipe gestures — horizontal swipes cycle the home ring (home ↔ bt ↔ radio ↔ sd ↔ mqtt, skipping hidden screens); swipe-up opens settings (home) or the source list (radio→playlist, SD→browser); detection runs through LVGL on the existing pointer indev, no per-chip glue
 - On-screen controls overlay — tap a screen to bring up the playback controls (play/stop, vol±, prev/next), auto-hides after a short timeout; the home hub's overlay adds source/playlist/sd/settings buttons
 - Audio VU meter — an optional radio-screen widget showing a real-time FFT spectrum computed from the live audio output; position it via the layout editor
-- Configurable layout (widget positions editable via JSON)
-- Screen background — choose a gradient, a solid color, or an **SD wallpaper image** (panel-sized RGB565 `.bin`, shared across all screens), from the Settings web UI
+- Weather widget — optional current temperature and conditions on the home screen, with day/night condition icons; choose keyless Open-Meteo or OpenWeatherMap (API key required), then configure coordinates and refresh interval in Settings → Weather
+- Configurable layout — position and style widgets in the visual web editor (stored as JSON); optional theme-aware background plates and adjustable opacity keep labels, the weather widget and station information readable over wallpapers
+- Screen background — choose a gradient, a solid color, an **SD wallpaper image** (panel-sized RGB565 `.bin`), or fetch a JPEG directly from an internet URL. Built-in presets, on-boot/daily refresh, saving to SD and 0–80% dimming are available from the Settings web UI
 - Custom boot splash logo — drop a panel-sized RGB565 `.bin` on the SD card to replace the built-in logo (auto-fit; falls back to the built-in logo if missing)
 - Optional per-source screens in the home ring — show or hide the Radio, SD player and Bluetooth screens from the Settings web UI (the home hub stays, so the ring is never empty)
 - 180° flip & colour inversion — rotate the whole screen upside-down (for inverted mounting) or invert panel colours (fixes batches where e.g. yellow shows as blue); both toggle from the Settings web UI and apply live, no restart
@@ -143,7 +144,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 
 **Photo-frame screensaver**
 - Turns the device into a digital photo frame — cycles through images stored on a microSD card
-- Images are pre-converted to LVGL's panel-sized RGB565 binary format (by the Android app or the [`scripts/img2lvgl.py`](scripts/img2lvgl.py) helper) and dropped on the card — there is **no JPEG/PNG decoder on the device**, so even large photos cost no extra firmware RAM
+- Slideshow images are pre-converted to LVGL's panel-sized RGB565 binary format (by the Android app or the [`scripts/img2lvgl.py`](scripts/img2lvgl.py) helper) and dropped on the card. The photo-frame path deliberately does not decode JPEG/PNG slides (the JPEG decoder is used only for internet wallpapers), so even large slides cost no extra decode-time RAM
 - Configurable from the Settings web UI or the Android app: **source folder**, **order** (sequential / random), **seconds per slide**, **reveal effect** and **reveal speed**
 - The slow SD load is turned into the transition: each new image **develops over the previous one** with a configurable reveal — **top-down**, **wipe**, **dissolve**, **interlaced** (retro low-res → sharp), or **random per slide**
 - Renders into two full-screen PSRAM buffers and repaints only the area that changed each tick, so it stays light even while the radio streams
