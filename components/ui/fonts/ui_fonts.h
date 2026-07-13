@@ -18,6 +18,9 @@ LV_FONT_DECLARE(lv_font_montserrat_72);
 LV_FONT_DECLARE(lv_font_montserrat_80);
 LV_FONT_DECLARE(lv_font_montserrat_96);
 LV_FONT_DECLARE(lv_font_montserrat_120);
+// Weather Icons (erikflowers, OFL) glyphs for the weather widget — icon-only,
+// deliberately NOT in the registry table (useless as a text font in profiles).
+LV_FONT_DECLARE(lv_font_weather_20);
 
 // ── Font registry ───────────────────────────────────────────────────────────
 // Maps id (string) ↔ font pointer, used for (de)serializing ui_profile

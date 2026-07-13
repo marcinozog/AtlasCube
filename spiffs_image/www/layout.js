@@ -395,7 +395,7 @@ function renderClock(svg) {
         const fh = fontHeight(c.clock_weather_font);
         const ww = c.clock_weather_w > 0 ? c.clock_weather_w : W;
         drawFreeElement(svg, {
-            x: c.clock_weather_x, y: c.clock_weather_y, w: ww, h: fh,
+            x: c.clock_weather_x, y: c.clock_weather_y, w: ww, h: Math.max(fh, 20),
             label: 'weather', cls: 'label-rect',
             fields: { x: 'clock_weather_x', y: 'clock_weather_y', w: 'clock_weather_w' },
             text: '+21 C  Partly cloudy  54%', textSize: fh,
@@ -575,7 +575,7 @@ function renderRadio(svg) {
         const fh = fontHeight(r.radio_weather_font);
         const ww = r.radio_weather_w > 0 ? r.radio_weather_w : W;
         drawFreeElement(svg, {
-            x: r.radio_weather_x, y: r.radio_weather_y, w: ww, h: fh,
+            x: r.radio_weather_x, y: r.radio_weather_y, w: ww, h: Math.max(fh, 20),
             label: 'weather', cls: 'label-rect',
             fields: { x: 'radio_weather_x', y: 'radio_weather_y', w: 'radio_weather_w' },
             text: '+21 C  Partly cloudy  54%', textSize: fh,
@@ -641,7 +641,7 @@ function renderSd(svg) {
         const fh = fontHeight(s.sd_weather_font);
         const ww = s.sd_weather_w > 0 ? s.sd_weather_w : state.meta.screen_w;
         drawFreeElement(svg, {
-            x: s.sd_weather_x, y: s.sd_weather_y, w: ww, h: fh,
+            x: s.sd_weather_x, y: s.sd_weather_y, w: ww, h: Math.max(fh, 20),
             label: 'weather', cls: 'label-rect',
             fields: { x: 'sd_weather_x', y: 'sd_weather_y', w: 'sd_weather_w' },
             text: '+21 C  Partly cloudy  54%', textSize: fh,

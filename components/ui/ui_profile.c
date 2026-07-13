@@ -627,8 +627,8 @@ static const ui_profile_t k_defaults = {
     .clock_event_indic_y       = 2,
     .clock_show_weather        = true,    // label hides itself until data is valid
     .clock_weather_x           = 0,
-    .clock_weather_y           = 4,       // top row, clear of the indicators at x>=282
-    .clock_weather_w           = 270,
+    .clock_weather_y           = 4,       // top row; text is short enough to clear the indicators
+    .clock_weather_w           = 320,     // full width → text centered on screen
     .clock_weather_font        = &lv_font_montserrat_12_pl,
 
     
