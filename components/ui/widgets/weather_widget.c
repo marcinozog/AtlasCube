@@ -15,6 +15,7 @@
 // tracks the content instead of spanning the whole screen width.
 static lv_obj_t *s_row, *s_pill, *s_icon, *s_label;
 static lv_timer_t *s_timer;
+static int16_t s_row_x, s_row_min_w;
 
 // Plate opacity 0-255 from the global display.label_bg / label_bg_opa setting
 // (0 = no plate). Read at create; the screen rebuilds on a settings change.
@@ -62,14 +63,20 @@ static void tick(lv_timer_t *t) { (void)t; weather_widget_update(); }
 void weather_widget_create(lv_obj_t *parent, int16_t x, int16_t y, int16_t w,
                            const lv_font_t *font)
 {
+    s_row_x = x;
+    s_row_min_w = w > 0 ? w : DISPLAY_WIDTH;
     s_row = lv_obj_create(parent);
     lv_obj_remove_style_all(s_row);
-    lv_obj_set_size(s_row, w > 0 ? w : DISPLAY_WIDTH, LV_SIZE_CONTENT);
+    lv_obj_set_size(s_row, s_row_min_w, LV_SIZE_CONTENT);
     lv_obj_set_pos(s_row, x, y);
     lv_obj_set_flex_flow(s_row, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(s_row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
     lv_obj_clear_flag(s_row, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+    // Long conditions can make the content pill wider than the profile's
+    // centering frame (typically 120/160 px). Without overflow LVGL clips both
+    // rounded ends at the frame boundary, making the plate look rectangular.
+    lv_obj_add_flag(s_row, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
 
     // Content-sized pill centered inside s_row — holds the icon+text pair and
     // the optional plate, so the background hugs the content, not the full row.
@@ -89,8 +96,8 @@ void weather_widget_create(lv_obj_t *parent, int16_t x, int16_t y, int16_t w,
     if (opa > 0) {
         lv_obj_set_style_bg_opa(s_pill, opa, LV_PART_MAIN);
         lv_obj_set_style_radius(s_pill, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-        lv_obj_set_style_pad_hor(s_pill, 6, LV_PART_MAIN);
-        lv_obj_set_style_pad_ver(s_pill, 0, LV_PART_MAIN);
+        lv_obj_set_style_pad_hor(s_pill, 8, LV_PART_MAIN);
+        lv_obj_set_style_pad_ver(s_pill, 2, LV_PART_MAIN);
     }
 
     s_icon = lv_label_create(s_pill);
@@ -131,6 +138,17 @@ void weather_widget_update(void)
     lv_label_set_text_fmt(s_label, "%+d C  %s  %d%%",
                           (int)lroundf(data.temperature_c),
                           condition(data.weather_code), data.humidity_pct);
+
+    // Radio/SD profiles reserve a compact 120/160 px slot in the top-left
+    // corner. Expand that transparent centering frame to the actual pill width
+    // so long conditions remain fully on-screen instead of being centred across
+    // the left edge and clipped there. Full-width clock widgets stay unchanged.
+    lv_obj_update_layout(s_row);
+    int32_t row_w = lv_obj_get_width(s_pill);
+    if (row_w < s_row_min_w) row_w = s_row_min_w;
+    int32_t available = DISPLAY_WIDTH - s_row_x;
+    if (row_w > available) row_w = available;
+    lv_obj_set_width(s_row, row_w);
 }
 
 void weather_widget_apply_theme(void) { weather_widget_update(); }

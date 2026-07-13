@@ -54,6 +54,7 @@ static const ui_profile_t k_defaults = {
     .radio_np_x                = 10,
     .radio_np_y                = 35,
     .radio_show_np             = true,
+    .radio_station_icon_size   = 64,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_state_y             = 16,
@@ -237,6 +238,7 @@ static const ui_profile_t k_defaults = {
     .radio_np_x                = 10,
     .radio_np_y                = 1,
     .radio_show_np             = true,
+    .radio_station_icon_size   = 64,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_state_y             = 44,
@@ -426,6 +428,7 @@ static const ui_profile_t k_defaults = {
     .radio_np_x                = 10,
     .radio_np_y                = 60,
     .radio_show_np             = true,
+    .radio_station_icon_size   = 64,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_state_y             = 216,
@@ -637,6 +640,7 @@ static const ui_profile_t k_defaults = {
     .radio_np_x                = 10,
     .radio_np_y                = 64,
     .radio_show_np             = true,
+    .radio_station_icon_size   = 64,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_state_y             = 160,
@@ -841,6 +845,7 @@ static const ui_profile_t k_defaults = {
     .radio_np_x                = 5,
     .radio_np_y                = 85,
     .radio_show_np             = true,
+    .radio_station_icon_size   = 64,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_state_y             = 226,
@@ -1169,6 +1174,9 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_np_x",                &p->radio_np_x);
     load_i16 (obj, "radio_np_y",                &p->radio_np_y);
     load_bool(obj, "radio_show_np",             &p->radio_show_np);
+    load_i16 (obj, "radio_station_icon_size",    &p->radio_station_icon_size);
+    if (p->radio_station_icon_size < 16) p->radio_station_icon_size = 16;
+    if (p->radio_station_icon_size > 64) p->radio_station_icon_size = 64;
     load_font(obj, "radio_np_station_font",     &p->radio_np_station_font);
     load_font(obj, "radio_np_title_font",       &p->radio_np_title_font);
     load_i16 (obj, "radio_state_y",             &p->radio_state_y);
@@ -1203,6 +1211,7 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_np_x",                p->radio_np_x);
     add_i16 (o, "radio_np_y",                p->radio_np_y);
     add_bool(o, "radio_show_np",             p->radio_show_np);
+    add_i16 (o, "radio_station_icon_size",    p->radio_station_icon_size);
     add_font(o, "radio_np_station_font",     p->radio_np_station_font);
     add_font(o, "radio_np_title_font",       p->radio_np_title_font);
     add_i16 (o, "radio_state_y",             p->radio_state_y);

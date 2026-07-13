@@ -19,6 +19,7 @@ static lv_obj_t *s_icon          = NULL;
 static lv_obj_t *s_text_col      = NULL;
 static lv_obj_t *s_label_station = NULL;
 static lv_obj_t *s_label_title   = NULL;
+static int       s_icon_size     = 64;
 
 // Long text wraps within the content cap (rather than running off both screen
 // edges) — the plate hugs short text and never exceeds the panel width.
@@ -26,13 +27,15 @@ static lv_obj_t *s_label_title   = NULL;
 
 void now_playing_widget_create(lv_obj_t *parent, int x, int y, lv_text_align_t align,
                                const lv_font_t *station_font,
-                               const lv_font_t *title_font)
+                               const lv_font_t *title_font,
+                               int icon_size)
 {
     (void)x;   // horizontal position is screen-centered via the full-width frame
     const ui_theme_colors_t *th = theme_get();
 
     if (!station_font) station_font = &lv_font_montserrat_18_pl;
     if (!title_font)   title_font   = &lv_font_montserrat_14_pl;
+    s_icon_size = icon_size < 16 ? 16 : icon_size > 64 ? 64 : icon_size;
 
     // Cross-axis alignment (horizontal, since the frame is a column) follows the
     // requested text align; the only caller uses CENTER.
@@ -131,9 +134,12 @@ void now_playing_widget_set_icon(const lv_image_dsc_t *icon)
     if (!s_icon) return;
     if (icon) {
         lv_image_set_src(s_icon, icon);
+        lv_obj_set_size(s_icon, s_icon_size, s_icon_size);
+        lv_image_set_inner_align(s_icon, LV_IMAGE_ALIGN_STRETCH);
         lv_obj_clear_flag(s_icon, LV_OBJ_FLAG_HIDDEN);
-        lv_obj_set_style_max_width(s_label_station, NPW_MAX_W - 72, LV_PART_MAIN);
-        lv_obj_set_style_max_width(s_label_title, NPW_MAX_W - 72, LV_PART_MAIN);
+        int text_w = NPW_MAX_W - s_icon_size - 8;
+        lv_obj_set_style_max_width(s_label_station, text_w, LV_PART_MAIN);
+        lv_obj_set_style_max_width(s_label_title, text_w, LV_PART_MAIN);
     } else {
         lv_image_set_src(s_icon, NULL);
         lv_obj_add_flag(s_icon, LV_OBJ_FLAG_HIDDEN);

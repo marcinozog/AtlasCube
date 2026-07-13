@@ -113,6 +113,7 @@ const RADIO_FIELDS = [
     { key: 'radio_show_np',           label: 'Show now-playing', type: 'bool' },
     { key: 'radio_np_x',              label: 'NP X',             type: 'number' },
     { key: 'radio_np_y',              label: 'NP Y',             type: 'number' },
+    { key: 'radio_station_icon_size', label: 'Station icon size', type: 'number', min: 16, max: 64, default: 64 },
     { key: 'radio_np_station_font',   label: 'NP station font',  type: 'font'   },
     { key: 'radio_np_title_font',     label: 'NP title font',    type: 'font'   },
 
@@ -209,7 +210,7 @@ const FORM_GROUPS = {
         { title: 'Clock', enabledBy: 'bt_show_clock', fields: ['bt_show_clock', 'bt_clock_widget_x', 'bt_clock_widget_y', 'bt_clock_font'] },
     ],
     radio: [
-        { title: 'Now playing', enabledBy: 'radio_show_np', fields: ['radio_show_np', 'radio_np_x', 'radio_np_y', 'radio_np_station_font', 'radio_np_title_font'] },
+        { title: 'Now playing', enabledBy: 'radio_show_np', fields: ['radio_show_np', 'radio_np_x', 'radio_np_y', 'radio_station_icon_size', 'radio_np_station_font', 'radio_np_title_font'] },
         { title: 'Playback status', fields: ['radio_state_y', 'radio_state_font', 'radio_audio_info_y', 'radio_audio_info_font'] },
         { title: 'Mode indicator', enabledBy: 'radio_show_mode_indicator', fields: ['radio_show_mode_indicator', 'radio_mode_indic_x', 'radio_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'radio_show_clock', fields: ['radio_show_clock', 'radio_clock_widget_x', 'radio_clock_widget_y', 'radio_clock_font'] },

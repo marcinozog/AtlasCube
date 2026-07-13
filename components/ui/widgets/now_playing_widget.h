@@ -13,16 +13,19 @@ extern "C" {
  *                     labels (LV_TEXT_ALIGN_LEFT / _CENTER / _RIGHT).
  * @param station_font font for the station-name line
  * @param title_font   font for the ICY-title line (placed below the station line)
+ * @param icon_size    displayed station icon size in pixels (source stays 64x64)
  */
 void now_playing_widget_create(lv_obj_t *parent, int x, int y, lv_text_align_t align,
                                const lv_font_t *station_font,
-                               const lv_font_t *title_font);
+                               const lv_font_t *title_font,
+                               int icon_size);
 void now_playing_widget_destroy(void);
 
 /** Refresh from current app_state — call from on_event(UI_EVT_STATE_CHANGED). */
 void now_playing_widget_update(void);
 
-/** Attach an optional 64x64 station icon to the left of the text. The caller
+/** Attach an optional 64x64 source icon, scaled to the configured display size.
+ * The caller
  * owns the descriptor and must keep it alive until it clears the icon again. */
 void now_playing_widget_set_icon(const lv_image_dsc_t *icon);
 
