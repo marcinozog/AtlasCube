@@ -84,10 +84,13 @@ static lv_obj_t *make_panel(lv_obj_t *parent, int x, int y, int w, int h, uint32
 // effect on the next screen rebuild.
 static void label_scrim(lv_obj_t *lbl)
 {
-    if (!ui_profile_get()->clock_label_bg) return;
+    const ui_profile_t *p = ui_profile_get();
+    if (!p->clock_label_bg) return;
+    int16_t pct = p->clock_label_bg_opa;
+    if (pct < 0) pct = 0; else if (pct > 100) pct = 100;
     lv_obj_set_style_bg_color(lbl,
         lv_color_hex(theme_get()->bg_primary), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(lbl, LV_OPA_50, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(lbl, (pct * 255) / 100, LV_PART_MAIN);
     lv_obj_set_style_radius(lbl, 8, LV_PART_MAIN);
     // Big digit fonts already carry vertical slack in their line box, so keep
     // vertical padding minimal — a tall plate makes clock and date overlap.

@@ -22,7 +22,8 @@ const CLOCK_FIELDS = [
     { key: 'clock_panel_w', label: 'Panel W',  type: 'number' },
     { key: 'clock_panel_h', label: 'Panel H',  type: 'number' },
 
-    { key: 'clock_label_bg',  label: 'Time/date/netinfo labels background', type: 'bool' },
+    { key: 'clock_label_bg',      label: 'Time/date/netinfo labels background', type: 'bool' },
+    { key: 'clock_label_bg_opa',  label: 'Labels background opacity %', type: 'range', min: 0, max: 100 },
 
     { key: 'clock_show_time', label: 'Show time',     type: 'bool' },
     { key: 'clock_time_x',    label: 'Time X',        type: 'number' },
@@ -263,6 +264,25 @@ function buildForm() {
                 data[f.key] = parseInt(input.value, 10) | 0;
                 renderSvg();
             });
+        } else if (f.type === 'range') {
+            input = document.createElement('input');
+            input.type = 'range';
+            input.min = f.min ?? 0;
+            input.max = f.max ?? 100;
+            input.value = data[f.key] ?? 0;
+            const out = document.createElement('span');
+            out.className = 'range-val';
+            out.textContent = input.value;
+            input.addEventListener('input', () => {
+                data[f.key] = parseInt(input.value, 10) | 0;
+                out.textContent = input.value;
+                renderSvg();
+            });
+            row.appendChild(input);
+            input.id = 'fld_' + f.key;
+            row.appendChild(out);
+            root.appendChild(row);
+            continue;
         } else if (f.type === 'bool') {
             input = document.createElement('input');
             input.type = 'checkbox';

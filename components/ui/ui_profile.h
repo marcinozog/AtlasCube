@@ -105,6 +105,8 @@ typedef struct {
     // Semi-transparent theme-coloured plate behind the clock labels (time,
     // AM/PM, date, netinfo) so they stay readable on a wallpaper background.
     bool             clock_label_bg;
+    // Plate opacity 0-100 % (only when clock_label_bg is on). 0 = invisible.
+    int16_t          clock_label_bg_opa;
 
     // Network info (IP + "<hostname>.local") — a clock screen element, toggled
     // and positioned in the layout editor like the date/strip.
