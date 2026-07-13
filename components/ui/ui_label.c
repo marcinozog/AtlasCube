@@ -63,3 +63,12 @@ void ui_label_scrim(lv_obj_t *obj)
     lv_obj_set_style_pad_ver(obj, 1, LV_PART_MAIN);
 #endif
 }
+
+void ui_label_set_text(lv_obj_t *lbl, const char *txt)
+{
+    if (!lbl) return;
+    txt = txt ? txt : "";
+    lv_label_set_text(lbl, txt);
+    if (txt[0]) lv_obj_clear_flag(lbl, LV_OBJ_FLAG_HIDDEN);
+    else        lv_obj_add_flag(lbl, LV_OBJ_FLAG_HIDDEN);
+}

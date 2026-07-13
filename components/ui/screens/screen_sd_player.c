@@ -64,7 +64,7 @@ static void bar_hide(void)
 static void progress_update(void)
 {
     if (!s_time) return;
-    if (!app_state_get()->sd_active) { lv_label_set_text(s_time, ""); bar_hide(); return; }
+    if (!app_state_get()->sd_active) { ui_label_set_text(s_time, ""); bar_hide(); return; }
 
     uint32_t pos = sd_player_position_ms();
     uint32_t dur = sd_player_duration_ms();
@@ -77,7 +77,7 @@ static void progress_update(void)
     } else {
         snprintf(out, sizeof(out), "%s", p);
     }
-    lv_label_set_text(s_time, out);
+    ui_label_set_text(s_time, out);
 
     // The bar needs a known length; formats without one (VBR w/o Xing, streams)
     // keep it hidden and show the elapsed counter alone.
@@ -109,12 +109,13 @@ static void refresh_from_state(void)
     app_state_t *s = app_state_get();
 
     // Only show a track while SD is the active source — app_state.title is
-    // shared and otherwise holds the radio's ICY title.
-    const char *t = "—";
+    // shared and otherwise holds the radio's ICY title. Blank (hidden) when idle
+    // so no empty plate shows; "Nothing playing" in the folder line covers it.
+    const char *t = "";
     if (s->sd_active) {
         t = s->title[0] ? s->title : (s->sd_track[0] ? s->sd_track : "—");
     }
-    lv_label_set_text(s_title, t);
+    ui_label_set_text(s_title, t);
 
     if (s_folder) {
         if (s->sd_active && s->sd_count > 0) {
@@ -166,7 +167,6 @@ static void sd_player_screen_create(lv_obj_t *parent)
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
 
     s_title = make_centered_label(parent, p->sd_title_font, th->text_primary, p->sd_title_y);
-    lv_label_set_long_mode(s_title, LV_LABEL_LONG_DOT);
 
     if (p->sd_show_folder) {
         s_folder = make_centered_label(parent, p->sd_folder_font, th->accent,     p->sd_folder_y);
@@ -229,6 +229,7 @@ static void sd_player_screen_create(lv_obj_t *parent)
     }
 
     refresh_from_state();
+    progress_update();   // set/hide the time row now, before the 1 s tick
 
     controls_overlay_create(parent, CTRL_OVL_MODE_SD);
 

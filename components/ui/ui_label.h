@@ -30,6 +30,11 @@ lv_obj_t *ui_anchored_label(lv_obj_t *parent, int x, int y, ui_label_align_t ali
 // widget's apply_theme() to refresh the plate colour on a theme change.
 void ui_label_scrim(lv_obj_t *obj);
 
+// Set a label's text, hiding the whole label when the text is empty — so a
+// scrim plate is never left showing behind nothing. Use for fields that go
+// blank (track title, playback time, audio info) instead of lv_label_set_text.
+void ui_label_set_text(lv_obj_t *lbl, const char *txt);
+
 #ifdef __cplusplus
 }
 #endif

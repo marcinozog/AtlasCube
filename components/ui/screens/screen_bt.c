@@ -64,13 +64,13 @@ static void refresh_from_state(void)
         lv_label_set_text(s_status_label, "Discoverable");
     }
 
-    // Track metadata — set_text only on real change so SCROLL_CIRCULAR
-    // doesn't restart every second when +PYPS triggers a state refresh.
+    // Track metadata — set_text only on real change (avoids needless relayout on
+    // every +PYPS refresh); hidden when empty so no plate shows behind nothing.
     if (s_title_label && strcmp(lv_label_get_text(s_title_label), s->bt_title) != 0) {
-        lv_label_set_text(s_title_label, s->bt_title);
+        ui_label_set_text(s_title_label, s->bt_title);
     }
     if (s_artist_label && strcmp(lv_label_get_text(s_artist_label), s->bt_artist) != 0) {
-        lv_label_set_text(s_artist_label, s->bt_artist);
+        ui_label_set_text(s_artist_label, s->bt_artist);
     }
     if (s_time_label) {
         char cur[8], total[8], buf[24];
@@ -158,8 +158,8 @@ static void bt_create(lv_obj_t *parent)
     lv_obj_set_style_text_align(s_title_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(s_title_label, p->bt_title_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_title_label, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_label_set_text(s_title_label, "");
     ui_label_scrim(s_title_label);
+    ui_label_set_text(s_title_label, "");
 
     s_artist_label = ui_anchored_label(parent, p->bt_artist_x + p->bt_artist_w / 2,
                                        p->bt_artist_y, UI_ALIGN_CENTER);
@@ -167,8 +167,8 @@ static void bt_create(lv_obj_t *parent)
     lv_obj_set_style_text_align(s_artist_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(s_artist_label, p->bt_artist_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_artist_label, lv_color_hex(th->text_secondary), LV_PART_MAIN);
-    lv_label_set_text(s_artist_label, "");
     ui_label_scrim(s_artist_label);
+    ui_label_set_text(s_artist_label, "");
 
     s_time_label = ui_anchored_label(parent, p->bt_time_x, p->bt_time_y, UI_ALIGN_CENTER);
     lv_obj_set_style_text_font(s_time_label, p->bt_time_font, LV_PART_MAIN);
