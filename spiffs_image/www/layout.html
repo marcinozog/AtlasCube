@@ -50,22 +50,75 @@
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: var(--radius);
-            padding: 14px;
+            padding: 0;
+            position: sticky;
+            top: 12px;
+            max-height: calc(100vh - 24px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
         .form-section {
-            margin-bottom: 14px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border);
+            padding: 14px;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-gutter: stable;
         }
-        .form-section:last-child { border-bottom: none; }
         .form-section h4 {
             font-size: 11px;
             color: var(--text-dim);
-            margin-bottom: 8px;
+            margin-bottom: 10px;
             font-weight: 600;
             letter-spacing: .08em;
             text-transform: uppercase;
         }
+        .form-group {
+            background: color-mix(in srgb, var(--bg-panel) 48%, transparent);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin-bottom: 7px;
+            overflow: hidden;
+        }
+        .form-group:last-child { margin-bottom: 0; }
+        .form-group summary {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 10px;
+            cursor: pointer;
+            list-style: none;
+            user-select: none;
+            transition: background .15s, color .15s;
+        }
+        .form-group summary::-webkit-details-marker { display: none; }
+        .form-group summary::before {
+            content: '›';
+            color: var(--accent);
+            font-size: 18px;
+            line-height: 12px;
+            transform: rotate(0deg);
+            transition: transform .15s;
+        }
+        .form-group[open] summary::before { transform: rotate(90deg); }
+        .form-group summary:hover { background: var(--bg-input); }
+        .form-group[open] summary {
+            border-bottom: 1px solid var(--border);
+            color: var(--accent);
+        }
+        .form-group-title {
+            flex: 1;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: .02em;
+        }
+        .form-group-meta {
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            white-space: nowrap;
+        }
+        .form-group.is-disabled .form-group-meta { color: var(--text-dim); opacity: .65; }
+        .form-group-body { padding: 9px 10px 5px; }
         .form-row {
             display: flex;
             justify-content: space-between;
@@ -110,7 +163,10 @@
         .actions {
             display: flex;
             gap: 8px;
-            margin-top: 12px;
+            padding: 12px 14px 8px;
+            border-top: 1px solid var(--border);
+            background: var(--bg-card);
+            box-shadow: 0 -8px 20px rgba(0,0,0,.16);
         }
         .actions button {
             flex: 1;
@@ -129,9 +185,17 @@
         #status_msg {
             font-size: 11px;
             color: var(--text-dim);
-            margin-top: 8px;
+            padding: 0 14px 10px;
             min-height: 14px;
             text-align: center;
+        }
+        @media (max-width: 800px) {
+            .form-card {
+                position: static;
+                max-height: none;
+                overflow: visible;
+            }
+            .form-section { overflow: visible; }
         }
         /* SVG element styles */
         .lcd-bg { fill: #1a1a2e; }

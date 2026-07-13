@@ -183,6 +183,55 @@ const SD_FIELDS = [
     { key: 'sd_weather_font', label: 'Weather font', type: 'font' },
 ];
 
+// Form-only grouping. Field schemas above remain the API/source-of-truth; these
+// groups only decide how the editor presents them. `enabledBy` keeps the Show
+// switch visible while hiding the controls that have no effect when it is off.
+const FORM_GROUPS = {
+    clock: [
+        { title: 'Panel', fields: ['clock_panel_x', 'clock_panel_y', 'clock_panel_w', 'clock_panel_h'] },
+        { title: 'Time', enabledBy: 'clock_show_time', fields: ['clock_show_time', 'clock_time_x', 'clock_time_y', 'clock_time_font'] },
+        { title: 'Date', enabledBy: 'clock_show_date', fields: ['clock_show_date', 'clock_date_x', 'clock_date_y', 'clock_date_font'] },
+        { title: 'Network info', enabledBy: 'clock_show_netinfo', fields: ['clock_show_netinfo', 'clock_netinfo_x', 'clock_netinfo_y', 'clock_netinfo_font'] },
+        { title: 'Station strip', enabledBy: 'clock_show_strip', fields: ['clock_show_strip', 'clock_strip_x', 'clock_strip_y', 'clock_strip_w', 'clock_strip_h', 'clock_strip_label_w', 'clock_strip_station_y', 'clock_strip_title_y', 'clock_strip_station_font', 'clock_strip_title_font'] },
+        { title: 'Mode indicator', enabledBy: 'clock_show_mode_indicator', fields: ['clock_show_mode_indicator', 'clock_mode_indic_x', 'clock_mode_indic_y'] },
+        { title: 'Event indicator', enabledBy: 'clock_show_event_indicator', fields: ['clock_show_event_indicator', 'clock_event_indic_x', 'clock_event_indic_y'] },
+        { title: 'Calendar', enabledBy: 'clock_show_calendar', fields: ['clock_show_calendar', 'clock_calendar_x', 'clock_calendar_y', 'clock_calendar_w', 'clock_calendar_font'] },
+        { title: 'Weather', enabledBy: 'clock_show_weather', fields: ['clock_show_weather', 'clock_weather_x', 'clock_weather_y', 'clock_weather_w', 'clock_weather_font'] },
+    ],
+    bt: [
+        { title: 'Bluetooth mark', enabledBy: 'bt_show_circle', fields: ['bt_show_circle', 'bt_circle_x', 'bt_circle_y', 'bt_circle_w', 'bt_circle_h', 'bt_icon_font'] },
+        { title: 'Device status', fields: ['bt_brand_x', 'bt_brand_y', 'bt_brand_font', 'bt_status_x', 'bt_status_y', 'bt_status_font'] },
+        { title: 'Track title', fields: ['bt_title_x', 'bt_title_y', 'bt_title_w', 'bt_title_font'] },
+        { title: 'Artist', fields: ['bt_artist_x', 'bt_artist_y', 'bt_artist_w', 'bt_artist_font'] },
+        { title: 'Playback', fields: ['bt_time_x', 'bt_time_y', 'bt_time_font', 'bt_vol_label_font'] },
+        { title: 'Mode indicator', enabledBy: 'bt_show_mode_indicator', fields: ['bt_show_mode_indicator', 'bt_mode_indic_x', 'bt_mode_indic_y'] },
+        { title: 'Clock', enabledBy: 'bt_show_clock', fields: ['bt_show_clock', 'bt_clock_widget_x', 'bt_clock_widget_y', 'bt_clock_font'] },
+    ],
+    radio: [
+        { title: 'Now playing', enabledBy: 'radio_show_np', fields: ['radio_show_np', 'radio_np_x', 'radio_np_y', 'radio_np_station_font', 'radio_np_title_font'] },
+        { title: 'Playback status', fields: ['radio_state_y', 'radio_state_font', 'radio_audio_info_y', 'radio_audio_info_font'] },
+        { title: 'Mode indicator', enabledBy: 'radio_show_mode_indicator', fields: ['radio_show_mode_indicator', 'radio_mode_indic_x', 'radio_mode_indic_y'] },
+        { title: 'Clock', enabledBy: 'radio_show_clock', fields: ['radio_show_clock', 'radio_clock_widget_x', 'radio_clock_widget_y', 'radio_clock_font'] },
+        { title: 'Event indicator', enabledBy: 'radio_show_event_indicator', fields: ['radio_show_event_indicator', 'radio_event_indic_x', 'radio_event_indic_y'] },
+        { title: 'VU meter', enabledBy: 'radio_show_vu', fields: ['radio_show_vu', 'radio_vu_x', 'radio_vu_y', 'radio_vu_w', 'radio_vu_h'] },
+        { title: 'Weather', enabledBy: 'radio_show_weather', fields: ['radio_show_weather', 'radio_weather_x', 'radio_weather_y', 'radio_weather_w', 'radio_weather_font'] },
+    ],
+    sd: [
+        { title: 'Track title', fields: ['sd_title_y', 'sd_title_font'] },
+        { title: 'Folder', enabledBy: 'sd_show_folder', fields: ['sd_show_folder', 'sd_folder_y', 'sd_folder_font'] },
+        { title: 'Playback info', enabledBy: 'sd_show_info', fields: ['sd_show_info', 'sd_info_y', 'sd_info_font'] },
+        { title: 'Progress bar', enabledBy: 'sd_show_bar', fields: ['sd_show_bar', 'sd_bar_w', 'sd_bar_h'] },
+        { title: 'Mode indicator', enabledBy: 'sd_show_mode_indicator', fields: ['sd_show_mode_indicator', 'sd_mode_indic_x', 'sd_mode_indic_y'] },
+        { title: 'Clock', enabledBy: 'sd_show_clock', fields: ['sd_show_clock', 'sd_clock_widget_x', 'sd_clock_widget_y', 'sd_clock_font'] },
+        { title: 'Event indicator', enabledBy: 'sd_show_event_indicator', fields: ['sd_show_event_indicator', 'sd_event_indic_x', 'sd_event_indic_y'] },
+        { title: 'VU meter', enabledBy: 'sd_show_vu', fields: ['sd_show_vu', 'sd_vu_x', 'sd_vu_y', 'sd_vu_w', 'sd_vu_h'] },
+        { title: 'Weather', enabledBy: 'sd_show_weather', fields: ['sd_show_weather', 'sd_weather_x', 'sd_weather_y', 'sd_weather_w', 'sd_weather_font'] },
+    ],
+};
+
+// Remember expanded groups while switching screen tabs or rebuilding the form.
+const openFormGroups = {};
+
 // ── Sections registry ──────────────────────────────────────────────────────
 // Each entry: { title, fields, renderer (active section's renderSvg) }
 
@@ -241,52 +290,120 @@ function buildForm() {
     const root  = document.getElementById('form_section');
     const data  = state[state.active];
     const fields = SECTIONS[state.active].fields;
-    [...root.querySelectorAll('.form-row')].forEach(n => n.remove());
+    const fieldByKey = new Map(fields.map(f => [f.key, f]));
+    const groups = FORM_GROUPS[state.active];
+    root.querySelectorAll('.form-group').forEach(n => n.remove());
 
-    for (const f of fields) {
-        const row = document.createElement('div');
-        row.className = 'form-row';
+    if (!openFormGroups[state.active]) openFormGroups[state.active] = new Set([0]);
 
-        const lab = document.createElement('label');
-        lab.textContent = f.label;
-        lab.htmlFor = 'fld_' + f.key;
-        row.appendChild(lab);
+    groups.forEach((group, groupIndex) => {
+        const details = document.createElement('details');
+        details.className = 'form-group';
+        details.dataset.groupIndex = groupIndex;
+        details.open = openFormGroups[state.active].has(groupIndex);
 
-        let input;
-        if (f.type === 'number') {
-            input = document.createElement('input');
-            input.type = 'number';
-            input.value = data[f.key] ?? 0;
-            input.addEventListener('input', () => {
-                data[f.key] = parseInt(input.value, 10) | 0;
-                renderSvg();
-            });
-        } else if (f.type === 'bool') {
-            input = document.createElement('input');
-            input.type = 'checkbox';
-            input.checked = !!data[f.key];
-            input.addEventListener('change', () => {
-                data[f.key] = input.checked;
-                renderSvg();
-            });
-        } else if (f.type === 'font') {
-            input = document.createElement('select');
-            for (const id of state.meta.fonts) {
-                const o = document.createElement('option');
-                o.value = id;
-                o.textContent = id;
-                input.appendChild(o);
-            }
-            input.value = data[f.key] ?? '';
-            input.addEventListener('change', () => {
-                data[f.key] = input.value;
-                renderSvg();
-            });
+        const summary = document.createElement('summary');
+        const title = document.createElement('span');
+        title.className = 'form-group-title';
+        title.textContent = group.title;
+        const meta = document.createElement('span');
+        meta.className = 'form-group-meta';
+        summary.append(title, meta);
+        details.appendChild(summary);
+
+        const body = document.createElement('div');
+        body.className = 'form-group-body';
+        for (const key of group.fields) {
+            const field = fieldByKey.get(key);
+            if (!field) continue;
+            const row = buildFormRow(field, data, group, details);
+            body.appendChild(row);
         }
-        input.id = 'fld_' + f.key;
-        row.appendChild(input);
-        root.appendChild(row);
+        details.appendChild(body);
+        root.appendChild(details);
+
+        details.addEventListener('toggle', () => {
+            const opened = openFormGroups[state.active];
+            if (details.open) opened.add(groupIndex);
+            else              opened.delete(groupIndex);
+        });
+        refreshGroup(details, group, data);
+    });
+}
+
+function buildFormRow(field, data, group, details) {
+    const row = document.createElement('div');
+    row.className = 'form-row';
+    row.dataset.field = field.key;
+    if (group.enabledBy && field.key !== group.enabledBy)
+        row.classList.add('form-row-conditional');
+
+    const lab = document.createElement('label');
+    lab.textContent = field.label;
+    lab.htmlFor = 'fld_' + field.key;
+    row.appendChild(lab);
+
+    let input;
+    if (field.type === 'number') {
+        input = document.createElement('input');
+        input.type = 'number';
+        input.value = data[field.key] ?? 0;
+        input.addEventListener('input', () => {
+            data[field.key] = parseInt(input.value, 10) | 0;
+            refreshGroup(details, group, data);
+            renderSvg();
+        });
+    } else if (field.type === 'bool') {
+        input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = !!data[field.key];
+        input.addEventListener('change', () => {
+            data[field.key] = input.checked;
+            refreshGroup(details, group, data);
+            renderSvg();
+        });
+    } else if (field.type === 'font') {
+        input = document.createElement('select');
+        for (const id of state.meta.fonts) {
+            const o = document.createElement('option');
+            o.value = id;
+            o.textContent = id;
+            input.appendChild(o);
+        }
+        input.value = data[field.key] ?? '';
+        input.addEventListener('change', () => {
+            data[field.key] = input.value;
+            refreshGroup(details, group, data);
+            renderSvg();
+        });
     }
+    input.id = 'fld_' + field.key;
+    row.appendChild(input);
+    return row;
+}
+
+function refreshGroup(details, group, data) {
+    const enabled = !group.enabledBy || !!data[group.enabledBy];
+    details.classList.toggle('is-disabled', !enabled);
+    for (const row of details.querySelectorAll('.form-row-conditional'))
+        row.hidden = !enabled;
+    details.querySelector('.form-group-meta').textContent = groupSummary(group, data);
+}
+
+function groupSummary(group, data) {
+    if (group.enabledBy && !data[group.enabledBy]) return 'Off';
+
+    const keys = group.fields;
+    const xKey = keys.find(k => /_x$/.test(k));
+    const yKey = keys.find(k => /_y$/.test(k));
+    const wKey = keys.find(k => /_w$/.test(k));
+    const hKey = keys.find(k => /_h$/.test(k));
+    const parts = [];
+    if (xKey && yKey) parts.push(`${data[xKey] | 0}, ${data[yKey] | 0}`);
+    else if (yKey)    parts.push(`Y ${data[yKey] | 0}`);
+    if (wKey && hKey) parts.push(`${data[wKey] | 0}×${data[hKey] | 0}`);
+    else if (wKey)    parts.push(`W ${data[wKey] | 0}`);
+    return parts.join(' · ') || 'On';
 }
 
 function setFormValue(key, val) {
@@ -294,6 +411,11 @@ function setFormValue(key, val) {
     if (!el) return;
     if (el.type === 'checkbox') el.checked = !!val;
     else                        el.value   = val;
+    const details = el.closest('.form-group');
+    if (details) {
+        const group = FORM_GROUPS[state.active][Number(details.dataset.groupIndex)];
+        refreshGroup(details, group, state[state.active]);
+    }
 }
 
 // ── SVG render — dispatch to per-section renderer ───────────────────────────
@@ -887,10 +1009,8 @@ async function resetProfile() {
         for (const name of Object.keys(SECTIONS)) {
             state[name] = await fetch(`/api/ui/profile/${name}`).then(r => r.json());
         }
-        // refresh form/svg of the active section
-        for (const f of SECTIONS[state.active].fields) {
-            setFormValue(f.key, state[state.active][f.key]);
-        }
+        // Rebuild so switches also refresh conditional rows and group summaries.
+        buildForm();
         renderSvg();
         setStatus('Reset to defaults.');
     } catch (err) {
