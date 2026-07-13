@@ -736,12 +736,15 @@ async function iconToLvBin(blob) {
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = ICON_SIZE;
     const ctx = canvas.getContext('2d', { alpha: false });
-    ctx.fillStyle = '#ffffff';
+    // RGB565 has no alpha channel. Use black for transparent areas and
+    // letterboxing so non-square artwork blends into the dark radio UI.
+    ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, ICON_SIZE, ICON_SIZE);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-    const pad = 5;
-    const scale = Math.min((ICON_SIZE - pad * 2) / sw, (ICON_SIZE - pad * 2) / sh);
+    // Use the full 64x64 tile. The old forced 5 px inset exposed the white
+    // RGB565 fallback around every image, even for perfectly square artwork.
+    const scale = Math.min(ICON_SIZE / sw, ICON_SIZE / sh);
     const dw = Math.max(1, Math.round(sw * scale));
     const dh = Math.max(1, Math.round(sh * scale));
     ctx.drawImage(src, Math.round((ICON_SIZE - dw) / 2), Math.round((ICON_SIZE - dh) / 2), dw, dh);
