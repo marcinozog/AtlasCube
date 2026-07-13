@@ -1,6 +1,8 @@
 #include "esp_log.h"
 #include "esp_heap_caps.h"
 #include "esp_http_server.h"
+#include "esp_http_client.h"
+#include "esp_crt_bundle.h"
 #include "esp_system.h"
 #include "esp_app_desc.h"
 #include "esp_app_format.h"
@@ -838,7 +840,7 @@ static esp_err_t api_theme_post_handler(httpd_req_t *req)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/playlist  — returns array [{name,url}, ...] from memory
+// GET /api/playlist — returns station data plus optional SD-card icon metadata.
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t api_playlist_get_handler(httpd_req_t *req)
 {
@@ -851,6 +853,8 @@ static esp_err_t api_playlist_get_handler(httpd_req_t *req)
         cJSON_AddStringToObject(o, "name", e->name);
         cJSON_AddStringToObject(o, "url",  e->url);
         cJSON_AddBoolToObject  (o, "favorite", e->favorite);
+        cJSON_AddStringToObject(o, "stationuuid", e->station_uuid);
+        cJSON_AddStringToObject(o, "icon", e->icon_path);
         cJSON_AddItemToArray(arr, o);
     }
 
@@ -863,7 +867,8 @@ static esp_err_t api_playlist_get_handler(httpd_req_t *req)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/playlist.csv  — downloads the playlist in the on-disk format
-// (name\turl\t<0|1>\n). Reflects the last *saved* state, not unsaved edits.
+// (name\turl\t<0|1>\tstationuuid\ticon_path\n). Older three-column files
+// remain valid. Reflects the last *saved* state, not unsaved edits.
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t api_playlist_csv_handler(httpd_req_t *req)
 {
@@ -872,13 +877,15 @@ static esp_err_t api_playlist_csv_handler(httpd_req_t *req)
                       "attachment; filename=\"playlist.csv\"");
     httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
 
-    char line[PLAYLIST_NAME_LEN + PLAYLIST_URL_LEN + 8];
+    char line[PLAYLIST_NAME_LEN + PLAYLIST_URL_LEN +
+              PLAYLIST_UUID_LEN + PLAYLIST_ICON_LEN + 16];
     int n = playlist_get_count();
     for (int i = 0; i < n; i++) {
         const playlist_entry_t *e = playlist_get(i);
         if (!e) continue;
-        int len = snprintf(line, sizeof(line), "%s\t%s\t%d\n",
-                           e->name, e->url, e->favorite ? 1 : 0);
+        int len = snprintf(line, sizeof(line), "%s\t%s\t%d\t%s\t%s\n",
+                           e->name, e->url, e->favorite ? 1 : 0,
+                           e->station_uuid, e->icon_path);
         if (len > 0) httpd_resp_send_chunk(req, line, len);
     }
     httpd_resp_send_chunk(req, NULL, 0);
@@ -886,7 +893,8 @@ static esp_err_t api_playlist_csv_handler(httpd_req_t *req)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// POST /api/playlist  — body: [{name,url}, ...] — overwrites the CSV file
+// POST /api/playlist — body: [{name,url,favorite,stationuuid,icon}, ...] —
+// overwrites the CSV file
 // and reloads the playlist into memory.
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t api_playlist_post_handler(httpd_req_t *req)
@@ -944,13 +952,26 @@ static esp_err_t api_playlist_post_handler(httpd_req_t *req)
         cJSON *jn = cJSON_GetObjectItem(item, "name");
         cJSON *ju = cJSON_GetObjectItem(item, "url");
         cJSON *jf = cJSON_GetObjectItem(item, "favorite");
+        cJSON *js = cJSON_GetObjectItem(item, "stationuuid");
+        cJSON *ji = cJSON_GetObjectItem(item, "icon");
         if (!cJSON_IsString(jn) || !cJSON_IsString(ju))       continue;
         if (jn->valuestring[0] == 0 || ju->valuestring[0] == 0) continue;
+        const char *uuid = cJSON_IsString(js) ? js->valuestring : "";
+        const char *icon = cJSON_IsString(ji) ? ji->valuestring : "";
+        if (strlen(jn->valuestring) >= PLAYLIST_NAME_LEN ||
+            strlen(ju->valuestring) >= PLAYLIST_URL_LEN ||
+            strlen(uuid) >= PLAYLIST_UUID_LEN ||
+            strlen(icon) >= PLAYLIST_ICON_LEN) continue;
+        // Icons are SD-relative paths. Reject traversal and absolute VFS paths.
+        if (icon[0] && (icon[0] != '/' || strstr(icon, ".."))) continue;
         // sanitize: no tabs or newlines in fields
         for (char *p = jn->valuestring; *p; p++) if (*p == '\t' || *p == '\r' || *p == '\n') *p = ' ';
         for (char *p = ju->valuestring; *p; p++) if (*p == '\t' || *p == '\r' || *p == '\n') *p = ' ';
+        if (cJSON_IsString(js)) for (char *p = js->valuestring; *p; p++) if (*p == '\t' || *p == '\r' || *p == '\n') *p = ' ';
+        if (cJSON_IsString(ji)) for (char *p = ji->valuestring; *p; p++) if (*p == '\t' || *p == '\r' || *p == '\n') *p = ' ';
         int fav = cJSON_IsTrue(jf) ? 1 : 0;
-        fprintf(f, "%s\t%s\t%d\n", jn->valuestring, ju->valuestring, fav);
+        fprintf(f, "%s\t%s\t%d\t%s\t%s\n",
+                jn->valuestring, ju->valuestring, fav, uuid, icon);
     }
     fflush(f);
     fclose(f);
@@ -1978,6 +1999,7 @@ static esp_err_t api_files_put_handler(httpd_req_t *req)
 // resolved under SD_MOUNT_POINT.
 // ─────────────────────────────────────────────────────────────────────────────
 #define SD_RECV_BUF_SIZE 4096
+#define STATION_ICON_PROXY_MAX (512 * 1024)
 
 // esp_http_server has no HTTPD_503 enum — send the status text directly.
 static esp_err_t sd_send_no_card(httpd_req_t *req)
@@ -2005,6 +2027,138 @@ static void sd_url_decode(const char *src, char *dst, size_t dstlen)
         }
     }
     dst[di] = '\0';
+}
+
+static bool station_icon_raster_magic(const uint8_t *p, size_t n)
+{
+    if (!p || n < 4) return false;
+    if (p[0] == 0xff && p[1] == 0xd8) return true;                         // JPEG
+    if (n >= 8 && memcmp(p, "\x89PNG\r\n\x1a\n", 8) == 0) return true; // PNG
+    if (memcmp(p, "GIF8", 4) == 0 || memcmp(p, "BM", 2) == 0) return true;
+    if (n >= 12 && memcmp(p, "RIFF", 4) == 0 && memcmp(p + 8, "WEBP", 4) == 0) return true;
+    if (p[0] == 0 && p[1] == 0 && p[2] == 1 && p[3] == 0) return true;      // ICO
+    return false;
+}
+
+// Same-origin, size-capped raster proxy used by playlist.html. Station favicon
+// hosts rarely expose CORS headers, so the browser cannot otherwise draw them
+// onto a canvas and convert them to the LVGL RGB565 format stored on SD.
+static esp_err_t api_station_icon_proxy_handler(httpd_req_t *req)
+{
+    size_t qlen = httpd_req_get_url_query_len(req) + 1;
+    if (qlen <= 1 || qlen > 1536) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing or long URL");
+        return ESP_FAIL;
+    }
+
+    char *query = malloc(qlen);
+    char encoded[1024];
+    char url[768];
+    if (!query) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OOM");
+        return ESP_FAIL;
+    }
+    esp_err_t qerr = httpd_req_get_url_query_str(req, query, qlen);
+    esp_err_t uerr = qerr == ESP_OK
+        ? httpd_query_key_value(query, "url", encoded, sizeof(encoded)) : ESP_FAIL;
+    free(query);
+    if (uerr != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing URL");
+        return ESP_FAIL;
+    }
+    sd_url_decode(encoded, url, sizeof(url));
+    if ((strncmp(url, "https://", 8) != 0 && strncmp(url, "http://", 7) != 0) ||
+        strpbrk(url, "\r\n\t") != NULL) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Only HTTP(S) raster URLs are allowed");
+        return ESP_FAIL;
+    }
+
+    app_state_t *state = app_state_get();
+    bool resume_radio = state->radio_state == RADIO_STATE_PLAYING ||
+                        state->radio_state == RADIO_STATE_BUFFERING;
+    int resume_index = state->curr_index;
+    if (resume_radio) radio_stop();
+
+    esp_http_client_config_t cfg = {
+        .url = url,
+        .timeout_ms = 15000,
+        .crt_bundle_attach = esp_crt_bundle_attach,
+        .user_agent = "AtlasCube/1.0 station-icon",
+    };
+    esp_http_client_handle_t cli = esp_http_client_init(&cfg);
+    uint8_t *buf = NULL;
+    esp_err_t ret = ESP_FAIL;
+    if (!cli) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "HTTP client init failed");
+        goto done;
+    }
+
+    int status = 0;
+    for (int hop = 0; hop < 4; hop++) {
+        if (esp_http_client_open(cli, 0) != ESP_OK) {
+            httpd_resp_set_status(req, "502 Bad Gateway");
+            httpd_resp_sendstr(req, "Image host connection failed");
+            goto done;
+        }
+        esp_http_client_fetch_headers(cli);
+        status = esp_http_client_get_status_code(cli);
+        if (status / 100 != 3) break;
+        esp_http_client_set_redirection(cli);
+        esp_http_client_close(cli);
+    }
+    if (status / 100 != 2) {
+        httpd_resp_set_status(req, "502 Bad Gateway");
+        httpd_resp_sendstr(req, "Image host returned an error");
+        goto done;
+    }
+    int64_t content_len = esp_http_client_get_content_length(cli);
+    if (content_len > STATION_ICON_PROXY_MAX) {
+        httpd_resp_set_status(req, "413 Payload Too Large");
+        httpd_resp_sendstr(req, "Image exceeds 512 KB");
+        goto done;
+    }
+
+    buf = malloc(SD_RECV_BUF_SIZE);
+    if (!buf) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "OOM");
+        goto done;
+    }
+    int first = 0;
+    while (first < 12) {
+        int got = esp_http_client_read(cli, (char *)buf + first, SD_RECV_BUF_SIZE - first);
+        if (got < 0) goto done;
+        if (got == 0) break;
+        first += got;
+    }
+    if (!station_icon_raster_magic(buf, first)) {
+        httpd_resp_set_status(req, "415 Unsupported Media Type");
+        httpd_resp_sendstr(req, "Not a supported raster image");
+        goto done;
+    }
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    if (httpd_resp_send_chunk(req, (const char *)buf, first) != ESP_OK) goto done;
+
+    size_t total = first;
+    while (total < STATION_ICON_PROXY_MAX) {
+        int got = esp_http_client_read(cli, (char *)buf, SD_RECV_BUF_SIZE);
+        if (got < 0) goto done;
+        if (got == 0) break;
+        if (total + (size_t)got > STATION_ICON_PROXY_MAX ||
+            httpd_resp_send_chunk(req, (const char *)buf, got) != ESP_OK) goto done;
+        total += got;
+    }
+    httpd_resp_send_chunk(req, NULL, 0);
+    ret = ESP_OK;
+
+done:
+    free(buf);
+    if (cli) {
+        esp_http_client_close(cli);
+        esp_http_client_cleanup(cli);
+    }
+    if (resume_radio && resume_index >= 0) radio_play_index(resume_index);
+    return ret;
 }
 
 // Read the `path` query param, validate it and build the absolute SD path into
@@ -2938,7 +3092,10 @@ void http_server_start(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn      = httpd_uri_match_wildcard;
-    config.max_uri_handlers  = 52;
+    // 52 handlers are registered below and ws_register() adds one more before
+    // them. Keep a little headroom so the final wildcard GET serving the web UI
+    // can never be silently dropped when another API endpoint is added.
+    config.max_uri_handlers  = 56;
     // WS handlers run on this task and chain deep: cJSON_Parse of the inbound
     // payload → radio/settings play path → send_full_state (cJSON build of the
     // whole state). The 4 KB HTTPD default overflows on that path (e.g. an
@@ -3304,6 +3461,13 @@ void http_server_start(void)
     };
     httpd_register_uri_handler(server, &api_sd_rename);
 
+    httpd_uri_t api_station_icon_proxy = {
+        .uri     = "/api/station-icon/proxy",
+        .method  = HTTP_GET,
+        .handler = api_station_icon_proxy_handler,
+    };
+    httpd_register_uri_handler(server, &api_station_icon_proxy);
+
     // OPTIONS dla /api/restart — preflight CORS
     httpd_uri_t api_restart_options = {
         .uri     = "/api/restart",
@@ -3326,7 +3490,11 @@ void http_server_start(void)
         .method  = HTTP_GET,
         .handler = file_handler,
     };
-    httpd_register_uri_handler(server, &file_uri);
+    esp_err_t file_err = httpd_register_uri_handler(server, &file_uri);
+    if (file_err != ESP_OK) {
+        ESP_LOGE("HTTP", "Failed to register wildcard file handler: %s",
+                 esp_err_to_name(file_err));
+    }
 
     ESP_LOGI("HTTP", "Server started");
 }

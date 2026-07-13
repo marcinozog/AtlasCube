@@ -49,33 +49,36 @@ esp_err_t playlist_load(void)
         return ESP_FAIL;
     }
 
-    char line[PLAYLIST_NAME_LEN + PLAYLIST_URL_LEN + 8];
+    char line[PLAYLIST_NAME_LEN + PLAYLIST_URL_LEN +
+              PLAYLIST_UUID_LEN + PLAYLIST_ICON_LEN + 16];
 
     while (fgets(line, sizeof(line), f) && s_count < PLAYLIST_MAX_ENTRIES) {
         // strip \r\n
         line[strcspn(line, "\r\n")] = 0;
         if (line[0] == 0) continue;
 
-        // format: name\turl[\tfavorite]   (favorite: '0' or '1')
-        char *tab1 = strchr(line, '\t');
-        if (!tab1) continue;
-
-        *tab1 = 0;
-        char *url_start = tab1 + 1;
-
-        char *tab2 = strchr(url_start, '\t');
-        char *flag_start = NULL;
-        if (tab2) {
-            *tab2 = 0;
-            flag_start = tab2 + 1;
+        // Backward-compatible TSV:
+        // name\turl[\tfavorite[\tstation_uuid[\ticon_path]]]
+        char *field[5] = { line, NULL, NULL, NULL, NULL };
+        for (int i = 1; i < 5; i++) {
+            char *tab = strchr(field[i - 1], '\t');
+            if (!tab) break;
+            *tab = 0;
+            field[i] = tab + 1;
         }
+        if (!field[1]) continue;
 
-        strncpy(s_entries[s_count].name, line,      PLAYLIST_NAME_LEN - 1);
-        strncpy(s_entries[s_count].url,  url_start, PLAYLIST_URL_LEN  - 1);
+        memset(&s_entries[s_count], 0, sizeof(s_entries[s_count]));
+        strncpy(s_entries[s_count].name, field[0], PLAYLIST_NAME_LEN - 1);
+        strncpy(s_entries[s_count].url,  field[1], PLAYLIST_URL_LEN  - 1);
+        if (field[3]) strncpy(s_entries[s_count].station_uuid, field[3], PLAYLIST_UUID_LEN - 1);
+        if (field[4]) strncpy(s_entries[s_count].icon_path, field[4], PLAYLIST_ICON_LEN - 1);
 
         s_entries[s_count].name[PLAYLIST_NAME_LEN - 1] = 0;
         s_entries[s_count].url [PLAYLIST_URL_LEN  - 1] = 0;
-        s_entries[s_count].favorite = (flag_start && flag_start[0] == '1');
+        s_entries[s_count].station_uuid[PLAYLIST_UUID_LEN - 1] = 0;
+        s_entries[s_count].icon_path[PLAYLIST_ICON_LEN - 1] = 0;
+        s_entries[s_count].favorite = (field[2] && field[2][0] == '1');
 
         // ESP_LOGI(TAG, "[%d] %s → %s", s_count, s_entries[s_count].name, s_entries[s_count].url);
         s_count++;

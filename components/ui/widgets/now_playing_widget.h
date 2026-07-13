@@ -22,6 +22,10 @@ void now_playing_widget_destroy(void);
 /** Refresh from current app_state — call from on_event(UI_EVT_STATE_CHANGED). */
 void now_playing_widget_update(void);
 
+/** Attach an optional 64x64 station icon to the left of the text. The caller
+ * owns the descriptor and must keep it alive until it clears the icon again. */
+void now_playing_widget_set_icon(const lv_image_dsc_t *icon);
+
 void now_playing_widget_apply_theme(void);
 
 #ifdef __cplusplus

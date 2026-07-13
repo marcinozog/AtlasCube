@@ -37,6 +37,7 @@ idf_component_register(
         "screensavers/screensavers.c"
         "widgets/clock_widget.c"
         "widgets/now_playing_widget.c"
+        "widgets/station_icon_widget.c"
         "widgets/mode_indicator_widget.c"
         "widgets/event_indicator_widget.c"
         "widgets/calendar_widget.c"
@@ -69,6 +70,7 @@ idf_component_register(
         driver
         app_state
         services                # radio_service.h (radio_state_t)
+        playlist                # station list + optional SD icon paths
         settings_ex             # settings_set_volume itp. (z screen_radio)
         network                 # screen_wifi
         events                  # event_indicator_widget, screen_event_notification

@@ -5,9 +5,17 @@
 // ─────────────────────────────────────────────────────────────────────────────
 let ws;
 let volTimeout, eqTimeout;
+let wsReconnectDelay = 250;
 let currentStation      = null;
 let currentStationIndex = null;
 let stationsList        = [];
+const pendingStateCommands = new Map();
+
+// These commands describe the desired final state, so keeping only the newest
+// value is safe while the WebSocket handshake is still in progress.
+const queueableCommands = new Set([
+    'set_volume', 'set_eq_10', 'bt_enable', 'bt_volume', 'bt_sync_vol'
+]);
 
 const codecMap = {
     0:"UNK", 1:"RAW", 2:"WAV", 3:"MP3", 4:"AAC", 5:"OPUS",
@@ -23,8 +31,20 @@ const freqs = ["31","62","125","250","500","1k","2k","4k","8k","16k"];
 function connect() {
     ws = new WebSocket(`ws://${location.host}/ws`);
 
-    ws.onopen  = () => console.log('WS connected');
-    ws.onclose = () => { console.log('WS disconnected'); setTimeout(connect, 2000); };
+    ws.onopen  = () => {
+        console.log('WS connected');
+        wsReconnectDelay = 250;
+        for (const obj of pendingStateCommands.values()) {
+            ws.send(JSON.stringify(obj));
+        }
+        pendingStateCommands.clear();
+    };
+    ws.onclose = () => {
+        const delay = wsReconnectDelay;
+        wsReconnectDelay = Math.min(wsReconnectDelay * 2, 3000);
+        console.log(`WS disconnected — retry in ${delay} ms`);
+        setTimeout(connect, delay);
+    };
     ws.onerror = () => console.warn('WS error');
 
     ws.onmessage = (msg) => {
@@ -72,7 +92,10 @@ function connect() {
 
 function send(obj) {
     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
-    else console.warn('WS not connected');
+    else if (obj && queueableCommands.has(obj.cmd)) {
+        pendingStateCommands.set(obj.cmd, obj);
+        console.log('WS connecting — command queued:', obj.cmd);
+    } else console.warn('WS not connected');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

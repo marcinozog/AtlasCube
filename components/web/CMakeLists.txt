@@ -4,6 +4,8 @@ idf_component_register(
     EMBED_FILES "setup.html"
     REQUIRES
         esp_http_server
+        esp_http_client
+        esp-tls
         app_update
         esp_partition
         audio

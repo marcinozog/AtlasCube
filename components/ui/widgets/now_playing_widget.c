@@ -15,6 +15,8 @@ static const char *TAG = "NPW";
 // as the weather widget, so the plate tracks the content, not the screen width.
 static lv_obj_t *s_frame         = NULL;
 static lv_obj_t *s_pill          = NULL;
+static lv_obj_t *s_icon          = NULL;
+static lv_obj_t *s_text_col      = NULL;
 static lv_obj_t *s_label_station = NULL;
 static lv_obj_t *s_label_title   = NULL;
 
@@ -51,20 +53,32 @@ void now_playing_widget_create(lv_obj_t *parent, int x, int y, lv_text_align_t a
     s_pill = lv_obj_create(s_frame);
     lv_obj_remove_style_all(s_pill);
     lv_obj_set_size(s_pill, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-    lv_obj_set_flex_flow(s_pill, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_flow(s_pill, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(s_pill, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(s_pill, 8, LV_PART_MAIN);
     lv_obj_set_style_pad_row(s_pill, 4, LV_PART_MAIN);
     lv_obj_clear_flag(s_pill, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
     ui_label_scrim(s_pill);
 
-    s_label_station = lv_label_create(s_pill);
+    s_icon = lv_image_create(s_pill);
+    lv_obj_add_flag(s_icon, LV_OBJ_FLAG_HIDDEN);
+
+    s_text_col = lv_obj_create(s_pill);
+    lv_obj_remove_style_all(s_text_col);
+    lv_obj_set_size(s_text_col, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(s_text_col, LV_FLEX_FLOW_COLUMN);
+    lv_obj_set_flex_align(s_text_col, LV_FLEX_ALIGN_CENTER, cross, cross);
+    lv_obj_set_style_pad_row(s_text_col, 4, LV_PART_MAIN);
+    lv_obj_clear_flag(s_text_col, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+    s_label_station = lv_label_create(s_text_col);
     lv_obj_set_style_max_width(s_label_station, NPW_MAX_W, LV_PART_MAIN);
     lv_obj_set_style_text_font(s_label_station, station_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_station, lv_color_hex(th->accent), LV_PART_MAIN);
     lv_obj_set_style_text_align(s_label_station, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
 
-    s_label_title = lv_label_create(s_pill);
+    s_label_title = lv_label_create(s_text_col);
     lv_obj_set_style_max_width(s_label_title, NPW_MAX_W, LV_PART_MAIN);
     lv_obj_set_style_text_font(s_label_title, title_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_title, lv_color_hex(th->text_secondary), LV_PART_MAIN);
@@ -78,6 +92,8 @@ void now_playing_widget_destroy(void)
 {
     s_frame         = NULL;
     s_pill          = NULL;
+    s_icon          = NULL;
+    s_text_col      = NULL;
     s_label_station = NULL;
     s_label_title   = NULL;
     ESP_LOGI(TAG, "Destroyed");
@@ -108,4 +124,20 @@ void now_playing_widget_apply_theme(void)
     lv_obj_set_style_text_color(s_label_title,
         lv_color_hex(th->text_secondary), LV_PART_MAIN);
     ui_label_scrim(s_pill);   // refresh plate colour for the new theme
+}
+
+void now_playing_widget_set_icon(const lv_image_dsc_t *icon)
+{
+    if (!s_icon) return;
+    if (icon) {
+        lv_image_set_src(s_icon, icon);
+        lv_obj_clear_flag(s_icon, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_style_max_width(s_label_station, NPW_MAX_W - 72, LV_PART_MAIN);
+        lv_obj_set_style_max_width(s_label_title, NPW_MAX_W - 72, LV_PART_MAIN);
+    } else {
+        lv_image_set_src(s_icon, NULL);
+        lv_obj_add_flag(s_icon, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_style_max_width(s_label_station, NPW_MAX_W, LV_PART_MAIN);
+        lv_obj_set_style_max_width(s_label_title, NPW_MAX_W, LV_PART_MAIN);
+    }
 }
