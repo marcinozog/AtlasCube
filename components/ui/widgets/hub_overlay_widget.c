@@ -321,25 +321,16 @@ void hub_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
     lv_obj_add_flag(s_overlay, LV_OBJ_FLAG_CLICKABLE);   // absorb taps on the dim area
     lv_obj_add_flag(s_overlay, LV_OBJ_FLAG_HIDDEN);
 
-    // Geometry: size both rows to the wider (5-button) transport row so the whole
+    // Geometry: size all three rows to the wider (5-button) transport row so the
     // grid stays inside the shorter screen side.
     int side = (DISPLAY_WIDTH < DISPLAY_HEIGHT) ? DISPLAY_WIDTH : DISPLAY_HEIGHT;
     int sz   = side / 5;
     if (sz < 40) sz = 40;
     if (sz > 72) sz = 72;
     int step  = sz + sz / 6;                 // center-to-center within a row
-    int row_y = sz / 2 + 6;                  // half-step above/below center
+    int row_y = step;                        // rows at -step, 0, +step
     int gscale = (int)((sz * 0.55f / 48.0f) * 256.0f);   // shrink 48px glyph to ~0.55*sz
     if (gscale > 256) gscale = 256;
-
-    // Six action buttons need a slightly smaller size than the five transport
-    // buttons. Spread their centers across the same short screen dimension.
-    int act_sz = side / 6 - 2;
-    if (act_sz < 34) act_sz = 34;
-    if (act_sz > 72) act_sz = 72;
-    int act_step = (side - act_sz) / 5;
-    int act_gscale = (int)((act_sz * 0.55f / 48.0f) * 256.0f);
-    if (act_gscale > 256) act_gscale = 256;
 
     // Lighten the resting button fill toward white so the circles stand out from
     // the dim overlay (raw bg_secondary is near-black on dark themes → blends in).
@@ -349,7 +340,7 @@ void hub_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
 
     // Row 1 — transport: vol-  prev  play  next  vol+
     // Collect every button into s_btns in this exact order so encoder focus
-    // walks left-to-right across row 1 then row 2 (see HUB_BTN_COUNT).
+    // walks left-to-right across all three rows (see HUB_BTN_COUNT).
     s_btns[0] = make_btn(s_overlay, LV_SYMBOL_MINUS, BTN_VOL_DN, -2 * step, -row_y, sz, btn_bg, gscale,
         BTN_EVT_SHORT | BTN_EVT_REPEAT);
     s_btns[1] = make_btn(s_overlay, LV_SYMBOL_PREV,  BTN_PREV,   -1 * step, -row_y, sz, btn_bg, gscale,
@@ -363,23 +354,25 @@ void hub_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
     s_btns[4] = make_btn(s_overlay, LV_SYMBOL_PLUS,  BTN_VOL_UP,  2 * step, -row_y, sz, btn_bg, gscale,
         BTN_EVT_SHORT | BTN_EVT_REPEAT);
 
-    // Row 2 — actions: source  playlist  sd  settings  refresh  save.
+    // Row 2 — actions: source  playlist  sd  settings.
     // The source button's glyph tracks the active source (see source_update).
-    lv_obj_t *src_btn = make_btn(s_overlay, LV_SYMBOL_AUDIO, BTN_SOURCE, -5 * act_step / 2, row_y,
-        act_sz, act_bg, act_gscale, BTN_EVT_SHORT);
+    lv_obj_t *src_btn = make_btn(s_overlay, LV_SYMBOL_AUDIO, BTN_SOURCE, -3 * step / 2, 0,
+        sz, act_bg, gscale, BTN_EVT_SHORT);
     s_btns[5]    = src_btn;
     s_source_lbl = lv_obj_get_child(src_btn, 0);
     source_update();
-    s_btns[6] = make_btn(s_overlay, LV_SYMBOL_LIST,      BTN_PLAYLIST, -3 * act_step / 2, row_y,
-        act_sz, act_bg, act_gscale, BTN_EVT_SHORT);
-    s_btns[7] = make_btn(s_overlay, LV_SYMBOL_SD_CARD,   BTN_SD,       -1 * act_step / 2, row_y,
-        act_sz, act_bg, act_gscale, BTN_EVT_SHORT);
-    s_btns[8] = make_btn(s_overlay, LV_SYMBOL_SETTINGS,  BTN_SETTINGS,  1 * act_step / 2, row_y,
-        act_sz, act_bg, act_gscale, BTN_EVT_SHORT);
-    s_btns[9] = make_btn(s_overlay, LV_SYMBOL_IMAGE, BTN_WALLPAPER_FETCH, 3 * act_step / 2, row_y,
-        act_sz, act_bg, act_gscale, BTN_EVT_SHORT);
-    s_btns[10] = make_btn(s_overlay, LV_SYMBOL_DOWNLOAD, BTN_WALLPAPER_SAVE, 5 * act_step / 2, row_y,
-        act_sz, act_bg, act_gscale, BTN_EVT_SHORT);
+    s_btns[6] = make_btn(s_overlay, LV_SYMBOL_LIST,      BTN_PLAYLIST, -1 * step / 2, 0,
+        sz, act_bg, gscale, BTN_EVT_SHORT);
+    s_btns[7] = make_btn(s_overlay, LV_SYMBOL_SD_CARD,   BTN_SD,        1 * step / 2, 0,
+        sz, act_bg, gscale, BTN_EVT_SHORT);
+    s_btns[8] = make_btn(s_overlay, LV_SYMBOL_SETTINGS,  BTN_SETTINGS,  3 * step / 2, 0,
+        sz, act_bg, gscale, BTN_EVT_SHORT);
+
+    // Row 3 — internet wallpaper: fetch a new image, then save it to SD.
+    s_btns[9] = make_btn(s_overlay, LV_SYMBOL_IMAGE, BTN_WALLPAPER_FETCH, -1 * step / 2, row_y,
+        sz, act_bg, gscale, BTN_EVT_SHORT);
+    s_btns[10] = make_btn(s_overlay, LV_SYMBOL_DOWNLOAD, BTN_WALLPAPER_SAVE, 1 * step / 2, row_y,
+        sz, act_bg, gscale, BTN_EVT_SHORT);
 
     ESP_LOGI(TAG, "Created (btn=%dpx, step=%dpx)", sz, step);
 }

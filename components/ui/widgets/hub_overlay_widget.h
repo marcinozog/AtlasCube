@@ -7,10 +7,11 @@ extern "C" {
 #endif
 
 // Touch overlay for the unified hub (screen_home). Like controls_overlay it is a
-// tap-to-show, auto-hiding modal dim layer, but it carries two rows of buttons:
+// tap-to-show, auto-hiding modal dim layer, but it carries three rows of buttons:
 //
 //   row 1 (transport, source-aware):  vol-  prev  play/stop  next  vol+
-//   row 2 (actions / navigation): source  playlist  sd  settings  refresh  save
+//   row 2 (actions / navigation):     source  playlist  sd  settings
+//   row 3 (internet wallpaper):                    fetch  save
 //
 // The transport row drives whichever audio source is active (same per-mode logic
 // as controls_overlay). The action row jumps to the source lists: playlist (pick
