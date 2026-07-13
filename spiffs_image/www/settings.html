@@ -189,6 +189,22 @@
                     on-screen text stays readable. Gradient/solid backgrounds are not affected.
                     100% = original image.</div>
             </div>
+            <div style="margin-top:12px">
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                    <input type="checkbox" id="label_bg_toggle" onchange="setLabelBg()" />
+                    <span class="slider-label">🔲 Label background</span>
+                </label>
+                <div class="field-hint">A semi-transparent plate behind on-screen text (clock,
+                    station/title, weather, …) so it stays readable over a colourful wallpaper.
+                    Applies to every screen.</div>
+                <div class="slider-row" style="margin-top:8px">
+                    <span class="slider-label">Opacity</span>
+                    <span id="label_bg_opa_value" class="slider-value">50%</span>
+                </div>
+                <input type="range" min="0" max="100" step="5" value="50" id="label_bg_opa_slider"
+                       oninput="document.getElementById('label_bg_opa_value').textContent = this.value + '%'"
+                       onchange="setLabelBg()" />
+            </div>
         </div>
 
         <div class="panel">

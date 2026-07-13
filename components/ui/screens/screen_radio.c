@@ -5,6 +5,7 @@
 #include "ui_screen.h"
 #include "ui_manager.h"
 #include "ui_nav.h"
+#include "ui_label.h"
 #include "clock_widget.h"
 #include "now_playing_widget.h"
 #include "mode_indicator_widget.h"
@@ -90,24 +91,24 @@ static void radio_create(lv_obj_t *parent)
     }
     if (p->radio_show_weather) {
         weather_widget_create(parent, p->radio_weather_x, p->radio_weather_y,
-                              p->radio_weather_w, p->radio_weather_font, 0);
+                              p->radio_weather_w, p->radio_weather_font);
     }
 
-    s_label_state = lv_label_create(parent);
+    // Screen-centered, content-hugging (so the label_bg plate tracks the text,
+    // not the full width) — mirrors the home clock labels.
+    s_label_state = ui_anchored_label(parent, DISPLAY_WIDTH / 2, p->radio_state_y,
+                                      UI_ALIGN_CENTER);
     lv_label_set_text(s_label_state, "");
     lv_obj_set_style_text_font(s_label_state, p->radio_state_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_state, lv_color_hex(th->status_ok), LV_PART_MAIN);
-    lv_obj_set_width(s_label_state, lv_pct(100));
-    lv_obj_set_style_text_align(s_label_state, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    lv_obj_set_pos(s_label_state, 0, p->radio_state_y);
+    ui_label_scrim(s_label_state);
 
-    s_label_audio_info = lv_label_create(parent);
+    s_label_audio_info = ui_anchored_label(parent, DISPLAY_WIDTH / 2,
+                                           p->radio_audio_info_y, UI_ALIGN_CENTER);
     lv_label_set_text(s_label_audio_info, "");
     lv_obj_set_style_text_font(s_label_audio_info, p->radio_audio_info_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_audio_info, lv_color_hex(th->text_muted), LV_PART_MAIN);
-    lv_obj_set_width(s_label_audio_info, lv_pct(100));
-    lv_obj_set_style_text_align(s_label_audio_info, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-    lv_obj_set_pos(s_label_audio_info, 0, p->radio_audio_info_y);
+    ui_label_scrim(s_label_audio_info);
 
     refresh_from_state();
 
@@ -203,9 +204,11 @@ static void radio_apply_theme(void)
 
     lv_obj_set_style_text_color(s_label_state,
         lv_color_hex(th->status_ok), LV_PART_MAIN);
+    ui_label_scrim(s_label_state);
 
     lv_obj_set_style_text_color(s_label_audio_info,
         lv_color_hex(th->text_muted), LV_PART_MAIN);
+    ui_label_scrim(s_label_audio_info);
 
     now_playing_widget_apply_theme();
     vu_widget_apply_theme();

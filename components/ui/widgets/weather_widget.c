@@ -3,6 +3,7 @@
 #include "theme.h"
 #include "fonts/ui_fonts.h"
 #include "ui_profile.h"
+#include "settings.h"
 #include <math.h>
 #include <stdio.h>
 
@@ -14,7 +15,17 @@
 // tracks the content instead of spanning the whole screen width.
 static lv_obj_t *s_row, *s_pill, *s_icon, *s_label;
 static lv_timer_t *s_timer;
-static int16_t s_bg_opa;   // 0 = no plate; else 0-100 % (set by the caller)
+
+// Plate opacity 0-255 from the global display.label_bg / label_bg_opa setting
+// (0 = no plate). Read at create; the screen rebuilds on a settings change.
+static uint8_t plate_opa(void)
+{
+    const app_settings_t *st = settings_get();
+    if (!st->display.label_bg || st->display.label_bg_opa <= 0) return 0;
+    int pct = st->display.label_bg_opa;
+    if (pct > 100) pct = 100;
+    return (uint8_t)((pct * 255) / 100);
+}
 
 static const char *condition(int code)
 {
@@ -49,10 +60,8 @@ static const char *icon_glyph(int code, bool day)
 static void tick(lv_timer_t *t) { (void)t; weather_widget_update(); }
 
 void weather_widget_create(lv_obj_t *parent, int16_t x, int16_t y, int16_t w,
-                           const lv_font_t *font, int16_t bg_opa)
+                           const lv_font_t *font)
 {
-    s_bg_opa = bg_opa < 0 ? 0 : (bg_opa > 100 ? 100 : bg_opa);
-
     s_row = lv_obj_create(parent);
     lv_obj_remove_style_all(s_row);
     lv_obj_set_size(s_row, w > 0 ? w : DISPLAY_WIDTH, LV_SIZE_CONTENT);
@@ -73,11 +82,12 @@ void weather_widget_create(lv_obj_t *parent, int16_t x, int16_t y, int16_t w,
     lv_obj_set_style_pad_column(s_pill, 6, LV_PART_MAIN);
     lv_obj_clear_flag(s_pill, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
 
-    // Semi-transparent plate behind the icon+text pair, mirroring the home
-    // clock-label scrim. Padding is added only when the plate is on, so the
-    // widget's geometry is unchanged when disabled.
-    if (s_bg_opa > 0) {
-        lv_obj_set_style_bg_opa(s_pill, (s_bg_opa * 255) / 100, LV_PART_MAIN);
+    // Semi-transparent plate behind the icon+text pair, controlled by the global
+    // display.label_bg setting. Padding is added only when the plate is on, so
+    // the widget's geometry is unchanged when disabled.
+    uint8_t opa = plate_opa();
+    if (opa > 0) {
+        lv_obj_set_style_bg_opa(s_pill, opa, LV_PART_MAIN);
         lv_obj_set_style_radius(s_pill, 8, LV_PART_MAIN);
         lv_obj_set_style_pad_hor(s_pill, 6, LV_PART_MAIN);
         lv_obj_set_style_pad_ver(s_pill, 0, LV_PART_MAIN);
@@ -98,7 +108,6 @@ void weather_widget_destroy(void)
 {
     if (s_timer) { lv_timer_delete(s_timer); s_timer = NULL; }
     s_row = s_pill = s_icon = s_label = NULL;
-    s_bg_opa = 0;
 }
 
 void weather_widget_update(void)
@@ -114,7 +123,7 @@ void weather_widget_update(void)
     lv_obj_set_style_text_color(s_label, col, LV_PART_MAIN);
     // Plate colour tracks the theme's screen background (text colours above are
     // picked to contrast with it) — refresh it here alongside the text.
-    if (s_bg_opa > 0)
+    if (plate_opa() > 0)
         lv_obj_set_style_bg_color(s_pill, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_label_set_text(s_icon, icon_glyph(data.weather_code, data.is_day));
     // LVGL's built-in sprintf has no %f support (LV_SPRINTF_USE_FLOAT is off) —

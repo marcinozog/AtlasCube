@@ -5,6 +5,7 @@
 #include "ui_screen.h"
 #include "ui_manager.h"
 #include "ui_nav.h"
+#include "ui_label.h"
 #include "controls_overlay_widget.h"
 #include "vol_overlay_widget.h"
 #include "clock_widget.h"
@@ -139,16 +140,19 @@ static void refresh_from_state(void)
     controls_overlay_refresh();   // keep center play/stop in sync with external changes
 }
 
+// Screen-centered, content-hugging label (so the label_bg plate tracks the
+// text, not the full width) — mirrors the home clock labels. Long text is
+// capped at the panel width (title uses LONG_DOT to ellipsize at the cap).
 static lv_obj_t *make_centered_label(lv_obj_t *parent, const lv_font_t *font,
                                      uint32_t color, int16_t y)
 {
-    lv_obj_t *lbl = lv_label_create(parent);
+    lv_obj_t *lbl = ui_anchored_label(parent, DISPLAY_WIDTH / 2, y, UI_ALIGN_CENTER);
     lv_label_set_text(lbl, "");
-    lv_obj_set_width(lbl, lv_pct(100));
+    lv_obj_set_style_max_width(lbl, DISPLAY_WIDTH - 20, LV_PART_MAIN);
     lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(lbl, font, LV_PART_MAIN);
     lv_obj_set_style_text_color(lbl, lv_color_hex(color), LV_PART_MAIN);
-    lv_obj_set_pos(lbl, 0, y);
+    ui_label_scrim(lbl);
     return lbl;
 }
 
@@ -178,8 +182,14 @@ static void sd_player_screen_create(lv_obj_t *parent)
     // Playback counter just below the VOL/mode line (position follows the
     // profile-driven anchor). Skipped on panels with no spare line (mono).
     if (p->sd_show_time) {
-        s_time = make_centered_label(parent, p->sd_info_font, th->text_muted, 0);
-        lv_obj_align_to(s_time, SD_ROW_ANCHOR, LV_ALIGN_OUT_BOTTOM_MID, 0, 4);
+        // Fixed y under the anchor row (an anchored label re-pins its own y on
+        // every text change, so align_to can't be used here — compute the y).
+        int16_t anchor_y;  const lv_font_t *anchor_font;
+        if (s_info)        { anchor_y = p->sd_info_y;   anchor_font = p->sd_info_font; }
+        else if (s_folder) { anchor_y = p->sd_folder_y; anchor_font = p->sd_folder_font; }
+        else               { anchor_y = p->sd_title_y;  anchor_font = p->sd_title_font; }
+        int16_t time_y = anchor_y + lv_font_get_line_height(anchor_font) + 4;
+        s_time = make_centered_label(parent, p->sd_info_font, th->text_muted, time_y);
         s_tick = lv_timer_create(tick_cb, 1000, NULL);
     }
 
@@ -215,7 +225,7 @@ static void sd_player_screen_create(lv_obj_t *parent)
     }
     if (p->sd_show_weather) {
         weather_widget_create(parent, p->sd_weather_x, p->sd_weather_y,
-                              p->sd_weather_w, p->sd_weather_font, 0);
+                              p->sd_weather_w, p->sd_weather_font);
     }
 
     refresh_from_state();
@@ -303,9 +313,10 @@ static void sd_player_apply_theme(void)
     const ui_theme_colors_t *th = theme_get();
 
     lv_obj_set_style_bg_color(s_root, lv_color_hex(th->bg_primary), LV_PART_MAIN);
-    if (s_title)  lv_obj_set_style_text_color(s_title,  lv_color_hex(th->text_primary), LV_PART_MAIN);
-    if (s_folder) lv_obj_set_style_text_color(s_folder, lv_color_hex(th->accent),       LV_PART_MAIN);
-    if (s_info)   lv_obj_set_style_text_color(s_info,   lv_color_hex(th->text_muted),   LV_PART_MAIN);
+    if (s_title)  { lv_obj_set_style_text_color(s_title,  lv_color_hex(th->text_primary), LV_PART_MAIN); ui_label_scrim(s_title); }
+    if (s_folder) { lv_obj_set_style_text_color(s_folder, lv_color_hex(th->accent),       LV_PART_MAIN); ui_label_scrim(s_folder); }
+    if (s_info)   { lv_obj_set_style_text_color(s_info,   lv_color_hex(th->text_muted),   LV_PART_MAIN); ui_label_scrim(s_info); }
+    if (s_time)   ui_label_scrim(s_time);
     if (s_bar) {
         lv_obj_set_style_bg_color(s_bar, lv_color_hex(th->text_muted), LV_PART_MAIN);
         lv_obj_set_style_bg_color(s_bar, lv_color_hex(th->accent),     LV_PART_INDICATOR);

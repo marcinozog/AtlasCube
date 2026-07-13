@@ -1,4 +1,7 @@
 #include "ui_label.h"
+#include "settings.h"
+#include "theme.h"
+#include "ui_profile.h"   // UI_PROFILE_MONO_* selection (via defines.h)
 
 typedef struct {
     int16_t x;
@@ -41,4 +44,22 @@ lv_obj_t *ui_anchored_label(lv_obj_t *parent, int x, int y, ui_label_align_t ali
 
     lv_obj_set_pos(label, x, y);  // initial; refined on first text/size change
     return label;
+}
+
+void ui_label_scrim(lv_obj_t *obj)
+{
+#if defined(UI_PROFILE_MONO_128X64) || defined(UI_PROFILE_MONO_256X64)
+    (void)obj;   // 1-bit panels have no wallpaper; a plate would just be a box
+#else
+    const app_settings_t *st = settings_get();
+    if (!st->display.label_bg || st->display.label_bg_opa <= 0) return;
+    int opa = st->display.label_bg_opa;
+    if (opa > 100) opa = 100;
+
+    lv_obj_set_style_bg_color(obj, lv_color_hex(theme_get()->bg_primary), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(obj, (opa * 255) / 100, LV_PART_MAIN);
+    lv_obj_set_style_radius(obj, 8, LV_PART_MAIN);
+    lv_obj_set_style_pad_hor(obj, 6, LV_PART_MAIN);
+    lv_obj_set_style_pad_ver(obj, 1, LV_PART_MAIN);
+#endif
 }

@@ -23,6 +23,13 @@ typedef enum {
 // Returns the label — set its font, color and text as usual.
 lv_obj_t *ui_anchored_label(lv_obj_t *parent, int x, int y, ui_label_align_t align);
 
+// Semi-transparent, theme-coloured rounded plate behind a floating label (or any
+// object) so its text stays readable over a wallpaper. Controlled globally by
+// display.label_bg / display.label_bg_opa. No-op — and adds no padding, so the
+// object's geometry is unchanged — when disabled. Idempotent: call again from a
+// widget's apply_theme() to refresh the plate colour on a theme change.
+void ui_label_scrim(lv_obj_t *obj);
+
 #ifdef __cplusplus
 }
 #endif

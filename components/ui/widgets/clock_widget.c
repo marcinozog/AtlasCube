@@ -51,6 +51,7 @@ void clock_widget_create(lv_obj_t *parent, int x, int y, const lv_font_t *font,
         font ? font : &lv_font_montserrat_18_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_time,
         lv_color_hex(th->text_primary), LV_PART_MAIN);
+    ui_label_scrim(s_label_time);
 
     s_timer = lv_timer_create(timer_cb, 60 * 1000, NULL);
     update_display();
@@ -77,4 +78,5 @@ void clock_widget_apply_theme(void)
 
     lv_obj_set_style_text_color(s_label_time,
         lv_color_hex(th->text_primary), LV_PART_MAIN);
+    ui_label_scrim(s_label_time);
 }
