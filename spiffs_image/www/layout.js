@@ -415,9 +415,9 @@ function renderClock(svg) {
         // Weather line — top-left anchored, width for centered text (0 → full).
         const fh = fontHeight(c.clock_weather_font);
         const ww = c.clock_weather_w > 0 ? c.clock_weather_w : W;
-        drawFreeElement(svg, {
+        drawWeatherElement(svg, {
             x: c.clock_weather_x, y: c.clock_weather_y, w: ww, h: Math.max(fh, 20),
-            label: 'weather', cls: 'label-rect',
+            label: 'weather',
             fields: { x: 'clock_weather_x', y: 'clock_weather_y', w: 'clock_weather_w' },
             text: '+21 C  Partly cloudy  54%', textSize: fh,
         });
@@ -595,9 +595,9 @@ function renderRadio(svg) {
     if (r.radio_show_weather) {
         const fh = fontHeight(r.radio_weather_font);
         const ww = r.radio_weather_w > 0 ? r.radio_weather_w : W;
-        drawFreeElement(svg, {
+        drawWeatherElement(svg, {
             x: r.radio_weather_x, y: r.radio_weather_y, w: ww, h: Math.max(fh, 20),
-            label: 'weather', cls: 'label-rect',
+            label: 'weather',
             fields: { x: 'radio_weather_x', y: 'radio_weather_y', w: 'radio_weather_w' },
             text: '+21 C  Partly cloudy  54%', textSize: fh,
         });
@@ -661,9 +661,9 @@ function renderSd(svg) {
     if (s.sd_show_weather) {
         const fh = fontHeight(s.sd_weather_font);
         const ww = s.sd_weather_w > 0 ? s.sd_weather_w : state.meta.screen_w;
-        drawFreeElement(svg, {
+        drawWeatherElement(svg, {
             x: s.sd_weather_x, y: s.sd_weather_y, w: ww, h: Math.max(fh, 20),
-            label: 'weather', cls: 'label-rect',
+            label: 'weather',
             fields: { x: 'sd_weather_x', y: 'sd_weather_y', w: 'sd_weather_w' },
             text: '+21 C  Partly cloudy  54%', textSize: fh,
         });
@@ -721,6 +721,33 @@ function drawFreeElement(svg, opts) {
     if (opts.fields.w && opts.fields.h) {
         addCornerHandles(svg, opts.x, opts.y, opts.w, opts.h, opts.fields);
     }
+}
+
+// Weather is special: its box (W) is a full-width centering FRAME that draws no
+// background on the device — the actual plate hugs the centered icon+text. So
+// draw the span as a dashed guide (movable, W-editable in the form) and a
+// filled pill sized to the rendered content, centered within the span.
+function drawWeatherElement(svg, opts) {
+    const frame = rect(svg, {
+        x: opts.x, y: opts.y, width: opts.w, height: opts.h,
+        class: 'label-frame',
+    });
+    setupMove(frame, svg, opts.fields);
+    tag(svg, opts.x + 2, opts.y + 7, opts.label);
+
+    const cx = opts.x + opts.w / 2;
+    const t = text(svg, cx, opts.y + opts.h * 0.78, opts.text, {
+        'font-size': Math.min(opts.textSize, opts.h),
+        'text-anchor': 'middle',
+    });
+    // Size the pill to the rendered text (+ horizontal padding), centered.
+    const pw = t.getBBox().width + 12;
+    const pill = rect(svg, {
+        x: cx - pw / 2, y: opts.y, width: pw, height: opts.h,
+        class: 'label-rect',
+    });
+    pill.style.pointerEvents = 'none';   // let drags fall through to the frame
+    svg.insertBefore(pill, t);           // paint the pill behind the text
 }
 
 function addCornerHandles(svg, x, y, w, h, fields) {

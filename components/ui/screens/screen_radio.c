@@ -90,7 +90,7 @@ static void radio_create(lv_obj_t *parent)
     }
     if (p->radio_show_weather) {
         weather_widget_create(parent, p->radio_weather_x, p->radio_weather_y,
-                              p->radio_weather_w, p->radio_weather_font);
+                              p->radio_weather_w, p->radio_weather_font, 0);
     }
 
     s_label_state = lv_label_create(parent);

@@ -9,8 +9,12 @@
 // Icon + text, centered as a pair inside a w-wide flex row at (x,y) — the
 // text length varies per condition, so the pair can't be centered with two
 // absolutely-positioned labels.
-static lv_obj_t *s_row, *s_icon, *s_label;
+// s_row is the full-width centering frame (transparent); s_pill hugs the
+// icon+text pair and carries the optional background plate, so the plate
+// tracks the content instead of spanning the whole screen width.
+static lv_obj_t *s_row, *s_pill, *s_icon, *s_label;
 static lv_timer_t *s_timer;
+static int16_t s_bg_opa;   // 0 = no plate; else 0-100 % (set by the caller)
 
 static const char *condition(int code)
 {
@@ -45,8 +49,10 @@ static const char *icon_glyph(int code, bool day)
 static void tick(lv_timer_t *t) { (void)t; weather_widget_update(); }
 
 void weather_widget_create(lv_obj_t *parent, int16_t x, int16_t y, int16_t w,
-                           const lv_font_t *font)
+                           const lv_font_t *font, int16_t bg_opa)
 {
+    s_bg_opa = bg_opa < 0 ? 0 : (bg_opa > 100 ? 100 : bg_opa);
+
     s_row = lv_obj_create(parent);
     lv_obj_remove_style_all(s_row);
     lv_obj_set_size(s_row, w > 0 ? w : DISPLAY_WIDTH, LV_SIZE_CONTENT);
@@ -54,13 +60,33 @@ void weather_widget_create(lv_obj_t *parent, int16_t x, int16_t y, int16_t w,
     lv_obj_set_flex_flow(s_row, LV_FLEX_FLOW_ROW);
     lv_obj_set_flex_align(s_row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
                           LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_style_pad_column(s_row, 6, LV_PART_MAIN);
     lv_obj_clear_flag(s_row, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
 
-    s_icon = lv_label_create(s_row);
+    // Content-sized pill centered inside s_row — holds the icon+text pair and
+    // the optional plate, so the background hugs the content, not the full row.
+    s_pill = lv_obj_create(s_row);
+    lv_obj_remove_style_all(s_pill);
+    lv_obj_set_size(s_pill, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+    lv_obj_set_flex_flow(s_pill, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(s_pill, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER,
+                          LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_column(s_pill, 6, LV_PART_MAIN);
+    lv_obj_clear_flag(s_pill, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+
+    // Semi-transparent plate behind the icon+text pair, mirroring the home
+    // clock-label scrim. Padding is added only when the plate is on, so the
+    // widget's geometry is unchanged when disabled.
+    if (s_bg_opa > 0) {
+        lv_obj_set_style_bg_opa(s_pill, (s_bg_opa * 255) / 100, LV_PART_MAIN);
+        lv_obj_set_style_radius(s_pill, 8, LV_PART_MAIN);
+        lv_obj_set_style_pad_hor(s_pill, 6, LV_PART_MAIN);
+        lv_obj_set_style_pad_ver(s_pill, 0, LV_PART_MAIN);
+    }
+
+    s_icon = lv_label_create(s_pill);
     lv_obj_set_style_text_font(s_icon, &lv_font_weather_20, LV_PART_MAIN);
 
-    s_label = lv_label_create(s_row);
+    s_label = lv_label_create(s_pill);
     lv_obj_set_style_text_font(s_label, font ? font : &lv_font_montserrat_12_pl,
                                LV_PART_MAIN);
 
@@ -71,7 +97,8 @@ void weather_widget_create(lv_obj_t *parent, int16_t x, int16_t y, int16_t w,
 void weather_widget_destroy(void)
 {
     if (s_timer) { lv_timer_delete(s_timer); s_timer = NULL; }
-    s_row = s_icon = s_label = NULL;
+    s_row = s_pill = s_icon = s_label = NULL;
+    s_bg_opa = 0;
 }
 
 void weather_widget_update(void)
@@ -81,9 +108,14 @@ void weather_widget_update(void)
     weather_get(&data);
     if (!data.valid) { lv_obj_add_flag(s_row, LV_OBJ_FLAG_HIDDEN); return; }
     lv_obj_clear_flag(s_row, LV_OBJ_FLAG_HIDDEN);
-    lv_color_t col = lv_color_hex(theme_get()->text_secondary);
+    const ui_theme_colors_t *th = theme_get();
+    lv_color_t col = lv_color_hex(th->text_secondary);
     lv_obj_set_style_text_color(s_icon, col, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label, col, LV_PART_MAIN);
+    // Plate colour tracks the theme's screen background (text colours above are
+    // picked to contrast with it) — refresh it here alongside the text.
+    if (s_bg_opa > 0)
+        lv_obj_set_style_bg_color(s_pill, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_label_set_text(s_icon, icon_glyph(data.weather_code, data.is_day));
     // LVGL's built-in sprintf has no %f support (LV_SPRINTF_USE_FLOAT is off) —
     // a float here renders garbage, so round to a whole degree first.

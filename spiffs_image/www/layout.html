@@ -139,6 +139,9 @@
         .panel.dragging { fill: rgba(80, 110, 170, 0.55); }
         .label-rect { fill: rgba(140, 160, 220, 0.45); stroke: #8aa0dc; stroke-width: 0.5; cursor: move; }
         .label-rect.dragging { fill: rgba(180, 200, 255, 0.75); }
+        /* Centering span for the weather widget — the device draws no background
+           here; the visible plate is the content-sized pill drawn inside it. */
+        .label-frame { fill: rgba(140, 160, 220, 0.08); stroke: #8aa0dc; stroke-width: 0.5; stroke-dasharray: 3 2; cursor: move; }
         .indicator-rect { fill: rgba(220, 100, 100, 0.55); stroke: #e94560; stroke-width: 0.5; pointer-events: none; }
         .corner-handle {
             fill: #f4a738;

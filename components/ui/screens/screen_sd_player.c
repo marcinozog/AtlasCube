@@ -215,7 +215,7 @@ static void sd_player_screen_create(lv_obj_t *parent)
     }
     if (p->sd_show_weather) {
         weather_widget_create(parent, p->sd_weather_x, p->sd_weather_y,
-                              p->sd_weather_w, p->sd_weather_font);
+                              p->sd_weather_w, p->sd_weather_font, 0);
     }
 
     refresh_from_state();

@@ -273,7 +273,8 @@ static void home_create(lv_obj_t *parent)
     }
     if (p->clock_show_weather) {
         weather_widget_create(parent, p->clock_weather_x, p->clock_weather_y,
-                              p->clock_weather_w, p->clock_weather_font);
+                              p->clock_weather_w, p->clock_weather_font,
+                              p->clock_label_bg ? p->clock_label_bg_opa : 0);
     }
 
     if (p->clock_show_strip) {
