@@ -82,6 +82,21 @@ static bool clock_is_large_font(void)
     return lv_font_get_line_height(p->clock_time_font) >= 48;
 }
 
+static void home_time_scrim(lv_obj_t *label)
+{
+    ui_label_scrim(label);
+
+    const app_settings_t *st = settings_get();
+    if (!label || !clock_is_large_font() || !st->display.label_bg ||
+        st->display.label_bg_opa <= 0) return;
+
+    // Large digit-only fonts leave slightly more unused line-box space above
+    // the glyphs than below. Remove 2 px from the plate's top while keeping the
+    // digits and the bottom edge in exactly the same visual position.
+    lv_obj_set_style_pad_top(label, -1, LV_PART_MAIN);
+    lv_obj_set_style_translate_y(label, 2, LV_PART_MAIN);
+}
+
 static void update_clock_display(void)
 {
     if (!s_time_label) return;
@@ -200,7 +215,7 @@ static void home_create(lv_obj_t *parent)
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_time_label,
             lv_color_hex(th->text_primary), LV_PART_MAIN);
-        ui_label_scrim(s_time_label);
+        home_time_scrim(s_time_label);
 
         // AM/PM suffix lives in its own label: the large clock fonts are
         // digit-only, so letters must use a text-capable (date) font. Hidden
@@ -391,7 +406,7 @@ static void home_apply_theme(void)
     if (s_time_label) {
         lv_obj_set_style_text_color(s_time_label,
             lv_color_hex(th->text_primary), LV_PART_MAIN);
-        ui_label_scrim(s_time_label);
+        home_time_scrim(s_time_label);
     }
     if (s_ampm_label) {
         lv_obj_set_style_text_color(s_ampm_label,

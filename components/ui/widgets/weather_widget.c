@@ -97,7 +97,12 @@ void weather_widget_create(lv_obj_t *parent, int16_t x, int16_t y, int16_t w,
         lv_obj_set_style_bg_opa(s_pill, opa, LV_PART_MAIN);
         lv_obj_set_style_radius(s_pill, LV_RADIUS_CIRCLE, LV_PART_MAIN);
         lv_obj_set_style_pad_hor(s_pill, 8, LV_PART_MAIN);
-        lv_obj_set_style_pad_ver(s_pill, 2, LV_PART_MAIN);
+        // The 20 px icon font makes a content-sized plate look too tall even
+        // with no padding. Keep the plate slim while centering the glyphs over
+        // it; overflow prevents the icon's line box from being clipped.
+        lv_obj_set_height(s_pill, 18);
+        lv_obj_set_style_pad_ver(s_pill, 1, LV_PART_MAIN);
+        lv_obj_add_flag(s_pill, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
     }
 
     s_icon = lv_label_create(s_pill);
