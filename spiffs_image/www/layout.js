@@ -547,7 +547,7 @@ function drawStripLabel(svg, sx, sy, yWithinStrip, labelW, stripW, name, fieldKe
     const h = 14;
     const r = rect(svg, {
         x, y, width: labelW, height: h,
-        class: 'label-rect',
+        class: `label-rect ${placeholderClass(name)}`,
     });
     text(svg, x + 4, y + 10, name, { 'font-size': 8 });
     setupYDrag(r, fieldKey);
@@ -566,7 +566,7 @@ function renderBt(svg) {
             width: b.bt_circle_w, height: b.bt_circle_h,
             rx: Math.min(b.bt_circle_w, b.bt_circle_h) / 2,
             ry: Math.min(b.bt_circle_w, b.bt_circle_h) / 2,
-            class: 'panel',
+            class: `panel ${placeholderClass('circle')}`,
         });
         setupMove(r, svg, { x: 'bt_circle_x', y: 'bt_circle_y' });
         addCornerHandles(svg,
@@ -728,7 +728,7 @@ function renderSd(svg) {
         const by = s.sd_info_y + fh + 4 + timeRow;
         const bx = Math.round((state.meta.screen_w - s.sd_bar_w) / 2);
         rect(svg, { x: bx, y: by, width: s.sd_bar_w, height: s.sd_bar_h,
-                    class: 'label-rect' });
+                    class: `label-rect ${placeholderClass('bar')}` });
         tag(svg, bx + 2, by + 7, 'bar');
     }
 
@@ -792,7 +792,8 @@ function drawLabel(svg, x, y, fontId, text_str, name, fields, anchorCenter) {
 
 function drawFreeElement(svg, opts) {
     const r = rect(svg, {
-        x: opts.x, y: opts.y, width: opts.w, height: opts.h, class: opts.cls,
+        x: opts.x, y: opts.y, width: opts.w, height: opts.h,
+        class: `${opts.cls} ${placeholderClass(opts.label)}`,
     });
     setupMove(r, svg, opts.fields);
 
@@ -830,7 +831,7 @@ function drawFreeElement(svg, opts) {
 function drawWeatherElement(svg, opts) {
     const frame = rect(svg, {
         x: opts.x, y: opts.y, width: opts.w, height: opts.h,
-        class: 'label-frame',
+        class: `label-frame ${placeholderClass('weather')}`,
     });
     setupMove(frame, svg, opts.fields);
     tag(svg, opts.x + 2, opts.y + 7, opts.label);
@@ -844,7 +845,7 @@ function drawWeatherElement(svg, opts) {
     const pw = t.getBBox().width + 12;
     const pill = rect(svg, {
         x: cx - pw / 2, y: opts.y, width: pw, height: opts.h,
-        class: 'label-rect',
+        class: `label-rect ${placeholderClass('weather')}`,
     });
     pill.style.pointerEvents = 'none';   // let drags fall through to the frame
     svg.insertBefore(pill, t);           // paint the pill behind the text
@@ -1024,6 +1025,26 @@ function fontHeight(id) {
     if (!id) return 14;
     const m = id.match(/_(\d+)(_pl)?$/);
     return m ? parseInt(m[1], 10) : 14;
+}
+
+// Keep the preview readable when elements overlap: the colour communicates the
+// element's role consistently across Home, Radio, SD and Bluetooth screens.
+function placeholderClass(name) {
+    const classes = {
+        time: 'ph-time', clock: 'ph-time',
+        date: 'ph-date',
+        station: 'ph-media-primary', np_station: 'ph-media-primary', brand: 'ph-media-primary',
+        title: 'ph-media-secondary', np_title: 'ph-media-secondary', artist: 'ph-media-secondary',
+        ip: 'ph-info', info: 'ph-info', status: 'ph-info', state: 'ph-info', folder: 'ph-info',
+        mode: 'ph-mode',
+        evt: 'ph-event',
+        calendar: 'ph-calendar',
+        weather: 'ph-weather',
+        VU: 'ph-vu',
+        bar: 'ph-progress',
+        panel: 'ph-container', strip: 'ph-container', circle: 'ph-container',
+    };
+    return classes[name] || 'ph-default';
 }
 
 function rect(parent, attrs) {

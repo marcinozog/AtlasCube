@@ -206,6 +206,20 @@
         /* Centering span for the weather widget — the device draws no background
            here; the visible plate is the content-sized pill drawn inside it. */
         .label-frame { fill: rgba(140, 160, 220, 0.08); stroke: #8aa0dc; stroke-width: 0.5; stroke-dasharray: 3 2; cursor: move; }
+        /* Semantic placeholder palette — the same role keeps the same colour on
+           every screen, so overlapping widgets remain distinguishable. */
+        .label-rect.ph-time       { fill: rgba(34, 211, 238, .30); stroke: #22d3ee; }
+        .label-rect.ph-date       { fill: rgba(59, 130, 246, .30); stroke: #60a5fa; }
+        .label-rect.ph-media-primary   { fill: rgba(168, 85, 247, .30); stroke: #c084fc; }
+        .label-rect.ph-media-secondary { fill: rgba(236, 72, 153, .28); stroke: #f472b6; }
+        .label-rect.ph-info       { fill: rgba(245, 158, 11, .28); stroke: #fbbf24; }
+        .label-rect.ph-mode       { fill: rgba(249, 115, 22, .36); stroke: #fb923c; }
+        .label-rect.ph-event      { fill: rgba(239, 68, 68, .36); stroke: #f87171; }
+        .label-rect.ph-calendar   { fill: rgba(234, 179, 8, .32); stroke: #fde047; }
+        .label-rect.ph-weather    { fill: rgba(20, 184, 166, .32); stroke: #2dd4bf; }
+        .label-frame.ph-weather   { fill: rgba(20, 184, 166, .08); stroke: #2dd4bf; }
+        .label-rect.ph-vu         { fill: rgba(34, 197, 94, .28); stroke: #4ade80; }
+        .label-rect.ph-progress   { fill: rgba(250, 204, 21, .35); stroke: #facc15; }
         .indicator-rect { fill: rgba(220, 100, 100, 0.55); stroke: #e94560; stroke-width: 0.5; pointer-events: none; }
         .corner-handle {
             fill: #f4a738;
