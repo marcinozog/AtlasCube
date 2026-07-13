@@ -16,6 +16,7 @@ let dragIdx  = -1;   // index of the row being dragged
 let iconEditIdx = -1;
 let iconCandidates = [];
 let iconObserver = null;
+let iconAuditOrphans = [];
 let savedPlaylistSnapshot = '';
 let allowUnloadOnce = false;
 const iconThumbCache = new Map();
@@ -212,6 +213,11 @@ function makeRow(st, idx) {
 
 function escapeAttr(s) {
     return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -865,6 +871,120 @@ async function iconFindMissing() {
     } finally {
         btn.disabled = false;
     }
+}
+
+async function iconListFiles() {
+    const res = await fetch('/api/sd/list?path=' + encodeURIComponent('/station-icons'), {
+        cache: 'no-store'
+    });
+    if (res.status === 503) throw new Error('no SD card');
+    if (res.status === 404) return [];
+    if (!res.ok) throw new Error('folder unavailable (HTTP ' + res.status + ')');
+    const data = await res.json();
+    return (data.entries || [])
+        .filter(e => !e.dir && String(e.name).toLowerCase().endsWith('.bin'))
+        .map(e => '/station-icons/' + e.name);
+}
+
+function iconAuditRender(missing, orphans) {
+    const box = document.getElementById('icon_audit');
+    iconAuditOrphans = orphans;
+    if (!missing.length && !orphans.length) {
+        box.innerHTML = '<div class="icon-audit-summary ok">All station icon assignments and files match.</div>';
+        return;
+    }
+
+    let html = '';
+    if (missing.length) {
+        html += `<div class="icon-audit-summary error">${missing.length} station(s) reference a missing icon file:</div>`;
+        html += missing.map(x => `
+            <div class="icon-audit-row">
+                <div class="icon-audit-copy">
+                    <strong>${escapeHtml(x.name || '(unnamed station)')}</strong>
+                    <span>${escapeHtml(x.icon)}</span>
+                </div>
+            </div>`).join('');
+    }
+    if (orphans.length) {
+        html += `<div class="icon-audit-head">
+            <div class="icon-audit-summary">${orphans.length} unused icon file(s) on the SD card:</div>
+            <button class="btn-secondary icon-remove" type="button" onclick="iconDeleteAllUnused()">Delete all unused</button>
+        </div>`;
+        html += orphans.map((path, idx) => `
+            <div class="icon-audit-row">
+                <div class="icon-audit-copy"><span>${escapeHtml(path)}</span></div>
+                <button class="btn-secondary icon-remove" type="button" onclick="iconDeleteUnused(${idx})">Delete</button>
+            </div>`).join('');
+    }
+    box.innerHTML = html;
+}
+
+async function iconAudit() {
+    syncFromDom();
+    const btn = document.getElementById('icons_audit_btn');
+    const box = document.getElementById('icon_audit');
+    btn.disabled = true;
+    box.innerHTML = '<div class="icon-audit-summary">Checking current editor assignments and SD files...</div>';
+    try {
+        const files = await iconListFiles();
+        const fileSet = new Set(files);
+        const referenced = new Set(stations.map(st => (st.icon || '').trim()).filter(Boolean));
+        const missing = stations
+            .filter(st => st.icon && !fileSet.has(st.icon.trim()))
+            .map(st => ({ name: st.name, icon: st.icon.trim() }));
+        const orphans = files.filter(path => !referenced.has(path));
+        iconAuditRender(missing, orphans);
+    } catch (e) {
+        iconAuditOrphans = [];
+        box.innerHTML = '<div class="icon-audit-summary error">Icon check failed: ' +
+            escapeHtml(e.message) + '.</div>';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function iconDeletePath(path) {
+    if (!path || !path.startsWith('/station-icons/') || !path.toLowerCase().endsWith('.bin')) {
+        throw new Error('invalid icon path');
+    }
+    syncFromDom();
+    if (stations.some(st => (st.icon || '').trim() === path)) {
+        throw new Error('icon is currently assigned to a station');
+    }
+    const res = await fetch('/api/sd/file?path=' + encodeURIComponent(path), { method: 'DELETE' });
+    if (!res.ok) throw new Error('delete HTTP ' + res.status);
+    iconThumbCache.delete(path);
+}
+
+async function iconDeleteUnused(idx) {
+    const path = iconAuditOrphans[idx];
+    if (!path || !confirm('Delete unused icon file?\n\n' + path)) return;
+    try {
+        await iconDeletePath(path);
+        setStatus('Unused icon deleted from the SD card.', 'ok');
+        await iconAudit();
+    } catch (e) {
+        setStatus('Icon delete failed: ' + e.message, 'error');
+        await iconAudit();
+    }
+}
+
+async function iconDeleteAllUnused() {
+    const paths = iconAuditOrphans.slice();
+    if (!paths.length || !confirm(`Delete all ${paths.length} unused icon files from the SD card?`)) return;
+    let deleted = 0;
+    let failed = 0;
+    for (const path of paths) {
+        try {
+            await iconDeletePath(path);
+            deleted++;
+        } catch (_) {
+            failed++;
+        }
+    }
+    setStatus(`Icon cleanup finished: ${deleted} deleted, ${failed} skipped or failed.`,
+              failed ? 'error' : 'ok');
+    await iconAudit();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -437,6 +437,49 @@
 .icon-status.error { color: var(--red); }
 .icon-note { margin-top: 10px; color: var(--text-dim); font-size: 11px; line-height: 1.45; }
 
+.icon-audit {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+}
+.icon-audit:empty { display: none; }
+.icon-audit-summary {
+    padding: 8px 10px;
+    color: var(--text-dim);
+    font-size: 12px;
+}
+.icon-audit-summary.ok { color: var(--green); }
+.icon-audit-summary.error { color: var(--red); }
+.icon-audit-head,
+.icon-audit-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.icon-audit-head { justify-content: space-between; }
+.icon-audit-row {
+    min-width: 0;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-station);
+}
+.icon-audit-copy {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 2px;
+}
+.icon-audit-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.icon-audit-copy span {
+    overflow-wrap: anywhere;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+}
+
 .pl-meta {
     margin-top: 10px;
     font-size: 12px;

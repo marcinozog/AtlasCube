@@ -60,6 +60,7 @@
         <div class="pl-actions">
             <button class="btn-secondary" onclick="plAddRow()">➕ Add station</button>
             <button class="btn-secondary" id="icons_missing_btn" onclick="iconFindMissing()">◉ Find missing icons</button>
+            <button class="btn-secondary" id="icons_audit_btn" onclick="iconAudit()">🧹 Check icon files</button>
             <button id="pl_save_btn" onclick="plSave()">💾 Save &amp; Apply</button>
             <button class="pl-download" onclick="document.getElementById('pl_import').click()"
                     title="Replace current list with a CSV file">⬆ Import CSV</button>
@@ -72,6 +73,7 @@
             <span id="pl_count">0</span> / <span id="pl_max2">64</span> stations
         </div>
         <div id="pl_status" class="save-status"></div>
+        <div id="icon_audit" class="icon-audit"></div>
     </div>
 </main>
 
