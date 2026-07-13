@@ -11,7 +11,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        variant: [ili9341-ft6336u, st7796-ft6336u, ili9488-ft6336u, co5300-cst816d, ssd1322,
+        variant: [ili9341-ft6336u, st7789v, st7796-ft6336u, ili9488-ft6336u, co5300-cst816d, ssd1322,
                   ili9341-xpt2046, st7796-xpt2046, ili9488-xpt2046]
 
     steps:

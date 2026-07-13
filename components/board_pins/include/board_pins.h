@@ -24,7 +24,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 typedef struct {
-    // Display — SPI variants (ili9341 / st7796 / ili9488 / ssd1322)
+    // Display — SPI variants (ili9341 / st7789v / st7796 / ili9488 / ssd1322)
     int8_t lcd_mosi;
     int8_t lcd_clk;
     int8_t lcd_cs;

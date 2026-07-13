@@ -657,7 +657,7 @@
     }
     if (d.driver === 'CO5300') {
       unused['SPI LCD'] = 1;
-    } else if (['ILI9341','ST7796','ILI9488','SSD1322'].indexOf(d.driver) >= 0) {
+    } else if (['ILI9341','ST7789V','ST7796','ILI9488','SSD1322'].indexOf(d.driver) >= 0) {
       unused['QSPI LCD'] = 1;
     }
 

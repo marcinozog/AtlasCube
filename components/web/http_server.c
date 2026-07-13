@@ -71,6 +71,8 @@ static esp_err_t api_weather_post_handler(httpd_req_t *req);
 // binary was flashed (driver is fixed in the image; pins are not).
 #if defined(CONFIG_DISPLAY_ILI9341)
   #define DISPLAY_DRIVER_NAME "ILI9341"
+#elif defined(CONFIG_DISPLAY_ST7789V)
+  #define DISPLAY_DRIVER_NAME "ST7789V"
 #elif defined(CONFIG_DISPLAY_ST7796)
   #define DISPLAY_DRIVER_NAME "ST7796"
 #elif defined(CONFIG_DISPLAY_ILI9488)

@@ -13,7 +13,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${DEFINES_H}")
 file(READ "${DEFINES_H}" _atlas_defines)
 set(_atlas_defines "${_atlas_defines}\n")
 
-string(REGEX MATCH "\n[ \t]*#define[ \t]+DISPLAY_(ILI9341|ST7796|ILI9488|CO5300|SSD1322)[^A-Za-z0-9_]"
+string(REGEX MATCH "\n[ \t]*#define[ \t]+DISPLAY_(ILI9341|ST7789V|ST7796|ILI9488|CO5300|SSD1322)[^A-Za-z0-9_]"
        _ "${_atlas_defines}")
 set(ATLAS_DISPLAY "${CMAKE_MATCH_1}")
 

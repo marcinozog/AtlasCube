@@ -41,6 +41,7 @@
 
 // ===== DISPLAY DRIVER =====
 #define DISPLAY_ILI9341
+// #define DISPLAY_ST7789V
 // #define DISPLAY_ST7796
 // #define DISPLAY_ILI9488
 // #define DISPLAY_CO5300
@@ -78,6 +79,16 @@
 
 #if CONFIG_DISPLAY_ILI9341
 
+#define LCD_PIN_MOSI  39
+#define LCD_PIN_CLK   40
+#define LCD_PIN_CS    41
+#define LCD_PIN_DC    2
+#define LCD_PIN_RST   42
+#define LCD_LED       1
+
+#elif CONFIG_DISPLAY_ST7789V
+
+// ST7789V 240x320 panel used in landscape as 320x240.
 #define LCD_PIN_MOSI  39
 #define LCD_PIN_CLK   40
 #define LCD_PIN_CS    41

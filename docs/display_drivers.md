@@ -230,6 +230,7 @@ toggles these mirror bits:
 | Driver | normal | flipped | bits toggled |
 |---|---|---|---|
 | CO5300 | `MADCTL 0xC0` | `0x00` | MY+MX (`0xC0`) |
+| ST7789V | `MADCTL 0xA8` | `0x68` | MY+MX (`0xC0`) |
 | ST7796 / ILI9341 / ILI9488 | `MADCTL 0xE8` | `0x28` | MY+MX (`0xC0`) |
 | SSD1322 | remap `0xA0`→`0x14` | `0x06` | column-remap (`0x02`) + COM-scan (`0x10`) |
 
@@ -259,7 +260,7 @@ The flag is **XORed over each driver's known-good baseline**, so the default
 
 | Driver | baseline | `invert=false` | `invert=true` |
 |---|---|---|---|
-| ILI9341 / ST7796 | `INVON` | `INVON` (`0x21`) | `INVOFF` (`0x20`) |
+| ILI9341 / ST7789V / ST7796 | `INVON` | `INVON` (`0x21`) | `INVOFF` (`0x20`) |
 | ILI9488 / CO5300 | `INVOFF` | `INVOFF` (`0x20`) | `INVON` (`0x21`) |
 | SSD1322 (mono) | — | no-op | no-op |
 

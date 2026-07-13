@@ -12,6 +12,7 @@ While the major version is `0`, any minor release may introduce breaking changes
 ## [0.43.0] - 2026-07-12
 
 ### Added
+- **display:** add ST7789V 320x240 SPI driver and touch-less firmware variant
 - **events:** stop-playback option for playback schedules (station -1 sentinel)
 - **setup:** hide/dim pin sections not matching compiled drivers + show-all toggle
 - **setup:** hide pin sections not matching compiled drivers + show-all toggle
