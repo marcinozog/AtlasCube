@@ -79,8 +79,8 @@ static void radio_create(lv_obj_t *parent)
 
     if (p->radio_show_cassette) {
         animated_wheels_widget_create(parent, (animated_wheels_style_t)p->radio_animation_style,
-                               p->radio_cassette_l_x, p->radio_cassette_l_y, p->radio_cassette_l_size,
-                               p->radio_cassette_r_x, p->radio_cassette_r_y, p->radio_cassette_r_size);
+                                      p->radio_cassette_l_x, p->radio_cassette_l_y, p->radio_cassette_l_size,
+                                      p->radio_cassette_r_x, p->radio_cassette_r_y, p->radio_cassette_r_size);
     }
 
     if (p->radio_show_np) {

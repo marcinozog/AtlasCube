@@ -171,8 +171,8 @@ static void sd_player_screen_create(lv_obj_t *parent)
 
     if (p->sd_show_cassette) {
         animated_wheels_widget_create(parent, (animated_wheels_style_t)p->sd_animation_style,
-                               p->sd_cassette_l_x, p->sd_cassette_l_y, p->sd_cassette_l_size,
-                               p->sd_cassette_r_x, p->sd_cassette_r_y, p->sd_cassette_r_size);
+                                      p->sd_cassette_l_x, p->sd_cassette_l_y, p->sd_cassette_l_size,
+                                      p->sd_cassette_r_x, p->sd_cassette_r_y, p->sd_cassette_r_size);
     }
 
     s_title = make_centered_label(parent, p->sd_title_font, th->text_primary, p->sd_title_y);
