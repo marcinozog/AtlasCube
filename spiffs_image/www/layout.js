@@ -139,6 +139,15 @@ const RADIO_FIELDS = [
     { key: 'radio_vu_y',                 label: 'VU Y',              type: 'number' },
     { key: 'radio_vu_w',                 label: 'VU W',              type: 'number' },
     { key: 'radio_vu_h',                 label: 'VU H',              type: 'number' },
+    { key: 'radio_show_cassette',        label: 'Show animated wheels', type: 'bool' },
+    { key: 'radio_animation_style',      label: 'Graphic', type: 'choice', default: 0,
+      options: [{ value: 0, label: 'Cassette reels' }, { value: 1, label: 'Car rims' }] },
+    { key: 'radio_cassette_l_x',         label: 'Left wheel X',         type: 'number' },
+    { key: 'radio_cassette_l_y',         label: 'Left wheel Y',         type: 'number' },
+    { key: 'radio_cassette_l_size',      label: 'Left wheel size',      type: 'number', min: 16, max: 480 },
+    { key: 'radio_cassette_r_x',         label: 'Right wheel X',        type: 'number' },
+    { key: 'radio_cassette_r_y',         label: 'Right wheel Y',        type: 'number' },
+    { key: 'radio_cassette_r_size',      label: 'Right wheel size',     type: 'number', min: 16, max: 480 },
     { key: 'radio_show_weather', label: 'Show weather', type: 'bool' },
     { key: 'radio_weather_x', label: 'Weather X', type: 'number' },
     { key: 'radio_weather_y', label: 'Weather Y', type: 'number' },
@@ -178,6 +187,15 @@ const SD_FIELDS = [
     { key: 'sd_vu_y',                 label: 'VU Y',              type: 'number' },
     { key: 'sd_vu_w',                 label: 'VU W',              type: 'number' },
     { key: 'sd_vu_h',                 label: 'VU H',              type: 'number' },
+    { key: 'sd_show_cassette',        label: 'Show animated wheels', type: 'bool' },
+    { key: 'sd_animation_style',      label: 'Graphic', type: 'choice', default: 0,
+      options: [{ value: 0, label: 'Cassette reels' }, { value: 1, label: 'Car rims' }] },
+    { key: 'sd_cassette_l_x',         label: 'Left wheel X',         type: 'number' },
+    { key: 'sd_cassette_l_y',         label: 'Left wheel Y',         type: 'number' },
+    { key: 'sd_cassette_l_size',      label: 'Left wheel size',      type: 'number', min: 16, max: 480 },
+    { key: 'sd_cassette_r_x',         label: 'Right wheel X',        type: 'number' },
+    { key: 'sd_cassette_r_y',         label: 'Right wheel Y',        type: 'number' },
+    { key: 'sd_cassette_r_size',      label: 'Right wheel size',     type: 'number', min: 16, max: 480 },
     { key: 'sd_show_weather', label: 'Show weather', type: 'bool' },
     { key: 'sd_weather_x', label: 'Weather X', type: 'number' },
     { key: 'sd_weather_y', label: 'Weather Y', type: 'number' },
@@ -215,6 +233,7 @@ const FORM_GROUPS = {
         { title: 'Mode indicator', enabledBy: 'radio_show_mode_indicator', fields: ['radio_show_mode_indicator', 'radio_mode_indic_x', 'radio_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'radio_show_clock', fields: ['radio_show_clock', 'radio_clock_widget_x', 'radio_clock_widget_y', 'radio_clock_font'] },
         { title: 'Event indicator', enabledBy: 'radio_show_event_indicator', fields: ['radio_show_event_indicator', 'radio_event_indic_x', 'radio_event_indic_y'] },
+        { title: 'Animated wheels', enabledBy: 'radio_show_cassette', fields: ['radio_show_cassette', 'radio_animation_style', 'radio_cassette_l_x', 'radio_cassette_l_y', 'radio_cassette_l_size', 'radio_cassette_r_x', 'radio_cassette_r_y', 'radio_cassette_r_size'] },
         { title: 'VU meter', enabledBy: 'radio_show_vu', fields: ['radio_show_vu', 'radio_vu_x', 'radio_vu_y', 'radio_vu_w', 'radio_vu_h'] },
         { title: 'Weather', enabledBy: 'radio_show_weather', fields: ['radio_show_weather', 'radio_weather_x', 'radio_weather_y', 'radio_weather_w', 'radio_weather_font'] },
     ],
@@ -226,6 +245,7 @@ const FORM_GROUPS = {
         { title: 'Mode indicator', enabledBy: 'sd_show_mode_indicator', fields: ['sd_show_mode_indicator', 'sd_mode_indic_x', 'sd_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'sd_show_clock', fields: ['sd_show_clock', 'sd_clock_widget_x', 'sd_clock_widget_y', 'sd_clock_font'] },
         { title: 'Event indicator', enabledBy: 'sd_show_event_indicator', fields: ['sd_show_event_indicator', 'sd_event_indic_x', 'sd_event_indic_y'] },
+        { title: 'Animated wheels', enabledBy: 'sd_show_cassette', fields: ['sd_show_cassette', 'sd_animation_style', 'sd_cassette_l_x', 'sd_cassette_l_y', 'sd_cassette_l_size', 'sd_cassette_r_x', 'sd_cassette_r_y', 'sd_cassette_r_size'] },
         { title: 'VU meter', enabledBy: 'sd_show_vu', fields: ['sd_show_vu', 'sd_vu_x', 'sd_vu_y', 'sd_vu_w', 'sd_vu_h'] },
         { title: 'Weather', enabledBy: 'sd_show_weather', fields: ['sd_show_weather', 'sd_weather_x', 'sd_weather_y', 'sd_weather_w', 'sd_weather_font'] },
     ],
@@ -381,6 +401,20 @@ function buildFormRow(field, data, group, details) {
         input.value = data[field.key] ?? '';
         input.addEventListener('change', () => {
             data[field.key] = input.value;
+            refreshGroup(details, group, data);
+            renderSvg();
+        });
+    } else if (field.type === 'choice') {
+        input = document.createElement('select');
+        for (const option of field.options) {
+            const o = document.createElement('option');
+            o.value = option.value;
+            o.textContent = option.label;
+            input.appendChild(o);
+        }
+        input.value = data[field.key] ?? field.default ?? 0;
+        input.addEventListener('change', () => {
+            data[field.key] = parseInt(input.value, 10) | 0;
             refreshGroup(details, group, data);
             renderSvg();
         });
@@ -648,6 +682,15 @@ function renderRadio(svg) {
     const r = state.radio;
     const W = state.meta.screen_w;
 
+    if (r.radio_show_cassette) {
+        drawAnimatedWheel(svg, r.radio_cassette_l_x, r.radio_cassette_l_y,
+                         r.radio_cassette_l_size, 'wheel L',
+                         'radio_cassette_l_x', 'radio_cassette_l_y', 'radio_cassette_l_size');
+        drawAnimatedWheel(svg, r.radio_cassette_r_x, r.radio_cassette_r_y,
+                         r.radio_cassette_r_size, 'wheel R',
+                         'radio_cassette_r_x', 'radio_cassette_r_y', 'radio_cassette_r_size');
+    }
+
     if (r.radio_show_np) {
         // Now-playing widget = two stacked labels (station + title). Width is fixed
         // in firmware to screen_w - 20 (full-screen scrolling line); the title sits
@@ -717,6 +760,15 @@ function renderRadio(svg) {
 
 function renderSd(svg) {
     const s = state.sd;
+
+    if (s.sd_show_cassette) {
+        drawAnimatedWheel(svg, s.sd_cassette_l_x, s.sd_cassette_l_y,
+                         s.sd_cassette_l_size, 'wheel L',
+                         'sd_cassette_l_x', 'sd_cassette_l_y', 'sd_cassette_l_size');
+        drawAnimatedWheel(svg, s.sd_cassette_r_x, s.sd_cassette_r_y,
+                         s.sd_cassette_r_size, 'wheel R',
+                         'sd_cassette_r_x', 'sd_cassette_r_y', 'sd_cassette_r_size');
+    }
 
     drawLabel(svg, 0, s.sd_title_y, s.sd_title_font, 'Artist - Title',
               'title', { y: 'sd_title_y' });
@@ -794,6 +846,15 @@ function drawLabel(svg, x, y, fontId, text_str, name, fields, anchorCenter) {
         label: name, cls: 'label-rect',
         fields,
         text: text_str, textSize: fh,
+    });
+}
+
+function drawAnimatedWheel(svg, x, y, size, label, xField, yField, sizeField) {
+    size = Math.max(16, size | 0);
+    const fields = { x: xField, y: yField, w: sizeField, h: sizeField, square: true };
+    drawFreeElement(svg, {
+        x, y, w: size, h: size,
+        label, cls: 'label-rect animated-wheel', fields,
     });
 }
 
@@ -935,17 +996,29 @@ function setupResize(el, svg, fields, dir) {
             const dx = Math.round((ev.clientX - start.mx) / pxPerU.x);
             const dy = Math.round((ev.clientY - start.my) / pxPerU.y);
             let nx = start.x, ny = start.y, nw = start.w, nh = start.h;
+            if (fields.square) {
+                const dwX = dir.includes('r') ? dx : -dx;
+                const dwY = dir.includes('b') ? dy : -dy;
+                const delta = Math.abs(dwX) >= Math.abs(dwY) ? dwX : dwY;
+                const size = Math.max(16, start.w + delta);
+                if (dir.includes('l')) nx = start.x + start.w - size;
+                if (dir.includes('t')) ny = start.y + start.h - size;
+                nw = nh = size;
+            } else {
             if (dir.includes('l')) { nx = start.x + dx; nw = start.w - dx; }
             if (dir.includes('r')) {                     nw = start.w + dx; }
             if (dir.includes('t')) { ny = start.y + dy; nh = start.h - dy; }
             if (dir.includes('b')) {                     nh = start.h + dy; }
             if (nw < 4) { nw = 4; if (dir.includes('l')) nx = start.x + start.w - 4; }
             if (nh < 4) { nh = 4; if (dir.includes('t')) ny = start.y + start.h - 4; }
+            }
 
             data[fields.x] = nx; data[fields.y] = ny;
-            data[fields.w] = nw; data[fields.h] = nh;
+            data[fields.w] = nw;
+            if (fields.h !== fields.w) data[fields.h] = nh;
             setFormValue(fields.x, nx); setFormValue(fields.y, ny);
-            setFormValue(fields.w, nw); setFormValue(fields.h, nh);
+            setFormValue(fields.w, nw);
+            if (fields.h !== fields.w) setFormValue(fields.h, nh);
             renderSvg();
         };
         const onUp = () => {

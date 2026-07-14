@@ -47,6 +47,7 @@ idf_component_register(
         "widgets/vol_overlay_widget.c"
         "widgets/net_fetch_overlay_widget.c"
         "widgets/vu_widget.c"
+        "widgets/animated_wheels_widget.c"
         "fonts/lv_font_montserrat_8_pl.c"
         "fonts/lv_font_montserrat_10_pl.c"
         "fonts/lv_font_montserrat_12_pl.c"
@@ -88,3 +89,11 @@ idf_component_register(
         net_wallpaper           # internet wallpaper (ui_background + done cb)
         weather
 )
+
+# Geometry and animation logic are built from TMP/private/animated_wheels and
+# published here only as a stripped ESP32-S3 archive. The public widget source
+# above is a theme/profile adapter and directly references the archive API, so
+# normal archive scanning is sufficient (no --whole-archive required).
+add_prebuilt_library(animated_wheels_impl_prebuilt
+    "${CMAKE_SOURCE_DIR}/lib/libanimated_wheels_impl.a")
+target_link_libraries(${COMPONENT_LIB} PRIVATE animated_wheels_impl_prebuilt)

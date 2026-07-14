@@ -15,6 +15,7 @@
 #include "controls_overlay_widget.h"
 #include "vol_overlay_widget.h"
 #include "vu_widget.h"
+#include "animated_wheels_widget.h"
 #include "app_state.h"
 #include "settings.h"
 #include "theme.h"
@@ -49,6 +50,7 @@ static void refresh_from_state(void)
     app_state_t *s = app_state_get();
 
     now_playing_widget_update();
+    animated_wheels_widget_set_running(s->radio_state == RADIO_STATE_PLAYING);
 
     lv_label_set_text(s_label_state, radio_state_str(s->radio_state));
 
@@ -72,6 +74,12 @@ static void radio_create(lv_obj_t *parent)
 
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
+
+    if (p->radio_show_cassette) {
+        animated_wheels_widget_create(parent, (animated_wheels_style_t)p->radio_animation_style,
+                               p->radio_cassette_l_x, p->radio_cassette_l_y, p->radio_cassette_l_size,
+                               p->radio_cassette_r_x, p->radio_cassette_r_y, p->radio_cassette_r_size);
+    }
 
     if (p->radio_show_np) {
         now_playing_widget_create(parent, p->radio_np_x, p->radio_np_y, LV_TEXT_ALIGN_CENTER,
@@ -125,6 +133,7 @@ static void radio_destroy(void)
     controls_overlay_destroy();
     vol_overlay_hide();
     vu_widget_destroy();
+    animated_wheels_widget_destroy();
     weather_widget_destroy();
     station_icon_widget_destroy();
     now_playing_widget_destroy();
@@ -155,6 +164,7 @@ static void radio_on_event(const ui_event_t *ev)
             weather_widget_update();
             break;
         case UI_EVT_RADIO_STATE:
+            animated_wheels_widget_set_running(ev->radio_state == RADIO_STATE_PLAYING);
             if (s_label_state)
                 lv_label_set_text(s_label_state, radio_state_str(ev->radio_state));
             break;
@@ -217,6 +227,7 @@ static void radio_apply_theme(void)
 
     now_playing_widget_apply_theme();
     vu_widget_apply_theme();
+    animated_wheels_widget_apply_theme();
     clock_widget_apply_theme();
     mode_indicator_apply_theme();
     event_indicator_apply_theme();

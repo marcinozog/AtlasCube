@@ -162,6 +162,14 @@ typedef struct {
     int16_t          radio_vu_y;
     int16_t          radio_vu_w;
     int16_t          radio_vu_h;
+    bool             radio_show_cassette;      // legacy JSON name: show animated wheels overlay
+    int16_t          radio_animation_style;    // 0 cassette reels, 1 car rims
+    int16_t          radio_cassette_l_x;        // top-left + square size, LCD px
+    int16_t          radio_cassette_l_y;
+    int16_t          radio_cassette_l_size;
+    int16_t          radio_cassette_r_x;
+    int16_t          radio_cassette_r_y;
+    int16_t          radio_cassette_r_size;
     bool             radio_show_weather;
     int16_t          radio_weather_x;
     int16_t          radio_weather_y;
@@ -199,6 +207,14 @@ typedef struct {
     int16_t          sd_vu_y;
     int16_t          sd_vu_w;
     int16_t          sd_vu_h;
+    bool             sd_show_cassette;         // legacy JSON name: show animated wheels overlay
+    int16_t          sd_animation_style;       // 0 cassette reels, 1 car rims
+    int16_t          sd_cassette_l_x;           // top-left + square size, LCD px
+    int16_t          sd_cassette_l_y;
+    int16_t          sd_cassette_l_size;
+    int16_t          sd_cassette_r_x;
+    int16_t          sd_cassette_r_y;
+    int16_t          sd_cassette_r_size;
     bool             sd_show_weather;
     int16_t          sd_weather_x;
     int16_t          sd_weather_y;

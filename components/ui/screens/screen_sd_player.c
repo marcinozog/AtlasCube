@@ -13,6 +13,7 @@
 #include "event_indicator_widget.h"
 #include "weather_widget.h"
 #include "vu_widget.h"
+#include "animated_wheels_widget.h"
 #include "app_state.h"
 #include "settings.h"
 #include "sd_player.h"
@@ -108,6 +109,8 @@ static void refresh_from_state(void)
     if (!s_title) return;
     app_state_t *s = app_state_get();
 
+    animated_wheels_widget_set_running(s->sd_active && !s->sd_paused);
+
     // Only show a track while SD is the active source — app_state.title is
     // shared and otherwise holds the radio's ICY title. Blank (hidden) when idle
     // so no empty plate shows; "Nothing playing" in the folder line covers it.
@@ -165,6 +168,12 @@ static void sd_player_screen_create(lv_obj_t *parent)
 
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
+
+    if (p->sd_show_cassette) {
+        animated_wheels_widget_create(parent, (animated_wheels_style_t)p->sd_animation_style,
+                               p->sd_cassette_l_x, p->sd_cassette_l_y, p->sd_cassette_l_size,
+                               p->sd_cassette_r_x, p->sd_cassette_r_y, p->sd_cassette_r_size);
+    }
 
     s_title = make_centered_label(parent, p->sd_title_font, th->text_primary, p->sd_title_y);
 
@@ -242,6 +251,7 @@ static void sd_player_screen_destroy(void)
     controls_overlay_destroy();
     vol_overlay_hide();
     vu_widget_destroy();
+    animated_wheels_widget_destroy();
     weather_widget_destroy();
     mode_indicator_destroy();
     event_indicator_destroy();
@@ -327,6 +337,7 @@ static void sd_player_apply_theme(void)
     mode_indicator_apply_theme();
     event_indicator_apply_theme();
     vu_widget_apply_theme();
+    animated_wheels_widget_apply_theme();
 
     lv_obj_invalidate(s_root);
 }

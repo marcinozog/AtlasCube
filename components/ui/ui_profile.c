@@ -450,6 +450,13 @@ static const ui_profile_t k_defaults = {
     .radio_vu_y                = 238,
     .radio_vu_w                = 238,
     .radio_vu_h                = 58,
+    .radio_show_cassette       = true,
+    .radio_cassette_l_x        = 39,
+    .radio_cassette_l_y        = 120,
+    .radio_cassette_l_size     = 56,
+    .radio_cassette_r_x        = 144,
+    .radio_cassette_r_y        = 120,
+    .radio_cassette_r_size     = 56,
     .radio_show_weather        = false,
     .radio_weather_x           = 0,
     .radio_weather_y           = 3,       // top-left row, clear of the centered clock
@@ -483,6 +490,13 @@ static const ui_profile_t k_defaults = {
     .sd_vu_y                   = 238,
     .sd_vu_w                   = 238,
     .sd_vu_h                   = 58,
+    .sd_show_cassette          = true,
+    .sd_cassette_l_x           = 39,
+    .sd_cassette_l_y           = 120,
+    .sd_cassette_l_size        = 56,
+    .sd_cassette_r_x           = 144,
+    .sd_cassette_r_y           = 120,
+    .sd_cassette_r_size        = 56,
     .sd_show_weather           = false,
     .sd_weather_x              = 0,
     .sd_weather_y              = 3,       // top-left row, clear of the centered clock
@@ -662,6 +676,13 @@ static const ui_profile_t k_defaults = {
     .radio_vu_y                = 182,
     .radio_vu_w                = 318,
     .radio_vu_h                = 58,
+    .radio_show_cassette       = true,
+    .radio_cassette_l_x        = 53,
+    .radio_cassette_l_y        = 84,
+    .radio_cassette_l_size     = 72,
+    .radio_cassette_r_x        = 194,
+    .radio_cassette_r_y        = 84,
+    .radio_cassette_r_size     = 72,
     .radio_show_weather        = false,
     .radio_weather_x           = 0,
     .radio_weather_y           = 2,       // top-left row, clear of the centered clock
@@ -695,6 +716,13 @@ static const ui_profile_t k_defaults = {
     .sd_vu_y                   = 182,
     .sd_vu_w                   = 318,
     .sd_vu_h                   = 58,
+    .sd_show_cassette          = true,
+    .sd_cassette_l_x           = 53,
+    .sd_cassette_l_y           = 84,
+    .sd_cassette_l_size        = 72,
+    .sd_cassette_r_x           = 194,
+    .sd_cassette_r_y           = 84,
+    .sd_cassette_r_size        = 72,
     .sd_show_weather           = false,
     .sd_weather_x              = 0,
     .sd_weather_y              = 2,       // top-left row, clear of the centered clock
@@ -867,6 +895,13 @@ static const ui_profile_t k_defaults = {
     .radio_vu_y                = 248,
     .radio_vu_w                = 478,
     .radio_vu_h                = 72,
+    .radio_show_cassette       = true,
+    .radio_cassette_l_x        = 85,
+    .radio_cassette_l_y        = 111,
+    .radio_cassette_l_size     = 98,
+    .radio_cassette_r_x        = 296,
+    .radio_cassette_r_y        = 111,
+    .radio_cassette_r_size     = 98,
     .radio_show_weather        = false,
     .radio_weather_x           = 0,
     .radio_weather_y           = 4,       // top-left row, clear of the centered clock
@@ -900,6 +935,13 @@ static const ui_profile_t k_defaults = {
     .sd_vu_y                   = 248,
     .sd_vu_w                   = 478,
     .sd_vu_h                   = 72,
+    .sd_show_cassette          = true,
+    .sd_cassette_l_x           = 85,
+    .sd_cassette_l_y           = 111,
+    .sd_cassette_l_size        = 98,
+    .sd_cassette_r_x           = 296,
+    .sd_cassette_r_y           = 111,
+    .sd_cassette_r_size        = 98,
     .sd_show_weather           = false,
     .sd_weather_x              = 0,
     .sd_weather_y              = 4,       // top-left row, clear of the centered clock
@@ -1080,6 +1122,13 @@ static void add_font(cJSON *obj, const char *key, const lv_font_t *f)
     cJSON_AddStringToObject(obj, key, ui_font_id(f));
 }
 
+static void clamp_reel_size(int16_t *size)
+{
+    int16_t max_size = DISPLAY_WIDTH < DISPLAY_HEIGHT ? DISPLAY_WIDTH : DISPLAY_HEIGHT;
+    if (*size < 16) *size = 16;
+    if (*size > max_size) *size = max_size;
+}
+
 // ── per-section load ────────────────────────────────────────────────────────
 
 static void load_clock(const cJSON *obj, ui_profile_t *p)
@@ -1198,6 +1247,17 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_vu_y",                 &p->radio_vu_y);
     load_i16 (obj, "radio_vu_w",                 &p->radio_vu_w);
     load_i16 (obj, "radio_vu_h",                 &p->radio_vu_h);
+    load_bool(obj, "radio_show_cassette",        &p->radio_show_cassette);
+    load_i16 (obj, "radio_animation_style",      &p->radio_animation_style);
+    p->radio_animation_style = LV_CLAMP(0, p->radio_animation_style, 1);
+    load_i16 (obj, "radio_cassette_l_x",         &p->radio_cassette_l_x);
+    load_i16 (obj, "radio_cassette_l_y",         &p->radio_cassette_l_y);
+    load_i16 (obj, "radio_cassette_l_size",      &p->radio_cassette_l_size);
+    load_i16 (obj, "radio_cassette_r_x",         &p->radio_cassette_r_x);
+    load_i16 (obj, "radio_cassette_r_y",         &p->radio_cassette_r_y);
+    load_i16 (obj, "radio_cassette_r_size",      &p->radio_cassette_r_size);
+    clamp_reel_size(&p->radio_cassette_l_size);
+    clamp_reel_size(&p->radio_cassette_r_size);
     load_bool(obj, "radio_show_weather",         &p->radio_show_weather);
     load_i16 (obj, "radio_weather_x",            &p->radio_weather_x);
     load_i16 (obj, "radio_weather_y",            &p->radio_weather_y);
@@ -1233,6 +1293,14 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_vu_y",                 p->radio_vu_y);
     add_i16 (o, "radio_vu_w",                 p->radio_vu_w);
     add_i16 (o, "radio_vu_h",                 p->radio_vu_h);
+    add_bool(o, "radio_show_cassette",        p->radio_show_cassette);
+    add_i16 (o, "radio_animation_style",      p->radio_animation_style);
+    add_i16 (o, "radio_cassette_l_x",         p->radio_cassette_l_x);
+    add_i16 (o, "radio_cassette_l_y",         p->radio_cassette_l_y);
+    add_i16 (o, "radio_cassette_l_size",      p->radio_cassette_l_size);
+    add_i16 (o, "radio_cassette_r_x",         p->radio_cassette_r_x);
+    add_i16 (o, "radio_cassette_r_y",         p->radio_cassette_r_y);
+    add_i16 (o, "radio_cassette_r_size",      p->radio_cassette_r_size);
     add_bool(o, "radio_show_weather",         p->radio_show_weather);
     add_i16 (o, "radio_weather_x",            p->radio_weather_x);
     add_i16 (o, "radio_weather_y",            p->radio_weather_y);
@@ -1271,6 +1339,17 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "sd_vu_y",                   &p->sd_vu_y);
     load_i16 (obj, "sd_vu_w",                   &p->sd_vu_w);
     load_i16 (obj, "sd_vu_h",                   &p->sd_vu_h);
+    load_bool(obj, "sd_show_cassette",          &p->sd_show_cassette);
+    load_i16 (obj, "sd_animation_style",        &p->sd_animation_style);
+    p->sd_animation_style = LV_CLAMP(0, p->sd_animation_style, 1);
+    load_i16 (obj, "sd_cassette_l_x",           &p->sd_cassette_l_x);
+    load_i16 (obj, "sd_cassette_l_y",           &p->sd_cassette_l_y);
+    load_i16 (obj, "sd_cassette_l_size",        &p->sd_cassette_l_size);
+    load_i16 (obj, "sd_cassette_r_x",           &p->sd_cassette_r_x);
+    load_i16 (obj, "sd_cassette_r_y",           &p->sd_cassette_r_y);
+    load_i16 (obj, "sd_cassette_r_size",        &p->sd_cassette_r_size);
+    clamp_reel_size(&p->sd_cassette_l_size);
+    clamp_reel_size(&p->sd_cassette_r_size);
     load_bool(obj, "sd_show_weather",           &p->sd_show_weather);
     load_i16 (obj, "sd_weather_x",              &p->sd_weather_x);
     load_i16 (obj, "sd_weather_y",              &p->sd_weather_y);
@@ -1308,6 +1387,14 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_vu_y",                   p->sd_vu_y);
     add_i16 (o, "sd_vu_w",                   p->sd_vu_w);
     add_i16 (o, "sd_vu_h",                   p->sd_vu_h);
+    add_bool(o, "sd_show_cassette",          p->sd_show_cassette);
+    add_i16 (o, "sd_animation_style",        p->sd_animation_style);
+    add_i16 (o, "sd_cassette_l_x",           p->sd_cassette_l_x);
+    add_i16 (o, "sd_cassette_l_y",           p->sd_cassette_l_y);
+    add_i16 (o, "sd_cassette_l_size",        p->sd_cassette_l_size);
+    add_i16 (o, "sd_cassette_r_x",           p->sd_cassette_r_x);
+    add_i16 (o, "sd_cassette_r_y",           p->sd_cassette_r_y);
+    add_i16 (o, "sd_cassette_r_size",        p->sd_cassette_r_size);
     add_bool(o, "sd_show_weather",           p->sd_show_weather);
     add_i16 (o, "sd_weather_x",              p->sd_weather_x);
     add_i16 (o, "sd_weather_y",              p->sd_weather_y);
