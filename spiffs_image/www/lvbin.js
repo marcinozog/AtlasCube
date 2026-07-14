@@ -4,7 +4,9 @@
 // natively, so we parse the 12-byte header and paint the pixels onto a <canvas>.
 //
 // Used by manager.js (SD file manager) and settings.js (wallpaper picker).
-// Exposes a single global: LvBin.openPreview(sdRelPath) / LvBin.decodeToCanvas(buf).
+// Exposes one global with preview/decoder helpers plus encodeImage(blob, w, h),
+// which converts a browser-supported image to the same crop-to-cover RGB565
+// format used by scripts/img2lvgl.py and AtlasCube Remote.
 (function (global) {
     const MAGIC = 0x19;        // LV_IMAGE_HEADER_MAGIC
     const CF_RGB565 = 0x12;    // LV_COLOR_FORMAT_RGB565
@@ -46,6 +48,68 @@
         }
         ctx.putImageData(img, 0, 0);
         return { canvas, w, h };
+    }
+
+    async function decodeImage(blob) {
+        if (typeof createImageBitmap === "function") {
+            try { return await createImageBitmap(blob, { imageOrientation: "from-image" }); }
+            catch (_) { /* fall back to an HTMLImageElement */ }
+        }
+        return await new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error("browser cannot decode this image"));
+            };
+            img.src = url;
+        });
+    }
+
+    // Center-crop to cover the target panel, then serialize the pixels into an
+    // LVGL v9 RGB565 binary image (12-byte LE header + row-major LE pixels).
+    async function encodeImage(blob, w, h) {
+        w = Number(w); h = Number(h);
+        if (!Number.isInteger(w) || !Number.isInteger(h) || w < 1 || h < 1 ||
+            w > 32767 || h > 32767) throw new Error("invalid panel dimensions");
+
+        const src = await decodeImage(blob);
+        const sw = src.width || src.naturalWidth;
+        const sh = src.height || src.naturalHeight;
+        if (!sw || !sh) throw new Error("image has invalid dimensions");
+
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d", { alpha: false });
+        if (!ctx) throw new Error("canvas is unavailable");
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        const scale = Math.max(w / sw, h / sh);
+        const dw = Math.max(w, Math.round(sw * scale));
+        const dh = Math.max(h, Math.round(sh * scale));
+        ctx.drawImage(src, Math.round((w - dw) / 2), Math.round((h - dh) / 2), dw, dh);
+        if (typeof src.close === "function") src.close();
+
+        const rgba = ctx.getImageData(0, 0, w, h).data;
+        const out = new ArrayBuffer(12 + w * h * 2);
+        const dv = new DataView(out);
+        dv.setUint8(0, MAGIC);
+        dv.setUint8(1, CF_RGB565);
+        dv.setUint16(2, 0, true);
+        dv.setUint16(4, w, true);
+        dv.setUint16(6, h, true);
+        dv.setUint16(8, w * 2, true);
+        dv.setUint16(10, 0, true);
+        let p = 12;
+        for (let i = 0; i < rgba.length; i += 4) {
+            const v = ((rgba[i] & 0xf8) << 8) |
+                      ((rgba[i + 1] & 0xfc) << 3) |
+                      (rgba[i + 2] >> 3);
+            dv.setUint16(p, v, true);
+            p += 2;
+        }
+        return new Blob([out], { type: "application/octet-stream" });
     }
 
     // Lazily-built modal overlay (one per page). Self-styled so it works on any
@@ -107,5 +171,5 @@
         }
     }
 
-    global.LvBin = { decodeToCanvas, openPreview };
+    global.LvBin = { decodeToCanvas, encodeImage, openPreview };
 })(window);

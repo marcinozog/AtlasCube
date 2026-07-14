@@ -259,6 +259,60 @@ function selectWallpaper(relPath) {
     postDisplay({ wallpaper_on: true, wallpaper_path: fullPath });
 }
 
+function wallpaperUploadStatus(message, kind) {
+    const el = document.getElementById('wallpaperUploadStatus');
+    el.textContent = message;
+    el.className = 'save-status' + (kind ? ' ' + kind : '');
+}
+
+function wallpaperFileStem(name) {
+    const raw = String(name || '').replace(/\.[^.]*$/, '');
+    const ascii = raw.normalize ? raw.normalize('NFKD').replace(/[\u0300-\u036f]/g, '') : raw;
+    return ascii.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) ||
+           ('wallpaper-' + Date.now());
+}
+
+async function wallpaperPanelSize() {
+    if (netWpPanelW > 0 && netWpPanelH > 0) return { w: netWpPanelW, h: netWpPanelH };
+    const r = await fetch('/api/ui/profile/meta', { cache: 'no-store' });
+    if (!r.ok) throw new Error('panel info HTTP ' + r.status);
+    const m = await r.json();
+    const w = Number(m.screen_w), h = Number(m.screen_h);
+    if (!Number.isInteger(w) || !Number.isInteger(h) || w < 1 || h < 1)
+        throw new Error('device returned invalid panel dimensions');
+    netWpPanelW = w; netWpPanelH = h;
+    return { w, h };
+}
+
+async function uploadWallpaperImage(input) {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+
+    const label = document.getElementById('wallpaperUploadBtn');
+    label.style.pointerEvents = 'none';
+    label.style.opacity = '.6';
+    wallpaperUploadStatus('Converting…', '');
+    try {
+        const { w, h } = await wallpaperPanelSize();
+        const bin = await LvBin.encodeImage(file, w, h);
+        const relPath = '/wallpapers/' + wallpaperFileStem(file.name) + '.bin';
+        wallpaperUploadStatus('Uploading ' + w + '×' + h + '…', '');
+        const r = await fetch('/api/sd/file?path=' + encodeURIComponent(relPath), {
+            method: 'POST', body: bin
+        });
+        if (r.status === 503) throw new Error('no SD card');
+        if (!r.ok) throw new Error('SD upload HTTP ' + r.status);
+        selectWallpaper(relPath);
+        wallpaperUploadStatus('✓ Uploaded and applied', 'ok');
+    } catch (e) {
+        wallpaperUploadStatus('✕ ' + e.message, 'error');
+    } finally {
+        label.style.pointerEvents = '';
+        label.style.opacity = '';
+    }
+}
+
 // ── Internet wallpaper (test) ────────────────────────────────────────────────
 // POST the URL, then poll /api/wallpaper/status until the fetch task settles.
 // On success the device repaints itself (UI_EVT_BG_CHANGED) — nothing else to do.

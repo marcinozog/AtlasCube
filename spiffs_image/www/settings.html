@@ -173,6 +173,13 @@
                     <span id="wallpaperPath" style="font-family:monospace;font-size:12px">(none)</span>
                 </div>
                 <button class="btn-secondary" onclick="openWallpaperBrowser()">📂 Choose file…</button>
+                <label class="btn-secondary" id="wallpaperUploadBtn" style="display:inline-block;cursor:pointer">
+                    ⬆ Upload image
+                    <input id="wallpaperUpload" type="file" accept="image/*"
+                           onchange="uploadWallpaperImage(this)" hidden />
+                </label>
+                <span id="wallpaperUploadStatus" class="save-status" style="display:inline-block;margin-left:6px"></span>
+                <div class="field-hint">The image is center-cropped to fill this panel, converted in the browser to LVGL RGB565 and uploaded to <code>/wallpapers</code> on the SD card. A file with the same name is replaced.</div>
                 <div id="wallpaperBrowser" style="display:none;margin-top:8px"></div>
             </div>
             <div style="margin-top:12px">
