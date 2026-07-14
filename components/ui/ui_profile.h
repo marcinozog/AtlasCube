@@ -140,6 +140,7 @@ typedef struct {
     const lv_font_t *radio_np_station_font;    // now-playing station-name line
     const lv_font_t *radio_np_title_font;      // now-playing ICY-title line
 
+    bool             radio_show_playback_status;
     int16_t          radio_state_y;            // "PLAYING / STOPPED / ..." label (centered)
     const lv_font_t *radio_state_font;
 

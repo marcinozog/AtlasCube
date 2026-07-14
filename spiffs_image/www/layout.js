@@ -117,6 +117,7 @@ const RADIO_FIELDS = [
     { key: 'radio_np_station_font',   label: 'NP station font',  type: 'font'   },
     { key: 'radio_np_title_font',     label: 'NP title font',    type: 'font'   },
 
+    { key: 'radio_show_playback_status', label: 'Show playback status', type: 'bool' },
     { key: 'radio_state_y',           label: 'State Y',          type: 'number' },
     { key: 'radio_state_font',        label: 'State font',       type: 'font'   },
 
@@ -229,7 +230,7 @@ const FORM_GROUPS = {
     ],
     radio: [
         { title: 'Now playing', enabledBy: 'radio_show_np', fields: ['radio_show_np', 'radio_np_x', 'radio_np_y', 'radio_station_icon_size', 'radio_np_station_font', 'radio_np_title_font'] },
-        { title: 'Playback status', fields: ['radio_state_y', 'radio_state_font', 'radio_audio_info_y', 'radio_audio_info_font'] },
+        { title: 'Playback status', enabledBy: 'radio_show_playback_status', fields: ['radio_show_playback_status', 'radio_state_y', 'radio_state_font', 'radio_audio_info_y', 'radio_audio_info_font'] },
         { title: 'Mode indicator', enabledBy: 'radio_show_mode_indicator', fields: ['radio_show_mode_indicator', 'radio_mode_indic_x', 'radio_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'radio_show_clock', fields: ['radio_show_clock', 'radio_clock_widget_x', 'radio_clock_widget_y', 'radio_clock_font'] },
         { title: 'Event indicator', enabledBy: 'radio_show_event_indicator', fields: ['radio_show_event_indicator', 'radio_event_indic_x', 'radio_event_indic_y'] },
@@ -712,11 +713,13 @@ function renderRadio(svg) {
         });
     }
 
-    drawLabel(svg, 0, r.radio_state_y, r.radio_state_font, 'PLAYING',
-              'state', { y: 'radio_state_y' });
-    drawLabel(svg, 0, r.radio_audio_info_y, r.radio_audio_info_font,
-              '44100 Hz  2ch  128kbps   VOL: 42%',
-              'info', { y: 'radio_audio_info_y' });
+    if (r.radio_show_playback_status) {
+        drawLabel(svg, 0, r.radio_state_y, r.radio_state_font, 'PLAYING',
+                  'state', { y: 'radio_state_y' });
+        drawLabel(svg, 0, r.radio_audio_info_y, r.radio_audio_info_font,
+                  '44100 Hz  2ch  128kbps   VOL: 42%',
+                  'info', { y: 'radio_audio_info_y' });
+    }
 
     if (r.radio_show_mode_indicator) {
         drawFreeElement(svg, {
