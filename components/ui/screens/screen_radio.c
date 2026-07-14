@@ -87,7 +87,7 @@ static void radio_create(lv_obj_t *parent)
         now_playing_widget_create(parent, p->radio_np_x, p->radio_np_y, LV_TEXT_ALIGN_CENTER,
                                   p->radio_np_station_font, p->radio_np_title_font,
                                   p->radio_station_icon_size);
-        station_icon_widget_create();
+        if (p->radio_show_station_icon) station_icon_widget_create();
     }
     if (p->radio_show_mode_indicator) {
         mode_indicator_create(parent, p->radio_mode_indic_x, p->radio_mode_indic_y);
@@ -156,7 +156,10 @@ static void radio_on_event(const ui_event_t *ev)
     switch (ev->type) {
         case UI_EVT_STATE_CHANGED:
             refresh_from_state();
-            station_icon_widget_update();
+            if (ui_profile_get()->radio_show_np &&
+                ui_profile_get()->radio_show_station_icon) {
+                station_icon_widget_update();
+            }
             mode_indicator_update();
             event_indicator_update();
             clock_widget_tick();
