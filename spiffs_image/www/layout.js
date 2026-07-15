@@ -281,6 +281,7 @@ const state = {
 // dragging widgets does not re-fetch or re-decode the .bin on every render.
 let wallpaperPreviewUrl = '';
 let wallpaperPreviewDim = 0;
+let currentWallpaperPath = '';
 let keyboardSelection = null;
 
 function isKeyboardSelection(fields) {
@@ -355,6 +356,174 @@ function ensureLvBin() {
     });
 }
 
+function updateWallpaperPickerLabel() {
+    const label = document.getElementById('layout_wallpaper_name');
+    if (!label) return;
+    label.textContent = currentWallpaperPath
+        ? currentWallpaperPath.split('/').pop()
+        : '(none)';
+    label.title = currentWallpaperPath;
+}
+
+function buildWallpaperPicker() {
+    const frame = document.querySelector('.canvas-card .lcd-frame');
+    if (!frame || document.getElementById('layout_wallpaper_picker')) return;
+
+    const picker = document.createElement('div');
+    picker.id = 'layout_wallpaper_picker';
+    picker.style.cssText =
+        'margin-top:10px;padding:9px 10px;border:1px solid var(--border);' +
+        'border-radius:var(--radius-sm);background:var(--bg-panel)';
+
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;flex-wrap:wrap';
+    const caption = document.createElement('span');
+    caption.textContent = 'Wallpaper:';
+    caption.style.cssText = 'font-size:11px;color:var(--text-dim)';
+    const name = document.createElement('span');
+    name.id = 'layout_wallpaper_name';
+    name.textContent = 'Loading...';
+    name.style.cssText =
+        'min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
+        'font-family:"JetBrains Mono",monospace;font-size:11px';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'section-tab';
+    button.textContent = 'Choose from SD...';
+    button.style.cssText =
+        'padding:6px 10px;background:var(--accent);color:#001019;border-color:var(--accent)';
+    button.addEventListener('click', toggleWallpaperBrowser);
+    row.append(caption, name, button);
+
+    const browser = document.createElement('div');
+    browser.id = 'layout_wallpaper_browser';
+    browser.hidden = true;
+    browser.style.marginTop = '8px';
+    const status = document.createElement('div');
+    status.id = 'layout_wallpaper_status';
+    status.style.cssText = 'min-height:14px;margin-top:5px;font-size:11px;color:var(--text-dim)';
+
+    picker.append(row, browser, status);
+    frame.insertAdjacentElement('afterend', picker);
+}
+
+function wallpaperDirectory() {
+    if (!currentWallpaperPath.startsWith('/sdcard/')) return '/wallpapers';
+    const rel = currentWallpaperPath.slice('/sdcard'.length);
+    return rel.replace(/\/[^/]+$/, '') || '/';
+}
+
+async function toggleWallpaperBrowser() {
+    const browser = document.getElementById('layout_wallpaper_browser');
+    if (!browser) return;
+    if (!browser.hidden) {
+        browser.hidden = true;
+        return;
+    }
+    browser.hidden = false;
+    await browseWallpaperDirectory(wallpaperDirectory());
+}
+
+async function browseWallpaperDirectory(path) {
+    const browser = document.getElementById('layout_wallpaper_browser');
+    if (!browser) return;
+    browser.textContent = 'Loading...';
+    try {
+        const response = await fetch('/api/sd/list?path=' + encodeURIComponent(path), {
+            cache: 'no-store',
+        });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        renderWallpaperDirectory(await response.json());
+    } catch (err) {
+        // Fresh cards may not have a /wallpapers directory yet; keep the
+        // picker usable by falling back to the SD root in that case.
+        if (path === '/wallpapers') {
+            await browseWallpaperDirectory('/');
+            return;
+        }
+        browser.textContent = 'SD folder unavailable: ' + err.message;
+    }
+}
+
+function renderWallpaperDirectory(data) {
+    const browser = document.getElementById('layout_wallpaper_browser');
+    if (!browser) return;
+    browser.innerHTML = '';
+    const path = data.path || '/';
+
+    const heading = document.createElement('div');
+    heading.textContent = path;
+    heading.style.cssText = 'margin-bottom:4px;font-family:monospace;font-size:11px;opacity:.75';
+    const list = document.createElement('div');
+    list.style.cssText =
+        'max-height:190px;overflow:auto;border:1px solid var(--border);' +
+        'border-radius:var(--radius-sm);background:var(--bg-card)';
+
+    const addRow = (label, onClick) => {
+        const row = document.createElement('div');
+        row.textContent = label;
+        row.style.cssText = 'padding:6px 9px;cursor:pointer;font-size:11px';
+        row.onmouseenter = () => { row.style.background = 'var(--bg-input)'; };
+        row.onmouseleave = () => { row.style.background = ''; };
+        row.addEventListener('click', onClick);
+        list.appendChild(row);
+    };
+
+    if (path !== '/') {
+        const parent = path.replace(/\/[^/]+\/?$/, '') || '/';
+        addRow('\u{1F4C1} ..', () => browseWallpaperDirectory(parent));
+    }
+
+    const entries = (data.entries || []).slice().sort((a, b) =>
+        (!!b.dir - !!a.dir) ||
+        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+    let fileCount = 0;
+    for (const entry of entries) {
+        const full = (path.endsWith('/') ? path : path + '/') + entry.name;
+        if (entry.dir) {
+            addRow('\u{1F4C1} ' + entry.name, () => browseWallpaperDirectory(full));
+        } else if (entry.name.toLowerCase().endsWith('.bin')) {
+            fileCount++;
+            const active = currentWallpaperPath === '/sdcard' + full;
+            addRow((active ? '\u2713 ' : '\u{1F5BC}\u{FE0F} ') + entry.name,
+                   () => selectWallpaper(full));
+        }
+    }
+    if (!fileCount && !entries.some(entry => entry.dir)) {
+        const empty = document.createElement('div');
+        empty.textContent = 'No .bin wallpapers in this folder.';
+        empty.style.cssText = 'padding:7px 9px;font-size:11px;color:var(--text-dim)';
+        list.appendChild(empty);
+    }
+    browser.append(heading, list);
+}
+
+async function selectWallpaper(relPath) {
+    const status = document.getElementById('layout_wallpaper_status');
+    if (status) status.textContent = 'Applying wallpaper...';
+    try {
+        const fullPath = '/sdcard' + (relPath.startsWith('/') ? relPath : '/' + relPath);
+        const response = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                display: { wallpaper_on: true, wallpaper_path: fullPath },
+            }),
+        });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+
+        currentWallpaperPath = fullPath;
+        updateWallpaperPickerLabel();
+        await loadWallpaperPreview();
+        renderSvg();
+        const browser = document.getElementById('layout_wallpaper_browser');
+        if (browser) browser.hidden = true;
+        if (status) status.textContent = 'Wallpaper changed.';
+    } catch (err) {
+        if (status) status.textContent = 'Wallpaper change failed: ' + err.message;
+    }
+}
+
 async function loadWallpaperPreview() {
     wallpaperPreviewUrl = '';
     wallpaperPreviewDim = 0;
@@ -364,6 +533,8 @@ async function loadWallpaperPreview() {
         const settings = await response.json();
         const display = settings.display || {};
         const path = String(display.wallpaper_path || '');
+        currentWallpaperPath = path;
+        updateWallpaperPickerLabel();
         if (!display.wallpaper_on || !path) return;
 
         // Settings store the fopen-ready "/sdcard/..." path, while the SD file
@@ -388,6 +559,7 @@ async function loadWallpaperPreview() {
 // ── Bootstrap ───────────────────────────────────────────────────────────────
 
 window.addEventListener('DOMContentLoaded', async () => {
+    buildWallpaperPicker();
     try {
         const meta = await fetch('/api/ui/profile/meta').then(r => r.json());
         state.meta = meta;
