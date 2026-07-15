@@ -111,6 +111,7 @@ const BT_FIELDS = [
 
 const RADIO_FIELDS = [
     { key: 'radio_show_np',           label: 'Show now-playing', type: 'bool' },
+    { key: 'radio_show_np_title',     label: 'Show track title', type: 'bool' },
     { key: 'radio_np_x',              label: 'NP X',             type: 'number' },
     { key: 'radio_np_y',              label: 'NP Y',             type: 'number' },
     { key: 'radio_show_station_icon', label: 'Show station icon', type: 'bool' },
@@ -234,7 +235,7 @@ const FORM_GROUPS = {
         { title: 'Clock', enabledBy: 'bt_show_clock', fields: ['bt_show_clock', 'bt_clock_widget_x', 'bt_clock_widget_y', 'bt_clock_font'] },
     ],
     radio: [
-        { title: 'Now playing', enabledBy: 'radio_show_np', fields: ['radio_show_np', 'radio_np_x', 'radio_np_y', 'radio_np_station_font', 'radio_np_title_font'] },
+        { title: 'Now playing', enabledBy: 'radio_show_np', fields: ['radio_show_np', 'radio_show_np_title', 'radio_np_x', 'radio_np_y', 'radio_np_station_font', 'radio_np_title_font'] },
         { title: 'Station icon', enabledBy: 'radio_show_station_icon', fields: ['radio_show_station_icon', 'radio_station_icon_size'] },
         { title: 'Playback status', enabledBy: 'radio_show_playback_status', fields: ['radio_show_playback_status', 'radio_state_y', 'radio_state_font', 'radio_audio_info_y', 'radio_audio_info_font'] },
         { title: 'Mode indicator', enabledBy: 'radio_show_mode_indicator', fields: ['radio_show_mode_indicator', 'radio_mode_indic_x', 'radio_mode_indic_y'] },
@@ -1016,12 +1017,14 @@ function renderRadio(svg) {
             fields: { x: 'radio_np_x', y: 'radio_np_y' },
             text: 'Atlas Radio', textSize: stationFh,
         });
-        drawFreeElement(svg, {
-            x: r.radio_np_x, y: r.radio_np_y + stationFh + 4, w: npW, h: titleFh,
-            label: 'np_title', cls: 'label-rect',
-            fields: { x: 'radio_np_x', y: 'radio_np_y' },
-            text: 'Title — Artist', textSize: titleFh,
-        });
+        if (r.radio_show_np_title) {
+            drawFreeElement(svg, {
+                x: r.radio_np_x, y: r.radio_np_y + stationFh + 4, w: npW, h: titleFh,
+                label: 'np_title', cls: 'label-rect',
+                fields: { x: 'radio_np_x', y: 'radio_np_y' },
+                text: 'Title — Artist', textSize: titleFh,
+            });
+        }
     }
 
     if (r.radio_show_playback_status) {

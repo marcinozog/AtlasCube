@@ -88,7 +88,8 @@ static void radio_create(lv_obj_t *parent)
 
     if (p->radio_show_np) {
         now_playing_widget_create(parent, p->radio_np_x, p->radio_np_y, LV_TEXT_ALIGN_CENTER,
-                                  p->radio_np_station_font, p->radio_np_title_font,
+                                  p->radio_np_station_font, p->radio_show_np_title,
+                                  p->radio_np_title_font,
                                   p->radio_station_icon_size);
         if (p->radio_show_station_icon) station_icon_widget_create();
     }

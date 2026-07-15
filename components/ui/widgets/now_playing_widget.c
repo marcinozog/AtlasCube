@@ -27,6 +27,7 @@ static int       s_icon_size     = 64;
 
 void now_playing_widget_create(lv_obj_t *parent, int x, int y, lv_text_align_t align,
                                const lv_font_t *station_font,
+                               bool show_title,
                                const lv_font_t *title_font,
                                int icon_size)
 {
@@ -81,11 +82,13 @@ void now_playing_widget_create(lv_obj_t *parent, int x, int y, lv_text_align_t a
     lv_obj_set_style_text_color(s_label_station, lv_color_hex(th->accent), LV_PART_MAIN);
     lv_obj_set_style_text_align(s_label_station, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
 
-    s_label_title = lv_label_create(s_text_col);
-    lv_obj_set_style_max_width(s_label_title, NPW_MAX_W, LV_PART_MAIN);
-    lv_obj_set_style_text_font(s_label_title, title_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_label_title, lv_color_hex(th->text_secondary), LV_PART_MAIN);
-    lv_obj_set_style_text_align(s_label_title, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    if (show_title) {
+        s_label_title = lv_label_create(s_text_col);
+        lv_obj_set_style_max_width(s_label_title, NPW_MAX_W, LV_PART_MAIN);
+        lv_obj_set_style_text_font(s_label_title, title_font, LV_PART_MAIN);
+        lv_obj_set_style_text_color(s_label_title, lv_color_hex(th->text_secondary), LV_PART_MAIN);
+        lv_obj_set_style_text_align(s_label_title, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
+    }
 
     now_playing_widget_update();
     ESP_LOGI(TAG, "Created");
@@ -111,10 +114,12 @@ void now_playing_widget_update(void)
     // Show the title only while radio is the active source — otherwise the
     // shared app_state.title holds the SD track and would leak onto this screen.
     // Hide (not just empty) the title label so the pill hugs the station alone.
-    bool has_title = !s->sd_active && s->title[0];
-    lv_label_set_text(s_label_title, has_title ? s->title : "");
-    if (has_title) lv_obj_clear_flag(s_label_title, LV_OBJ_FLAG_HIDDEN);
-    else           lv_obj_add_flag(s_label_title, LV_OBJ_FLAG_HIDDEN);
+    if (s_label_title) {
+        bool has_title = !s->sd_active && s->title[0];
+        lv_label_set_text(s_label_title, has_title ? s->title : "");
+        if (has_title) lv_obj_clear_flag(s_label_title, LV_OBJ_FLAG_HIDDEN);
+        else           lv_obj_add_flag(s_label_title, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 void now_playing_widget_apply_theme(void)
@@ -124,8 +129,10 @@ void now_playing_widget_apply_theme(void)
 
     lv_obj_set_style_text_color(s_label_station,
         lv_color_hex(th->accent), LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_label_title,
-        lv_color_hex(th->text_secondary), LV_PART_MAIN);
+    if (s_label_title) {
+        lv_obj_set_style_text_color(s_label_title,
+            lv_color_hex(th->text_secondary), LV_PART_MAIN);
+    }
     ui_label_scrim(s_pill);   // refresh plate colour for the new theme
 }
 
@@ -139,11 +146,11 @@ void now_playing_widget_set_icon(const lv_image_dsc_t *icon)
         lv_obj_clear_flag(s_icon, LV_OBJ_FLAG_HIDDEN);
         int text_w = NPW_MAX_W - s_icon_size - 8;
         lv_obj_set_style_max_width(s_label_station, text_w, LV_PART_MAIN);
-        lv_obj_set_style_max_width(s_label_title, text_w, LV_PART_MAIN);
+        if (s_label_title) lv_obj_set_style_max_width(s_label_title, text_w, LV_PART_MAIN);
     } else {
         lv_image_set_src(s_icon, NULL);
         lv_obj_add_flag(s_icon, LV_OBJ_FLAG_HIDDEN);
         lv_obj_set_style_max_width(s_label_station, NPW_MAX_W, LV_PART_MAIN);
-        lv_obj_set_style_max_width(s_label_title, NPW_MAX_W, LV_PART_MAIN);
+        if (s_label_title) lv_obj_set_style_max_width(s_label_title, NPW_MAX_W, LV_PART_MAIN);
     }
 }
