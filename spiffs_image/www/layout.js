@@ -281,6 +281,68 @@ const state = {
 // dragging widgets does not re-fetch or re-decode the .bin on every render.
 let wallpaperPreviewUrl = '';
 let wallpaperPreviewDim = 0;
+let keyboardSelection = null;
+
+function isKeyboardSelection(fields) {
+    return keyboardSelection &&
+           keyboardSelection.section === state.active &&
+           keyboardSelection.x === fields.x &&
+           keyboardSelection.y === fields.y;
+}
+
+function showKeyboardSelection(el, fields) {
+    if (!isKeyboardSelection(fields)) return;
+    el.setAttribute('data-keyboard-selected', 'true');
+    el.style.stroke = '#fff';
+    el.style.strokeWidth = '1.5px';
+    el.style.strokeDasharray = '3 2';
+}
+
+function selectForKeyboard(el, fields) {
+    keyboardSelection = {
+        section: state.active,
+        x: fields.x,
+        y: fields.y,
+    };
+    for (const selected of document.querySelectorAll('#lcd [data-keyboard-selected]')) {
+        selected.removeAttribute('data-keyboard-selected');
+        selected.style.removeProperty('stroke');
+        selected.style.removeProperty('stroke-width');
+        selected.style.removeProperty('stroke-dasharray');
+    }
+    showKeyboardSelection(el, fields);
+}
+
+document.addEventListener('keydown', (e) => {
+    const delta = {
+        ArrowLeft:  [-1,  0],
+        ArrowRight: [ 1,  0],
+        ArrowUp:    [ 0, -1],
+        ArrowDown:  [ 0,  1],
+    }[e.key];
+    if (!delta || !keyboardSelection || keyboardSelection.section !== state.active) return;
+    if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+
+    const target = e.target;
+    if (target instanceof HTMLElement &&
+        (target.isContentEditable || /^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(target.tagName))) return;
+
+    const data = state[state.active];
+    let moved = false;
+    if (delta[0] && keyboardSelection.x !== undefined) {
+        data[keyboardSelection.x] = (data[keyboardSelection.x] | 0) + delta[0];
+        setFormValue(keyboardSelection.x, data[keyboardSelection.x]);
+        moved = true;
+    }
+    if (delta[1] && keyboardSelection.y !== undefined) {
+        data[keyboardSelection.y] = (data[keyboardSelection.y] | 0) + delta[1];
+        setFormValue(keyboardSelection.y, data[keyboardSelection.y]);
+        moved = true;
+    }
+    if (!moved) return;
+    e.preventDefault();
+    renderSvg();
+});
 
 function ensureLvBin() {
     if (window.LvBin) return Promise.resolve();
@@ -347,6 +409,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 function selectSection(name) {
     if (!SECTIONS[name]) return;
+    if (state.active !== name) keyboardSelection = null;
     state.active = name;
 
     document.getElementById('form_section_title').textContent = SECTIONS[name].title;
@@ -1013,9 +1076,11 @@ function addCornerHandles(svg, x, y, w, h, fields) {
 }
 
 function setupMove(el, svg, fields) {
+    showKeyboardSelection(el, fields);
     el.addEventListener('pointerdown', (e) => {
         if (e.target !== el) return;
         e.preventDefault();
+        selectForKeyboard(el, fields);
         el.setPointerCapture(e.pointerId);
         el.classList.add('dragging');
 
@@ -1051,6 +1116,7 @@ function setupResize(el, svg, fields, dir) {
     el.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        selectForKeyboard(el, fields);
         el.setPointerCapture(e.pointerId);
 
         const data = state[state.active];
@@ -1095,6 +1161,9 @@ function setupResize(el, svg, fields, dir) {
         const onUp = () => {
             window.removeEventListener('pointermove', onMove);
             window.removeEventListener('pointerup', onUp);
+            // A handle click without an actual resize should still leave the
+            // owning element visibly selected for keyboard nudging.
+            renderSvg();
         };
         window.addEventListener('pointermove', onMove);
         window.addEventListener('pointerup', onUp);
@@ -1104,9 +1173,12 @@ function setupResize(el, svg, fields, dir) {
 // ── Y-only drag (used by strip station/title labels) ──────────────────────
 
 function setupYDrag(el, field) {
+    const fields = { y: field };
+    showKeyboardSelection(el, fields);
     el.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
+        selectForKeyboard(el, fields);
         el.setPointerCapture(e.pointerId);
         el.classList.add('dragging');
 
