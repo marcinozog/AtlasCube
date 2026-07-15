@@ -19,10 +19,16 @@ static animated_wheels_impl_palette_t current_palette(void)
 }
 
 void animated_wheels_widget_create(lv_obj_t *parent, animated_wheels_style_t style,
-                                   int16_t left_x,  int16_t left_y,  int16_t left_size,
+                                   bool show_left,
+                                   int16_t left_x, int16_t left_y, int16_t left_size,
+                                   bool show_right,
                                    int16_t right_x, int16_t right_y, int16_t right_size)
 {
     animated_wheels_impl_palette_t palette = current_palette();
+    // The private renderer has a stable two-wheel ABI. Place a disabled wheel
+    // just beyond the display clip instead of changing that binary boundary.
+    if (!show_left)  { left_x  = DISPLAY_WIDTH; left_y  = DISPLAY_HEIGHT; }
+    if (!show_right) { right_x = DISPLAY_WIDTH; right_y = DISPLAY_HEIGHT; }
     animated_wheels_impl_create(parent, (animated_wheels_impl_style_t)style,
                                 left_x, left_y, left_size,
                                 right_x, right_y, right_size,

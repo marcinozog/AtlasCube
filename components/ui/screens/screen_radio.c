@@ -77,9 +77,12 @@ static void radio_create(lv_obj_t *parent)
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
 
-    if (p->radio_show_cassette) {
+    if (p->radio_show_cassette &&
+        (p->radio_show_wheel_left || p->radio_show_wheel_right)) {
         animated_wheels_widget_create(parent, (animated_wheels_style_t)p->radio_animation_style,
+                                      p->radio_show_wheel_left,
                                       p->radio_cassette_l_x, p->radio_cassette_l_y, p->radio_cassette_l_size,
+                                      p->radio_show_wheel_right,
                                       p->radio_cassette_r_x, p->radio_cassette_r_y, p->radio_cassette_r_size);
     }
 

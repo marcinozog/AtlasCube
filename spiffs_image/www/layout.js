@@ -144,9 +144,11 @@ const RADIO_FIELDS = [
     { key: 'radio_show_cassette',        label: 'Show animated wheels', type: 'bool' },
     { key: 'radio_animation_style',      label: 'Graphic', type: 'choice', default: 0,
       options: [{ value: 0, label: 'Cassette reels' }, { value: 1, label: 'Car rims' }] },
+    { key: 'radio_show_wheel_left',      label: 'Show left wheel',       type: 'bool' },
     { key: 'radio_cassette_l_x',         label: 'Left wheel X',         type: 'number' },
     { key: 'radio_cassette_l_y',         label: 'Left wheel Y',         type: 'number' },
     { key: 'radio_cassette_l_size',      label: 'Left wheel size',      type: 'number', min: 16, max: 480 },
+    { key: 'radio_show_wheel_right',     label: 'Show right wheel',      type: 'bool' },
     { key: 'radio_cassette_r_x',         label: 'Right wheel X',        type: 'number' },
     { key: 'radio_cassette_r_y',         label: 'Right wheel Y',        type: 'number' },
     { key: 'radio_cassette_r_size',      label: 'Right wheel size',     type: 'number', min: 16, max: 480 },
@@ -192,9 +194,11 @@ const SD_FIELDS = [
     { key: 'sd_show_cassette',        label: 'Show animated wheels', type: 'bool' },
     { key: 'sd_animation_style',      label: 'Graphic', type: 'choice', default: 0,
       options: [{ value: 0, label: 'Cassette reels' }, { value: 1, label: 'Car rims' }] },
+    { key: 'sd_show_wheel_left',      label: 'Show left wheel',       type: 'bool' },
     { key: 'sd_cassette_l_x',         label: 'Left wheel X',         type: 'number' },
     { key: 'sd_cassette_l_y',         label: 'Left wheel Y',         type: 'number' },
     { key: 'sd_cassette_l_size',      label: 'Left wheel size',      type: 'number', min: 16, max: 480 },
+    { key: 'sd_show_wheel_right',     label: 'Show right wheel',      type: 'bool' },
     { key: 'sd_cassette_r_x',         label: 'Right wheel X',        type: 'number' },
     { key: 'sd_cassette_r_y',         label: 'Right wheel Y',        type: 'number' },
     { key: 'sd_cassette_r_size',      label: 'Right wheel size',     type: 'number', min: 16, max: 480 },
@@ -236,7 +240,7 @@ const FORM_GROUPS = {
         { title: 'Mode indicator', enabledBy: 'radio_show_mode_indicator', fields: ['radio_show_mode_indicator', 'radio_mode_indic_x', 'radio_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'radio_show_clock', fields: ['radio_show_clock', 'radio_clock_widget_x', 'radio_clock_widget_y', 'radio_clock_font'] },
         { title: 'Event indicator', enabledBy: 'radio_show_event_indicator', fields: ['radio_show_event_indicator', 'radio_event_indic_x', 'radio_event_indic_y'] },
-        { title: 'Animated wheels', enabledBy: 'radio_show_cassette', fields: ['radio_show_cassette', 'radio_animation_style', 'radio_cassette_l_x', 'radio_cassette_l_y', 'radio_cassette_l_size', 'radio_cassette_r_x', 'radio_cassette_r_y', 'radio_cassette_r_size'] },
+        { title: 'Animated wheels', enabledBy: 'radio_show_cassette', fields: ['radio_show_cassette', 'radio_animation_style', 'radio_show_wheel_left', 'radio_cassette_l_x', 'radio_cassette_l_y', 'radio_cassette_l_size', 'radio_show_wheel_right', 'radio_cassette_r_x', 'radio_cassette_r_y', 'radio_cassette_r_size'] },
         { title: 'VU meter', enabledBy: 'radio_show_vu', fields: ['radio_show_vu', 'radio_vu_x', 'radio_vu_y', 'radio_vu_w', 'radio_vu_h'] },
         { title: 'Weather', enabledBy: 'radio_show_weather', fields: ['radio_show_weather', 'radio_weather_x', 'radio_weather_y', 'radio_weather_w', 'radio_weather_font'] },
     ],
@@ -248,7 +252,7 @@ const FORM_GROUPS = {
         { title: 'Mode indicator', enabledBy: 'sd_show_mode_indicator', fields: ['sd_show_mode_indicator', 'sd_mode_indic_x', 'sd_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'sd_show_clock', fields: ['sd_show_clock', 'sd_clock_widget_x', 'sd_clock_widget_y', 'sd_clock_font'] },
         { title: 'Event indicator', enabledBy: 'sd_show_event_indicator', fields: ['sd_show_event_indicator', 'sd_event_indic_x', 'sd_event_indic_y'] },
-        { title: 'Animated wheels', enabledBy: 'sd_show_cassette', fields: ['sd_show_cassette', 'sd_animation_style', 'sd_cassette_l_x', 'sd_cassette_l_y', 'sd_cassette_l_size', 'sd_cassette_r_x', 'sd_cassette_r_y', 'sd_cassette_r_size'] },
+        { title: 'Animated wheels', enabledBy: 'sd_show_cassette', fields: ['sd_show_cassette', 'sd_animation_style', 'sd_show_wheel_left', 'sd_cassette_l_x', 'sd_cassette_l_y', 'sd_cassette_l_size', 'sd_show_wheel_right', 'sd_cassette_r_x', 'sd_cassette_r_y', 'sd_cassette_r_size'] },
         { title: 'VU meter', enabledBy: 'sd_show_vu', fields: ['sd_show_vu', 'sd_vu_x', 'sd_vu_y', 'sd_vu_w', 'sd_vu_h'] },
         { title: 'Weather', enabledBy: 'sd_show_weather', fields: ['sd_show_weather', 'sd_weather_x', 'sd_weather_y', 'sd_weather_w', 'sd_weather_font'] },
     ],
@@ -987,12 +991,16 @@ function renderRadio(svg) {
     const W = state.meta.screen_w;
 
     if (r.radio_show_cassette) {
-        drawAnimatedWheel(svg, r.radio_cassette_l_x, r.radio_cassette_l_y,
-                         r.radio_cassette_l_size, 'wheel L',
-                         'radio_cassette_l_x', 'radio_cassette_l_y', 'radio_cassette_l_size');
-        drawAnimatedWheel(svg, r.radio_cassette_r_x, r.radio_cassette_r_y,
-                         r.radio_cassette_r_size, 'wheel R',
-                         'radio_cassette_r_x', 'radio_cassette_r_y', 'radio_cassette_r_size');
+        if (r.radio_show_wheel_left) {
+            drawAnimatedWheel(svg, r.radio_cassette_l_x, r.radio_cassette_l_y,
+                             r.radio_cassette_l_size, 'wheel L',
+                             'radio_cassette_l_x', 'radio_cassette_l_y', 'radio_cassette_l_size');
+        }
+        if (r.radio_show_wheel_right) {
+            drawAnimatedWheel(svg, r.radio_cassette_r_x, r.radio_cassette_r_y,
+                             r.radio_cassette_r_size, 'wheel R',
+                             'radio_cassette_r_x', 'radio_cassette_r_y', 'radio_cassette_r_size');
+        }
     }
 
     if (r.radio_show_np) {
@@ -1068,12 +1076,16 @@ function renderSd(svg) {
     const s = state.sd;
 
     if (s.sd_show_cassette) {
-        drawAnimatedWheel(svg, s.sd_cassette_l_x, s.sd_cassette_l_y,
-                         s.sd_cassette_l_size, 'wheel L',
-                         'sd_cassette_l_x', 'sd_cassette_l_y', 'sd_cassette_l_size');
-        drawAnimatedWheel(svg, s.sd_cassette_r_x, s.sd_cassette_r_y,
-                         s.sd_cassette_r_size, 'wheel R',
-                         'sd_cassette_r_x', 'sd_cassette_r_y', 'sd_cassette_r_size');
+        if (s.sd_show_wheel_left) {
+            drawAnimatedWheel(svg, s.sd_cassette_l_x, s.sd_cassette_l_y,
+                             s.sd_cassette_l_size, 'wheel L',
+                             'sd_cassette_l_x', 'sd_cassette_l_y', 'sd_cassette_l_size');
+        }
+        if (s.sd_show_wheel_right) {
+            drawAnimatedWheel(svg, s.sd_cassette_r_x, s.sd_cassette_r_y,
+                             s.sd_cassette_r_size, 'wheel R',
+                             'sd_cassette_r_x', 'sd_cassette_r_y', 'sd_cassette_r_size');
+        }
     }
 
     drawLabel(svg, 0, s.sd_title_y, s.sd_title_font, 'Artist - Title',

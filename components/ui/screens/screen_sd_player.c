@@ -169,9 +169,12 @@ static void sd_player_screen_create(lv_obj_t *parent)
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
 
-    if (p->sd_show_cassette) {
+    if (p->sd_show_cassette &&
+        (p->sd_show_wheel_left || p->sd_show_wheel_right)) {
         animated_wheels_widget_create(parent, (animated_wheels_style_t)p->sd_animation_style,
+                                      p->sd_show_wheel_left,
                                       p->sd_cassette_l_x, p->sd_cassette_l_y, p->sd_cassette_l_size,
+                                      p->sd_show_wheel_right,
                                       p->sd_cassette_r_x, p->sd_cassette_r_y, p->sd_cassette_r_size);
     }
 
