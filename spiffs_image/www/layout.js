@@ -276,6 +276,53 @@ const state = {
     sd:     {},
 };
 
+// The layout preview can use the currently selected SD wallpaper as its
+// background. It is decoded once and kept as a browser-native data URL so
+// dragging widgets does not re-fetch or re-decode the .bin on every render.
+let wallpaperPreviewUrl = '';
+let wallpaperPreviewDim = 0;
+
+function ensureLvBin() {
+    if (window.LvBin) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'lvbin.js';
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('could not load lvbin.js'));
+        document.head.appendChild(script);
+    });
+}
+
+async function loadWallpaperPreview() {
+    wallpaperPreviewUrl = '';
+    wallpaperPreviewDim = 0;
+    try {
+        const response = await fetch('/api/settings', { cache: 'no-store' });
+        if (!response.ok) throw new Error('settings HTTP ' + response.status);
+        const settings = await response.json();
+        const display = settings.display || {};
+        const path = String(display.wallpaper_path || '');
+        if (!display.wallpaper_on || !path) return;
+
+        // Settings store the fopen-ready "/sdcard/..." path, while the SD file
+        // endpoint accepts a mount-relative path such as "/wallpapers/a.bin".
+        const relPath = path.startsWith('/sdcard/') ? path.slice('/sdcard'.length) : path;
+        const file = await fetch('/api/sd/file?path=' + encodeURIComponent(relPath), {
+            cache: 'no-store',
+        });
+        if (!file.ok) throw new Error('wallpaper HTTP ' + file.status);
+
+        await ensureLvBin();
+        const decoded = window.LvBin.decodeToCanvas(await file.arrayBuffer());
+        wallpaperPreviewUrl = decoded.canvas.toDataURL('image/png');
+        wallpaperPreviewDim = clamp(display.wallpaper_dim || 0, 0, 100);
+    } catch (err) {
+        // The preview is optional: an absent SD card or stale path must not
+        // prevent the profile editor from loading and applying layouts.
+        console.warn('Wallpaper preview unavailable:', err);
+    }
+}
+
 // ── Bootstrap ───────────────────────────────────────────────────────────────
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -289,6 +336,8 @@ window.addEventListener('DOMContentLoaded', async () => {
         for (const name of Object.keys(SECTIONS)) {
             state[name] = await fetch(`/api/ui/profile/${name}`).then(r => r.json());
         }
+
+        await loadWallpaperPreview();
 
         selectSection('clock');
     } catch (err) {
@@ -478,6 +527,23 @@ function renderSvg() {
     svg.innerHTML = '';
 
     rect(svg, { x: 0, y: 0, width: W, height: H, class: 'lcd-bg' });
+    if (wallpaperPreviewUrl) {
+        const image = document.createElementNS(SVG_NS, 'image');
+        image.setAttribute('x', 0);
+        image.setAttribute('y', 0);
+        image.setAttribute('width', W);
+        image.setAttribute('height', H);
+        image.setAttribute('preserveAspectRatio', 'none');
+        image.setAttribute('href', wallpaperPreviewUrl);
+        image.style.pointerEvents = 'none';
+        svg.appendChild(image);
+        if (wallpaperPreviewDim > 0) {
+            const shade = rect(svg, { x: 0, y: 0, width: W, height: H });
+            shade.setAttribute('fill', '#000');
+            shade.setAttribute('fill-opacity', wallpaperPreviewDim / 100);
+            shade.style.pointerEvents = 'none';
+        }
+    }
     SECTIONS[state.active].renderer(svg);
 }
 
