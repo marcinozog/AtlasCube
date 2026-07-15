@@ -9,6 +9,55 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-07-15
+
+### Added
+- **ui:** allow hiding radio track title
+- **ui:** allow individual animated wheels to be hidden
+- **web:** add wallpaper picker to layout editor
+- **web:** add keyboard nudging to layout editor
+- **web:** show active wallpaper in layout preview
+- **web:** add browser wallpaper conversion and SD upload
+- **ui:** add radio station icon visibility toggle
+- **ui:** add configurable radio playback status visibility
+- **ui:** add configurable animated wheels widget
+- **web:** add station icon audit and cleanup
+- **display:** add ST7789V 320x240 driver
+- **ui:** add wallpaper fetch and SD save actions to hub overlay
+- **ui:** add wallpaper fetch button to hub overlay
+- **ui:** add configurable radio station icon size
+- **radio:** add SD-backed station icons with playlist web management
+- **ui:** add configurable station strip background opacity
+- **web:** improve layout editor with grouped settings and semantic placeholder colors
+- **web:** compact layout editor settings into collapsible groups
+- **ui:** global label-background plate for readability over wallpaper (all screens)
+- **ui:** global label-background plate for readability over wallpaper (all screens)
+- **ui:** optional background plate behind home weather widget
+- **ui:** adjustable opacity for home clock-label background plate
+- **www:** layout editor warning to Reset after firmware layout changes
+- **weather:** condition icons via Weather Icons font (day/night variants)
+- **ui:** AM/PM time format on radio/SD/BT clock widget
+- **weather:** OpenWeatherMap as alternative provider
+- **weather:** on-screen weather widget (Open-Meteo) + /api/weather + settings tab
+- **web:** redesign station discovery calls to action
+- **www:** surface station search — top of playlist editor + link on index
+- **www:** radio-browser.info station search in playlist editor
+- **www:** atlascube.net link under the logo on all web UI pages
+- **setup:** one-file settings.json + pin map export/import, unified /setup buttons
+- **scrsaver:** option to block screensaver while radio/SD/BT is playing
+
+### Changed
+- **ui:** move wallpaper actions to third hub overlay row
+
+### Fixed
+- **ui:** rebuild animated wheels library against LVGL 9.2.2
+- **web:** remove white padding from station icons
+- **ui:** tighten weather and clock label backgrounds
+- **ui:** use pill background for weather widget
+- **www:** clip placeholder sample text to its box in layout editor
+- **www:** layout editor screen tabs order — home, sd, radio, bt
+- **scrsaver:** normalize photo dir path (case/slash) + path example in web hint
+
 ## [0.43.0] - 2026-07-12
 
 ### Added
@@ -655,7 +704,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.43.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.44.0...HEAD
+[0.44.0]: https://github.com/marcinozog/AtlasCube/compare/v0.43.0...v0.44.0
 [0.43.0]: https://github.com/marcinozog/AtlasCube/compare/v0.42.0...v0.43.0
 [0.41.0]: https://github.com/marcinozog/AtlasCube/compare/v0.40.0...v0.41.0
 [0.40.0]: https://github.com/marcinozog/AtlasCube/compare/v0.39.0...v0.40.0
