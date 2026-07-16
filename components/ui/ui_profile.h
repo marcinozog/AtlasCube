@@ -150,6 +150,8 @@ typedef struct {
     bool             radio_show_np;
     bool             radio_show_np_title;
     bool             radio_show_station_icon;
+    int16_t          radio_station_icon_x;     // station artwork top-left position
+    int16_t          radio_station_icon_y;
     int16_t          radio_station_icon_size;  // displayed station artwork size, 16..64 px
     const lv_font_t *radio_np_station_font;    // now-playing station-name line
     const lv_font_t *radio_np_title_font;      // now-playing ICY-title line

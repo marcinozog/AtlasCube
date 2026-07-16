@@ -156,6 +156,8 @@ const RADIO_FIELDS = [
     { key: 'radio_np_x',              label: 'NP X',             type: 'number' },
     { key: 'radio_np_y',              label: 'NP Y',             type: 'number' },
     { key: 'radio_show_station_icon', label: 'Show station icon', type: 'bool' },
+    { key: 'radio_station_icon_x',    label: 'Station icon X',   type: 'number' },
+    { key: 'radio_station_icon_y',    label: 'Station icon Y',   type: 'number' },
     { key: 'radio_station_icon_size', label: 'Station icon size', type: 'number', min: 16, max: 64, default: 64 },
     { key: 'radio_np_station_font',   label: 'NP station font',  type: 'font'   },
     { key: 'radio_np_title_font',     label: 'NP title font',    type: 'font'   },
@@ -279,7 +281,7 @@ const FORM_GROUPS = {
     ],
     radio: [
         { title: 'Now playing', enabledBy: 'radio_show_np', fields: ['radio_show_np', 'radio_show_np_title', 'radio_np_x', 'radio_np_y', 'radio_np_station_font', 'radio_np_title_font'] },
-        { title: 'Station icon', enabledBy: 'radio_show_station_icon', fields: ['radio_show_station_icon', 'radio_station_icon_size'] },
+        { title: 'Station icon', enabledBy: 'radio_show_station_icon', fields: ['radio_show_station_icon', 'radio_station_icon_x', 'radio_station_icon_y', 'radio_station_icon_size'] },
         { title: 'Playback status', enabledBy: 'radio_show_playback_status', fields: ['radio_show_playback_status', 'radio_state_y', 'radio_state_font', 'radio_audio_info_y', 'radio_audio_info_font'] },
         { title: 'Mode indicator', enabledBy: 'radio_show_mode_indicator', fields: ['radio_show_mode_indicator', 'radio_mode_indic_x', 'radio_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'radio_show_clock', fields: ['radio_show_clock', 'radio_clock_widget_x', 'radio_clock_widget_y', 'radio_clock_font'] },
@@ -1105,7 +1107,7 @@ function renderRadio(svg) {
         // a station-font-height + 4px below the station (mirrors the firmware).
         const stationFh = fontHeight(r.radio_np_station_font);
         const titleFh   = fontHeight(r.radio_np_title_font);
-        const npW       = Math.max(W - 20, 8);
+        const npW       = Math.max(W - r.radio_np_x - 10, 8);
         drawFreeElement(svg, {
             x: r.radio_np_x, y: r.radio_np_y, w: npW, h: stationFh,
             label: 'np_station', cls: 'label-rect',
@@ -1120,6 +1122,15 @@ function renderRadio(svg) {
                 text: 'Title — Artist', textSize: titleFh,
             });
         }
+    }
+
+    if (r.radio_show_station_icon) {
+        drawFreeElement(svg, {
+            x: r.radio_station_icon_x, y: r.radio_station_icon_y,
+            w: r.radio_station_icon_size, h: r.radio_station_icon_size,
+            label: 'station icon', cls: 'panel',
+            fields: { x: 'radio_station_icon_x', y: 'radio_station_icon_y' },
+        });
     }
 
     if (r.radio_show_playback_status) {

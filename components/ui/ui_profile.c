@@ -56,6 +56,8 @@ static const ui_profile_t k_defaults = {
     .radio_show_np             = true,
     .radio_show_np_title       = true,
     .radio_show_station_icon   = true,
+    .radio_station_icon_x      = 10,
+    .radio_station_icon_y      = 35,
     .radio_station_icon_size   = 64,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
@@ -243,6 +245,8 @@ static const ui_profile_t k_defaults = {
     .radio_show_np             = true,
     .radio_show_np_title       = true,
     .radio_show_station_icon   = true,
+    .radio_station_icon_x      = 10,
+    .radio_station_icon_y      = 1,
     .radio_station_icon_size   = 64,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
@@ -431,11 +435,13 @@ static const ui_profile_t k_defaults = {
     .clock_weather_font        = &lv_font_montserrat_12_pl,
 
     // Radio: Station info and large volume slider
-    .radio_np_x                = 10,
+    .radio_np_x                = 82,     // after the default 64px station icon
     .radio_np_y                = 60,
     .radio_show_np             = true,
     .radio_show_np_title       = true,
     .radio_show_station_icon   = true,
+    .radio_station_icon_x      = 10,
+    .radio_station_icon_y      = 60,
     .radio_station_icon_size   = 64,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
@@ -664,11 +670,13 @@ static const ui_profile_t k_defaults = {
     .clock_weather_font        = &lv_font_montserrat_12_pl,
 
     
-    .radio_np_x                = 10,
+    .radio_np_x                = 82,     // after the default 64px station icon
     .radio_np_y                = 64,
     .radio_show_np             = true,
     .radio_show_np_title       = true,
     .radio_show_station_icon   = true,
+    .radio_station_icon_x      = 10,
+    .radio_station_icon_y      = 64,
     .radio_station_icon_size   = 64,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
@@ -890,11 +898,13 @@ static const ui_profile_t k_defaults = {
     .clock_weather_font        = &lv_font_montserrat_14_pl,
 
 
-    .radio_np_x                = 5,
+    .radio_np_x                = 77,     // after the default 64px station icon
     .radio_np_y                = 85,
     .radio_show_np             = true,
     .radio_show_np_title       = true,
     .radio_show_station_icon   = true,
+    .radio_station_icon_x      = 5,
+    .radio_station_icon_y      = 85,
     .radio_station_icon_size   = 64,
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
@@ -1325,6 +1335,8 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_bool(obj, "radio_show_np",             &p->radio_show_np);
     load_bool(obj, "radio_show_np_title",       &p->radio_show_np_title);
     load_bool(obj, "radio_show_station_icon",   &p->radio_show_station_icon);
+    load_i16 (obj, "radio_station_icon_x",      &p->radio_station_icon_x);
+    load_i16 (obj, "radio_station_icon_y",      &p->radio_station_icon_y);
     load_i16 (obj, "radio_station_icon_size",    &p->radio_station_icon_size);
     if (p->radio_station_icon_size < 16) p->radio_station_icon_size = 16;
     if (p->radio_station_icon_size > 64) p->radio_station_icon_size = 64;
@@ -1379,6 +1391,8 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_bool(o, "radio_show_np",             p->radio_show_np);
     add_bool(o, "radio_show_np_title",       p->radio_show_np_title);
     add_bool(o, "radio_show_station_icon",   p->radio_show_station_icon);
+    add_i16 (o, "radio_station_icon_x",      p->radio_station_icon_x);
+    add_i16 (o, "radio_station_icon_y",      p->radio_station_icon_y);
     add_i16 (o, "radio_station_icon_size",    p->radio_station_icon_size);
     add_font(o, "radio_np_station_font",     p->radio_np_station_font);
     add_font(o, "radio_np_title_font",       p->radio_np_title_font);
