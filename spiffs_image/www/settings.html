@@ -788,15 +788,30 @@
         </div>
 
         <div class="panel">
-            <label class="field-label">Latitude</label>
-            <input type="number" id="weather_lat" class="field-input" min="-90" max="90"
-                   step="0.0001" placeholder="52.2297" style="width:180px" />
-        </div>
-        <div class="panel">
-            <label class="field-label">Longitude</label>
-            <input type="number" id="weather_lon" class="field-input" min="-180" max="180"
-                   step="0.0001" placeholder="21.0122" style="width:180px" />
-            <div class="field-hint">Right-click your location in Google Maps to copy the coordinates.</div>
+            <label class="field-label">Location</label>
+            <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+                <div>
+                    <label class="field-hint" for="weather_location_query">City or postal code</label>
+                    <input type="search" id="weather_location_query" class="field-input"
+                           placeholder="e.g. Warsaw or 00-001" style="width:280px"
+                           onkeydown="if(event.key==='Enter'){event.preventDefault();findWeatherLocation()}" />
+                </div>
+                <button type="button" id="weather_location_btn" class="btn-secondary"
+                        onclick="findWeatherLocation()">&#128269; Find location</button>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+                <div>
+                    <label class="field-hint" for="weather_lat">Latitude</label>
+                    <input type="number" id="weather_lat" class="field-input" min="-90" max="90"
+                           step="0.0001" placeholder="52.2297" style="width:180px" />
+                </div>
+                <div>
+                    <label class="field-hint" for="weather_lon">Longitude</label>
+                    <input type="number" id="weather_lon" class="field-input" min="-180" max="180"
+                           step="0.0001" placeholder="21.0122" style="width:180px" />
+                </div>
+            </div>
+            <div class="field-hint">Search powered by Open-Meteo, or enter coordinates manually. Saving remains a separate step.</div>
         </div>
         <div class="panel">
             <label class="field-label">Refresh interval (minutes)</label>

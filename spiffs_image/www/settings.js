@@ -1363,6 +1363,43 @@ async function loadWeather() {
     }
 }
 
+async function findWeatherLocation() {
+    const btn = document.getElementById('weather_location_btn');
+    const query = document.getElementById('weather_location_query')?.value.trim();
+    if (!query) {
+        showWeatherStatus('Enter a city or postal code.', 'error');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = 'Searching...';
+    showWeatherStatus('Searching for location...');
+
+    try {
+        const language = (navigator.language || 'en').split('-')[0].toLowerCase();
+        const url = 'https://geocoding-api.open-meteo.com/v1/search?name=' +
+            encodeURIComponent(query) + '&count=1&language=' + encodeURIComponent(language) + '&format=json';
+        const r = await fetch(url, { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const data = await r.json();
+        const location = data.results?.[0];
+        if (!location) {
+            showWeatherStatus('No matching location found.', 'error');
+            return;
+        }
+
+        setVal('weather_lat', Number(location.latitude).toFixed(5));
+        setVal('weather_lon', Number(location.longitude).toFixed(5));
+        const parts = [location.name, location.admin1, location.country].filter(Boolean);
+        showWeatherStatus('Found: ' + parts.join(', ') + '. Save Weather to apply it.', 'ok');
+    } catch (e) {
+        showWeatherStatus('Could not search for the location: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerText = '\u{1F50D} Find location';
+    }
+}
+
 async function saveWeather() {
     const btn = document.getElementById('weather_save_btn');
     btn.disabled = true;
