@@ -80,7 +80,7 @@
             overflow: hidden;
         }
         .form-group:last-child { margin-bottom: 0; }
-        .form-group summary {
+        .form-group > summary {
             display: flex;
             align-items: center;
             gap: 8px;
@@ -90,8 +90,8 @@
             user-select: none;
             transition: background .15s, color .15s;
         }
-        .form-group summary::-webkit-details-marker { display: none; }
-        .form-group summary::before {
+        .form-group > summary::-webkit-details-marker { display: none; }
+        .form-group > summary::before {
             content: '›';
             color: var(--accent);
             font-size: 18px;
@@ -99,9 +99,9 @@
             transform: rotate(0deg);
             transition: transform .15s;
         }
-        .form-group[open] summary::before { transform: rotate(90deg); }
-        .form-group summary:hover { background: var(--bg-input); }
-        .form-group[open] summary {
+        .form-group[open] > summary::before { transform: rotate(90deg); }
+        .form-group > summary:hover { background: var(--bg-input); }
+        .form-group[open] > summary {
             border-bottom: 1px solid var(--border);
             color: var(--accent);
         }
@@ -119,6 +119,34 @@
         }
         .form-group.is-disabled .form-group-meta { color: var(--text-dim); opacity: .65; }
         .form-group-body { padding: 9px 10px 5px; }
+        .form-subgroup {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            margin-bottom: 6px;
+            overflow: hidden;
+        }
+        .form-subgroup > summary {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 8px;
+            cursor: pointer;
+            list-style: none;
+            user-select: none;
+        }
+        .form-subgroup > summary::-webkit-details-marker { display: none; }
+        .form-subgroup > summary::before {
+            content: '›';
+            color: var(--accent);
+            font-size: 16px;
+            line-height: 10px;
+            transition: transform .15s;
+        }
+        .form-subgroup[open] > summary::before { transform: rotate(90deg); }
+        .form-subgroup[open] > summary { border-bottom: 1px solid var(--border); }
+        .form-subgroup-body { padding: 8px 8px 2px; }
+        .form-subgroup.is-disabled .form-group-meta { opacity: .65; }
         .form-row {
             display: flex;
             justify-content: space-between;

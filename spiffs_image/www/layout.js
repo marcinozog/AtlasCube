@@ -42,15 +42,17 @@ function touchHotspotFields(prefix) {
 }
 
 function touchHotspotGroups(prefix) {
-    return Array.from({ length: 6 }, (_, index) => {
-        const key = `${prefix}_hotspot_${index + 1}`;
-        return {
-            title: `Touch hotspot ${index + 1}`,
+    const subgroups = [];
+    for (let i = 1; i <= 6; i++) {
+        const key = `${prefix}_hotspot_${i}`;
+        subgroups.push({
+            title: `Hotspot ${i}`,
             enabledBy: `${key}_enabled`,
             fields: [`${key}_enabled`, `${key}_action`, `${key}_x`, `${key}_y`,
                      `${key}_w`, `${key}_h`, `${key}_radius`],
-        };
-    });
+        });
+    }
+    return [{ title: 'Touch hotspots', fields: [], subgroups }];
 }
 
 // ── Field schemas — order is purely UI grouping; doesn't affect backend ────
@@ -676,6 +678,34 @@ function buildForm() {
             const row = buildFormRow(field, data, group, details);
             body.appendChild(row);
         }
+        if (group.subgroups) {
+            group.subgroups.forEach((subgroup, subgroupIndex) => {
+                const subDetails = document.createElement('details');
+                subDetails.className = 'form-subgroup';
+                subDetails.dataset.groupIndex = groupIndex;
+                subDetails.dataset.subgroupIndex = subgroupIndex;
+
+                const subSummary = document.createElement('summary');
+                const subTitle = document.createElement('span');
+                subTitle.className = 'form-group-title';
+                subTitle.textContent = subgroup.title;
+                const subMeta = document.createElement('span');
+                subMeta.className = 'form-group-meta';
+                subSummary.append(subTitle, subMeta);
+                subDetails.appendChild(subSummary);
+
+                const subBody = document.createElement('div');
+                subBody.className = 'form-subgroup-body';
+                for (const key of subgroup.fields) {
+                    const field = fieldByKey.get(key);
+                    if (!field) continue;
+                    subBody.appendChild(buildFormRow(field, data, subgroup, subDetails));
+                }
+                subDetails.appendChild(subBody);
+                body.appendChild(subDetails);
+                refreshGroup(subDetails, subgroup, data);
+            });
+        }
         details.appendChild(body);
         root.appendChild(details);
 
@@ -762,13 +792,31 @@ function buildFormRow(field, data, group, details) {
 function refreshGroup(details, group, data) {
     const enabled = !group.enabledBy || !!data[group.enabledBy];
     details.classList.toggle('is-disabled', !enabled);
-    for (const row of details.querySelectorAll('.form-row-conditional'))
-        row.hidden = !enabled;
-    details.querySelector('.form-group-meta').textContent = groupSummary(group, data);
+    const body = details.children[1];
+    if (body) {
+        for (const row of body.children) {
+            if (row.classList.contains('form-row-conditional')) row.hidden = !enabled;
+        }
+    }
+    const meta = details.firstElementChild?.querySelector('.form-group-meta');
+    if (meta) meta.textContent = groupSummary(group, data);
+
+    if (details.classList.contains('form-subgroup')) {
+        const parent = details.closest('.form-group');
+        if (parent) {
+            const parentGroup = FORM_GROUPS[state.active][Number(parent.dataset.groupIndex)];
+            const parentMeta = parent.firstElementChild?.querySelector('.form-group-meta');
+            if (parentMeta) parentMeta.textContent = groupSummary(parentGroup, data);
+        }
+    }
 }
 
 function groupSummary(group, data) {
     if (group.enabledBy && !data[group.enabledBy]) return 'Off';
+    if (group.subgroups) {
+        const enabled = group.subgroups.filter(s => !!data[s.enabledBy]).length;
+        return `${enabled}/${group.subgroups.length} enabled`;
+    }
 
     const keys = group.fields;
     const xKey = keys.find(k => /_x$/.test(k));
@@ -788,9 +836,13 @@ function setFormValue(key, val) {
     if (!el) return;
     if (el.type === 'checkbox') el.checked = !!val;
     else                        el.value   = val;
-    const details = el.closest('.form-group');
+    const details = el.closest('.form-subgroup, .form-group');
     if (details) {
-        const group = FORM_GROUPS[state.active][Number(details.dataset.groupIndex)];
+        const parentGroup = FORM_GROUPS[state.active][Number(details.dataset.groupIndex)];
+        const subgroupIndex = details.dataset.subgroupIndex;
+        const group = subgroupIndex === undefined
+            ? parentGroup
+            : parentGroup.subgroups[Number(subgroupIndex)];
         refreshGroup(details, group, state[state.active]);
     }
 }
