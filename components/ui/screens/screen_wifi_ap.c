@@ -452,7 +452,7 @@ static void wifi_create(lv_obj_t *parent)
         char ip[16];
         lv_label_set_text_fmt(s_status,
                               "Connected to \"%s\"  IP: %s\n"
-                              "Scan to switch network, swipe to go back",
+                              "Scan to switch network, hold knob or swipe to go back",
                               settings_get()->wifi.ssid,
                               wifi_get_ip(ip, sizeof(ip)));
     } else {
@@ -538,8 +538,10 @@ static void wifi_on_input(ui_input_t input)
         return;
     }
 
-    // Network list: knob moves the highlight, press opens the selected AP,
-    // long-press (re)scans. Press on an empty list scans too.
+    // Network list: knob moves the highlight and press opens the selected AP.
+    // Press on an empty list scans. Long-press goes back when this screen was
+    // opened from Settings; during boot provisioning there is nowhere to go
+    // back to, so it remains a rescan shortcut.
     switch (input) {
         case UI_INPUT_ENCODER_CW:
         case UI_INPUT_ENCODER_CCW: {
@@ -556,7 +558,10 @@ static void wifi_on_input(ui_input_t input)
             open_password_overlay(s_aps[s_focus].ssid, s_aps[s_focus].secure);
             break;
         case UI_INPUT_ENCODER_LONG_PRESS:
-            scan_btn_cb(NULL);
+            if (wifi_get_run_mode() == WIFI_RUN_MODE_STA)
+                ui_navigate(SCREEN_SETTINGS);
+            else
+                scan_btn_cb(NULL);
             break;
         case UI_INPUT_SWIPE_LEFT:
         case UI_INPUT_SWIPE_RIGHT:
