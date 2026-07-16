@@ -114,6 +114,8 @@ static lv_obj_t              *s_root;
 static lv_obj_t              *s_boxes[MAX_EDITOR_ELEMENTS];
 static lv_obj_t              *s_status;
 static lv_obj_t              *s_hint;
+static lv_obj_t              *s_visibility_btn;
+static lv_obj_t              *s_visibility_label;
 static lv_obj_t              *s_exit_overlay;
 static lv_obj_t              *s_exit_title;
 static int                    s_selected = -1;
@@ -130,6 +132,11 @@ static int16_t *i16_field(size_t off)
 static bool bool_field(size_t off)
 {
     return off != OFF_NONE && *(bool *)((uint8_t *)&s_work + off);
+}
+
+static bool *bool_field_ptr(size_t off)
+{
+    return off == OFF_NONE ? NULL : (bool *)((uint8_t *)&s_work + off);
 }
 
 static const lv_font_t *font_field(size_t off)
@@ -264,7 +271,35 @@ static void style_box(int index)
     lv_obj_set_style_border_opa(box, selected ? LV_OPA_COVER : LV_OPA_70, LV_PART_MAIN);
     lv_obj_set_style_bg_color(box,
         hotspot ? lv_color_hex(th->status_ok) : lv_color_hex(th->bg_primary), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(box, selected ? LV_OPA_40 : LV_OPA_20, LV_PART_MAIN);
+    bool enabled = element_enabled(&elements()[index]);
+    // Hidden templates stay selectable. Only the currently selected hidden
+    // box is click-through, because it is temporarily raised above the other
+    // elements and would otherwise block picking a visible box underneath.
+    if (enabled || !selected) lv_obj_add_flag(box, LV_OBJ_FLAG_CLICKABLE);
+    else                      lv_obj_remove_flag(box, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_style_bg_opa(box, selected ? LV_OPA_40
+                                           : enabled ? LV_OPA_20 : LV_OPA_TRANSP,
+                            LV_PART_MAIN);
+    lv_obj_set_style_opa(box, selected ? LV_OPA_COVER
+                                       : enabled ? LV_OPA_COVER : LV_OPA_30,
+                         LV_PART_MAIN);
+}
+
+static void restack_boxes(void)
+{
+    // Hidden templates live below active UI elements, so their larger default
+    // hitboxes cannot steal taps. They remain clickable wherever they are not
+    // covered by a visible element.
+    for (int i = 0; i < element_count(); ++i) {
+        if (s_boxes[i] && !element_enabled(&elements()[i]))
+            lv_obj_move_to_index(s_boxes[i], 0);
+    }
+    for (int i = 0; i < element_count(); ++i) {
+        if (s_boxes[i] && element_enabled(&elements()[i]))
+            lv_obj_move_foreground(s_boxes[i]);
+    }
+    if (s_selected >= 0 && s_boxes[s_selected])
+        lv_obj_move_foreground(s_boxes[s_selected]);
 }
 
 static void position_box(int index)
@@ -282,22 +317,29 @@ static void update_status(void)
     if (!s_status) return;
     if (s_selected < 0) {
         lv_label_set_text(s_status, "Radio layout - tap an element");
+        if (s_visibility_btn) lv_obj_add_flag(s_visibility_btn, LV_OBJ_FLAG_HIDDEN);
         return;
     }
 
     const editor_element_t *d = &elements()[s_selected];
     char buf[80];
     int y = *i16_field(d->y_off);
+    const char *visibility = element_enabled(d) ? "" : " [HIDDEN]";
     if (d->x_off == OFF_NONE) {
-        snprintf(buf, sizeof(buf), "%s  y:%d", d->name, y);
+        snprintf(buf, sizeof(buf), "%s%s y:%d", d->name, visibility, y);
     } else {
         int x = *i16_field(d->x_off);
-        snprintf(buf, sizeof(buf), "%s  x:%d y:%d  axis:%c",
-                 d->name, x, y, s_axis_y ? 'Y' : 'X');
+        snprintf(buf, sizeof(buf), "%s%s x:%d y:%d %c",
+                 d->name, visibility, x, y, s_axis_y ? 'Y' : 'X');
     }
     lv_label_set_text(s_status, buf);
+    if (s_visibility_btn && s_visibility_label) {
+        lv_label_set_text(s_visibility_label, element_enabled(d) ? "HIDE" : "SHOW");
+        lv_obj_remove_flag(s_visibility_btn, LV_OBJ_FLAG_HIDDEN);
+    }
     lv_obj_move_foreground(s_status);
     if (s_hint) lv_obj_move_foreground(s_hint);
+    if (s_visibility_btn) lv_obj_move_foreground(s_visibility_btn);
 }
 
 static void select_element(int index)
@@ -308,8 +350,61 @@ static void select_element(int index)
     else if (previous != index) s_axis_y = false;
     if (previous >= 0) style_box(previous);
     style_box(index);
-    if (s_boxes[index]) lv_obj_move_foreground(s_boxes[index]);
+    restack_boxes();
     update_status();
+}
+
+static void select_relative(int delta)
+{
+    if (element_count() <= 0) return;
+    int index = s_selected;
+    if (index < 0) index = delta > 0 ? -1 : 0;
+    index = (index + delta + element_count()) % element_count();
+    select_element(index);
+}
+
+static void toggle_selected_visibility(void)
+{
+    if (s_selected < 0) return;
+    const editor_element_t *d = &elements()[s_selected];
+    bool *flag = bool_field_ptr(d->enabled_off);
+    if (!flag) return;
+
+    bool currently_visible = element_enabled(d);
+    if (d->needs_wheels_master) {
+        if (currently_visible) {
+            *flag = false;
+            if (!s_work.radio_show_wheel_left && !s_work.radio_show_wheel_right)
+                s_work.radio_show_cassette = false;
+        } else {
+            if (!s_work.radio_show_cassette) {
+                s_work.radio_show_wheel_left = false;
+                s_work.radio_show_wheel_right = false;
+            }
+            s_work.radio_show_cassette = true;
+            *flag = true;
+        }
+    } else {
+        *flag = !*flag;
+    }
+
+    // Some descriptors share one visibility field (playback + audio info), so
+    // refresh every template instead of only the selected one.
+    for (int i = 0; i < element_count(); ++i) style_box(i);
+    restack_boxes();
+    update_status();
+}
+
+static void visibility_clicked_cb(lv_event_t *e)
+{
+    (void)e;
+    toggle_selected_visibility();
+}
+
+static void status_clicked_cb(lv_event_t *e)
+{
+    (void)e;
+    select_relative(1);
 }
 
 static void element_event_cb(lv_event_t *e)
@@ -340,7 +435,6 @@ static void element_event_cb(lv_event_t *e)
 static void create_template(int index)
 {
     const editor_element_t *d = &elements()[index];
-    if (!element_enabled(d)) return;
 
     lv_obj_t *box = lv_obj_create(s_root);
     s_boxes[index] = box;
@@ -472,12 +566,15 @@ static void layout_create(lv_obj_t *parent)
     s_axis_y = false;
     s_exit_overlay = NULL;
     s_exit_title = NULL;
+    s_visibility_btn = NULL;
+    s_visibility_label = NULL;
 
     const ui_theme_colors_t *th = theme_get();
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
 
     for (int i = 0; i < element_count(); ++i) create_template(i);
+    restack_boxes();
 
     s_status = lv_label_create(parent);
     lv_obj_set_style_text_font(s_status, &lv_font_montserrat_10_pl, LV_PART_MAIN);
@@ -487,11 +584,23 @@ static void layout_create(lv_obj_t *parent)
     lv_obj_set_style_pad_hor(s_status, 5, LV_PART_MAIN);
     lv_obj_set_style_pad_ver(s_status, 2, LV_PART_MAIN);
     lv_obj_set_style_radius(s_status, 5, LV_PART_MAIN);
-    lv_obj_align(s_status, LV_ALIGN_TOP_MID, 0, 2);
-    lv_obj_remove_flag(s_status, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_width(s_status, DISPLAY_WIDTH - 54);
+    lv_label_set_long_mode(s_status, LV_LABEL_LONG_DOT);
+    lv_obj_align(s_status, LV_ALIGN_TOP_LEFT, 2, 2);
+    lv_obj_add_flag(s_status, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(s_status, status_clicked_cb, LV_EVENT_CLICKED, NULL);
+
+    s_visibility_btn = lv_btn_create(parent);
+    lv_obj_set_size(s_visibility_btn, 48, 24);
+    lv_obj_align(s_visibility_btn, LV_ALIGN_TOP_RIGHT, -2, 2);
+    lv_obj_add_event_cb(s_visibility_btn, visibility_clicked_cb, LV_EVENT_CLICKED, NULL);
+    s_visibility_label = lv_label_create(s_visibility_btn);
+    lv_obj_set_style_text_font(s_visibility_label, &lv_font_montserrat_10_pl, LV_PART_MAIN);
+    lv_obj_center(s_visibility_label);
+    lv_obj_add_flag(s_visibility_btn, LV_OBJ_FLAG_HIDDEN);
 
     s_hint = lv_label_create(parent);
-    lv_label_set_text(s_hint, "drag | press:axis | turn:1px | swipe:finish");
+    lv_label_set_text(s_hint, "drag | tap title:next | side:finish");
     lv_obj_set_style_text_font(s_hint, &lv_font_montserrat_8_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_hint, lv_color_white(), LV_PART_MAIN);
     lv_obj_set_style_bg_color(s_hint, lv_color_black(), LV_PART_MAIN);
@@ -508,7 +617,8 @@ static void layout_create(lv_obj_t *parent)
 
 static void layout_destroy(void)
 {
-    s_root = s_status = s_hint = s_exit_overlay = s_exit_title = NULL;
+    s_root = s_status = s_hint = s_visibility_btn = s_visibility_label = NULL;
+    s_exit_overlay = s_exit_title = NULL;
     memset(s_boxes, 0, sizeof(s_boxes));
     s_selected = -1;
     ESP_LOGI(TAG, "Destroyed");
@@ -541,11 +651,19 @@ static void layout_on_input(ui_input_t input)
             break;
         }
         case UI_INPUT_ENCODER_PRESS:
-        case UI_INPUT_BTN_OK:
             if (s_selected >= 0 && elements()[s_selected].x_off != OFF_NONE) {
                 s_axis_y = !s_axis_y;
                 update_status();
             }
+            break;
+        case UI_INPUT_BTN_OK:
+            toggle_selected_visibility();
+            break;
+        case UI_INPUT_SWIPE_UP:
+            select_relative(-1);
+            break;
+        case UI_INPUT_SWIPE_DOWN:
+            select_relative(1);
             break;
         case UI_INPUT_ENCODER_LONG_PRESS:
         case UI_INPUT_SWIPE_LEFT:
