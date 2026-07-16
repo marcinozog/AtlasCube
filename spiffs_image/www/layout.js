@@ -14,6 +14,45 @@
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+const HOTSPOT_ACTIONS = [
+    { value: 0, label: 'Play / stop' },
+    { value: 1, label: 'Previous' },
+    { value: 2, label: 'Next' },
+    { value: 3, label: 'Volume -' },
+    { value: 4, label: 'Volume +' },
+    { value: 5, label: 'Stop' },
+];
+
+function touchHotspotFields(prefix) {
+    const fields = [];
+    for (let i = 1; i <= 6; i++) {
+        const key = `${prefix}_hotspot_${i}`;
+        fields.push(
+            { key: `${key}_enabled`, label: 'Enabled', type: 'bool' },
+            { key: `${key}_action`, label: 'Action', type: 'choice', default: (i - 1) % 6,
+              options: HOTSPOT_ACTIONS },
+            { key: `${key}_x`, label: 'X', type: 'number' },
+            { key: `${key}_y`, label: 'Y', type: 'number' },
+            { key: `${key}_w`, label: 'W', type: 'number', min: 8, default: 48 },
+            { key: `${key}_h`, label: 'H', type: 'number', min: 8, default: 36 },
+            { key: `${key}_radius`, label: 'Roundness %', type: 'number', min: 0, max: 100, default: 20 },
+        );
+    }
+    return fields;
+}
+
+function touchHotspotGroups(prefix) {
+    return Array.from({ length: 6 }, (_, index) => {
+        const key = `${prefix}_hotspot_${index + 1}`;
+        return {
+            title: `Touch hotspot ${index + 1}`,
+            enabledBy: `${key}_enabled`,
+            fields: [`${key}_enabled`, `${key}_action`, `${key}_x`, `${key}_y`,
+                     `${key}_w`, `${key}_h`, `${key}_radius`],
+        };
+    });
+}
+
 // ── Field schemas — order is purely UI grouping; doesn't affect backend ────
 
 const CLOCK_FIELDS = [
@@ -158,6 +197,7 @@ const RADIO_FIELDS = [
     { key: 'radio_weather_y', label: 'Weather Y', type: 'number' },
     { key: 'radio_weather_w', label: 'Weather W', type: 'number' },
     { key: 'radio_weather_font', label: 'Weather font', type: 'font' },
+    ...touchHotspotFields('radio'),
 ];
 
 const SD_FIELDS = [
@@ -208,6 +248,7 @@ const SD_FIELDS = [
     { key: 'sd_weather_y', label: 'Weather Y', type: 'number' },
     { key: 'sd_weather_w', label: 'Weather W', type: 'number' },
     { key: 'sd_weather_font', label: 'Weather font', type: 'font' },
+    ...touchHotspotFields('sd'),
 ];
 
 // Form-only grouping. Field schemas above remain the API/source-of-truth; these
@@ -244,6 +285,7 @@ const FORM_GROUPS = {
         { title: 'Animated wheels', enabledBy: 'radio_show_cassette', fields: ['radio_show_cassette', 'radio_animation_style', 'radio_show_wheel_left', 'radio_cassette_l_x', 'radio_cassette_l_y', 'radio_cassette_l_size', 'radio_show_wheel_right', 'radio_cassette_r_x', 'radio_cassette_r_y', 'radio_cassette_r_size'] },
         { title: 'VU meter', enabledBy: 'radio_show_vu', fields: ['radio_show_vu', 'radio_vu_x', 'radio_vu_y', 'radio_vu_w', 'radio_vu_h'] },
         { title: 'Weather', enabledBy: 'radio_show_weather', fields: ['radio_show_weather', 'radio_weather_x', 'radio_weather_y', 'radio_weather_w', 'radio_weather_font'] },
+        ...touchHotspotGroups('radio'),
     ],
     sd: [
         { title: 'Track title', fields: ['sd_title_y', 'sd_title_font'] },
@@ -256,6 +298,7 @@ const FORM_GROUPS = {
         { title: 'Animated wheels', enabledBy: 'sd_show_cassette', fields: ['sd_show_cassette', 'sd_animation_style', 'sd_show_wheel_left', 'sd_cassette_l_x', 'sd_cassette_l_y', 'sd_cassette_l_size', 'sd_show_wheel_right', 'sd_cassette_r_x', 'sd_cassette_r_y', 'sd_cassette_r_size'] },
         { title: 'VU meter', enabledBy: 'sd_show_vu', fields: ['sd_show_vu', 'sd_vu_x', 'sd_vu_y', 'sd_vu_w', 'sd_vu_h'] },
         { title: 'Weather', enabledBy: 'sd_show_weather', fields: ['sd_show_weather', 'sd_weather_x', 'sd_weather_y', 'sd_weather_w', 'sd_weather_font'] },
+        ...touchHotspotGroups('sd'),
     ],
 };
 
@@ -1071,6 +1114,7 @@ function renderRadio(svg) {
             text: '+21 C  Partly cloudy  54%', textSize: fh,
         });
     }
+    drawTouchHotspots(svg, 'radio', r);
 }
 
 // ── SD PLAYER renderer ───────────────────────────────────────────────────────
@@ -1150,6 +1194,23 @@ function renderSd(svg) {
             text: '+21 C  Partly cloudy  54%', textSize: fh,
         });
     }
+    drawTouchHotspots(svg, 'sd', s);
+}
+
+function drawTouchHotspots(svg, prefix, data) {
+    for (let i = 1; i <= 6; i++) {
+        const key = `${prefix}_hotspot_${i}`;
+        if (!data[`${key}_enabled`]) continue;
+        const action = HOTSPOT_ACTIONS.find(a => a.value === (data[`${key}_action`] | 0));
+        const w = Math.max(8, data[`${key}_w`] | 0);
+        const h = Math.max(8, data[`${key}_h`] | 0);
+        drawFreeElement(svg, {
+            x: data[`${key}_x`] | 0, y: data[`${key}_y`] | 0, w, h,
+            label: `touch ${i}: ${action ? action.label : '?'}`,
+            cls: 'label-rect', radius: Math.min(w, h) * clamp(data[`${key}_radius`] | 0, 0, 100) / 200,
+            fields: { x: `${key}_x`, y: `${key}_y`, w: `${key}_w`, h: `${key}_h` },
+        });
+    }
 }
 
 function drawLabel(svg, x, y, fontId, text_str, name, fields, anchorCenter) {
@@ -1187,6 +1248,10 @@ function drawFreeElement(svg, opts) {
         class: `${opts.cls} ${placeholderClass(opts.label)}`,
     });
     if (opts.fillOpacity !== undefined) r.style.fillOpacity = opts.fillOpacity;
+    if (opts.radius !== undefined) {
+        r.setAttribute('rx', opts.radius);
+        r.setAttribute('ry', opts.radius);
+    }
     setupMove(r, svg, opts.fields);
 
     tag(svg, opts.x + 2, opts.y + 7, opts.label);
@@ -1443,6 +1508,7 @@ function fontHeight(id) {
 // Keep the preview readable when elements overlap: the colour communicates the
 // element's role consistently across Home, Radio, SD and Bluetooth screens.
 function placeholderClass(name) {
+    if (name && name.startsWith('touch ')) return 'ph-hotspot';
     const classes = {
         time: 'ph-time', clock: 'ph-time',
         date: 'ph-date',

@@ -43,6 +43,8 @@ idf_component_register(
         "widgets/calendar_widget.c"
         "widgets/weather_widget.c"
         "widgets/controls_overlay_widget.c"
+        "widgets/control_action.c"
+        "widgets/touch_hotspots_widget.c"
         "widgets/hub_overlay_widget.c"
         "widgets/vol_overlay_widget.c"
         "widgets/net_fetch_overlay_widget.c"

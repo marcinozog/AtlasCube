@@ -1083,10 +1083,33 @@ static const ui_profile_t k_defaults = {
 static ui_profile_t s_runtime;
 static bool         s_initialized = false;
 
+static void ensure_hotspot_defaults(ui_touch_hotspot_t *hotspots)
+{
+    for (int i = 0; i < UI_TOUCH_HOTSPOT_COUNT; ++i) {
+        bool missing_geometry = hotspots[i].w <= 0 || hotspots[i].h <= 0;
+        if (hotspots[i].w <= 0) hotspots[i].w = 48;
+        if (hotspots[i].h <= 0) hotspots[i].h = 36;
+        if (missing_geometry) {
+            hotspots[i].radius = 20;
+            hotspots[i].action = i % 6;
+        } else {
+            hotspots[i].radius = LV_CLAMP(0, hotspots[i].radius, 100);
+            hotspots[i].action = LV_CLAMP(0, hotspots[i].action, 5);
+        }
+    }
+}
+
+static void ensure_all_hotspot_defaults(ui_profile_t *p)
+{
+    ensure_hotspot_defaults(p->radio_touch_hotspots);
+    ensure_hotspot_defaults(p->sd_touch_hotspots);
+}
+
 static void ensure_initialized(void)
 {
     if (!s_initialized) {
         s_runtime = k_defaults;
+        ensure_all_hotspot_defaults(&s_runtime);
         s_initialized = true;
     }
 }
@@ -1109,6 +1132,7 @@ void ui_profile_set(const ui_profile_t *src)
 void ui_profile_reset(void)
 {
     s_runtime = k_defaults;
+    ensure_all_hotspot_defaults(&s_runtime);
     s_initialized = true;
 }
 
@@ -1154,6 +1178,55 @@ static void clamp_reel_size(int16_t *size)
     int16_t max_size = DISPLAY_WIDTH < DISPLAY_HEIGHT ? DISPLAY_WIDTH : DISPLAY_HEIGHT;
     if (*size < 16) *size = 16;
     if (*size > max_size) *size = max_size;
+}
+
+static void load_hotspots(const cJSON *obj, const char *prefix,
+                          ui_touch_hotspot_t *hotspots)
+{
+    char key[48];
+    for (int i = 0; i < UI_TOUCH_HOTSPOT_COUNT; ++i) {
+        ui_touch_hotspot_t *h = &hotspots[i];
+        int slot = i + 1;
+        snprintf(key, sizeof(key), "%s_hotspot_%d_enabled", prefix, slot);
+        load_bool(obj, key, &h->enabled);
+        snprintf(key, sizeof(key), "%s_hotspot_%d_x", prefix, slot);
+        load_i16(obj, key, &h->x);
+        snprintf(key, sizeof(key), "%s_hotspot_%d_y", prefix, slot);
+        load_i16(obj, key, &h->y);
+        snprintf(key, sizeof(key), "%s_hotspot_%d_w", prefix, slot);
+        load_i16(obj, key, &h->w);
+        snprintf(key, sizeof(key), "%s_hotspot_%d_h", prefix, slot);
+        load_i16(obj, key, &h->h);
+        snprintf(key, sizeof(key), "%s_hotspot_%d_action", prefix, slot);
+        load_i16(obj, key, &h->action);
+        snprintf(key, sizeof(key), "%s_hotspot_%d_radius", prefix, slot);
+        load_i16(obj, key, &h->radius);
+    }
+    ensure_hotspot_defaults(hotspots);
+}
+
+static void dump_hotspots(cJSON *obj, const char *prefix,
+                          const ui_touch_hotspot_t *hotspots)
+{
+    char key[48];
+    for (int i = 0; i < UI_TOUCH_HOTSPOT_COUNT; ++i) {
+        const ui_touch_hotspot_t *h = &hotspots[i];
+        int slot = i + 1;
+        snprintf(key, sizeof(key), "%s_hotspot_%d_enabled", prefix, slot);
+        add_bool(obj, key, h->enabled);
+        snprintf(key, sizeof(key), "%s_hotspot_%d_x", prefix, slot);
+        add_i16(obj, key, h->x);
+        snprintf(key, sizeof(key), "%s_hotspot_%d_y", prefix, slot);
+        add_i16(obj, key, h->y);
+        snprintf(key, sizeof(key), "%s_hotspot_%d_w", prefix, slot);
+        add_i16(obj, key, h->w);
+        snprintf(key, sizeof(key), "%s_hotspot_%d_h", prefix, slot);
+        add_i16(obj, key, h->h);
+        snprintf(key, sizeof(key), "%s_hotspot_%d_action", prefix, slot);
+        add_i16(obj, key, h->action);
+        snprintf(key, sizeof(key), "%s_hotspot_%d_radius", prefix, slot);
+        add_i16(obj, key, h->radius);
+    }
 }
 
 // ── per-section load ────────────────────────────────────────────────────────
@@ -1295,6 +1368,7 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_weather_y",            &p->radio_weather_y);
     load_i16 (obj, "radio_weather_w",            &p->radio_weather_w);
     load_font(obj, "radio_weather_font",         &p->radio_weather_font);
+    load_hotspots(obj, "radio", p->radio_touch_hotspots);
 }
 
 static cJSON *dump_radio(const ui_profile_t *p)
@@ -1343,6 +1417,7 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_weather_y",            p->radio_weather_y);
     add_i16 (o, "radio_weather_w",            p->radio_weather_w);
     add_font(o, "radio_weather_font",         p->radio_weather_font);
+    dump_hotspots(o, "radio", p->radio_touch_hotspots);
     return o;
 }
 
@@ -1394,6 +1469,7 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "sd_weather_y",              &p->sd_weather_y);
     load_i16 (obj, "sd_weather_w",              &p->sd_weather_w);
     load_font(obj, "sd_weather_font",           &p->sd_weather_font);
+    load_hotspots(obj, "sd", p->sd_touch_hotspots);
 }
 
 static cJSON *dump_sd(const ui_profile_t *p)
@@ -1441,6 +1517,7 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_weather_y",              p->sd_weather_y);
     add_i16 (o, "sd_weather_w",              p->sd_weather_w);
     add_font(o, "sd_weather_font",           p->sd_weather_font);
+    dump_hotspots(o, "sd", p->sd_touch_hotspots);
     return o;
 }
 

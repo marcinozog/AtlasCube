@@ -7,6 +7,7 @@
 #include "ui_nav.h"
 #include "ui_label.h"
 #include "controls_overlay_widget.h"
+#include "touch_hotspots_widget.h"
 #include "vol_overlay_widget.h"
 #include "clock_widget.h"
 #include "mode_indicator_widget.h"
@@ -244,6 +245,7 @@ static void sd_player_screen_create(lv_obj_t *parent)
     progress_update();   // set/hide the time row now, before the 1 s tick
 
     controls_overlay_create(parent, CTRL_OVL_MODE_SD);
+    touch_hotspots_widget_create(parent, CONTROL_SOURCE_SD, p->sd_touch_hotspots);
 
     ESP_LOGI(TAG, "Created");
 }
@@ -251,6 +253,7 @@ static void sd_player_screen_create(lv_obj_t *parent)
 static void sd_player_screen_destroy(void)
 {
     if (s_tick) { lv_timer_delete(s_tick); s_tick = NULL; }
+    touch_hotspots_widget_destroy();
     controls_overlay_destroy();
     vol_overlay_hide();
     vu_widget_destroy();

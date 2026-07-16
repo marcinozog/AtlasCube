@@ -71,6 +71,18 @@
 extern "C" {
 #endif
 
+#define UI_TOUCH_HOTSPOT_COUNT 6
+
+typedef struct {
+    bool    enabled;
+    int16_t x;
+    int16_t y;
+    int16_t w;
+    int16_t h;
+    int16_t action;
+    int16_t radius;   // corner radius in percent: 0 rectangle, 100 pill/circle
+} ui_touch_hotspot_t;
+
 // UI profile picked at compile time — describes screen dimensions,
 // fonts and visibility flags for each screen. Lets us build the same
 // UI code for different displays (color/mono, various resolutions)
@@ -180,6 +192,7 @@ typedef struct {
     int16_t          radio_weather_y;
     int16_t          radio_weather_w;
     const lv_font_t *radio_weather_font;
+    ui_touch_hotspot_t radio_touch_hotspots[UI_TOUCH_HOTSPOT_COUNT];
 
     // screen_sd_player — absolute LCD coordinates (top-left origin). The three
     // text rows are horizontally centered (Y only). Mirrors screen_radio.
@@ -227,6 +240,7 @@ typedef struct {
     int16_t          sd_weather_y;
     int16_t          sd_weather_w;
     const lv_font_t *sd_weather_font;
+    ui_touch_hotspot_t sd_touch_hotspots[UI_TOUCH_HOTSPOT_COUNT];
 
     // screen_playlist
     int16_t          playlist_header_h;

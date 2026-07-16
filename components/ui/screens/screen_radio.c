@@ -13,6 +13,7 @@
 #include "event_indicator_widget.h"
 #include "weather_widget.h"
 #include "controls_overlay_widget.h"
+#include "touch_hotspots_widget.h"
 #include "vol_overlay_widget.h"
 #include "vu_widget.h"
 #include "animated_wheels_widget.h"
@@ -132,12 +133,14 @@ static void radio_create(lv_obj_t *parent)
     refresh_from_state();
 
     controls_overlay_create(parent, CTRL_OVL_MODE_RADIO);
+    touch_hotspots_widget_create(parent, CONTROL_SOURCE_RADIO, p->radio_touch_hotspots);
 
     ESP_LOGI(TAG, "Created (theme=%d)", theme_current());
 }
 
 static void radio_destroy(void)
 {
+    touch_hotspots_widget_destroy();
     controls_overlay_destroy();
     vol_overlay_hide();
     vu_widget_destroy();
