@@ -43,6 +43,7 @@ extern const ui_screen_t screen_ota;
 extern const ui_screen_t screen_sd_player;
 extern const ui_screen_t screen_sd_browser;
 extern const ui_screen_t screen_update;
+extern const ui_screen_t screen_layout_editor;
 
 // --------------------------------------------------------------------------
 // Screen registry — order must match ui_screen_id_t
@@ -66,6 +67,7 @@ static const ui_screen_t *s_screens[SCREEN_COUNT] = {
     [SCREEN_SD]                 = &screen_sd_player,
     [SCREEN_SD_BROWSER]         = &screen_sd_browser,
     [SCREEN_UPDATE]             = &screen_update,
+    [SCREEN_LAYOUT_EDITOR]      = &screen_layout_editor,
 };
 
 // --------------------------------------------------------------------------
@@ -116,6 +118,7 @@ static bool can_auto_screensaver_from(ui_screen_id_t id)
     if (id == SCREEN_EVENT_NOTIFICATION) return false;
     if (id == SCREEN_WIFI)               return false;
     if (id == SCREEN_OTA)                return false;  // never screensave mid-update
+    if (id == SCREEN_LAYOUT_EDITOR)      return false;  // never interrupt unsaved layout work
     return true;
 }
 

@@ -8,6 +8,7 @@
 #include "ui_screen.h"
 #include "ui_events.h"
 #include "ui_manager.h"
+#include "screen_layout_editor.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
@@ -108,6 +109,9 @@ static bool get_radio_show(void) { return app_state_get()->radio_show_screen; }
 static bool get_bt_auto(void)    { return app_state_get()->bt_auto_switch; }
 static bool get_eq(void)         { return app_state_get()->eq_enabled; }
 static void act_restart(void)    { esp_restart(); }
+#if !CONFIG_TOUCH_NONE
+static void act_radio_layout(void) { screen_layout_editor_open(LAYOUT_EDITOR_RADIO); }
+#endif
 
 /* ── row tables ─────────────────────────────────────────────────────────── */
 
@@ -145,6 +149,9 @@ static const row_desc_t SEC_SCREENS[] = {
       .on_txt = "<    Show    >", .off_txt = "<    Hide    >" },
     { .title = "Radio Screen", .kind = RK_TOGGLE, .tget = get_radio_show, .tset = settings_set_radio_show_screen,
       .on_txt = "<    Show    >", .off_txt = "<    Hide    >" },
+#if !CONFIG_TOUCH_NONE
+    { .title = "Radio Layout", .kind = RK_ACTION, .action = act_radio_layout, .on_txt = "Open >" },
+#endif
 };
 
 static const row_desc_t SEC_SYSTEM[] = {

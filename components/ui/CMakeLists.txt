@@ -18,6 +18,7 @@ idf_component_register(
         "screens/screen_bt.c"
         "screens/screen_wifi_ap.c"
         "screens/screen_settings.c"
+        "screens/screen_layout_editor.c"
         "screens/screen_equalizer.c"
         "screens/screen_events.c"
         "screens/screen_event_notification.c"
