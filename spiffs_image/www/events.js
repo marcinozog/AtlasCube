@@ -744,39 +744,14 @@ async function evDelete(id, playback = false) {
     }
 }
 
-function playbackPayload(start, stop, enabled = start.enabled) {
-    const payload = {
-        type: 'schedule',
-        title: start.title,
-        year: start.year,
-        month: start.month,
-        day: start.day,
-        hour: start.hour,
-        minute: start.minute,
-        stop_enabled: !!stop,
-        recurrence: start.recurrence,
-        enabled,
-        station: start.station,
-        volume: start.volume,
-        sound: start.sound || '',
-    };
-    if (stop) {
-        payload.stop_hour = stop.hour;
-        payload.stop_minute = stop.minute;
-    }
-    return payload;
-}
-
 async function evToggleEnabled(id, enabled, playback = false) {
     try {
-        const schedule = playback ? playbackSchedules().find(e => e.playback_id === id) : null;
-        if (playback && !schedule) throw new Error('Playback schedule not found');
+        // The playback PUT patches like the generic one: omitted fields keep
+        // their stored values, so the toggle sends only `enabled`.
         const res = await fetch(playback ? `/api/events/playback/${id}` : `/api/events/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(playback
-                ? playbackPayload(schedule, schedule._stop, enabled)
-                : { enabled }),
+            body: JSON.stringify({ enabled }),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         await evLoad();

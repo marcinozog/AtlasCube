@@ -1267,16 +1267,24 @@ static esp_err_t api_events_post_handler(httpd_req_t *req)
 // Playback is stored as one start EV_SCHEDULE plus an optional linked stop
 // record, so the scheduler keeps its simple one-event/one-trigger model. The
 // API exposes the group as one object and commits it in one events.json write.
+// `cur_start`/`cur_stop` are the stored records for PUT (patch semantics:
+// omitted fields keep their current values); NULL for POST.
 static const char *playback_schedule_from_json(const cJSON *json,
+                                           const event_t *cur_start,
+                                           const event_t *cur_stop,
                                            event_t *start, event_t *stop,
                                            bool *has_stop)
 {
     if (!cJSON_IsObject(json) || !start || !stop || !has_stop)
         return "Invalid playback schedule";
 
-    memset(start, 0, sizeof(*start));
-    start->enabled = true;
-    start->recurrence = EV_REC_DAILY;
+    if (cur_start) {
+        *start = *cur_start;
+    } else {
+        memset(start, 0, sizeof(*start));
+        start->enabled = true;
+        start->recurrence = EV_REC_DAILY;
+    }
     event_patch_from_json(start, json);
     start->type = EV_SCHEDULE;
 
@@ -1290,24 +1298,34 @@ static const char *playback_schedule_from_json(const cJSON *json,
     const char *err = event_validate(start);
     if (err) return err;
 
+    bool cur_has_stop = cur_stop && cur_stop->id[0];
     const cJSON *se = cJSON_GetObjectItem(json, "stop_enabled");
-    *has_stop = cJSON_IsBool(se) && cJSON_IsTrue(se);
+    *has_stop = cJSON_IsBool(se) ? cJSON_IsTrue(se) : cur_has_stop;
     memset(stop, 0, sizeof(*stop));
     if (!*has_stop) return NULL;
 
     const cJSON *sh = cJSON_GetObjectItem(json, "stop_hour");
     const cJSON *sm = cJSON_GetObjectItem(json, "stop_minute");
-    if (!cJSON_IsNumber(sh) || !cJSON_IsNumber(sm)) return "Stop time required";
-    if (sh->valueint < 0 || sh->valueint > 23) return "stop hour out of range";
-    if (sm->valueint < 0 || sm->valueint > 59) return "stop minute out of range";
+    int stop_hour, stop_minute;
+    if (cJSON_IsNumber(sh) && cJSON_IsNumber(sm)) {
+        stop_hour   = sh->valueint;
+        stop_minute = sm->valueint;
+    } else if (cur_has_stop && !sh && !sm) {
+        stop_hour   = cur_stop->hour;
+        stop_minute = cur_stop->minute;
+    } else {
+        return "Stop time required";
+    }
+    if (stop_hour < 0 || stop_hour > 23) return "stop hour out of range";
+    if (stop_minute < 0 || stop_minute > 59) return "stop minute out of range";
 
     *stop = *start;
     memset(stop->id, 0, sizeof(stop->id));
     memset(stop->playback_id, 0, sizeof(stop->playback_id));
     memset(stop->sound, 0, sizeof(stop->sound));
     stop->station = EVENT_STATION_STOP;
-    stop->hour = sh->valueint;
-    stop->minute = sm->valueint;
+    stop->hour = stop_hour;
+    stop->minute = stop_minute;
 
     // An end time not later than the start means the following day. Advancing
     // the stop record's base date makes one-time and weekly overnight ranges
@@ -1366,7 +1384,8 @@ static esp_err_t api_events_playback_post_handler(httpd_req_t *req)
 
     event_t start, stop;
     bool has_stop;
-    const char *err = playback_schedule_from_json(json, &start, &stop, &has_stop);
+    const char *err = playback_schedule_from_json(json, NULL, NULL,
+                                                  &start, &stop, &has_stop);
     cJSON_Delete(json);
     if (err) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, err);
@@ -1414,7 +1433,8 @@ static esp_err_t api_events_playback_put_handler(httpd_req_t *req)
 
     event_t start, stop;
     bool has_stop;
-    const char *err = playback_schedule_from_json(json, &start, &stop, &has_stop);
+    const char *err = playback_schedule_from_json(json, &current_start, &current_stop,
+                                                  &start, &stop, &has_stop);
     cJSON_Delete(json);
     if (err) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, err);

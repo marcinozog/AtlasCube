@@ -249,7 +249,7 @@ In [components/web/http_server.c](../components/web/http_server.c):
 | `GET` | `/api/events` | Array of all events (JSON) |
 | `POST` | `/api/events` | Body: event JSON (id optional). Returns the created object. |
 | `POST` | `/api/events/playback` | Creates a start and optional linked stop in one save. `stop_enabled` controls whether `stop_hour` and `stop_minute` are required. |
-| `PUT` | `/api/events/playback/{playback_id}` | Replaces the start and optional stop records of a playback schedule in one save. |
+| `PUT` | `/api/events/playback/{playback_id}` | Partial patch of a playback schedule, saved in one write. Omitted fields keep their stored values; `stop_enabled: false` removes the stop record, `true` adds one (then `stop_hour`/`stop_minute` are required unless a stop already exists). |
 | `DELETE` | `/api/events/playback/{playback_id}` | Deletes the complete playback schedule in one save. |
 | `PUT` | `/api/events/calendar` | Bulk "wipe & replace" of all `EV_CALENDAR` events. Body: JSON array (or `{"events":[...]}`). Returns `{"ok":true,"count":N}`. `[]` clears them all. |
 | `PUT` | `/api/events/{id}` | Body: partial or full event JSON (partial patch). |

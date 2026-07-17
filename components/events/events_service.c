@@ -528,9 +528,8 @@ esp_err_t events_add_playback(event_t *start, event_t *stop)
     s_events[s_count] = *start;
     s_fired_today[s_count++] = false;
     if (stop) {
+        // start is already in s_events here, so the uniqueness scan covers it.
         make_unique_event_id_locked(stop->id);
-        while (strncmp(start->id, stop->id, EVENT_ID_LEN) == 0)
-            make_unique_event_id_locked(stop->id);
         strncpy(stop->playback_id, playback_id, EVENT_PLAYBACK_ID_LEN);
         s_events[s_count] = *stop;
         s_fired_today[s_count++] = false;
