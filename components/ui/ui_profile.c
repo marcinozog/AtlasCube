@@ -1362,6 +1362,7 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_vu_y",                 &p->radio_vu_y);
     load_i16 (obj, "radio_vu_w",                 &p->radio_vu_w);
     load_i16 (obj, "radio_vu_h",                 &p->radio_vu_h);
+    load_bool(obj, "radio_vu_transparent",       &p->radio_vu_transparent);
     load_bool(obj, "radio_show_cassette",        &p->radio_show_cassette);
     load_i16 (obj, "radio_animation_style",      &p->radio_animation_style);
     p->radio_animation_style = LV_CLAMP(0, p->radio_animation_style, 1);
@@ -1416,6 +1417,7 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_vu_y",                 p->radio_vu_y);
     add_i16 (o, "radio_vu_w",                 p->radio_vu_w);
     add_i16 (o, "radio_vu_h",                 p->radio_vu_h);
+    add_bool(o, "radio_vu_transparent",       p->radio_vu_transparent);
     add_bool(o, "radio_show_cassette",        p->radio_show_cassette);
     add_i16 (o, "radio_animation_style",      p->radio_animation_style);
     add_bool(o, "radio_show_wheel_left",      p->radio_show_wheel_left);
@@ -1465,6 +1467,7 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "sd_vu_y",                   &p->sd_vu_y);
     load_i16 (obj, "sd_vu_w",                   &p->sd_vu_w);
     load_i16 (obj, "sd_vu_h",                   &p->sd_vu_h);
+    load_bool(obj, "sd_vu_transparent",         &p->sd_vu_transparent);
     load_bool(obj, "sd_show_cassette",          &p->sd_show_cassette);
     load_i16 (obj, "sd_animation_style",        &p->sd_animation_style);
     p->sd_animation_style = LV_CLAMP(0, p->sd_animation_style, 1);
@@ -1516,6 +1519,7 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_vu_y",                   p->sd_vu_y);
     add_i16 (o, "sd_vu_w",                   p->sd_vu_w);
     add_i16 (o, "sd_vu_h",                   p->sd_vu_h);
+    add_bool(o, "sd_vu_transparent",         p->sd_vu_transparent);
     add_bool(o, "sd_show_cassette",          p->sd_show_cassette);
     add_i16 (o, "sd_animation_style",        p->sd_animation_style);
     add_bool(o, "sd_show_wheel_left",        p->sd_show_wheel_left);

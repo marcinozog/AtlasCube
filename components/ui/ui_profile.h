@@ -179,6 +179,7 @@ typedef struct {
     int16_t          radio_vu_y;
     int16_t          radio_vu_w;
     int16_t          radio_vu_h;
+    bool             radio_vu_transparent;     // no bg fill: bars sit on wallpaper/gradient
     bool             radio_show_cassette;      // legacy JSON name: show animated wheels overlay
     int16_t          radio_animation_style;    // 0 cassette reels, 1 car rims
     bool             radio_show_wheel_left;
@@ -227,6 +228,7 @@ typedef struct {
     int16_t          sd_vu_y;
     int16_t          sd_vu_w;
     int16_t          sd_vu_h;
+    bool             sd_vu_transparent;         // no bg fill: bars sit on wallpaper/gradient
     bool             sd_show_cassette;         // legacy JSON name: show animated wheels overlay
     int16_t          sd_animation_style;       // 0 cassette reels, 1 car rims
     bool             sd_show_wheel_left;

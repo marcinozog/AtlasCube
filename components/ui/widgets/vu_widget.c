@@ -67,6 +67,7 @@ static int         s_hgt[VU_BARS_MAX]; // current bar heights in px (LVGL task o
 static int         s_slot   = 0;   // per-bar horizontal slot width
 static int         s_bar_w  = 0;   // drawn bar width (< slot → leaves the gap)
 static int         s_pad    = 0;   // left padding to centre the row
+static bool        s_transparent = false; // no bg fill: bars sit on the screen bg
 
 // ── FFT task (core 0) ────────────────────────────────────────────────────────
 static TaskHandle_t      s_fft_task = NULL;
@@ -264,10 +265,11 @@ static void tick_cb(lv_timer_t *t)
     render_deltas();   // invalidates only the changed strip of each bar
 }
 
-void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h)
+void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h, bool transparent)
 {
     if (s_cont) return;
     const ui_theme_colors_t *th = theme_get();
+    s_transparent = transparent;
 
     // Working buffers in PSRAM — kept out of the tight internal-RAM budget
     // (TLS/LVGL). The FFT runs ~20 fps on the LVGL task, so the slower PSRAM
@@ -301,8 +303,13 @@ void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h)
     lv_obj_remove_style_all(s_cont);
     lv_obj_set_size(s_cont, w, h);
     lv_obj_set_pos(s_cont, x, y);
-    lv_obj_set_style_bg_color(s_cont, lv_color_hex(th->vu_bg), 0);
-    lv_obj_set_style_bg_opa(s_cont, LV_OPA_COVER, 0);   // opaque → no full-screen recomposite
+    // Opaque bg is the cheap path (changed strips are a solid fill). Transparent
+    // shows the screen bg (wallpaper/gradient) under the bars: each changed strip
+    // also re-blits that bg — still delta-bounded, just ~2× the pixel work.
+    if (!s_transparent) {
+        lv_obj_set_style_bg_color(s_cont, lv_color_hex(th->vu_bg), 0);
+        lv_obj_set_style_bg_opa(s_cont, LV_OPA_COVER, 0);
+    }
     lv_obj_clear_flag(s_cont, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
     s_h = h;
 
@@ -361,6 +368,6 @@ void vu_widget_apply_theme(void)
 {
     if (!s_cont) return;
     const ui_theme_colors_t *th = theme_get();
-    lv_obj_set_style_bg_color(s_cont, lv_color_hex(th->vu_bg), 0);
+    if (!s_transparent) lv_obj_set_style_bg_color(s_cont, lv_color_hex(th->vu_bg), 0);
     lv_obj_invalidate(s_cont);   // bar colour is read fresh in vu_draw_cb
 }

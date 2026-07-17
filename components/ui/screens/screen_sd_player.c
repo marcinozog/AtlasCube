@@ -234,7 +234,8 @@ static void sd_player_screen_create(lv_obj_t *parent)
         event_indicator_create(parent, p->sd_event_indic_x, p->sd_event_indic_y);
     }
     if (p->sd_show_vu) {
-        vu_widget_create(parent, p->sd_vu_x, p->sd_vu_y, p->sd_vu_w, p->sd_vu_h);
+        vu_widget_create(parent, p->sd_vu_x, p->sd_vu_y, p->sd_vu_w, p->sd_vu_h,
+                         p->sd_vu_transparent);
     }
     if (p->sd_show_weather) {
         weather_widget_create(parent, p->sd_weather_x, p->sd_weather_y,

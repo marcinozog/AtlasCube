@@ -108,7 +108,8 @@ static void radio_create(lv_obj_t *parent)
         event_indicator_create(parent, p->radio_event_indic_x, p->radio_event_indic_y);
     }
     if (p->radio_show_vu) {
-        vu_widget_create(parent, p->radio_vu_x, p->radio_vu_y, p->radio_vu_w, p->radio_vu_h);
+        vu_widget_create(parent, p->radio_vu_x, p->radio_vu_y, p->radio_vu_w, p->radio_vu_h,
+                         p->radio_vu_transparent);
     }
     if (p->radio_show_weather) {
         weather_widget_create(parent, p->radio_weather_x, p->radio_weather_y,
