@@ -151,10 +151,10 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Wymaga karty microSD podpiętej do pinów SDMMC danego wariantu (tryb 1-bit)
 
 **Wydarzenia i przypomnienia**
-- Urodziny, imieniny, rocznice, zwykłe przypomnienia, alarmy (z radiem), powiadomienia głosowe
+- Urodziny, imieniny, rocznice, zwykłe przypomnienia, powiadomienia głosowe i harmonogramy odtwarzania
 - Cykliczne: dziennie / co tydzień / miesiąc / rok
 - W momencie wyzwolenia: pełnoekranowe powiadomienie i melodia z buzzera; melodie zaszyte w firmware (webowy edytor w planach)
-- Tryb alarm — zamiast buzzera włącza wybraną stację z playlisty; strumień gra dalej po zamknięciu powiadomienia, aż ręcznie nie zatrzymasz radia
+- Harmonogramy odtwarzania — radio lub plik/folder z karty SD startuje o ustawionej godzinie, a czas zatrzymania jest opcjonalny. Start i stop są wewnętrznie powiązane, ale wyświetlane i edytowane jako jeden wpis; zakres jednorazowy, dzienny lub tygodniowy może przechodzić przez północ
 - Tryb powiadomienia głosowego — w momencie wyzwolenia odtwarza nagranie z karty microSD, na chwilę przerywając i potem przywracając źródło (radio/Bluetooth). Aplikacja na Androida syntezuje mowę na telefonie (TTS) i wgrywa ją; każde nagranie to pojedynczy plik nazwany czytelnym slugiem tytułu wydarzenia (np. `voice/pobudka-a3f9c1.wav`), dzięki czemu karta pozostaje przejrzysta w menedżerze plików. Edytor webowy i aplikacja pozwalają odsłuchać nagranie
 - CRUD przez web UI
 

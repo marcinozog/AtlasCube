@@ -35,6 +35,7 @@ const REC_LABEL = {
 let events    = [];
 let stations  = [];      // playlist entries, fetched once for the alarm picker
 let editingId = null;    // null = add mode, string = edit mode
+let editingPlaybackId = null;
 let clipUrl   = null;    // object URL of the loaded voice clip (revoked on reset)
 let currentTab = 'events';  // 'events' | 'playback' (EV_SCHEDULE list)
 const SCHEDULE_VIEW_KEY = 'atlascube.events.scheduleView';
@@ -88,18 +89,42 @@ function evTypeChanged() {
     const sched   = isScheduleTab();
     const type    = sched ? 'schedule' : document.getElementById('ev_type').value;
     const isVoice = type === 'voice';
-    const src     = document.getElementById('ev_source').value;   // radio | sd | stop
+    const src     = document.getElementById('ev_source').value;   // radio | sd
     const schedRadio = sched && src === 'radio';
     const schedSd    = sched && src === 'sd';
-    const schedStop  = sched && src === 'stop';
 
     document.getElementById('ev_type_group').style.display    = sched ? 'none' : '';
     document.getElementById('ev_source_group').style.display  = sched ? '' : 'none';
     document.getElementById('ev_station_group').style.display = schedRadio ? '' : 'none';
     document.getElementById('ev_sdpath_group').style.display  = schedSd ? '' : 'none';
-    // A stop schedule starts nothing, so the volume slider is meaningless there.
-    document.getElementById('ev_volume_group').style.display  = (isVoice || (sched && !schedStop)) ? '' : 'none';
+    document.getElementById('ev_volume_group').style.display  = (isVoice || sched) ? '' : 'none';
     document.getElementById('ev_sound_group').style.display   = isVoice ? '' : 'none';
+    document.getElementById('ev_stop_toggle_group').style.display = sched ? '' : 'none';
+    document.getElementById('ev_time_label').textContent = sched ? 'Start time' : 'Time';
+
+    // Playback schedules support the recurrence modes that can represent an
+    // overnight stop as the following calendar day without ambiguity.
+    for (const id of ['ev_rec_monthly', 'ev_rec_yearly']) {
+        const opt = document.getElementById(id);
+        opt.hidden = sched;
+        opt.disabled = sched;
+    }
+    const rec = document.getElementById('ev_recurrence');
+    if (sched && !['none', 'daily', 'weekly'].includes(rec.value)) rec.value = 'daily';
+    evStopChanged();
+    evRecurrenceChanged();
+}
+
+function evStopChanged() {
+    const show = isScheduleTab() && document.getElementById('ev_stop_enabled').checked;
+    document.getElementById('ev_stop_time_group').style.display = show ? '' : 'none';
+}
+
+function evRecurrenceChanged() {
+    const recurrence = document.getElementById('ev_recurrence').value;
+    document.getElementById('ev_date_group').style.display = recurrence === 'daily' ? 'none' : '';
+    document.getElementById('ev_date_label').textContent =
+        recurrence === 'weekly' ? 'Weekday (choose a date)' : 'Date';
 }
 
 // Stop playback and drop the loaded clip (called when the form changes events).
@@ -354,14 +379,28 @@ async function evPlayRow(btn, sound) {
     }
 }
 
+function isStopSchedule(ev) {
+    return ev.type === 'schedule' && !ev.sound && (ev.station ?? 0) < 0;
+}
+
+function playbackSchedules() {
+    const stops = new Map(events
+        .filter(ev => isStopSchedule(ev) && ev.playback_id)
+        .map(ev => [ev.playback_id, ev]));
+    return events
+        .filter(ev => ev.type === 'schedule' && !isStopSchedule(ev) && ev.playback_id)
+        .map(ev => ({ ...ev, _stop: stops.get(ev.playback_id) || null }));
+}
+
 function render() {
     // Rows (and their ▶ buttons) are rebuilt below; stop any clip first.
     stopRowAudio();
 
     const sched = isScheduleTab();
     const dailyView = sched && scheduleView === 'daily';
-    const shown = events.filter(ev =>
-        (ev.type === 'schedule') === sched && (!dailyView || ev.recurrence === 'daily'));
+    const shown = sched
+        ? playbackSchedules().filter(ev => !dailyView || ev.recurrence === 'daily')
+        : events.filter(ev => ev.type !== 'schedule');
 
     const list = document.getElementById('ev_list');
     const viewWrap = document.getElementById('ev_schedule_view_wrap');
@@ -391,10 +430,12 @@ function makeRow(ev) {
     row.className = 'ev-row' + (ev.enabled ? '' : ' disabled');
 
     const dateStr = formatDate(ev);
-    const timeStr = `${pad2(ev.hour)}:${pad2(ev.minute)}`;
+    let timeStr = `${pad2(ev.hour)}:${pad2(ev.minute)}`;
     const recStr  = REC_LABEL[ev.recurrence] || ev.recurrence;
-
-    const isStopSched = ev.type === 'schedule' && !ev.sound && (ev.station ?? 0) < 0;
+    if (ev.type === 'schedule' && ev._stop) {
+        const nextDay = ev._stop.year !== ev.year || ev._stop.month !== ev.month || ev._stop.day !== ev.day;
+        timeStr += `–${pad2(ev._stop.hour)}:${pad2(ev._stop.minute)}${nextDay ? ' (+1 day)' : ''}`;
+    }
 
     let extra = '';
     if (ev.type === 'voice') {
@@ -402,8 +443,6 @@ function makeRow(ev) {
     } else if (ev.type === 'schedule') {
         if (ev.sound) {
             extra = ` · 💾 ${escapeHtml(ev.sound)} · 🔊 ${ev.volume ?? 0}`;
-        } else if (isStopSched) {
-            extra = ' · ⏹ stop playback';
         } else {
             const st = stations[ev.station];
             const name = st ? st.name : `#${ev.station}`;
@@ -412,7 +451,7 @@ function makeRow(ev) {
     }
 
     row.innerHTML = `
-        <div class="ev-icon">${isStopSched ? '⏹' : (TYPE_ICON[ev.type] || '•')}</div>
+        <div class="ev-icon">${TYPE_ICON[ev.type] || '•'}</div>
         <div class="ev-info">
             <div class="ev-title">${escapeHtml(ev.title)}</div>
             <div class="ev-meta">${dateStr} · ${timeStr}${extra}</div>
@@ -420,7 +459,7 @@ function makeRow(ev) {
         <span class="ev-tag">${recStr}</span>
         <label class="ev-tag" style="cursor:pointer">
             <input type="checkbox" ${ev.enabled ? 'checked' : ''}
-                   onchange="evToggleEnabled('${ev.id}', this.checked)" />
+                   onchange="evToggleEnabled('${ev.type === 'schedule' ? ev.playback_id : ev.id}', this.checked, ${ev.type === 'schedule'})" />
             on
         </label>
         ${ev.type === 'voice'
@@ -429,8 +468,8 @@ function makeRow(ev) {
                 : `<span class="ev-btn" title="No audio clip — will ring the reminder melody"
                          style="cursor:default;opacity:.6">⚠️</span>`)
             : ''}
-        <button class="ev-btn" title="Edit" onclick="evEdit('${ev.id}')">✎</button>
-        <button class="ev-btn danger" title="Delete" onclick="evDelete('${ev.id}')">✕</button>
+        <button class="ev-btn" title="Edit" onclick="evEdit('${ev.type === 'schedule' ? ev.playback_id : ev.id}', ${ev.type === 'schedule'})">✎</button>
+        <button class="ev-btn danger" title="Delete" onclick="evDelete('${ev.type === 'schedule' ? ev.playback_id : ev.id}', ${ev.type === 'schedule'})">✕</button>
     `;
     return row;
 }
@@ -518,6 +557,7 @@ function sortByTimeOfDay(a, b) {
 function evFormReset() {
     const sched = isScheduleTab();
     editingId = null;
+    editingPlaybackId = null;
     document.getElementById('ev_form_title').textContent =
         sched ? '➕ New playback schedule' : '➕ New event';
     document.getElementById('ev_cancel_btn').style.display = 'none';
@@ -525,7 +565,10 @@ function evFormReset() {
     document.getElementById('ev_source').value = 'radio';
     document.getElementById('ev_title').value = '';
     document.getElementById('ev_date').value = todayStr();
-    document.getElementById('ev_time').value = nowTimeStr();
+    const startTime = nowTimeStr();
+    document.getElementById('ev_time').value = startTime;
+    document.getElementById('ev_stop_time').value = timePlusMinutes(startTime, 60);
+    document.getElementById('ev_stop_enabled').checked = false;
     // Schedules are usually recurring; one-off reminders default to one-time.
     document.getElementById('ev_recurrence').value = sched ? 'daily' : 'none';
     document.getElementById('ev_enabled').checked = true;
@@ -540,8 +583,10 @@ function evFormReset() {
     setStatus('', '');
 }
 
-function evEdit(id) {
-    const ev = events.find(e => e.id === id);
+function evEdit(id, playback = false) {
+    const ev = playback
+        ? playbackSchedules().find(e => e.playback_id === id)
+        : events.find(e => e.id === id);
     if (!ev) return;
 
     // Keep the active tab in sync with the edited event so the form shows the
@@ -549,17 +594,21 @@ function evEdit(id) {
     const wantTab = ev.type === 'schedule' ? 'playback' : 'events';
     if (wantTab !== currentTab) selectEvTab(wantTab);
 
-    editingId = id;
+    editingId = playback ? null : id;
+    editingPlaybackId = playback ? id : null;
     document.getElementById('ev_form_title').textContent =
         ev.type === 'schedule' ? '✎ Edit playback schedule' : '✎ Edit event';
     document.getElementById('ev_cancel_btn').style.display = '';
 
     document.getElementById('ev_type').value     = ev.type;
     document.getElementById('ev_source').value   =
-        ev.sound ? 'sd' : ((ev.station ?? 0) < 0 ? 'stop' : 'radio');
+        ev.sound ? 'sd' : 'radio';
     document.getElementById('ev_title').value    = ev.title;
     document.getElementById('ev_date').value     = `${ev.year}-${pad2(ev.month)}-${pad2(ev.day)}`;
     document.getElementById('ev_time').value     = `${pad2(ev.hour)}:${pad2(ev.minute)}`;
+    document.getElementById('ev_stop_enabled').checked = playback && !!ev._stop;
+    if (playback && ev._stop)
+        document.getElementById('ev_stop_time').value = `${pad2(ev._stop.hour)}:${pad2(ev._stop.minute)}`;
     document.getElementById('ev_recurrence').value = ev.recurrence;
     document.getElementById('ev_enabled').checked = !!ev.enabled;
     document.getElementById('ev_station').value = String(Math.max(ev.station ?? 0, 0));
@@ -589,12 +638,8 @@ function formToEvent() {
 
     const sched   = isScheduleTab();
     const type    = sched ? 'schedule' : document.getElementById('ev_type').value;
-    const source  = document.getElementById('ev_source').value;   // radio | sd | stop
-    // station -1 = stop sentinel (with empty sound): the firmware stops playback
-    // at the scheduled time instead of starting a source.
-    const station = (sched && source === 'stop')
-        ? -1
-        : parseInt(document.getElementById('ev_station').value, 10) || 0;
+    const source  = document.getElementById('ev_source').value;   // radio | sd
+    const station = parseInt(document.getElementById('ev_station').value, 10) || 0;
     let   volume  = parseInt(document.getElementById('ev_volume').value, 10);
     if (isNaN(volume)) volume = 50;
     if (volume < 0)   volume = 0;
@@ -618,7 +663,7 @@ function formToEvent() {
         return null;
     }
 
-    return {
+    const payload = {
         type,
         title,
         year:       y,
@@ -632,6 +677,17 @@ function formToEvent() {
         volume,
         sound,
     };
+    if (sched) {
+        payload.stop_enabled = document.getElementById('ev_stop_enabled').checked;
+        if (payload.stop_enabled) {
+            const stopTime = document.getElementById('ev_stop_time').value;
+            if (!stopTime) { setStatus('Stop time required', 'error'); return null; }
+            const [stopHour, stopMinute] = stopTime.split(':').map(Number);
+            payload.stop_hour = stopHour;
+            payload.stop_minute = stopMinute;
+        }
+    }
+    return payload;
 }
 
 async function evSave() {
@@ -642,8 +698,11 @@ async function evSave() {
     btn.disabled = true;
     setStatus('Saving…', '');
 
-    const url    = editingId ? `/api/events/${editingId}` : '/api/events';
-    const method = editingId ? 'PUT' : 'POST';
+    const sched  = isScheduleTab();
+    const url    = sched
+        ? (editingPlaybackId ? `/api/events/playback/${editingPlaybackId}` : '/api/events/playback')
+        : (editingId ? `/api/events/${editingId}` : '/api/events');
+    const method = (editingId || editingPlaybackId) ? 'PUT' : 'POST';
 
     try {
         const res = await fetch(url, {
@@ -666,15 +725,18 @@ async function evSave() {
     }
 }
 
-async function evDelete(id) {
-    const ev = events.find(e => e.id === id);
+async function evDelete(id, playback = false) {
+    const ev = playback
+        ? playbackSchedules().find(e => e.playback_id === id)
+        : events.find(e => e.id === id);
     if (!ev) return;
     if (!confirm(`Delete "${ev.title}"?`)) return;
 
     try {
-        const res = await fetch(`/api/events/${id}`, { method: 'DELETE' });
+        const url = playback ? `/api/events/playback/${id}` : `/api/events/${id}`;
+        const res = await fetch(url, { method: 'DELETE' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        if (editingId === id) evFormReset();
+        if (editingId === id || editingPlaybackId === id) evFormReset();
         await evLoad();
     } catch (e) {
         console.error(e);
@@ -682,12 +744,39 @@ async function evDelete(id) {
     }
 }
 
-async function evToggleEnabled(id, enabled) {
+function playbackPayload(start, stop, enabled = start.enabled) {
+    const payload = {
+        type: 'schedule',
+        title: start.title,
+        year: start.year,
+        month: start.month,
+        day: start.day,
+        hour: start.hour,
+        minute: start.minute,
+        stop_enabled: !!stop,
+        recurrence: start.recurrence,
+        enabled,
+        station: start.station,
+        volume: start.volume,
+        sound: start.sound || '',
+    };
+    if (stop) {
+        payload.stop_hour = stop.hour;
+        payload.stop_minute = stop.minute;
+    }
+    return payload;
+}
+
+async function evToggleEnabled(id, enabled, playback = false) {
     try {
-        const res = await fetch(`/api/events/${id}`, {
+        const schedule = playback ? playbackSchedules().find(e => e.playback_id === id) : null;
+        if (playback && !schedule) throw new Error('Playback schedule not found');
+        const res = await fetch(playback ? `/api/events/playback/${id}` : `/api/events/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ enabled }),
+            body: JSON.stringify(playback
+                ? playbackPayload(schedule, schedule._stop, enabled)
+                : { enabled }),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         await evLoad();
@@ -716,6 +805,12 @@ function todayStr() {
 function nowTimeStr() {
     const d = new Date();
     return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+}
+
+function timePlusMinutes(value, delta) {
+    const [hour, minute] = value.split(':').map(Number);
+    const total = (hour * 60 + minute + delta + 24 * 60) % (24 * 60);
+    return `${pad2(Math.floor(total / 60))}:${pad2(total % 60)}`;
 }
 
 function escapeHtml(s) {

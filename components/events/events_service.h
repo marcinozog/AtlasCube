@@ -16,6 +16,7 @@ extern "C" {
 
 #define EVENTS_MAX          200
 #define EVENT_ID_LEN        9       // 8 hex + '\0'
+#define EVENT_PLAYBACK_ID_LEN   EVENT_ID_LEN
 #define EVENT_TITLE_LEN     64
 #define EVENT_SOUND_LEN     128     // SD path (rel. to card root) or /voice WAV, '\0' incl.
 
@@ -48,6 +49,9 @@ typedef enum {
 
 typedef struct {
     char               id[EVENT_ID_LEN];
+    // Two EV_SCHEDULE records (play + stop) share this id. Their own `id`
+    // fields stay unique so the generic event CRUD remains unambiguous.
+    char               playback_id[EVENT_PLAYBACK_ID_LEN];
     event_type_t       type;
     char               title[EVENT_TITLE_LEN];
 
@@ -127,6 +131,15 @@ esp_err_t events_update(const char *id, const event_t *ev);
 
 /** Removes the event with the given id. */
 esp_err_t events_remove(const char *id);
+
+// Atomic CRUD for a playback schedule. `start` is the regular radio/SD
+// EV_SCHEDULE. Optional `stop` uses EVENT_STATION_STOP. The group is saved in
+// one events.json write whether it contains one or two records.
+esp_err_t events_add_playback(event_t *start, event_t *stop);
+esp_err_t events_update_playback(const char *playback_id,
+                             const event_t *start, const event_t *stop);
+esp_err_t events_remove_playback(const char *playback_id);
+bool events_get_playback(const char *playback_id, event_t *start, event_t *stop);
 
 /** Copies the list to a buffer (for HTTP GET). Returns the number written. */
 int events_get_all(event_t *out, int max);

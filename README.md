@@ -153,10 +153,10 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Requires a microSD card wired to the build's SDMMC pins (1-bit mode)
 
 **Events & reminders**
-- Birthdays, namedays, anniversaries, plain reminders, alarms (radio), voice notifications
+- Birthdays, namedays, anniversaries, plain reminders, voice notifications and playback schedules
 - Recurring: daily / weekly / monthly / yearly
 - On-screen fullscreen notification + buzzer melody at trigger time; melodies are programmable in firmware (web-based editor planned)
-- Alarm type — at trigger time starts a configured playlist station (the stream itself is the "ringtone", keeps playing after dismiss until the radio is stopped) instead of the buzzer
+- Playback schedules — start a radio station or an SD file/folder at a configured time, with an optional stop time. Start and stop are linked internally but shown and edited as one item; one-time, daily and weekly ranges can cross midnight
 - Voice notification type — plays a spoken clip from the microSD card at trigger time, briefly interrupting and then restoring the radio/Bluetooth source. The Android app synthesizes the speech on the phone (TTS) and uploads it; each clip is a single file named after a readable slug of the event title (e.g. `voice/wake-up-call-a3f9c1.wav`), so the card stays browsable in the file manager. Both the web and app editors can preview the clip
 - CRUD via web UI
 

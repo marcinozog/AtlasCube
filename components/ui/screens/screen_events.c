@@ -95,11 +95,20 @@ static void build_rows(void)
         lv_obj_align(title, LV_ALIGN_TOP_LEFT, 0, 0);
 
         char meta_buf[64];
-        snprintf(meta_buf, sizeof(meta_buf), "%s  %02d.%02d  %02d:%02d%s",
-                 events_type_label(e->type),
-                 e->day, e->month,
-                 e->hour, e->minute,
-                 e->enabled ? "" : "  (off)");
+        event_t playback_start, playback_stop;
+        if (e->type == EV_SCHEDULE && e->playback_id[0] &&
+            events_get_playback(e->playback_id, &playback_start, &playback_stop) && playback_stop.id[0]) {
+            bool next_day = playback_stop.year != e->year || playback_stop.month != e->month ||
+                            playback_stop.day != e->day;
+            snprintf(meta_buf, sizeof(meta_buf), "%s  %02d.%02d  %02d:%02d-%02d:%02d%s%s",
+                     events_type_label(e->type), e->day, e->month,
+                     e->hour, e->minute, playback_stop.hour, playback_stop.minute,
+                     next_day ? "+1" : "", e->enabled ? "" : "  (off)");
+        } else {
+            snprintf(meta_buf, sizeof(meta_buf), "%s  %02d.%02d  %02d:%02d%s",
+                     events_type_label(e->type), e->day, e->month,
+                     e->hour, e->minute, e->enabled ? "" : "  (off)");
+        }
 
         lv_obj_t *meta = lv_label_create(row);
         lv_label_set_text(meta, meta_buf);
@@ -121,6 +130,16 @@ static void scr_create(lv_obj_t *parent)
 
     s_count = events_get_all(s_items, EVENTS_MAX);
     if (s_count < 0) s_count = 0;
+    // A playback group is one user-facing schedule. Keep its stop trigger in the
+    // service, but omit that internal child record from the on-device list.
+    int visible = 0;
+    for (int i = 0; i < s_count; ++i) {
+        const event_t *e = &s_items[i];
+        bool grouped_stop = e->type == EV_SCHEDULE && e->playback_id[0] &&
+                           !e->sound[0] && e->station == EVENT_STATION_STOP;
+        if (!grouped_stop) s_items[visible++] = *e;
+    }
+    s_count = visible;
     s_selected = 0;
 
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);

@@ -46,6 +46,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <errno.h>
+#include <time.h>
 #include "zlib.h"
 #include "defines.h"
 #include "board_pins.h"
@@ -1051,6 +1052,7 @@ static cJSON *event_to_json(const event_t *e)
 {
     cJSON *o = cJSON_CreateObject();
     cJSON_AddStringToObject(o, "id",                e->id);
+    cJSON_AddStringToObject(o, "playback_id",           e->playback_id);
     cJSON_AddStringToObject(o, "type",              ev_type_str(e->type));
     cJSON_AddStringToObject(o, "title",             e->title);
     cJSON_AddNumberToObject(o, "year",              e->year);
@@ -1236,6 +1238,11 @@ static esp_err_t api_events_post_handler(httpd_req_t *req)
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, err);
         return ESP_FAIL;
     }
+    if (e.type == EV_SCHEDULE) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                            "Use /api/events/playback for playback schedules");
+        return ESP_FAIL;
+    }
 
     esp_err_t rc = events_add(&e);
     if (rc != ESP_OK) {
@@ -1255,6 +1262,203 @@ static esp_err_t api_events_post_handler(httpd_req_t *req)
     cJSON_Delete(out);
 
     return send_json_or_500(req, str);
+}
+
+// Playback is stored as one start EV_SCHEDULE plus an optional linked stop
+// record, so the scheduler keeps its simple one-event/one-trigger model. The
+// API exposes the group as one object and commits it in one events.json write.
+static const char *playback_schedule_from_json(const cJSON *json,
+                                           event_t *start, event_t *stop,
+                                           bool *has_stop)
+{
+    if (!cJSON_IsObject(json) || !start || !stop || !has_stop)
+        return "Invalid playback schedule";
+
+    memset(start, 0, sizeof(*start));
+    start->enabled = true;
+    start->recurrence = EV_REC_DAILY;
+    event_patch_from_json(start, json);
+    start->type = EV_SCHEDULE;
+
+    if (start->recurrence != EV_REC_NONE &&
+        start->recurrence != EV_REC_DAILY &&
+        start->recurrence != EV_REC_WEEKLY)
+        return "Playback recurrence must be none, daily or weekly";
+    if (!start->sound[0] && start->station == EVENT_STATION_STOP)
+        return "Playback start source required";
+
+    const char *err = event_validate(start);
+    if (err) return err;
+
+    const cJSON *se = cJSON_GetObjectItem(json, "stop_enabled");
+    *has_stop = cJSON_IsBool(se) && cJSON_IsTrue(se);
+    memset(stop, 0, sizeof(*stop));
+    if (!*has_stop) return NULL;
+
+    const cJSON *sh = cJSON_GetObjectItem(json, "stop_hour");
+    const cJSON *sm = cJSON_GetObjectItem(json, "stop_minute");
+    if (!cJSON_IsNumber(sh) || !cJSON_IsNumber(sm)) return "Stop time required";
+    if (sh->valueint < 0 || sh->valueint > 23) return "stop hour out of range";
+    if (sm->valueint < 0 || sm->valueint > 59) return "stop minute out of range";
+
+    *stop = *start;
+    memset(stop->id, 0, sizeof(stop->id));
+    memset(stop->playback_id, 0, sizeof(stop->playback_id));
+    memset(stop->sound, 0, sizeof(stop->sound));
+    stop->station = EVENT_STATION_STOP;
+    stop->hour = sh->valueint;
+    stop->minute = sm->valueint;
+
+    // An end time not later than the start means the following day. Advancing
+    // the stop record's base date makes one-time and weekly overnight ranges
+    // work without special cases in the scheduler.
+    int start_min = start->hour * 60 + start->minute;
+    int stop_min  = stop->hour  * 60 + stop->minute;
+    if (stop_min <= start_min) {
+        struct tm date = {
+            .tm_year = stop->year - 1900,
+            .tm_mon  = stop->month - 1,
+            .tm_mday = stop->day + 1,
+            .tm_hour = 12,
+            .tm_isdst = -1,
+        };
+        if (mktime(&date) == (time_t)-1) return "Invalid playback date";
+        stop->year  = date.tm_year + 1900;
+        stop->month = date.tm_mon + 1;
+        stop->day   = date.tm_mday;
+    }
+
+    return event_validate(stop);
+}
+
+static cJSON *playback_schedule_to_json(const event_t *start, const event_t *stop)
+{
+    cJSON *out = cJSON_CreateObject();
+    cJSON_AddStringToObject(out, "playback_id", start->playback_id);
+    cJSON_AddItemToObject(out, "start", event_to_json(start));
+    if (stop && stop->id[0]) cJSON_AddItemToObject(out, "stop", event_to_json(stop));
+    else cJSON_AddNullToObject(out, "stop");
+    return out;
+}
+
+static bool extract_playback_id(const char *uri, char *out, size_t out_sz)
+{
+    const char *prefix = "/api/events/playback/";
+    const char *p = strstr(uri, prefix);
+    if (!p) return false;
+    p += strlen(prefix);
+    size_t i = 0;
+    while (*p && *p != '/' && *p != '?' && i < out_sz - 1) out[i++] = *p++;
+    out[i] = '\0';
+    return i > 0;
+}
+
+static esp_err_t api_events_playback_post_handler(httpd_req_t *req)
+{
+    char *buf = NULL;
+    if (read_body(req, &buf, 2048) != ESP_OK) return ESP_FAIL;
+    cJSON *json = cJSON_Parse(buf);
+    free(buf);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    event_t start, stop;
+    bool has_stop;
+    const char *err = playback_schedule_from_json(json, &start, &stop, &has_stop);
+    cJSON_Delete(json);
+    if (err) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, err);
+        return ESP_FAIL;
+    }
+
+    esp_err_t rc = events_add_playback(&start, has_stop ? &stop : NULL);
+    if (rc != ESP_OK) {
+        httpd_resp_send_err(req,
+            rc == ESP_ERR_NO_MEM ? HTTPD_400_BAD_REQUEST : HTTPD_500_INTERNAL_SERVER_ERROR,
+            rc == ESP_ERR_NO_MEM ? "Event limit reached" : "Add playback failed");
+        return ESP_FAIL;
+    }
+
+    ui_event_t st = { .type = UI_EVT_STATE_CHANGED };
+    ui_event_send(&st);
+    cJSON *out = playback_schedule_to_json(&start, &stop);
+    char *str = cJSON_PrintUnformatted(out);
+    cJSON_Delete(out);
+    return send_json_or_500(req, str);
+}
+
+static esp_err_t api_events_playback_put_handler(httpd_req_t *req)
+{
+    char playback_id[EVENT_PLAYBACK_ID_LEN];
+    if (!extract_playback_id(req->uri, playback_id, sizeof(playback_id))) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing playback id");
+        return ESP_FAIL;
+    }
+
+    event_t current_start, current_stop;
+    if (!events_get_playback(playback_id, &current_start, &current_stop)) {
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Playback schedule not found");
+        return ESP_FAIL;
+    }
+
+    char *buf = NULL;
+    if (read_body(req, &buf, 2048) != ESP_OK) return ESP_FAIL;
+    cJSON *json = cJSON_Parse(buf);
+    free(buf);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    event_t start, stop;
+    bool has_stop;
+    const char *err = playback_schedule_from_json(json, &start, &stop, &has_stop);
+    cJSON_Delete(json);
+    if (err) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, err);
+        return ESP_FAIL;
+    }
+
+    esp_err_t rc = events_update_playback(playback_id, &start, has_stop ? &stop : NULL);
+    if (rc != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Update playback failed");
+        return ESP_FAIL;
+    }
+    events_get_playback(playback_id, &start, &stop);
+
+    ui_event_t st = { .type = UI_EVT_STATE_CHANGED };
+    ui_event_send(&st);
+    cJSON *out = playback_schedule_to_json(&start, &stop);
+    char *str = cJSON_PrintUnformatted(out);
+    cJSON_Delete(out);
+    return send_json_or_500(req, str);
+}
+
+static esp_err_t api_events_playback_delete_handler(httpd_req_t *req)
+{
+    char playback_id[EVENT_PLAYBACK_ID_LEN];
+    if (!extract_playback_id(req->uri, playback_id, sizeof(playback_id))) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing playback id");
+        return ESP_FAIL;
+    }
+
+    esp_err_t rc = events_remove_playback(playback_id);
+    if (rc == ESP_ERR_NOT_FOUND) {
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Playback schedule not found");
+        return ESP_FAIL;
+    }
+    if (rc != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Delete playback failed");
+        return ESP_FAIL;
+    }
+
+    ui_event_t st = { .type = UI_EVT_STATE_CHANGED };
+    ui_event_send(&st);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true}");
+    return ESP_OK;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1342,6 +1546,11 @@ static esp_err_t api_events_put_handler(httpd_req_t *req)
         httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Event not found");
         return ESP_FAIL;
     }
+    if (cur->playback_id[0]) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                            "Use playback schedule endpoint");
+        return ESP_FAIL;
+    }
 
     event_t updated = *cur;         // start from current state → patch
 
@@ -1361,6 +1570,11 @@ static esp_err_t api_events_put_handler(httpd_req_t *req)
     const char *err = event_validate(&updated);
     if (err) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, err);
+        return ESP_FAIL;
+    }
+    if (updated.type == EV_SCHEDULE) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                            "Use /api/events/playback for playback schedules");
         return ESP_FAIL;
     }
 
@@ -1387,6 +1601,13 @@ static esp_err_t api_events_delete_handler(httpd_req_t *req)
     char id[EVENT_ID_LEN];
     if (!extract_event_id(req->uri, id, sizeof(id))) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing id");
+        return ESP_FAIL;
+    }
+
+    const event_t *cur = events_find(id);
+    if (cur && cur->playback_id[0]) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST,
+                            "Use playback schedule endpoint");
         return ESP_FAIL;
     }
 
@@ -3273,6 +3494,28 @@ void http_server_start(void)
         .handler = api_events_post_handler,
     };
     httpd_register_uri_handler(server, &api_events_post);
+
+    httpd_uri_t api_events_playback_post = {
+        .uri     = "/api/events/playback",
+        .method  = HTTP_POST,
+        .handler = api_events_playback_post_handler,
+    };
+    httpd_register_uri_handler(server, &api_events_playback_post);
+
+    // Playback routes must precede the generic /api/events/* handlers.
+    httpd_uri_t api_events_playback_put = {
+        .uri     = "/api/events/playback/*",
+        .method  = HTTP_PUT,
+        .handler = api_events_playback_put_handler,
+    };
+    httpd_register_uri_handler(server, &api_events_playback_put);
+
+    httpd_uri_t api_events_playback_delete = {
+        .uri     = "/api/events/playback/*",
+        .method  = HTTP_DELETE,
+        .handler = api_events_playback_delete_handler,
+    };
+    httpd_register_uri_handler(server, &api_events_playback_delete);
 
     // Exact path registered before the wildcard PUT below so it wins the match.
     httpd_uri_t api_events_calendar_put = {

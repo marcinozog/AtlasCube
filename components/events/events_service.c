@@ -69,6 +69,15 @@ static int find_index_locked(const char *id)
     return -1;
 }
 
+static bool playback_id_exists_locked(const char *playback_id)
+{
+    for (int i = 0; i < s_count; ++i) {
+        if (strncmp(s_events[i].playback_id, playback_id, EVENT_PLAYBACK_ID_LEN) == 0)
+            return true;
+    }
+    return false;
+}
+
 static const char *type_to_str(event_type_t t)
 {
     switch (t) {
@@ -159,6 +168,9 @@ static esp_err_t load_from_file(void)
         if (cJSON_IsString(j)) strncpy(e.id, j->valuestring, EVENT_ID_LEN - 1);
         if (e.id[0] == '\0') gen_id(e.id);
 
+        j = cJSON_GetObjectItem(it, "playback_id");
+        if (cJSON_IsString(j)) strncpy(e.playback_id, j->valuestring, EVENT_PLAYBACK_ID_LEN - 1);
+
         j = cJSON_GetObjectItem(it, "type");
         e.type = type_from_str(cJSON_IsString(j) ? j->valuestring : NULL);
 
@@ -205,6 +217,7 @@ static esp_err_t save_to_file(void)
         const event_t *e = &s_events[i];
         cJSON *o = cJSON_CreateObject();
         cJSON_AddStringToObject(o, "id",                 e->id);
+        cJSON_AddStringToObject(o, "playback_id",            e->playback_id);
         cJSON_AddStringToObject(o, "type",               type_to_str(e->type));
         cJSON_AddStringToObject(o, "title",              e->title);
         cJSON_AddNumberToObject(o, "year",               e->year);
@@ -489,6 +502,144 @@ esp_err_t events_remove(const char *id)
     return err;
 }
 
+static void make_unique_event_id_locked(char id[EVENT_ID_LEN])
+{
+    do { gen_id(id); } while (find_index_locked(id) >= 0);
+}
+
+static void make_unique_playback_id_locked(char playback_id[EVENT_PLAYBACK_ID_LEN])
+{
+    do { gen_id(playback_id); } while (playback_id_exists_locked(playback_id));
+}
+
+esp_err_t events_add_playback(event_t *start, event_t *stop)
+{
+    if (!start) return ESP_ERR_INVALID_ARG;
+
+    lock();
+    int needed = stop ? 2 : 1;
+    if (s_count > EVENTS_MAX - needed) { unlock(); return ESP_ERR_NO_MEM; }
+
+    char playback_id[EVENT_PLAYBACK_ID_LEN];
+    make_unique_playback_id_locked(playback_id);
+    make_unique_event_id_locked(start->id);
+    strncpy(start->playback_id, playback_id, EVENT_PLAYBACK_ID_LEN);
+
+    s_events[s_count] = *start;
+    s_fired_today[s_count++] = false;
+    if (stop) {
+        make_unique_event_id_locked(stop->id);
+        while (strncmp(start->id, stop->id, EVENT_ID_LEN) == 0)
+            make_unique_event_id_locked(stop->id);
+        strncpy(stop->playback_id, playback_id, EVENT_PLAYBACK_ID_LEN);
+        s_events[s_count] = *stop;
+        s_fired_today[s_count++] = false;
+    }
+
+    esp_err_t err = save_to_file();
+    unlock();
+
+    if (err == ESP_OK) check_events();
+    return err;
+}
+
+bool events_get_playback(const char *playback_id, event_t *start, event_t *stop)
+{
+    if (!playback_id || !playback_id[0] || !start || !stop) return false;
+
+    bool have_start = false;
+    memset(stop, 0, sizeof(*stop));
+    lock();
+    for (int i = 0; i < s_count; ++i) {
+        const event_t *e = &s_events[i];
+        if (strncmp(e->playback_id, playback_id, EVENT_PLAYBACK_ID_LEN) != 0) continue;
+        if (!e->sound[0] && e->station == EVENT_STATION_STOP) {
+            *stop = *e;
+        } else {
+            *start = *e;
+            have_start = true;
+        }
+    }
+    unlock();
+    return have_start;
+}
+
+esp_err_t events_update_playback(const char *playback_id,
+                             const event_t *start, const event_t *stop)
+{
+    if (!playback_id || !playback_id[0] || !start) return ESP_ERR_INVALID_ARG;
+
+    lock();
+    int start_idx = -1, stop_idx = -1;
+    for (int i = 0; i < s_count; ++i) {
+        const event_t *e = &s_events[i];
+        if (strncmp(e->playback_id, playback_id, EVENT_PLAYBACK_ID_LEN) != 0) continue;
+        if (!e->sound[0] && e->station == EVENT_STATION_STOP) stop_idx = i;
+        else start_idx = i;
+    }
+    if (start_idx < 0) { unlock(); return ESP_ERR_NOT_FOUND; }
+    if (stop && stop_idx < 0 && s_count >= EVENTS_MAX) {
+        unlock();
+        return ESP_ERR_NO_MEM;
+    }
+
+    event_t updated_start = *start;
+    strncpy(updated_start.id, s_events[start_idx].id, EVENT_ID_LEN);
+    strncpy(updated_start.playback_id, playback_id, EVENT_PLAYBACK_ID_LEN);
+    s_events[start_idx] = updated_start;
+    s_fired_today[start_idx] = false;
+
+    if (stop) {
+        event_t updated_stop = *stop;
+        strncpy(updated_stop.playback_id, playback_id, EVENT_PLAYBACK_ID_LEN);
+        if (stop_idx >= 0) {
+            strncpy(updated_stop.id, s_events[stop_idx].id, EVENT_ID_LEN);
+            s_events[stop_idx] = updated_stop;
+            s_fired_today[stop_idx] = false;
+        } else {
+            make_unique_event_id_locked(updated_stop.id);
+            s_events[s_count] = updated_stop;
+            s_fired_today[s_count++] = false;
+        }
+    } else if (stop_idx >= 0) {
+        for (int i = stop_idx; i < s_count - 1; ++i) {
+            s_events[i] = s_events[i + 1];
+            s_fired_today[i] = s_fired_today[i + 1];
+        }
+        s_count--;
+    }
+
+    esp_err_t err = save_to_file();
+    unlock();
+
+    if (err == ESP_OK) check_events();
+    return err;
+}
+
+esp_err_t events_remove_playback(const char *playback_id)
+{
+    if (!playback_id || !playback_id[0]) return ESP_ERR_INVALID_ARG;
+
+    lock();
+    int w = 0, removed = 0;
+    for (int r = 0; r < s_count; ++r) {
+        if (strncmp(s_events[r].playback_id, playback_id, EVENT_PLAYBACK_ID_LEN) == 0) {
+            removed++;
+            continue;
+        }
+        if (w != r) {
+            s_events[w] = s_events[r];
+            s_fired_today[w] = s_fired_today[r];
+        }
+        w++;
+    }
+    if (removed == 0) { unlock(); return ESP_ERR_NOT_FOUND; }
+    s_count = w;
+    esp_err_t err = save_to_file();
+    unlock();
+    return err;
+}
+
 int events_get_all(event_t *out, int max)
 {
     if (!out || max <= 0) return 0;
@@ -612,6 +763,8 @@ int events_pending_today_count(void)
     for (int i = 0; i < s_count; ++i) {
         const event_t *e = &s_events[i];
         if (e->type == EV_CALENDAR) continue;   // display-only, not counted
+        if (e->type == EV_SCHEDULE && e->playback_id[0] &&
+            !e->sound[0] && e->station == EVENT_STATION_STOP) continue;
         if (!e->enabled) continue;
         if (s_fired_today[i]) continue;
         if (!matches_today(e, &lt)) continue;

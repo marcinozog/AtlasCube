@@ -1,18 +1,52 @@
 {
-    "events":
-    [
-        {
-            "id":"e45203ba",
-            "type":"reminder",
-            "title":"Test",
-            "year":2026,
-            "month":4,
-            "day":21,
-            "hour":20,
-            "minute":58,
-            "all_day":false,
-            "recurrence":"none",
-            "enabled":true
-        }
-    ]
+  "events": [
+    {
+      "id": "ce2bbd47",
+      "playback_id": "",
+      "type": "reminder",
+      "title": "Test",
+      "year": 2028,
+      "month": 7,
+      "day": 17,
+      "hour": 10,
+      "minute": 35,
+      "recurrence": "none",
+      "enabled": true,
+      "station": 0,
+      "volume": 20,
+      "sound": ""
+    },
+    {
+      "id": "0eea96e7",
+      "playback_id": "1fdd9094",
+      "type": "schedule",
+      "title": "Station 2",
+      "year": 2028,
+      "month": 7,
+      "day": 17,
+      "hour": 22,
+      "minute": 0,
+      "recurrence": "daily",
+      "enabled": true,
+      "station": 1,
+      "volume": 20,
+      "sound": ""
+    },
+    {
+      "id": "dcdb9801",
+      "playback_id": "1fdd9094",
+      "type": "schedule",
+      "title": "Station 2",
+      "year": 2028,
+      "month": 7,
+      "day": 17,
+      "hour": 23,
+      "minute": 0,
+      "recurrence": "daily",
+      "enabled": true,
+      "station": -1,
+      "volume": 20,
+      "sound": ""
+    }
+  ]
 }

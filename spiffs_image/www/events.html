@@ -62,7 +62,6 @@
                 <select id="ev_source" class="field-input" onchange="evTypeChanged()">
                     <option value="radio" selected>📻 Radio station</option>
                     <option value="sd">💾 SD card (file or folder)</option>
-                    <option value="stop">⏹ Stop playback</option>
                 </select>
             </div>
 
@@ -94,24 +93,37 @@
             </div>
 
             <div class="field-group">
-                <label class="field-label">Date</label>
-                <input type="date" id="ev_date" class="field-input" />
-            </div>
-
-            <div class="field-group">
-                <label class="field-label">Time</label>
-                <input type="time" id="ev_time" class="field-input" value="08:00" />
-            </div>
-
-            <div class="field-group">
                 <label class="field-label">Recurrence</label>
-                <select id="ev_recurrence" class="field-input">
+                <select id="ev_recurrence" class="field-input" onchange="evRecurrenceChanged()">
                     <option value="none">One-time</option>
                     <option value="daily">Daily</option>
                     <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="yearly" selected>Yearly</option>
+                    <option value="monthly" id="ev_rec_monthly">Monthly</option>
+                    <option value="yearly" id="ev_rec_yearly" selected>Yearly</option>
                 </select>
+            </div>
+
+            <div class="field-group" id="ev_date_group">
+                <label class="field-label" id="ev_date_label">Date</label>
+                <input type="date" id="ev_date" class="field-input" />
+            </div>
+
+            <div class="field-group" id="ev_time_group">
+                <label class="field-label" id="ev_time_label">Time</label>
+                <input type="time" id="ev_time" class="field-input" value="08:00" />
+            </div>
+
+            <div class="field-group" id="ev_stop_toggle_group" style="display:none">
+                <label class="field-label">
+                    <input type="checkbox" id="ev_stop_enabled" onchange="evStopChanged()" />
+                    Stop playback at
+                </label>
+            </div>
+
+            <div class="field-group" id="ev_stop_time_group" style="display:none">
+                <label class="field-label">Stop time</label>
+                <input type="time" id="ev_stop_time" class="field-input" value="09:00" />
+                <div class="field-hint">A stop time at or before start means the following day.</div>
             </div>
 
             <div class="field-group">
