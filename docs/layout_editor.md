@@ -268,6 +268,36 @@ are all section-agnostic.
   rebuild event. If the device restarts immediately after a POST, the
   LCD state will still be consistent with the file (read back on boot).
 
+## Per-wallpaper layout presets
+
+Different wallpapers usually need different widget placement (hotspots,
+now-playing, VU meter…). The editor can therefore snapshot the **entire**
+profile (all sections) into a preset file on the SD card, named after the
+current wallpaper:
+
+```
+/wallpapers/layouts/<wallpaper-basename>.json
+```
+
+e.g. wallpaper `/sdcard/wallpapers/sunset.bin` → preset
+`/wallpapers/layouts/sunset.json`. Format: `{ w, h, wallpaper,
+sections: { clock, bt, radio, sd } }`.
+
+This is a **frontend-only** feature — no firmware involvement. Save
+uploads the editor's current state via `POST /api/sd/file` (parent
+directories are auto-created). Load fetches the file and POSTs each
+section to the existing `/api/ui/profile/<section>` endpoints, so the
+layout is applied live and persisted to `ui_profile.json` exactly like a
+manual Apply. When you switch wallpapers from the editor's picker, it
+checks for a matching preset and offers to apply it.
+
+The `w`/`h` stamp guards against cross-LCD presets: a file saved for a
+different resolution is refused on load (same rule as `ui_profile.json`).
+
+Note: **Save** snapshots what the editor currently shows — including
+tweaks not yet applied to the device. Load-then-Save round-trips
+losslessly.
+
 ## Limits
 
 - Maximum JSON size: 16 KB in `ui_profile_load_from_file()`, 4 KB in

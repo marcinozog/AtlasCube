@@ -421,6 +421,9 @@ function updateWallpaperPickerLabel() {
         ? currentWallpaperPath.split('/').pop()
         : '(none)';
     label.title = currentWallpaperPath;
+
+    const preset = document.getElementById('layout_preset_name');
+    if (preset) preset.textContent = presetPath() || '(select a wallpaper first)';
 }
 
 function buildWallpaperPicker() {
@@ -457,12 +460,147 @@ function buildWallpaperPicker() {
     browser.id = 'layout_wallpaper_browser';
     browser.hidden = true;
     browser.style.marginTop = '8px';
+
+    // Per-wallpaper layout presets — the full profile (all sections) saved to
+    // SD next to the wallpapers, named after the wallpaper file.
+    const presetRow = document.createElement('div');
+    presetRow.style.cssText =
+        'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;' +
+        'padding-top:8px;border-top:1px solid var(--border)';
+    const presetCaption = document.createElement('span');
+    presetCaption.textContent = 'Layout preset:';
+    presetCaption.style.cssText = 'font-size:11px;color:var(--text-dim)';
+    const presetName = document.createElement('span');
+    presetName.id = 'layout_preset_name';
+    presetName.textContent = '...';
+    presetName.style.cssText =
+        'min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
+        'font-family:"JetBrains Mono",monospace;font-size:11px';
+    const presetBtn = (label, onClick) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'section-tab';
+        b.textContent = label;
+        b.style.cssText = 'padding:6px 10px';
+        b.addEventListener('click', onClick);
+        return b;
+    };
+    presetRow.append(presetCaption, presetName,
+                     presetBtn('Save', savePreset),
+                     presetBtn('Load', () => loadPreset()));
+
     const status = document.createElement('div');
     status.id = 'layout_wallpaper_status';
     status.style.cssText = 'min-height:14px;margin-top:5px;font-size:11px;color:var(--text-dim)';
 
-    picker.append(row, browser, status);
+    picker.append(row, browser, presetRow, status);
     frame.insertAdjacentElement('afterend', picker);
+}
+
+// ── Per-wallpaper layout presets on SD ─────────────────────────────────────
+// One file per wallpaper: /wallpapers/layouts/<wallpaper-basename>.json with
+// every section's fields plus a screen-size stamp (same guard as
+// ui_profile.json — a preset saved for another LCD is refused on load).
+
+function presetPath() {
+    if (!currentWallpaperPath) return '';
+    const base = currentWallpaperPath.split('/').pop().replace(/\.bin$/i, '');
+    return '/wallpapers/layouts/' + base + '.json';
+}
+
+function setPresetStatus(msg, error = false) {
+    const el = document.getElementById('layout_wallpaper_status');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.color = error ? 'var(--red)' : 'var(--text-dim)';
+}
+
+async function savePreset() {
+    const path = presetPath();
+    if (!path) {
+        setPresetStatus('Select a wallpaper first — presets are stored per wallpaper.', true);
+        return;
+    }
+    setPresetStatus('Saving preset...');
+    try {
+        const preset = {
+            w: state.meta.screen_w,
+            h: state.meta.screen_h,
+            wallpaper: currentWallpaperPath.split('/').pop(),
+            sections: {},
+        };
+        for (const name of Object.keys(SECTIONS)) preset.sections[name] = state[name];
+        // POST /api/sd/file auto-creates missing parent directories.
+        const r = await fetch('/api/sd/file?path=' + encodeURIComponent(path), {
+            method: 'POST',
+            body: JSON.stringify(preset),
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        setPresetStatus('Preset saved to SD: ' + path);
+    } catch (err) {
+        setPresetStatus('Preset save failed: ' + err.message, true);
+    }
+}
+
+// Fetches the preset for the current wallpaper and applies every section to
+// the device (which persists it to ui_profile.json and rebuilds the screen).
+async function loadPreset() {
+    const path = presetPath();
+    if (!path) {
+        setPresetStatus('Select a wallpaper first — presets are stored per wallpaper.', true);
+        return;
+    }
+    setPresetStatus('Loading preset...');
+    try {
+        const r = await fetch('/api/sd/file?path=' + encodeURIComponent(path), {
+            cache: 'no-store',
+        });
+        if (r.status === 404) {
+            setPresetStatus('No preset saved for this wallpaper yet.', true);
+            return;
+        }
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const preset = await r.json();
+        if (preset.w !== state.meta.screen_w || preset.h !== state.meta.screen_h) {
+            setPresetStatus(
+                `Preset was saved for a ${preset.w}×${preset.h} LCD — not applied.`, true);
+            return;
+        }
+        const sections = preset.sections || {};
+        for (const name of Object.keys(SECTIONS)) {
+            if (!sections[name]) continue;
+            Object.assign(state[name], sections[name]);
+            const post = await fetch(`/api/ui/profile/${name}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(state[name]),
+            });
+            if (!post.ok) throw new Error(`${name}: HTTP ` + post.status);
+        }
+        buildForm();
+        renderSvg();
+        setPresetStatus('Preset applied — device screen rebuilding.');
+    } catch (err) {
+        setPresetStatus('Preset load failed: ' + err.message, true);
+    }
+}
+
+// After switching wallpapers, offer to apply its saved preset (if one exists)
+// so wallpaper + matching layout travel together.
+async function offerPresetForWallpaper() {
+    const path = presetPath();
+    if (!path) return;
+    try {
+        const r = await fetch('/api/sd/file?path=' + encodeURIComponent(path), {
+            cache: 'no-store',
+        });
+        if (!r.ok) return;
+        if (confirm('A saved layout preset exists for this wallpaper. Apply it?')) {
+            await loadPreset();
+        }
+    } catch {
+        // No preset / no SD — nothing to offer.
+    }
 }
 
 function wallpaperDirectory() {
@@ -577,6 +715,7 @@ async function selectWallpaper(relPath) {
         const browser = document.getElementById('layout_wallpaper_browser');
         if (browser) browser.hidden = true;
         if (status) status.textContent = 'Wallpaper changed.';
+        await offerPresetForWallpaper();
     } catch (err) {
         if (status) status.textContent = 'Wallpaper change failed: ' + err.message;
     }
