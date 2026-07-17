@@ -125,4 +125,11 @@ CONFIG_LV_USE_FONT_PLACEHOLDER=n
 CONFIG_FATFS_LFN_HEAP=y
 CONFIG_FATFS_MAX_LFN=255
 
+# Core 1 is the compute core by design (aac/rsp/dsp decode tasks + LVGL, all
+# prio 5): a 48 kHz stream (e.g. HLS video audio) needs a real 48000->44100
+# resample and legitimately saturates the core for >5 s, starving IDLE1 and
+# spamming task_wdt warnings. That is a working state, not a hang, so IDLE1
+# leaves the watchdog; IDLE0 (Wi-Fi/lwIP/system core) stays supervised.
+CONFIG_ESP_TASK_WDT_CHECK_IDLE_TASK_CPU1=n
+
 # CONFIG_LOG_DEFAULT_LEVEL_DEBUG=y
