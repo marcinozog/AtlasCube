@@ -67,8 +67,12 @@ CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y
 # CONFIG_LV_FONT_MONTSERRAT_12=y
 # CONFIG_LV_FONT_MONTSERRAT_14=y
 # CONFIG_LV_FONT_MONTSERRAT_18=y
-# CONFIG_LV_FONT_MONTSERRAT_28=y
 CONFIG_LV_FONT_MONTSERRAT_48=y
+# _28 exists for hub_overlay button glyphs on small panels: an unscaled font
+# render is far cheaper than transform_scale-ing _48 down (scaled labels go
+# through an intermediate layer — 11 at once made showing the overlay crawl
+# while a stream keeps the LVGL core busy).
+CONFIG_LV_FONT_MONTSERRAT_28=y
 
 # On-screen FPS + CPU% overlay (bottom-right) for perf/stability testing.
 # PERF_MONITOR requires SYSMON, which requires OBSERVER. Kept in Kconfig (not a

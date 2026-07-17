@@ -263,18 +263,23 @@ static void btn_long_repeat_cb(lv_event_t *e)
     if (s_timer) lv_timer_reset(s_timer);
 }
 
-// One round button with a (scaled) glyph centered inside. `dx,dy` are offsets
-// from the screen center; `gscale` shrinks the 48px glyph to fit small buttons.
+// One round button with a glyph centered inside. `dx,dy` are offsets from the
+// screen center. The glyph is a native-size font picked per button size — NOT
+// a transform_scale-d _48: scaled labels render through an intermediate layer,
+// and 11 of those made showing the overlay visibly slow once a live stream
+// squeezed the LVGL core budget.
 static lv_obj_t *make_btn(lv_obj_t *parent, const char *symbol, intptr_t id,
-                          int dx, int dy, int size, lv_color_t bg, int gscale,
+                          int dx, int dy, int size, lv_color_t bg,
                           uint32_t evt_mask)
 {
     lv_obj_t *btn = lv_btn_create(parent);
     lv_obj_remove_style_all(btn);
     lv_obj_set_size(btn, size, size);
     lv_obj_set_style_radius(btn, LV_RADIUS_CIRCLE, LV_PART_MAIN);
-    lv_obj_set_style_bg_color(btn, bg, LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(btn, LV_OPA_90, LV_PART_MAIN);
+    // The overlay behind is solid black — pre-mix the 10% black the old
+    // LV_OPA_90 blend produced and draw opaque (no per-pixel blending).
+    lv_obj_set_style_bg_color(btn, lv_color_mix(bg, lv_color_black(), LV_OPA_90), LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(btn, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_bg_color(btn, lv_color_white(), LV_STATE_PRESSED);
     lv_obj_set_style_bg_opa(btn, LV_OPA_50, LV_STATE_PRESSED);
     lv_obj_set_style_border_width(btn, 0, LV_PART_MAIN);
@@ -283,14 +288,12 @@ static lv_obj_t *make_btn(lv_obj_t *parent, const char *symbol, intptr_t id,
 
     lv_obj_t *lbl = lv_label_create(btn);
     lv_label_set_text(lbl, symbol);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_48, LV_PART_MAIN);
+    // 48 px glyph fits a >=72 px circle (inscribed square ~51 px); smaller
+    // buttons (48-64 px) take the 28 px font — same ~0.55*size as before.
+    lv_obj_set_style_text_font(lbl, (size >= 72) ? &lv_font_montserrat_48
+                                                 : &lv_font_montserrat_28, LV_PART_MAIN);
     lv_obj_set_style_text_color(lbl, lv_color_white(), LV_PART_MAIN);
     lv_obj_center(lbl);
-    if (gscale != 256) {
-        lv_obj_set_style_transform_pivot_x(lbl, lv_pct(50), LV_PART_MAIN);
-        lv_obj_set_style_transform_pivot_y(lbl, lv_pct(50), LV_PART_MAIN);
-        lv_obj_set_style_transform_scale(lbl, gscale, LV_PART_MAIN);
-    }
 
     if (evt_mask & BTN_EVT_SHORT)
         lv_obj_add_event_cb(btn, btn_clicked_cb, LV_EVENT_SHORT_CLICKED, (void *)id);
@@ -329,8 +332,6 @@ void hub_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
     if (sz > 72) sz = 72;
     int step  = sz + sz / 6;                 // center-to-center within a row
     int row_y = step;                        // rows at -step, 0, +step
-    int gscale = (int)((sz * 0.55f / 48.0f) * 256.0f);   // shrink 48px glyph to ~0.55*sz
-    if (gscale > 256) gscale = 256;
 
     // Lighten the resting button fill toward white so the circles stand out from
     // the dim overlay (raw bg_secondary is near-black on dark themes → blends in).
@@ -341,38 +342,38 @@ void hub_overlay_create(lv_obj_t *parent, controls_overlay_mode_t mode)
     // Row 1 — transport: vol-  prev  play  next  vol+
     // Collect every button into s_btns in this exact order so encoder focus
     // walks left-to-right across all three rows (see HUB_BTN_COUNT).
-    s_btns[0] = make_btn(s_overlay, LV_SYMBOL_MINUS, BTN_VOL_DN, -2 * step, -row_y, sz, btn_bg, gscale,
+    s_btns[0] = make_btn(s_overlay, LV_SYMBOL_MINUS, BTN_VOL_DN, -2 * step, -row_y, sz, btn_bg,
         BTN_EVT_SHORT | BTN_EVT_REPEAT);
-    s_btns[1] = make_btn(s_overlay, LV_SYMBOL_PREV,  BTN_PREV,   -1 * step, -row_y, sz, btn_bg, gscale,
+    s_btns[1] = make_btn(s_overlay, LV_SYMBOL_PREV,  BTN_PREV,   -1 * step, -row_y, sz, btn_bg,
         BTN_EVT_SHORT);
     lv_obj_t *play_btn = make_btn(s_overlay, play_symbol_for_mode(s_mode), BTN_PLAY,
-        0, -row_y, sz, play_bg, gscale, BTN_EVT_SHORT);
+        0, -row_y, sz, play_bg, BTN_EVT_SHORT);
     s_btns[2]  = play_btn;
     s_play_lbl = lv_obj_get_child(play_btn, 0);
-    s_btns[3] = make_btn(s_overlay, LV_SYMBOL_NEXT,  BTN_NEXT,    1 * step, -row_y, sz, btn_bg, gscale,
+    s_btns[3] = make_btn(s_overlay, LV_SYMBOL_NEXT,  BTN_NEXT,    1 * step, -row_y, sz, btn_bg,
         BTN_EVT_SHORT);
-    s_btns[4] = make_btn(s_overlay, LV_SYMBOL_PLUS,  BTN_VOL_UP,  2 * step, -row_y, sz, btn_bg, gscale,
+    s_btns[4] = make_btn(s_overlay, LV_SYMBOL_PLUS,  BTN_VOL_UP,  2 * step, -row_y, sz, btn_bg,
         BTN_EVT_SHORT | BTN_EVT_REPEAT);
 
     // Row 2 — actions: source  playlist  sd  settings.
     // The source button's glyph tracks the active source (see source_update).
     lv_obj_t *src_btn = make_btn(s_overlay, LV_SYMBOL_AUDIO, BTN_SOURCE, -3 * step / 2, 0,
-        sz, act_bg, gscale, BTN_EVT_SHORT);
+        sz, act_bg, BTN_EVT_SHORT);
     s_btns[5]    = src_btn;
     s_source_lbl = lv_obj_get_child(src_btn, 0);
     source_update();
     s_btns[6] = make_btn(s_overlay, LV_SYMBOL_LIST,      BTN_PLAYLIST, -1 * step / 2, 0,
-        sz, act_bg, gscale, BTN_EVT_SHORT);
+        sz, act_bg, BTN_EVT_SHORT);
     s_btns[7] = make_btn(s_overlay, LV_SYMBOL_SD_CARD,   BTN_SD,        1 * step / 2, 0,
-        sz, act_bg, gscale, BTN_EVT_SHORT);
+        sz, act_bg, BTN_EVT_SHORT);
     s_btns[8] = make_btn(s_overlay, LV_SYMBOL_SETTINGS,  BTN_SETTINGS,  3 * step / 2, 0,
-        sz, act_bg, gscale, BTN_EVT_SHORT);
+        sz, act_bg, BTN_EVT_SHORT);
 
     // Row 3 — internet wallpaper: fetch a new image, then save it to SD.
     s_btns[9] = make_btn(s_overlay, LV_SYMBOL_IMAGE, BTN_WALLPAPER_FETCH, -1 * step / 2, row_y,
-        sz, act_bg, gscale, BTN_EVT_SHORT);
+        sz, act_bg, BTN_EVT_SHORT);
     s_btns[10] = make_btn(s_overlay, LV_SYMBOL_DOWNLOAD, BTN_WALLPAPER_SAVE, 1 * step / 2, row_y,
-        sz, act_bg, gscale, BTN_EVT_SHORT);
+        sz, act_bg, BTN_EVT_SHORT);
 
     ESP_LOGI(TAG, "Created (btn=%dpx, step=%dpx)", sz, step);
 }
