@@ -407,6 +407,7 @@ function render() {
     const viewSelect = document.getElementById('ev_schedule_view');
     viewWrap.style.display = sched ? '' : 'none';
     viewSelect.value = scheduleView;
+    document.getElementById('ev_audit_section').style.display = sched ? 'none' : '';
     list.innerHTML = '';
     document.getElementById('ev_count').textContent = shown.length;
 
