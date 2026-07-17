@@ -23,6 +23,7 @@ Pinned toolchain: ESP-IDF v5.5.4, ESP-ADF v2.8.
 
 import argparse
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -55,6 +56,36 @@ GROUPS = {
                    "UI_PROFILE_MONO_128X64", "UI_PROFILE_MONO_256X64"],
     "FLASH":      ["FLASH_16MB"],
 }
+
+
+# ── version stamp ───────────────────────────────────────────────────────────--
+
+def stamp_version():
+    """Freeze PROJECT_VER before the tree gets dirtied.
+
+    select_variant() edits the tracked defines.h (and compress_web.py may touch
+    www_version.txt), so by the time CMake runs `git describe --dirty` every
+    variant except the committed default would be stamped `-dirty` — official
+    releases included. If the tree is clean right now, write the describe output
+    to version.txt, which ESP-IDF prefers over its own git describe. On an
+    already-dirty tree do nothing: a genuinely modified local build should keep
+    reporting `-dirty`.
+
+    Returns the created file (for post-build cleanup) or None."""
+    # -uno: untracked files don't make `git describe --dirty` dirty either.
+    porcelain = subprocess.run(["git", "status", "--porcelain", "-uno"],
+                               cwd=REPO_ROOT, capture_output=True, text=True)
+    if porcelain.returncode != 0 or porcelain.stdout.strip():
+        return None
+    # Same describe flavour ESP-IDF itself uses, minus the (vacuous) --dirty.
+    describe = subprocess.run(["git", "describe", "--always", "--tags"],
+                              cwd=REPO_ROOT, capture_output=True, text=True)
+    if describe.returncode != 0 or not describe.stdout.strip():
+        return None
+    version_file = REPO_ROOT / "version.txt"
+    version_file.write_text(describe.stdout.strip() + "\n", encoding="utf-8")
+    print(f"    PROJECT_VER frozen: {describe.stdout.strip()}")
+    return version_file
 
 
 # ── variant selection (replaces select-variant.sh) ──────────────────────────────
@@ -156,14 +187,26 @@ def main():
     idf, idf_py = resolve_idf()
     adf = resolve_adf(args.adf_path)
 
+    step("Stamping firmware version (before defines.h gets dirtied)")
+    version_file = stamp_version()
+    if version_file is None:
+        print("    tree already dirty (or no git) — leaving version to git describe")
+
     step(f"Selecting variant '{variant}' in defines.h")
     select_variant(variant)
 
     patch_adf(adf, idf)
 
-    build(idf_py, variant,
-          do_clean=not args.no_clean,
-          do_build=not args.skip_build)
+    try:
+        build(idf_py, variant,
+              do_clean=not args.no_clean,
+              do_build=not args.skip_build)
+    finally:
+        # Don't let the freeze leak into later dev builds (build-flash.py would
+        # silently reuse it). With --skip-build the manual `idf.py build` that
+        # follows therefore still reports -dirty, same as before this stamp.
+        if version_file is not None:
+            version_file.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

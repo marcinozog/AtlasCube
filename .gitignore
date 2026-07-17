@@ -1,6 +1,8 @@
 spiffs_image/web
 spiffs_image/www/www_version.txt
 components/web/web_assets_version.h
+# Transient PROJECT_VER freeze written by ci/build.py (removed after build)
+/version.txt
 TMP
 
 # ===== Build artifacts =====
