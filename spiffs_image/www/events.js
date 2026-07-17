@@ -37,10 +37,26 @@ let stations  = [];      // playlist entries, fetched once for the alarm picker
 let editingId = null;    // null = add mode, string = edit mode
 let clipUrl   = null;    // object URL of the loaded voice clip (revoked on reset)
 let currentTab = 'events';  // 'events' | 'playback' (EV_SCHEDULE list)
+const SCHEDULE_VIEW_KEY = 'atlascube.events.scheduleView';
+let scheduleView = loadScheduleView();
 
 // Playback schedules share the events backend; the Playback tab just filters
 // the list to type==='schedule' and forces that type on the form.
 function isScheduleTab() { return currentTab === 'playback'; }
+
+function loadScheduleView() {
+    try {
+        return localStorage.getItem(SCHEDULE_VIEW_KEY) === 'daily' ? 'daily' : 'upcoming';
+    } catch (e) {
+        return 'upcoming';
+    }
+}
+
+function setScheduleView(value) {
+    scheduleView = value === 'daily' ? 'daily' : 'upcoming';
+    try { localStorage.setItem(SCHEDULE_VIEW_KEY, scheduleView); } catch (e) { /* private mode */ }
+    render();
+}
 
 function selectEvTab(name) {
     if (name === currentTab) return;
@@ -343,14 +359,20 @@ function render() {
     stopRowAudio();
 
     const sched = isScheduleTab();
-    const shown = events.filter(ev => (ev.type === 'schedule') === sched);
+    const dailyView = sched && scheduleView === 'daily';
+    const shown = events.filter(ev =>
+        (ev.type === 'schedule') === sched && (!dailyView || ev.recurrence === 'daily'));
 
     const list = document.getElementById('ev_list');
+    const viewWrap = document.getElementById('ev_schedule_view_wrap');
+    const viewSelect = document.getElementById('ev_schedule_view');
+    viewWrap.style.display = sched ? '' : 'none';
+    viewSelect.value = scheduleView;
     list.innerHTML = '';
     document.getElementById('ev_count').textContent = shown.length;
 
     if (shown.length === 0) {
-        const what = sched ? 'playback schedules' : 'events';
+        const what = dailyView ? 'daily playback schedules' : (sched ? 'playback schedules' : 'events');
         list.innerHTML = `<div class="pl-hint" style="text-align:center;padding:20px 0">No ${what} yet. Fill the form above and click Save.</div>`;
         return;
     }
@@ -358,7 +380,9 @@ function render() {
     const now = new Date();   // one snapshot so the whole sort agrees on "now"
     shown
         .slice()
-        .sort((a, b) => sortByNextOccurrence(a, b, now))
+        .sort(dailyView
+            ? sortByTimeOfDay
+            : (a, b) => sortByNextOccurrence(a, b, now))
         .forEach(ev => list.appendChild(makeRow(ev)));
 }
 
@@ -479,6 +503,13 @@ function sortByNextOccurrence(a, b, now) {
     const pastA = ta <= now.getTime(), pastB = tb <= now.getTime();
     if (pastA !== pastB) return pastA ? 1 : -1;
     return ta - tb;
+}
+
+function sortByTimeOfDay(a, b) {
+    const timeDiff = (a.hour * 60 + a.minute) - (b.hour * 60 + b.minute);
+    if (timeDiff !== 0) return timeDiff;
+    const titleDiff = String(a.title || '').localeCompare(String(b.title || ''));
+    return titleDiff || String(a.id || '').localeCompare(String(b.id || ''));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

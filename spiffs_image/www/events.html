@@ -134,8 +134,17 @@
     ══════════════════════════════════════════ -->
     <div class="section-gap"></div>
     <div class="panel">
-        <div class="pl-hint">
-            <span id="ev_count">0</span> event(s). Click ✎ to edit, ✕ to delete.
+        <div class="ev-list-header">
+            <div class="pl-hint">
+                <span id="ev_count">0</span> event(s). Click ✎ to edit, ✕ to delete.
+            </div>
+            <label class="ev-view-picker" id="ev_schedule_view_wrap" style="display:none">
+                <span>Schedule view</span>
+                <select id="ev_schedule_view" class="field-input" onchange="setScheduleView(this.value)">
+                    <option value="upcoming">Upcoming</option>
+                    <option value="daily">Daily timetable</option>
+                </select>
+            </label>
         </div>
         <div id="ev_list" class="ev-list"></div>
     </div>
