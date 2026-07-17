@@ -9,6 +9,31 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-07-17
+
+### Added
+- **www:** per-wallpaper layout presets saved to SD (/wallpapers/layouts)
+- **ui:** per-screen option to disable tap controls overlay (radio/SD)
+- **ui:** optional transparent VU background (vu_transparent profile flag)
+- **events:** group playback start and stop as linked schedules
+- **web:** add daily timetable view for playback schedules
+- **web:** add location search to weather settings
+- **ui:** toggle radio layout elements on device
+- **ui:** add on-device radio layout editor
+- **ui:** allow positioning radio station icon and constrain long metadata
+- **ui:** add layout-configurable touch hotspots
+
+### Changed
+- **ui:** native-size hub overlay glyphs instead of transform_scale
+- **audio:** low-bandwidth HLS variant, cheaper 48k resample, per-task CPU dump
+- **events:** patch-style playback PUT and lean enable toggle
+- **web:** organize touch hotspots into nested groups
+
+### Fixed
+- **www:** show voice files check only on Events tab, not Playback
+- **ci:** freeze clean-tree version before variant switch so releases aren't stamped -dirty
+- **ui:** long press to exit wifi screen
+
 ## [0.44.0] - 2026-07-15
 
 ### Added
@@ -704,7 +729,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.44.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.45.0...HEAD
+[0.45.0]: https://github.com/marcinozog/AtlasCube/compare/v0.44.0...v0.45.0
 [0.44.0]: https://github.com/marcinozog/AtlasCube/compare/v0.43.0...v0.44.0
 [0.43.0]: https://github.com/marcinozog/AtlasCube/compare/v0.42.0...v0.43.0
 [0.41.0]: https://github.com/marcinozog/AtlasCube/compare/v0.40.0...v0.41.0
