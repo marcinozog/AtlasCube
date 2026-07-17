@@ -84,7 +84,10 @@ The transport/play controls come from the tap-to-show overlays:
 [`hub_overlay_widget`](../components/ui/widgets/hub_overlay_widget.c) on HOME (with
 the extra source/playlist/sd/settings actions) and
 [`controls_overlay_widget`](../components/ui/widgets/controls_overlay_widget.c) on
-RADIO/SD/BT. Both auto-hide after a short timeout.
+RADIO/SD/BT. Both auto-hide after a short timeout. On RADIO/SD the overlay can be
+disabled per screen (`radio_show_ctrl_overlay` / `sd_show_ctrl_overlay` in the UI
+profile, "Tap controls overlay" in the web layout editor) — useful when a wallpaper
+with touch hotspots already provides the same transport buttons.
 
 ## Visibility conditions
 

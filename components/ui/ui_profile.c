@@ -78,6 +78,7 @@ static const ui_profile_t k_defaults = {
     .radio_event_indic_y       = 8,
     .radio_show_weather        = false,
     .radio_weather_font        = &lv_font_montserrat_12_pl,
+    .radio_show_ctrl_overlay   = true,
 
     .sd_title_y                = 35,
     .sd_title_font             = &lv_font_montserrat_14_pl,
@@ -103,6 +104,7 @@ static const ui_profile_t k_defaults = {
     .sd_event_indic_y          = 8,
     .sd_show_weather           = false,
     .sd_weather_font           = &lv_font_montserrat_12_pl,
+    .sd_show_ctrl_overlay      = true,
 
     .playlist_header_h         = 14,
     .playlist_item_h           = 12,
@@ -267,6 +269,7 @@ static const ui_profile_t k_defaults = {
     .radio_event_indic_y       = 4,
     .radio_show_weather        = false,
     .radio_weather_font        = &lv_font_montserrat_12_pl,
+    .radio_show_ctrl_overlay   = true,
 
     .sd_title_y                = 1,
     .sd_title_font             = &lv_font_montserrat_14_pl,
@@ -292,6 +295,7 @@ static const ui_profile_t k_defaults = {
     .sd_event_indic_y          = 4,
     .sd_show_weather           = false,
     .sd_weather_font           = &lv_font_montserrat_12_pl,
+    .sd_show_ctrl_overlay      = true,
 
     .playlist_header_h         = 16,
     .playlist_item_h           = 14,
@@ -479,6 +483,7 @@ static const ui_profile_t k_defaults = {
     .radio_weather_y           = 3,       // top-left row, clear of the centered clock
     .radio_weather_w           = 120,
     .radio_weather_font        = &lv_font_montserrat_12_pl,
+    .radio_show_ctrl_overlay   = true,
 
     .sd_title_y                = 60,
     .sd_title_font             = &lv_font_montserrat_14_pl,
@@ -521,6 +526,7 @@ static const ui_profile_t k_defaults = {
     .sd_weather_y              = 3,       // top-left row, clear of the centered clock
     .sd_weather_w              = 120,
     .sd_weather_font           = &lv_font_montserrat_12_pl,
+    .sd_show_ctrl_overlay      = true,
 
     // Playlist: We use the screen height for more list items
     .playlist_header_h         = 45,
@@ -714,6 +720,7 @@ static const ui_profile_t k_defaults = {
     .radio_weather_y           = 2,       // top-left row, clear of the centered clock
     .radio_weather_w           = 120,
     .radio_weather_font        = &lv_font_montserrat_12_pl,
+    .radio_show_ctrl_overlay   = true,
 
     .sd_title_y                = 64,
     .sd_title_font             = &lv_font_montserrat_14_pl,
@@ -756,6 +763,7 @@ static const ui_profile_t k_defaults = {
     .sd_weather_y              = 2,       // top-left row, clear of the centered clock
     .sd_weather_w              = 120,
     .sd_weather_font           = &lv_font_montserrat_12_pl,
+    .sd_show_ctrl_overlay      = true,
 
     .playlist_header_h         = 26,
     .playlist_item_h           = 28,
@@ -942,6 +950,7 @@ static const ui_profile_t k_defaults = {
     .radio_weather_y           = 4,       // top-left row, clear of the centered clock
     .radio_weather_w           = 160,
     .radio_weather_font        = &lv_font_montserrat_14_pl,
+    .radio_show_ctrl_overlay   = true,
 
     .sd_title_y                = 85,
     .sd_title_font             = &lv_font_montserrat_14_pl,
@@ -984,6 +993,7 @@ static const ui_profile_t k_defaults = {
     .sd_weather_y              = 4,       // top-left row, clear of the centered clock
     .sd_weather_w              = 160,
     .sd_weather_font           = &lv_font_montserrat_14_pl,
+    .sd_show_ctrl_overlay      = true,
 
     .playlist_header_h         = 34,
     .playlist_item_h           = 38,
@@ -1381,6 +1391,7 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_weather_y",            &p->radio_weather_y);
     load_i16 (obj, "radio_weather_w",            &p->radio_weather_w);
     load_font(obj, "radio_weather_font",         &p->radio_weather_font);
+    load_bool(obj, "radio_show_ctrl_overlay",    &p->radio_show_ctrl_overlay);
     load_hotspots(obj, "radio", p->radio_touch_hotspots);
 }
 
@@ -1433,6 +1444,7 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_weather_y",            p->radio_weather_y);
     add_i16 (o, "radio_weather_w",            p->radio_weather_w);
     add_font(o, "radio_weather_font",         p->radio_weather_font);
+    add_bool(o, "radio_show_ctrl_overlay",    p->radio_show_ctrl_overlay);
     dump_hotspots(o, "radio", p->radio_touch_hotspots);
     return o;
 }
@@ -1486,6 +1498,7 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "sd_weather_y",              &p->sd_weather_y);
     load_i16 (obj, "sd_weather_w",              &p->sd_weather_w);
     load_font(obj, "sd_weather_font",           &p->sd_weather_font);
+    load_bool(obj, "sd_show_ctrl_overlay",      &p->sd_show_ctrl_overlay);
     load_hotspots(obj, "sd", p->sd_touch_hotspots);
 }
 
@@ -1535,6 +1548,7 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_weather_y",              p->sd_weather_y);
     add_i16 (o, "sd_weather_w",              p->sd_weather_w);
     add_font(o, "sd_weather_font",           p->sd_weather_font);
+    add_bool(o, "sd_show_ctrl_overlay",      p->sd_show_ctrl_overlay);
     dump_hotspots(o, "sd", p->sd_touch_hotspots);
     return o;
 }

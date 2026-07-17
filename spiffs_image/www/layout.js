@@ -202,6 +202,7 @@ const RADIO_FIELDS = [
     { key: 'radio_weather_y', label: 'Weather Y', type: 'number' },
     { key: 'radio_weather_w', label: 'Weather W', type: 'number' },
     { key: 'radio_weather_font', label: 'Weather font', type: 'font' },
+    { key: 'radio_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('radio'),
 ];
 
@@ -254,6 +255,7 @@ const SD_FIELDS = [
     { key: 'sd_weather_y', label: 'Weather Y', type: 'number' },
     { key: 'sd_weather_w', label: 'Weather W', type: 'number' },
     { key: 'sd_weather_font', label: 'Weather font', type: 'font' },
+    { key: 'sd_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('sd'),
 ];
 
@@ -291,6 +293,7 @@ const FORM_GROUPS = {
         { title: 'Animated wheels', enabledBy: 'radio_show_cassette', fields: ['radio_show_cassette', 'radio_animation_style', 'radio_show_wheel_left', 'radio_cassette_l_x', 'radio_cassette_l_y', 'radio_cassette_l_size', 'radio_show_wheel_right', 'radio_cassette_r_x', 'radio_cassette_r_y', 'radio_cassette_r_size'] },
         { title: 'VU meter', enabledBy: 'radio_show_vu', fields: ['radio_show_vu', 'radio_vu_x', 'radio_vu_y', 'radio_vu_w', 'radio_vu_h', 'radio_vu_transparent'] },
         { title: 'Weather', enabledBy: 'radio_show_weather', fields: ['radio_show_weather', 'radio_weather_x', 'radio_weather_y', 'radio_weather_w', 'radio_weather_font'] },
+        { title: 'Tap controls overlay', enabledBy: 'radio_show_ctrl_overlay', fields: ['radio_show_ctrl_overlay'] },
         ...touchHotspotGroups('radio'),
     ],
     sd: [
@@ -304,6 +307,7 @@ const FORM_GROUPS = {
         { title: 'Animated wheels', enabledBy: 'sd_show_cassette', fields: ['sd_show_cassette', 'sd_animation_style', 'sd_show_wheel_left', 'sd_cassette_l_x', 'sd_cassette_l_y', 'sd_cassette_l_size', 'sd_show_wheel_right', 'sd_cassette_r_x', 'sd_cassette_r_y', 'sd_cassette_r_size'] },
         { title: 'VU meter', enabledBy: 'sd_show_vu', fields: ['sd_show_vu', 'sd_vu_x', 'sd_vu_y', 'sd_vu_w', 'sd_vu_h', 'sd_vu_transparent'] },
         { title: 'Weather', enabledBy: 'sd_show_weather', fields: ['sd_show_weather', 'sd_weather_x', 'sd_weather_y', 'sd_weather_w', 'sd_weather_font'] },
+        { title: 'Tap controls overlay', enabledBy: 'sd_show_ctrl_overlay', fields: ['sd_show_ctrl_overlay'] },
         ...touchHotspotGroups('sd'),
     ],
 };

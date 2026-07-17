@@ -245,7 +245,9 @@ static void sd_player_screen_create(lv_obj_t *parent)
     refresh_from_state();
     progress_update();   // set/hide the time row now, before the 1 s tick
 
-    controls_overlay_create(parent, CTRL_OVL_MODE_SD);
+    if (p->sd_show_ctrl_overlay) {
+        controls_overlay_create(parent, CTRL_OVL_MODE_SD);
+    }
     touch_hotspots_widget_create(parent, CONTROL_SOURCE_SD, p->sd_touch_hotspots);
 
     ESP_LOGI(TAG, "Created");

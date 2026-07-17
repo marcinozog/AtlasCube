@@ -195,6 +195,7 @@ typedef struct {
     int16_t          radio_weather_y;
     int16_t          radio_weather_w;
     const lv_font_t *radio_weather_font;
+    bool             radio_show_ctrl_overlay;   // tap-anywhere transport/volume overlay
     ui_touch_hotspot_t radio_touch_hotspots[UI_TOUCH_HOTSPOT_COUNT];
 
     // screen_sd_player — absolute LCD coordinates (top-left origin). The three
@@ -244,6 +245,7 @@ typedef struct {
     int16_t          sd_weather_y;
     int16_t          sd_weather_w;
     const lv_font_t *sd_weather_font;
+    bool             sd_show_ctrl_overlay;      // tap-anywhere transport/volume overlay
     ui_touch_hotspot_t sd_touch_hotspots[UI_TOUCH_HOTSPOT_COUNT];
 
     // screen_playlist
