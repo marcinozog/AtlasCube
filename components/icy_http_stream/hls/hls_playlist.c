@@ -387,7 +387,18 @@ static hls_stream_t* hls_filter_stream(hls_master_playlist_t* main, uint32_t bit
         }
     }
     if (sel_stream == NULL) {
+        // Local change (upstream picks stream[0], often the top quality): fall
+        // back to the LOWEST-bandwidth variant. This device only plays the
+        // audio track (video PIDs are dropped in the TS demux), and callers
+        // pass prefer_bitrate=0, so this branch decides every A/V stream —
+        // e.g. a 1080p-first master would otherwise cost ~4.6 Mbps of
+        // download+TLS+demux for the same audio.
         sel_stream = &main->stream[0];
+        for (int i = 1; i < main->stream_num; i++) {
+            if (main->stream[i].bandwidth < sel_stream->bandwidth) {
+                sel_stream = &main->stream[i];
+            }
+        }
     }
     return sel_stream;
 }

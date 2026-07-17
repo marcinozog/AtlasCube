@@ -180,6 +180,10 @@ void app_main(void)
 
     heap_report("boot-done");   // internal-RAM baseline before any stream
 
+    // Temporary: per-task CPU% every 5 s, to attribute core-1 load during
+    // 48 kHz HLS playback. Remove (or comment out) after the diagnosis.
+    cpu_report_start();
+
     // xTaskCreate(system_monitor_task, "sys_mon", 4096, NULL, 5, NULL);
 }
 
