@@ -233,6 +233,8 @@ const SD_FIELDS = [
     { key: 'sd_time_y',               label: 'Time Y',            type: 'number' },
 
     { key: 'sd_show_bar',             label: 'Show progress bar', type: 'bool' },
+    { key: 'sd_bar_x',                label: 'Bar X',             type: 'number' },
+    { key: 'sd_bar_y',                label: 'Bar Y',             type: 'number' },
     { key: 'sd_bar_w',                label: 'Bar W',             type: 'number' },
     { key: 'sd_bar_h',                label: 'Bar H',             type: 'number' },
 
@@ -327,7 +329,7 @@ const FORM_GROUPS = {
         { title: 'Folder', enabledBy: 'sd_show_folder', fields: ['sd_show_folder', 'sd_folder_y', 'sd_folder_font'] },
         { title: 'Playback info', enabledBy: 'sd_show_info', fields: ['sd_show_info', 'sd_info_y', 'sd_info_font'] },
         { title: 'Playback time', enabledBy: 'sd_show_time', fields: ['sd_show_time', 'sd_time_y'] },
-        { title: 'Progress bar', enabledBy: 'sd_show_bar', fields: ['sd_show_bar', 'sd_bar_w', 'sd_bar_h'] },
+        { title: 'Progress bar', enabledBy: 'sd_show_bar', fields: ['sd_show_bar', 'sd_bar_x', 'sd_bar_y', 'sd_bar_w', 'sd_bar_h'] },
         { title: 'Mode indicator', enabledBy: 'sd_show_mode_indicator', fields: ['sd_show_mode_indicator', 'sd_mode_indic_x', 'sd_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'sd_show_clock', fields: ['sd_show_clock', 'sd_clock_widget_x', 'sd_clock_widget_y', 'sd_clock_font'] },
         { title: 'Event indicator', enabledBy: 'sd_show_event_indicator', fields: ['sd_show_event_indicator', 'sd_event_indic_x', 'sd_event_indic_y'] },
@@ -1406,19 +1408,11 @@ function renderSd(svg) {
     }
 
     if (s.sd_show_bar && s.sd_bar_w > 0) {
-        // Firmware centers the bar 4px under the time row, falling back to the
-        // lowest visible text row (info → folder → title) when the time row is
-        // off; approximate that here for a size/position hint (not draggable).
-        let ay, af;
-        if (s.sd_show_time)        { ay = s.sd_time_y;   af = s.sd_info_font; }
-        else if (s.sd_show_info)   { ay = s.sd_info_y;   af = s.sd_info_font; }
-        else if (s.sd_show_folder) { ay = s.sd_folder_y; af = s.sd_folder_font; }
-        else                       { ay = s.sd_title_y;  af = s.sd_title_font; }
-        const by = ay + fontHeight(af) + 4;
-        const bx = Math.round((state.meta.screen_w - s.sd_bar_w) / 2);
-        rect(svg, { x: bx, y: by, width: s.sd_bar_w, height: s.sd_bar_h,
-                    class: `label-rect ${placeholderClass('bar')}` });
-        tag(svg, bx + 2, by + 7, 'bar');
+        drawFreeElement(svg, {
+            x: s.sd_bar_x, y: s.sd_bar_y, w: s.sd_bar_w, h: s.sd_bar_h,
+            label: 'bar', cls: 'label-rect',
+            fields: { x: 'sd_bar_x', y: 'sd_bar_y' },
+        });
     }
 
     if (s.sd_show_mode_indicator) {

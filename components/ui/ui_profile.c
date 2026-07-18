@@ -91,6 +91,8 @@ static const ui_profile_t k_defaults = {
     .sd_show_time              = false,   // no spare line on a 64px mono panel
     .sd_time_y                 = 49,
     .sd_show_bar               = false,
+    .sd_bar_x                  = 0,
+    .sd_bar_y                  = 0,
     .sd_bar_w                  = 0,
     .sd_bar_h                  = 0,
     .sd_show_mode_indicator    = false,
@@ -283,6 +285,8 @@ static const ui_profile_t k_defaults = {
     .sd_show_time              = false,   // no spare line on a 64px mono panel
     .sd_time_y                 = 71,
     .sd_show_bar               = false,
+    .sd_bar_x                  = 0,
+    .sd_bar_y                  = 0,
     .sd_bar_w                  = 0,
     .sd_bar_h                  = 0,
     .sd_show_mode_indicator    = false,
@@ -507,6 +511,8 @@ static const ui_profile_t k_defaults = {
     .sd_show_time              = true,
     .sd_time_y                 = 189,
     .sd_show_bar               = true,
+    .sd_bar_x                  = 20,    // (240 - 200) / 2, under the time row
+    .sd_bar_y                  = 208,
     .sd_bar_w                  = 200,
     .sd_bar_h                  = 6,
     .sd_show_mode_indicator    = true,
@@ -763,6 +769,8 @@ static const ui_profile_t k_defaults = {
     .sd_show_time              = true,
     .sd_time_y                 = 119,
     .sd_show_bar               = true,
+    .sd_bar_x                  = 20,    // (320 - 280) / 2, under the time row
+    .sd_bar_y                  = 138,
     .sd_bar_w                  = 280,
     .sd_bar_h                  = 6,
     .sd_show_mode_indicator    = true,
@@ -1012,6 +1020,8 @@ static const ui_profile_t k_defaults = {
     .sd_show_time              = true,
     .sd_time_y                 = 161,
     .sd_show_bar               = true,
+    .sd_bar_x                  = 30,    // (480 - 420) / 2, under the time row
+    .sd_bar_y                  = 182,
     .sd_bar_w                  = 420,
     .sd_bar_h                  = 8,
     .sd_show_mode_indicator    = true,
@@ -1544,6 +1554,8 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_bool(obj, "sd_show_time",              &p->sd_show_time);
     load_i16 (obj, "sd_time_y",                 &p->sd_time_y);
     load_bool(obj, "sd_show_bar",               &p->sd_show_bar);
+    load_i16 (obj, "sd_bar_x",                  &p->sd_bar_x);
+    load_i16 (obj, "sd_bar_y",                  &p->sd_bar_y);
     load_i16 (obj, "sd_bar_w",                  &p->sd_bar_w);
     load_i16 (obj, "sd_bar_h",                  &p->sd_bar_h);
     load_bool(obj, "sd_show_mode_indicator",    &p->sd_show_mode_indicator);
@@ -1609,6 +1621,8 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_bool(o, "sd_show_time",              p->sd_show_time);
     add_i16 (o, "sd_time_y",                 p->sd_time_y);
     add_bool(o, "sd_show_bar",               p->sd_show_bar);
+    add_i16 (o, "sd_bar_x",                  p->sd_bar_x);
+    add_i16 (o, "sd_bar_y",                  p->sd_bar_y);
     add_i16 (o, "sd_bar_w",                  p->sd_bar_w);
     add_i16 (o, "sd_bar_h",                  p->sd_bar_h);
     add_bool(o, "sd_show_mode_indicator",    p->sd_show_mode_indicator);

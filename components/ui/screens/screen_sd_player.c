@@ -66,7 +66,7 @@ static void bar_hide(void)
 
 static void progress_update(void)
 {
-    if (!s_time) return;
+    if (!s_time && !s_bar) return;
     if (!app_state_get()->sd_active) { ui_label_set_text(s_time, ""); bar_hide(); return; }
 
     uint32_t pos = sd_player_position_ms();
@@ -189,20 +189,14 @@ static void sd_player_screen_create(lv_obj_t *parent)
         s_info   = make_centered_label(parent, p->sd_info_font,   th->text_muted, p->sd_info_y);
     }
 
-    // Fallback anchor for the bar when the time row is off: the lowest visible
-    // text row (info → folder → title).
-    #define SD_ROW_ANCHOR (s_info ? s_info : (s_folder ? s_folder : s_title))
-
     // Playback counter at its own profile-driven position. Skipped on panels
     // with no spare line (mono).
     if (p->sd_show_time) {
         s_time = make_centered_label(parent, p->sd_info_font, th->text_muted, p->sd_time_y);
-        s_tick = lv_timer_create(tick_cb, 1000, NULL);
     }
 
-    // Read-only progress bar under the time row. Anchored to s_time (or s_info
-    // if the time row is off), sized from the profile. Kept hidden until a
-    // duration is known (see progress_update).
+    // Read-only progress bar, an independent element at its own profile-driven
+    // position. Kept hidden until a duration is known (see progress_update).
     if (p->sd_show_bar && p->sd_bar_w > 0) {
         s_bar = lv_bar_create(parent);
         lv_obj_set_size(s_bar, p->sd_bar_w, p->sd_bar_h);
@@ -211,10 +205,14 @@ static void sd_player_screen_create(lv_obj_t *parent)
         lv_obj_set_style_bg_color(s_bar, lv_color_hex(th->accent), LV_PART_INDICATOR);
         lv_obj_set_style_radius(s_bar, p->sd_bar_h / 2, LV_PART_MAIN);
         lv_obj_set_style_radius(s_bar, p->sd_bar_h / 2, LV_PART_INDICATOR);
-        lv_obj_align_to(s_bar, s_time ? s_time : SD_ROW_ANCHOR, LV_ALIGN_OUT_BOTTOM_MID, 0, 4);
+        lv_obj_set_pos(s_bar, p->sd_bar_x, p->sd_bar_y);
         lv_obj_add_flag(s_bar, LV_OBJ_FLAG_HIDDEN);
     }
-    #undef SD_ROW_ANCHOR
+
+    // 1 Hz refresh drives both the counter and the bar (either may exist alone).
+    if (s_time || s_bar) {
+        s_tick = lv_timer_create(tick_cb, 1000, NULL);
+    }
 
     // Clock + indicators (own sd_* layout fields, same widgets as screen_radio).
     if (p->sd_show_clock) {
