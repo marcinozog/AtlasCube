@@ -209,9 +209,11 @@ typedef struct {
     bool             radio_show_ctrl_overlay;   // tap-anywhere transport/volume overlay
     ui_touch_hotspot_t radio_touch_hotspots[UI_TOUCH_HOTSPOT_COUNT];
 
-    // screen_sd_player — absolute LCD coordinates (top-left origin). The three
-    // text rows are horizontally centered (Y only). Mirrors screen_radio.
-    int16_t          sd_title_y;               // track title (ID3 / file name)
+    // screen_sd_player — absolute LCD coordinates (top-left origin). The title
+    // is center-anchored at (sd_title_x, sd_title_y); the other text rows are
+    // horizontally centered (Y only). Mirrors screen_radio.
+    int16_t          sd_title_x;               // track title (ID3 / file name), center anchor
+    int16_t          sd_title_y;
     const lv_font_t *sd_title_font;
     int16_t          sd_folder_y;              // "<folder>   idx/count"
     const lv_font_t *sd_folder_font;

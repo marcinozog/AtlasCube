@@ -218,6 +218,7 @@ const RADIO_FIELDS = [
 ];
 
 const SD_FIELDS = [
+    { key: 'sd_title_x',    label: 'Title X',          type: 'number' },
     { key: 'sd_title_y',    label: 'Title Y',          type: 'number' },
     { key: 'sd_title_font', label: 'Title font',       type: 'font'   },
 
@@ -325,7 +326,7 @@ const FORM_GROUPS = {
         ...touchHotspotGroups('radio'),
     ],
     sd: [
-        { title: 'Track title', fields: ['sd_title_y', 'sd_title_font'] },
+        { title: 'Track title', fields: ['sd_title_x', 'sd_title_y', 'sd_title_font'] },
         { title: 'Folder', enabledBy: 'sd_show_folder', fields: ['sd_show_folder', 'sd_folder_y', 'sd_folder_font'] },
         { title: 'Playback info', enabledBy: 'sd_show_info', fields: ['sd_show_info', 'sd_info_y', 'sd_info_font'] },
         { title: 'Playback time', enabledBy: 'sd_show_time', fields: ['sd_show_time', 'sd_time_y'] },
@@ -1391,8 +1392,8 @@ function renderSd(svg) {
         }
     }
 
-    drawLabel(svg, 0, s.sd_title_y, s.sd_title_font, 'Artist - Title',
-              'title', { y: 'sd_title_y' });
+    drawLabel(svg, s.sd_title_x, s.sd_title_y, s.sd_title_font, 'Artist - Title',
+              'title', { x: 'sd_title_x', y: 'sd_title_y' }, true);
     if (s.sd_show_folder) {
         drawLabel(svg, 0, s.sd_folder_y, s.sd_folder_font, 'Folder   3/12',
                   'folder', { y: 'sd_folder_y' });
@@ -1411,7 +1412,7 @@ function renderSd(svg) {
         drawFreeElement(svg, {
             x: s.sd_bar_x, y: s.sd_bar_y, w: s.sd_bar_w, h: s.sd_bar_h,
             label: 'bar', cls: 'label-rect',
-            fields: { x: 'sd_bar_x', y: 'sd_bar_y' },
+            fields: { x: 'sd_bar_x', y: 'sd_bar_y', w: 'sd_bar_w', h: 'sd_bar_h' },
         });
     }
 

@@ -80,6 +80,7 @@ static const ui_profile_t k_defaults = {
     .radio_weather_font        = &lv_font_montserrat_12_pl,
     .radio_show_ctrl_overlay   = true,
 
+    .sd_title_x                = 64,    // panel center
     .sd_title_y                = 35,
     .sd_title_font             = &lv_font_montserrat_14_pl,
     .sd_folder_y               = 16,
@@ -274,6 +275,7 @@ static const ui_profile_t k_defaults = {
     .radio_weather_font        = &lv_font_montserrat_12_pl,
     .radio_show_ctrl_overlay   = true,
 
+    .sd_title_x                = 128,   // panel center
     .sd_title_y                = 1,
     .sd_title_font             = &lv_font_montserrat_14_pl,
     .sd_folder_y               = 44,
@@ -500,6 +502,7 @@ static const ui_profile_t k_defaults = {
     .radio_weather_font        = &lv_font_montserrat_12_pl,
     .radio_show_ctrl_overlay   = true,
 
+    .sd_title_x                = 120,   // panel center
     .sd_title_y                = 60,
     .sd_title_font             = &lv_font_montserrat_14_pl,
     .sd_folder_y               = 216,
@@ -758,6 +761,7 @@ static const ui_profile_t k_defaults = {
     .radio_weather_font        = &lv_font_montserrat_12_pl,
     .radio_show_ctrl_overlay   = true,
 
+    .sd_title_x                = 160,   // panel center
     .sd_title_y                = 64,
     .sd_title_font             = &lv_font_montserrat_14_pl,
     .sd_folder_y               = 160,
@@ -1009,6 +1013,7 @@ static const ui_profile_t k_defaults = {
     .radio_weather_font        = &lv_font_montserrat_14_pl,
     .radio_show_ctrl_overlay   = true,
 
+    .sd_title_x                = 240,   // panel center
     .sd_title_y                = 85,
     .sd_title_font             = &lv_font_montserrat_14_pl,
     .sd_folder_y               = 226,
@@ -1543,6 +1548,7 @@ static cJSON *dump_radio(const ui_profile_t *p)
 static void load_sd(const cJSON *obj, ui_profile_t *p)
 {
     if (!cJSON_IsObject(obj)) return;
+    load_i16 (obj, "sd_title_x",                &p->sd_title_x);
     load_i16 (obj, "sd_title_y",                &p->sd_title_y);
     load_font(obj, "sd_title_font",             &p->sd_title_font);
     load_i16 (obj, "sd_folder_y",               &p->sd_folder_y);
@@ -1610,6 +1616,7 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
 static cJSON *dump_sd(const ui_profile_t *p)
 {
     cJSON *o = cJSON_CreateObject();
+    add_i16 (o, "sd_title_x",                p->sd_title_x);
     add_i16 (o, "sd_title_y",                p->sd_title_y);
     add_font(o, "sd_title_font",             p->sd_title_font);
     add_i16 (o, "sd_folder_y",               p->sd_folder_y);
