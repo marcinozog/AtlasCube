@@ -16,12 +16,12 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const HOTSPOT_ACTIONS = [
     { value: 0, label: 'Play / stop' },
+    { value: 6, label: 'Play / pause' },
     { value: 1, label: 'Previous' },
     { value: 2, label: 'Next' },
     { value: 3, label: 'Volume -' },
     { value: 4, label: 'Volume +' },
     { value: 5, label: 'Stop' },
-    { value: 6, label: 'Play / pause' },
 ];
 
 function touchHotspotFields(prefix) {
