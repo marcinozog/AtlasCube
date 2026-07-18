@@ -469,6 +469,15 @@ static const ui_profile_t k_defaults = {
     .radio_vu_y                = 238,
     .radio_vu_w                = 238,
     .radio_vu_h                = 58,
+    .radio_needle_frame        = true,
+    .radio_needle_l_x          = 6,
+    .radio_needle_l_y          = 118,
+    .radio_needle_l_w          = 110,
+    .radio_needle_l_h          = 72,
+    .radio_needle_r_x          = 124,
+    .radio_needle_r_y          = 118,
+    .radio_needle_r_w          = 110,
+    .radio_needle_r_h          = 72,
     .radio_show_cassette       = true,
     .radio_show_wheel_left     = true,
     .radio_show_wheel_right    = true,
@@ -512,6 +521,15 @@ static const ui_profile_t k_defaults = {
     .sd_vu_y                   = 238,
     .sd_vu_w                   = 238,
     .sd_vu_h                   = 58,
+    .sd_needle_frame           = true,
+    .sd_needle_l_x             = 6,
+    .sd_needle_l_y             = 118,
+    .sd_needle_l_w             = 110,
+    .sd_needle_l_h             = 72,
+    .sd_needle_r_x             = 124,
+    .sd_needle_r_y             = 118,
+    .sd_needle_r_w             = 110,
+    .sd_needle_r_h             = 72,
     .sd_show_cassette          = true,
     .sd_show_wheel_left        = true,
     .sd_show_wheel_right       = true,
@@ -706,6 +724,15 @@ static const ui_profile_t k_defaults = {
     .radio_vu_y                = 182,
     .radio_vu_w                = 318,
     .radio_vu_h                = 58,
+    .radio_needle_frame        = true,
+    .radio_needle_l_x          = 15,
+    .radio_needle_l_y          = 80,
+    .radio_needle_l_w          = 140,
+    .radio_needle_l_h          = 90,
+    .radio_needle_r_x          = 165,
+    .radio_needle_r_y          = 80,
+    .radio_needle_r_w          = 140,
+    .radio_needle_r_h          = 90,
     .radio_show_cassette       = true,
     .radio_show_wheel_left     = true,
     .radio_show_wheel_right    = true,
@@ -749,6 +776,15 @@ static const ui_profile_t k_defaults = {
     .sd_vu_y                   = 182,
     .sd_vu_w                   = 318,
     .sd_vu_h                   = 58,
+    .sd_needle_frame           = true,
+    .sd_needle_l_x             = 15,
+    .sd_needle_l_y             = 80,
+    .sd_needle_l_w             = 140,
+    .sd_needle_l_h             = 90,
+    .sd_needle_r_x             = 165,
+    .sd_needle_r_y             = 80,
+    .sd_needle_r_w             = 140,
+    .sd_needle_r_h             = 90,
     .sd_show_cassette          = true,
     .sd_show_wheel_left        = true,
     .sd_show_wheel_right       = true,
@@ -936,6 +972,15 @@ static const ui_profile_t k_defaults = {
     .radio_vu_y                = 248,
     .radio_vu_w                = 478,
     .radio_vu_h                = 72,
+    .radio_needle_frame        = true,
+    .radio_needle_l_x          = 30,
+    .radio_needle_l_y          = 100,
+    .radio_needle_l_w          = 200,
+    .radio_needle_l_h          = 130,
+    .radio_needle_r_x          = 250,
+    .radio_needle_r_y          = 100,
+    .radio_needle_r_w          = 200,
+    .radio_needle_r_h          = 130,
     .radio_show_cassette       = true,
     .radio_show_wheel_left     = true,
     .radio_show_wheel_right    = true,
@@ -979,6 +1024,15 @@ static const ui_profile_t k_defaults = {
     .sd_vu_y                   = 248,
     .sd_vu_w                   = 478,
     .sd_vu_h                   = 72,
+    .sd_needle_frame           = true,
+    .sd_needle_l_x             = 30,
+    .sd_needle_l_y             = 100,
+    .sd_needle_l_w             = 200,
+    .sd_needle_l_h             = 130,
+    .sd_needle_r_x             = 250,
+    .sd_needle_r_y             = 100,
+    .sd_needle_r_w             = 200,
+    .sd_needle_r_h             = 130,
     .sd_show_cassette          = true,
     .sd_show_wheel_left        = true,
     .sd_show_wheel_right       = true,
@@ -1373,6 +1427,17 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_vu_w",                 &p->radio_vu_w);
     load_i16 (obj, "radio_vu_h",                 &p->radio_vu_h);
     load_bool(obj, "radio_vu_transparent",       &p->radio_vu_transparent);
+    load_bool(obj, "radio_needle_show_l",        &p->radio_needle_show_l);
+    load_bool(obj, "radio_needle_show_r",        &p->radio_needle_show_r);
+    load_bool(obj, "radio_needle_frame",         &p->radio_needle_frame);
+    load_i16 (obj, "radio_needle_l_x",           &p->radio_needle_l_x);
+    load_i16 (obj, "radio_needle_l_y",           &p->radio_needle_l_y);
+    load_i16 (obj, "radio_needle_l_w",           &p->radio_needle_l_w);
+    load_i16 (obj, "radio_needle_l_h",           &p->radio_needle_l_h);
+    load_i16 (obj, "radio_needle_r_x",           &p->radio_needle_r_x);
+    load_i16 (obj, "radio_needle_r_y",           &p->radio_needle_r_y);
+    load_i16 (obj, "radio_needle_r_w",           &p->radio_needle_r_w);
+    load_i16 (obj, "radio_needle_r_h",           &p->radio_needle_r_h);
     load_bool(obj, "radio_show_cassette",        &p->radio_show_cassette);
     load_i16 (obj, "radio_animation_style",      &p->radio_animation_style);
     p->radio_animation_style = LV_CLAMP(0, p->radio_animation_style, 1);
@@ -1429,6 +1494,17 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_vu_w",                 p->radio_vu_w);
     add_i16 (o, "radio_vu_h",                 p->radio_vu_h);
     add_bool(o, "radio_vu_transparent",       p->radio_vu_transparent);
+    add_bool(o, "radio_needle_show_l",        p->radio_needle_show_l);
+    add_bool(o, "radio_needle_show_r",        p->radio_needle_show_r);
+    add_bool(o, "radio_needle_frame",         p->radio_needle_frame);
+    add_i16 (o, "radio_needle_l_x",           p->radio_needle_l_x);
+    add_i16 (o, "radio_needle_l_y",           p->radio_needle_l_y);
+    add_i16 (o, "radio_needle_l_w",           p->radio_needle_l_w);
+    add_i16 (o, "radio_needle_l_h",           p->radio_needle_l_h);
+    add_i16 (o, "radio_needle_r_x",           p->radio_needle_r_x);
+    add_i16 (o, "radio_needle_r_y",           p->radio_needle_r_y);
+    add_i16 (o, "radio_needle_r_w",           p->radio_needle_r_w);
+    add_i16 (o, "radio_needle_r_h",           p->radio_needle_r_h);
     add_bool(o, "radio_show_cassette",        p->radio_show_cassette);
     add_i16 (o, "radio_animation_style",      p->radio_animation_style);
     add_bool(o, "radio_show_wheel_left",      p->radio_show_wheel_left);
@@ -1480,6 +1556,17 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "sd_vu_w",                   &p->sd_vu_w);
     load_i16 (obj, "sd_vu_h",                   &p->sd_vu_h);
     load_bool(obj, "sd_vu_transparent",         &p->sd_vu_transparent);
+    load_bool(obj, "sd_needle_show_l",          &p->sd_needle_show_l);
+    load_bool(obj, "sd_needle_show_r",          &p->sd_needle_show_r);
+    load_bool(obj, "sd_needle_frame",           &p->sd_needle_frame);
+    load_i16 (obj, "sd_needle_l_x",             &p->sd_needle_l_x);
+    load_i16 (obj, "sd_needle_l_y",             &p->sd_needle_l_y);
+    load_i16 (obj, "sd_needle_l_w",             &p->sd_needle_l_w);
+    load_i16 (obj, "sd_needle_l_h",             &p->sd_needle_l_h);
+    load_i16 (obj, "sd_needle_r_x",             &p->sd_needle_r_x);
+    load_i16 (obj, "sd_needle_r_y",             &p->sd_needle_r_y);
+    load_i16 (obj, "sd_needle_r_w",             &p->sd_needle_r_w);
+    load_i16 (obj, "sd_needle_r_h",             &p->sd_needle_r_h);
     load_bool(obj, "sd_show_cassette",          &p->sd_show_cassette);
     load_i16 (obj, "sd_animation_style",        &p->sd_animation_style);
     p->sd_animation_style = LV_CLAMP(0, p->sd_animation_style, 1);
@@ -1533,6 +1620,17 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_vu_w",                   p->sd_vu_w);
     add_i16 (o, "sd_vu_h",                   p->sd_vu_h);
     add_bool(o, "sd_vu_transparent",         p->sd_vu_transparent);
+    add_bool(o, "sd_needle_show_l",          p->sd_needle_show_l);
+    add_bool(o, "sd_needle_show_r",          p->sd_needle_show_r);
+    add_bool(o, "sd_needle_frame",           p->sd_needle_frame);
+    add_i16 (o, "sd_needle_l_x",             p->sd_needle_l_x);
+    add_i16 (o, "sd_needle_l_y",             p->sd_needle_l_y);
+    add_i16 (o, "sd_needle_l_w",             p->sd_needle_l_w);
+    add_i16 (o, "sd_needle_l_h",             p->sd_needle_l_h);
+    add_i16 (o, "sd_needle_r_x",             p->sd_needle_r_x);
+    add_i16 (o, "sd_needle_r_y",             p->sd_needle_r_y);
+    add_i16 (o, "sd_needle_r_w",             p->sd_needle_r_w);
+    add_i16 (o, "sd_needle_r_h",             p->sd_needle_r_h);
     add_bool(o, "sd_show_cassette",          p->sd_show_cassette);
     add_i16 (o, "sd_animation_style",        p->sd_animation_style);
     add_bool(o, "sd_show_wheel_left",        p->sd_show_wheel_left);

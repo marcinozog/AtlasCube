@@ -14,6 +14,7 @@
 #include "event_indicator_widget.h"
 #include "weather_widget.h"
 #include "vu_widget.h"
+#include "vu_needle_widget.h"
 #include "animated_wheels_widget.h"
 #include "app_state.h"
 #include "settings.h"
@@ -237,6 +238,16 @@ static void sd_player_screen_create(lv_obj_t *parent)
         vu_widget_create(parent, p->sd_vu_x, p->sd_vu_y, p->sd_vu_w, p->sd_vu_h,
                          p->sd_vu_transparent);
     }
+    if (p->sd_needle_show_l || p->sd_needle_show_r) {
+        vu_needle_widget_create(parent,
+                                p->sd_needle_show_l,
+                                p->sd_needle_l_x, p->sd_needle_l_y,
+                                p->sd_needle_l_w, p->sd_needle_l_h,
+                                p->sd_needle_show_r,
+                                p->sd_needle_r_x, p->sd_needle_r_y,
+                                p->sd_needle_r_w, p->sd_needle_r_h,
+                                p->sd_needle_frame);
+    }
     if (p->sd_show_weather) {
         weather_widget_create(parent, p->sd_weather_x, p->sd_weather_y,
                               p->sd_weather_w, p->sd_weather_font);
@@ -260,6 +271,7 @@ static void sd_player_screen_destroy(void)
     controls_overlay_destroy();
     vol_overlay_hide();
     vu_widget_destroy();
+    vu_needle_widget_destroy();
     animated_wheels_widget_destroy();
     weather_widget_destroy();
     mode_indicator_destroy();
@@ -346,6 +358,7 @@ static void sd_player_apply_theme(void)
     mode_indicator_apply_theme();
     event_indicator_apply_theme();
     vu_widget_apply_theme();
+    vu_needle_widget_apply_theme();
     animated_wheels_widget_apply_theme();
 
     lv_obj_invalidate(s_root);

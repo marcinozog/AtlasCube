@@ -16,6 +16,7 @@
 #include "touch_hotspots_widget.h"
 #include "vol_overlay_widget.h"
 #include "vu_widget.h"
+#include "vu_needle_widget.h"
 #include "animated_wheels_widget.h"
 #include "app_state.h"
 #include "settings.h"
@@ -111,6 +112,16 @@ static void radio_create(lv_obj_t *parent)
         vu_widget_create(parent, p->radio_vu_x, p->radio_vu_y, p->radio_vu_w, p->radio_vu_h,
                          p->radio_vu_transparent);
     }
+    if (p->radio_needle_show_l || p->radio_needle_show_r) {
+        vu_needle_widget_create(parent,
+                                p->radio_needle_show_l,
+                                p->radio_needle_l_x, p->radio_needle_l_y,
+                                p->radio_needle_l_w, p->radio_needle_l_h,
+                                p->radio_needle_show_r,
+                                p->radio_needle_r_x, p->radio_needle_r_y,
+                                p->radio_needle_r_w, p->radio_needle_r_h,
+                                p->radio_needle_frame);
+    }
     if (p->radio_show_weather) {
         weather_widget_create(parent, p->radio_weather_x, p->radio_weather_y,
                               p->radio_weather_w, p->radio_weather_font);
@@ -150,6 +161,7 @@ static void radio_destroy(void)
     controls_overlay_destroy();
     vol_overlay_hide();
     vu_widget_destroy();
+    vu_needle_widget_destroy();
     animated_wheels_widget_destroy();
     weather_widget_destroy();
     station_icon_widget_destroy();
@@ -249,6 +261,7 @@ static void radio_apply_theme(void)
 
     now_playing_widget_apply_theme();
     vu_widget_apply_theme();
+    vu_needle_widget_apply_theme();
     animated_wheels_widget_apply_theme();
     clock_widget_apply_theme();
     mode_indicator_apply_theme();

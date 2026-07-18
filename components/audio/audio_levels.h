@@ -30,6 +30,13 @@ bool audio_levels_snapshot(int16_t *out, int count);
 // instead of re-transforming a stale window.
 uint32_t audio_levels_count(void);
 
+// Latest per-channel linear RMS (0..1), computed over the most recent pushed
+// chunk. Feeds the needle VU, which wants a level per channel rather than a
+// spectrum. Mono input reports the same value on both. Each value is a single
+// aligned 32-bit float store on the writer side, so reads need no lock; use
+// audio_levels_count() to detect a stalled (paused) stream.
+void audio_levels_get_stereo(float *l, float *r);
+
 #ifdef __cplusplus
 }
 #endif
