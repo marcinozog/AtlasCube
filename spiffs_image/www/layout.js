@@ -229,6 +229,9 @@ const SD_FIELDS = [
     { key: 'sd_info_y',    label: 'Info Y',            type: 'number' },
     { key: 'sd_info_font', label: 'Info font',         type: 'font'   },
 
+    { key: 'sd_show_time',            label: 'Show playback time', type: 'bool' },
+    { key: 'sd_time_y',               label: 'Time Y',            type: 'number' },
+
     { key: 'sd_show_bar',             label: 'Show progress bar', type: 'bool' },
     { key: 'sd_bar_w',                label: 'Bar W',             type: 'number' },
     { key: 'sd_bar_h',                label: 'Bar H',             type: 'number' },
@@ -323,6 +326,7 @@ const FORM_GROUPS = {
         { title: 'Track title', fields: ['sd_title_y', 'sd_title_font'] },
         { title: 'Folder', enabledBy: 'sd_show_folder', fields: ['sd_show_folder', 'sd_folder_y', 'sd_folder_font'] },
         { title: 'Playback info', enabledBy: 'sd_show_info', fields: ['sd_show_info', 'sd_info_y', 'sd_info_font'] },
+        { title: 'Playback time', enabledBy: 'sd_show_time', fields: ['sd_show_time', 'sd_time_y'] },
         { title: 'Progress bar', enabledBy: 'sd_show_bar', fields: ['sd_show_bar', 'sd_bar_w', 'sd_bar_h'] },
         { title: 'Mode indicator', enabledBy: 'sd_show_mode_indicator', fields: ['sd_show_mode_indicator', 'sd_mode_indic_x', 'sd_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'sd_show_clock', fields: ['sd_show_clock', 'sd_clock_widget_x', 'sd_clock_widget_y', 'sd_clock_font'] },
@@ -1396,12 +1400,21 @@ function renderSd(svg) {
                   'info', { y: 'sd_info_y' });
     }
 
+    if (s.sd_show_time) {
+        drawLabel(svg, 0, s.sd_time_y, s.sd_info_font, '1:23 / 4:56',
+                  'time', { y: 'sd_time_y' });
+    }
+
     if (s.sd_show_bar && s.sd_bar_w > 0) {
-        // Firmware centers the bar and anchors it under the (optional) time row;
-        // approximate that here for a size/position hint (not draggable).
-        const fh = fontHeight(s.sd_info_font);
-        const timeRow = s.sd_show_time ? fh + 4 : 0;
-        const by = s.sd_info_y + fh + 4 + timeRow;
+        // Firmware centers the bar 4px under the time row, falling back to the
+        // lowest visible text row (info → folder → title) when the time row is
+        // off; approximate that here for a size/position hint (not draggable).
+        let ay, af;
+        if (s.sd_show_time)        { ay = s.sd_time_y;   af = s.sd_info_font; }
+        else if (s.sd_show_info)   { ay = s.sd_info_y;   af = s.sd_info_font; }
+        else if (s.sd_show_folder) { ay = s.sd_folder_y; af = s.sd_folder_font; }
+        else                       { ay = s.sd_title_y;  af = s.sd_title_font; }
+        const by = ay + fontHeight(af) + 4;
         const bx = Math.round((state.meta.screen_w - s.sd_bar_w) / 2);
         rect(svg, { x: bx, y: by, width: s.sd_bar_w, height: s.sd_bar_h,
                     class: `label-rect ${placeholderClass('bar')}` });

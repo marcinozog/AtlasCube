@@ -89,6 +89,7 @@ static const ui_profile_t k_defaults = {
     .sd_show_folder            = true,
     .sd_show_info              = true,
     .sd_show_time              = false,   // no spare line on a 64px mono panel
+    .sd_time_y                 = 49,
     .sd_show_bar               = false,
     .sd_bar_w                  = 0,
     .sd_bar_h                  = 0,
@@ -280,6 +281,7 @@ static const ui_profile_t k_defaults = {
     .sd_show_folder            = true,
     .sd_show_info              = true,
     .sd_show_time              = false,   // no spare line on a 64px mono panel
+    .sd_time_y                 = 71,
     .sd_show_bar               = false,
     .sd_bar_w                  = 0,
     .sd_bar_h                  = 0,
@@ -503,6 +505,7 @@ static const ui_profile_t k_defaults = {
     .sd_show_folder            = true,
     .sd_show_info              = true,
     .sd_show_time              = true,
+    .sd_time_y                 = 189,
     .sd_show_bar               = true,
     .sd_bar_w                  = 200,
     .sd_bar_h                  = 6,
@@ -758,6 +761,7 @@ static const ui_profile_t k_defaults = {
     .sd_show_folder            = true,
     .sd_show_info              = true,
     .sd_show_time              = true,
+    .sd_time_y                 = 119,
     .sd_show_bar               = true,
     .sd_bar_w                  = 280,
     .sd_bar_h                  = 6,
@@ -1006,6 +1010,7 @@ static const ui_profile_t k_defaults = {
     .sd_show_folder            = true,
     .sd_show_info              = true,
     .sd_show_time              = true,
+    .sd_time_y                 = 161,
     .sd_show_bar               = true,
     .sd_bar_w                  = 420,
     .sd_bar_h                  = 8,
@@ -1537,6 +1542,7 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_bool(obj, "sd_show_folder",            &p->sd_show_folder);
     load_bool(obj, "sd_show_info",              &p->sd_show_info);
     load_bool(obj, "sd_show_time",              &p->sd_show_time);
+    load_i16 (obj, "sd_time_y",                 &p->sd_time_y);
     load_bool(obj, "sd_show_bar",               &p->sd_show_bar);
     load_i16 (obj, "sd_bar_w",                  &p->sd_bar_w);
     load_i16 (obj, "sd_bar_h",                  &p->sd_bar_h);
@@ -1601,6 +1607,7 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_bool(o, "sd_show_folder",            p->sd_show_folder);
     add_bool(o, "sd_show_info",              p->sd_show_info);
     add_bool(o, "sd_show_time",              p->sd_show_time);
+    add_i16 (o, "sd_time_y",                 p->sd_time_y);
     add_bool(o, "sd_show_bar",               p->sd_show_bar);
     add_i16 (o, "sd_bar_w",                  p->sd_bar_w);
     add_i16 (o, "sd_bar_h",                  p->sd_bar_h);

@@ -220,6 +220,7 @@ typedef struct {
     const lv_font_t *sd_info_font;
     bool             sd_show_info;             // VOL/mode row
     bool             sd_show_time;             // "elapsed / total" row (needs a spare line; off on mono)
+    int16_t          sd_time_y;                // "elapsed / total" row Y
     bool             sd_show_bar;              // read-only progress bar under the time row (needs a duration)
     int16_t          sd_bar_w;                 // progress bar size (LCD px); centered under the time row
     int16_t          sd_bar_h;

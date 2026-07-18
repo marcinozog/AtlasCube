@@ -189,21 +189,14 @@ static void sd_player_screen_create(lv_obj_t *parent)
         s_info   = make_centered_label(parent, p->sd_info_font,   th->text_muted, p->sd_info_y);
     }
 
-    // The time row and bar sit below the VOL/mode line; anchor to it, falling
-    // back to the next visible row above (folder → title) when info is hidden.
+    // Fallback anchor for the bar when the time row is off: the lowest visible
+    // text row (info → folder → title).
     #define SD_ROW_ANCHOR (s_info ? s_info : (s_folder ? s_folder : s_title))
 
-    // Playback counter just below the VOL/mode line (position follows the
-    // profile-driven anchor). Skipped on panels with no spare line (mono).
+    // Playback counter at its own profile-driven position. Skipped on panels
+    // with no spare line (mono).
     if (p->sd_show_time) {
-        // Fixed y under the anchor row (an anchored label re-pins its own y on
-        // every text change, so align_to can't be used here — compute the y).
-        int16_t anchor_y;  const lv_font_t *anchor_font;
-        if (s_info)        { anchor_y = p->sd_info_y;   anchor_font = p->sd_info_font; }
-        else if (s_folder) { anchor_y = p->sd_folder_y; anchor_font = p->sd_folder_font; }
-        else               { anchor_y = p->sd_title_y;  anchor_font = p->sd_title_font; }
-        int16_t time_y = anchor_y + lv_font_get_line_height(anchor_font) + 4;
-        s_time = make_centered_label(parent, p->sd_info_font, th->text_muted, time_y);
+        s_time = make_centered_label(parent, p->sd_info_font, th->text_muted, p->sd_time_y);
         s_tick = lv_timer_create(tick_cb, 1000, NULL);
     }
 
