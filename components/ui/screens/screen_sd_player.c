@@ -148,13 +148,14 @@ static void refresh_from_state(void)
 
 // Center-anchored, content-hugging label (so the label_bg plate tracks the
 // text, not the full width) — mirrors the home clock labels. Long text is
-// capped at the panel width (title uses LONG_DOT to ellipsize at the cap).
+// capped at max_w (title uses LONG_DOT to ellipsize at the cap).
 static lv_obj_t *make_centered_label(lv_obj_t *parent, const lv_font_t *font,
-                                     uint32_t color, int16_t x, int16_t y)
+                                     uint32_t color, int16_t x, int16_t y,
+                                     int16_t max_w)
 {
     lv_obj_t *lbl = ui_anchored_label(parent, x, y, UI_ALIGN_CENTER);
     lv_label_set_text(lbl, "");
-    lv_obj_set_style_max_width(lbl, DISPLAY_WIDTH - 20, LV_PART_MAIN);
+    lv_obj_set_style_max_width(lbl, max_w, LV_PART_MAIN);
     lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(lbl, font, LV_PART_MAIN);
     lv_obj_set_style_text_color(lbl, lv_color_hex(color), LV_PART_MAIN);
@@ -180,23 +181,29 @@ static void sd_player_screen_create(lv_obj_t *parent)
                                       p->sd_cassette_r_x, p->sd_cassette_r_y, p->sd_cassette_r_size);
     }
 
+    // Title is a fixed-width box (like bt_title): text centered on the box
+    // centre and capped at the box width, so it never spills off the box.
     s_title = make_centered_label(parent, p->sd_title_font, th->text_primary,
-                                  p->sd_title_x, p->sd_title_y);
+                                  p->sd_title_x + p->sd_title_w / 2, p->sd_title_y,
+                                  p->sd_title_w);
 
     if (p->sd_show_folder) {
         s_folder = make_centered_label(parent, p->sd_folder_font, th->accent,
-                                       DISPLAY_WIDTH / 2, p->sd_folder_y);
+                                       DISPLAY_WIDTH / 2, p->sd_folder_y,
+                                       DISPLAY_WIDTH - 20);
     }
     if (p->sd_show_info) {
         s_info   = make_centered_label(parent, p->sd_info_font,   th->text_muted,
-                                       DISPLAY_WIDTH / 2, p->sd_info_y);
+                                       DISPLAY_WIDTH / 2, p->sd_info_y,
+                                       DISPLAY_WIDTH - 20);
     }
 
     // Playback counter at its own profile-driven position. Skipped on panels
     // with no spare line (mono).
     if (p->sd_show_time) {
         s_time = make_centered_label(parent, p->sd_info_font, th->text_muted,
-                                     DISPLAY_WIDTH / 2, p->sd_time_y);
+                                     DISPLAY_WIDTH / 2, p->sd_time_y,
+                                     DISPLAY_WIDTH - 20);
     }
 
     // Read-only progress bar, an independent element at its own profile-driven

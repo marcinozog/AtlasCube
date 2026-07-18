@@ -220,6 +220,7 @@ const RADIO_FIELDS = [
 const SD_FIELDS = [
     { key: 'sd_title_x',    label: 'Title X',          type: 'number' },
     { key: 'sd_title_y',    label: 'Title Y',          type: 'number' },
+    { key: 'sd_title_w',    label: 'Title W',          type: 'number' },
     { key: 'sd_title_font', label: 'Title font',       type: 'font'   },
 
     { key: 'sd_show_folder', label: 'Show folder',     type: 'bool'   },
@@ -326,7 +327,7 @@ const FORM_GROUPS = {
         ...touchHotspotGroups('radio'),
     ],
     sd: [
-        { title: 'Track title', fields: ['sd_title_x', 'sd_title_y', 'sd_title_font'] },
+        { title: 'Track title', fields: ['sd_title_x', 'sd_title_y', 'sd_title_w', 'sd_title_font'] },
         { title: 'Folder', enabledBy: 'sd_show_folder', fields: ['sd_show_folder', 'sd_folder_y', 'sd_folder_font'] },
         { title: 'Playback info', enabledBy: 'sd_show_info', fields: ['sd_show_info', 'sd_info_y', 'sd_info_font'] },
         { title: 'Playback time', enabledBy: 'sd_show_time', fields: ['sd_show_time', 'sd_time_y'] },
@@ -1392,8 +1393,14 @@ function renderSd(svg) {
         }
     }
 
-    drawLabel(svg, s.sd_title_x, s.sd_title_y, s.sd_title_font, 'Artist - Title',
-              'title', { x: 'sd_title_x', y: 'sd_title_y' }, true);
+    // Title — fixed-width box (like bt_title), text centered inside.
+    const sdTitleFh = fontHeight(s.sd_title_font);
+    drawFreeElement(svg, {
+        x: s.sd_title_x, y: s.sd_title_y, w: s.sd_title_w, h: sdTitleFh,
+        label: 'title', cls: 'label-rect',
+        fields: { x: 'sd_title_x', y: 'sd_title_y', w: 'sd_title_w' },
+        text: 'Artist - Title', textSize: sdTitleFh,
+    });
     if (s.sd_show_folder) {
         drawLabel(svg, 0, s.sd_folder_y, s.sd_folder_font, 'Folder   3/12',
                   'folder', { y: 'sd_folder_y' });
@@ -1552,7 +1559,9 @@ function drawFreeElement(svg, opts) {
         });
     }
 
-    if (opts.fields.w && opts.fields.h) {
+    // Corner resize whenever a width field exists; without a height field the
+    // corners resize width only (height follows the font).
+    if (opts.fields.w) {
         addCornerHandles(svg, opts.x, opts.y, opts.w, opts.h, opts.fields);
     }
 }
@@ -1672,18 +1681,20 @@ function setupResize(el, svg, fields, dir) {
             } else {
             if (dir.includes('l')) { nx = start.x + dx; nw = start.w - dx; }
             if (dir.includes('r')) {                     nw = start.w + dx; }
-            if (dir.includes('t')) { ny = start.y + dy; nh = start.h - dy; }
-            if (dir.includes('b')) {                     nh = start.h + dy; }
+            if (fields.h) {
+                if (dir.includes('t')) { ny = start.y + dy; nh = start.h - dy; }
+                if (dir.includes('b')) {                     nh = start.h + dy; }
+            }
             if (nw < 4) { nw = 4; if (dir.includes('l')) nx = start.x + start.w - 4; }
-            if (nh < 4) { nh = 4; if (dir.includes('t')) ny = start.y + start.h - 4; }
+            if (fields.h && nh < 4) { nh = 4; if (dir.includes('t')) ny = start.y + start.h - 4; }
             }
 
             data[fields.x] = nx; data[fields.y] = ny;
             data[fields.w] = nw;
-            if (fields.h !== fields.w) data[fields.h] = nh;
+            if (fields.h && fields.h !== fields.w) data[fields.h] = nh;
             setFormValue(fields.x, nx); setFormValue(fields.y, ny);
             setFormValue(fields.w, nw);
-            if (fields.h !== fields.w) setFormValue(fields.h, nh);
+            if (fields.h && fields.h !== fields.w) setFormValue(fields.h, nh);
             renderSvg();
         };
         const onUp = () => {

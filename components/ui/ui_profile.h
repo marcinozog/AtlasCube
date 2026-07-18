@@ -210,10 +210,12 @@ typedef struct {
     ui_touch_hotspot_t radio_touch_hotspots[UI_TOUCH_HOTSPOT_COUNT];
 
     // screen_sd_player — absolute LCD coordinates (top-left origin). The title
-    // is center-anchored at (sd_title_x, sd_title_y); the other text rows are
-    // horizontally centered (Y only). Mirrors screen_radio.
-    int16_t          sd_title_x;               // track title (ID3 / file name), center anchor
+    // is a fixed-width box (text centered inside, capped at the box width, like
+    // bt_title); the other text rows are horizontally centered (Y only).
+    // Mirrors screen_radio.
+    int16_t          sd_title_x;               // track title (ID3 / file name) box: left edge
     int16_t          sd_title_y;
+    int16_t          sd_title_w;               // box width
     const lv_font_t *sd_title_font;
     int16_t          sd_folder_y;              // "<folder>   idx/count"
     const lv_font_t *sd_folder_font;
