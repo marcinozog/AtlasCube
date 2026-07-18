@@ -190,8 +190,11 @@ static void play_at(int idx, int n)
     // name when there's no usable tag. sd_track stays the file name (the queue
     // / browser key used by the web + Android UIs).
     char title[128];
-    if (!id3_read_title(path, title, sizeof(title)))
+    if (!id3_read_title(path, title, sizeof(title))) {
         snprintf(title, sizeof(title), "%s", s_queue[idx]);
+        char *dot = strrchr(title, '.');
+        if (dot && dot != title) *dot = 0;   // drop the ".mp3"/".wav" extension
+    }
 
     app_state_update(&(app_state_patch_t){
         .has_sd_active = true, .sd_active = true,
