@@ -11,6 +11,7 @@ typedef enum {
     CONTROL_ACTION_VOLUME_DOWN,
     CONTROL_ACTION_VOLUME_UP,
     CONTROL_ACTION_STOP,
+    CONTROL_ACTION_PLAY_PAUSE,
 } control_action_t;
 
 typedef enum {

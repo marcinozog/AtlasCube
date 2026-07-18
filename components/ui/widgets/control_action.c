@@ -24,6 +24,7 @@ void control_action_execute(control_source_t source, control_action_t action)
                     (action == CONTROL_ACTION_VOLUME_UP ? 2 : -2)));
                 break;
             case CONTROL_ACTION_PLAY_TOGGLE:
+            case CONTROL_ACTION_PLAY_PAUSE:   // a stream can't pause; same as play/stop
                 if (s->radio_state == RADIO_STATE_PLAYING) radio_stop();
                 else radio_play_index(s->curr_index);
                 break;
@@ -48,6 +49,7 @@ void control_action_execute(control_source_t source, control_action_t action)
                     (action == CONTROL_ACTION_VOLUME_UP ? 2 : -2)));
                 break;
             case CONTROL_ACTION_PLAY_TOGGLE:
+            case CONTROL_ACTION_PLAY_PAUSE:   // AVRCP toggle is already play/pause
                 s->bt_playing ? bt_pause() : bt_play();
                 break;
             case CONTROL_ACTION_NEXT:     bt_next(); break;
@@ -65,6 +67,13 @@ void control_action_execute(control_source_t source, control_action_t action)
             break;
         case CONTROL_ACTION_PLAY_TOGGLE:
             if (sd_player_is_active()) sd_player_stop_keep();
+            else sd_player_resume_current();
+            break;
+        case CONTROL_ACTION_PLAY_PAUSE:
+            // In-place pause/resume (keeps the pipeline and the position);
+            // falls back to play when nothing is active, so the button also
+            // works as "play" after a stop.
+            if (sd_player_is_active()) sd_player_toggle_pause();
             else sd_player_resume_current();
             break;
         case CONTROL_ACTION_NEXT:     sd_player_next(); break;

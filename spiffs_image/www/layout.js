@@ -21,6 +21,7 @@ const HOTSPOT_ACTIONS = [
     { value: 3, label: 'Volume -' },
     { value: 4, label: 'Volume +' },
     { value: 5, label: 'Stop' },
+    { value: 6, label: 'Play / pause' },
 ];
 
 function touchHotspotFields(prefix) {

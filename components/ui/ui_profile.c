@@ -1193,7 +1193,7 @@ static void ensure_hotspot_defaults(ui_touch_hotspot_t *hotspots)
             hotspots[i].action = i % 6;
         } else {
             hotspots[i].radius = LV_CLAMP(0, hotspots[i].radius, 100);
-            hotspots[i].action = LV_CLAMP(0, hotspots[i].action, 5);
+            hotspots[i].action = LV_CLAMP(0, hotspots[i].action, 6);
         }
     }
 }
