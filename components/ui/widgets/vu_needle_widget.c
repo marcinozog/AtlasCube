@@ -1,5 +1,6 @@
 #include "vu_needle_widget.h"
 #include "audio_levels.h"   // per-channel RMS tapped from the DSP element
+#include "app_state.h"      // volume % scales the needle swing
 #include "theme.h"
 #include "esp_log.h"
 #include <math.h>
@@ -25,6 +26,11 @@ static const char *TAG = "VU_NEEDLE";
 // the needle; attack leads decay so it jumps up and falls back a touch lazier.
 #define NEEDLE_ATTACK    0.45f     // smoothing per tick when rising
 #define NEEDLE_DECAY     0.25f     // smoothing per tick when falling
+// >1 expands the TOP of the range (opposite of the bar VU's 0.8): the AGC ref
+// rides the recent peak, so the programme sits at level 0.8-1.0 and the needle
+// looked pinned; gamma 2.2 moves the operating point down to ~2/3 of the arc
+// and roughly doubles the visible swing of the same few-dB programme dynamics.
+#define NEEDLE_GAMMA     2.2f
 
 typedef struct {
     lv_obj_t *cont;      // NULL when this side is hidden
@@ -146,10 +152,21 @@ static void tick_cb(lv_timer_t *t)
         else                       s_agc_ref -= NEEDLE_AGC_FALL_DB;
         if (s_agc_ref < NEEDLE_AGC_REF_MIN) s_agc_ref = NEEDLE_AGC_REF_MIN;
 
+        // The DSP tap is deliberately PRE-volume (the AGC window tracks the
+        // music, not the listening level — and the ^4 volume taper would park
+        // the needle in real dB). Scale the swing by the volume instead, so the
+        // needle visibly follows the knob like a real amplifier's meter. Square
+        // root, not linear: linear crushed the swing at quiet listening levels
+        // (25% volume left a quarter of the arc); sqrt keeps half the arc there
+        // while still dropping the needle to rest as the knob approaches zero.
+        float vol = (float)app_state_get()->volume * 0.01f;
+        if (vol < 0.0f) vol = 0.0f; else if (vol > 1.0f) vol = 1.0f;
+        float vol_scale = sqrtf(vol);
+
         for (int i = 0; i < 2; i++) {
             float lvl = (db[i] - (s_agc_ref - NEEDLE_AGC_RANGE_DB)) / NEEDLE_AGC_RANGE_DB;
             if (lvl < 0.0f) lvl = 0.0f; else if (lvl > 1.0f) lvl = 1.0f;
-            target[i] = lvl;
+            target[i] = powf(lvl, NEEDLE_GAMMA) * vol_scale;
         }
     }
 
