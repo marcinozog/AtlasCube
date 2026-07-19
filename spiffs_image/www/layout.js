@@ -487,7 +487,22 @@ function buildWallpaperPicker() {
     button.style.cssText =
         'padding:6px 10px;background:var(--accent);color:#001019;border-color:var(--accent)';
     button.addEventListener('click', toggleWallpaperBrowser);
-    row.append(caption, name, button);
+
+    // When checked, a wallpaper's saved preset is applied on switch without
+    // the confirm() prompt. Sticky across visits via localStorage.
+    const autoLabel = document.createElement('label');
+    autoLabel.style.cssText =
+        'display:flex;align-items:center;gap:5px;font-size:11px;' +
+        'color:var(--text-dim);cursor:pointer;white-space:nowrap';
+    const autoCheck = document.createElement('input');
+    autoCheck.type = 'checkbox';
+    autoCheck.id = 'layout_preset_autoload';
+    autoCheck.checked = localStorage.getItem('layout_preset_autoload') === '1';
+    autoCheck.addEventListener('change', () => {
+        localStorage.setItem('layout_preset_autoload', autoCheck.checked ? '1' : '0');
+    });
+    autoLabel.append(autoCheck, document.createTextNode('Auto-apply preset'));
+    row.append(caption, name, button, autoLabel);
 
     const browser = document.createElement('div');
     browser.id = 'layout_wallpaper_browser';
@@ -628,7 +643,9 @@ async function offerPresetForWallpaper() {
             cache: 'no-store',
         });
         if (!r.ok) return;
-        if (confirm('A saved layout preset exists for this wallpaper. Apply it?')) {
+        const auto = document.getElementById('layout_preset_autoload');
+        if ((auto && auto.checked) ||
+            confirm('A saved layout preset exists for this wallpaper. Apply it?')) {
             await loadPreset();
         }
     } catch {
