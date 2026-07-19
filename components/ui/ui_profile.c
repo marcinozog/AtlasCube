@@ -114,6 +114,7 @@ static const ui_profile_t k_defaults = {
     .sd_show_weather           = false,
     .sd_weather_font           = &lv_font_montserrat_12_pl,
     .sd_show_ctrl_overlay      = true,
+    .bt_show_ctrl_overlay      = true,
 
     .playlist_header_h         = 14,
     .playlist_item_h           = 12,
@@ -313,6 +314,7 @@ static const ui_profile_t k_defaults = {
     .sd_show_weather           = false,
     .sd_weather_font           = &lv_font_montserrat_12_pl,
     .sd_show_ctrl_overlay      = true,
+    .bt_show_ctrl_overlay      = true,
 
     .playlist_header_h         = 16,
     .playlist_item_h           = 14,
@@ -570,6 +572,7 @@ static const ui_profile_t k_defaults = {
     .sd_weather_w              = 120,
     .sd_weather_font           = &lv_font_montserrat_12_pl,
     .sd_show_ctrl_overlay      = true,
+    .bt_show_ctrl_overlay      = true,
 
     // Playlist: We use the screen height for more list items
     .playlist_header_h         = 45,
@@ -833,6 +836,7 @@ static const ui_profile_t k_defaults = {
     .sd_weather_w              = 120,
     .sd_weather_font           = &lv_font_montserrat_12_pl,
     .sd_show_ctrl_overlay      = true,
+    .bt_show_ctrl_overlay      = true,
 
     .playlist_header_h         = 26,
     .playlist_item_h           = 28,
@@ -1089,6 +1093,7 @@ static const ui_profile_t k_defaults = {
     .sd_weather_w              = 160,
     .sd_weather_font           = &lv_font_montserrat_14_pl,
     .sd_show_ctrl_overlay      = true,
+    .bt_show_ctrl_overlay      = true,
 
     .playlist_header_h         = 34,
     .playlist_item_h           = 38,
@@ -1453,6 +1458,7 @@ static void load_bt(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "bt_label_bg_opa",        &p->bt_label_bg_opa);
     p->bt_label_bg_opa = LV_CLAMP(0, p->bt_label_bg_opa, 100);
     load_str (obj, "bt_wallpaper",           p->bt_wallpaper, sizeof(p->bt_wallpaper));
+    load_bool(obj, "bt_show_ctrl_overlay",   &p->bt_show_ctrl_overlay);
     load_hotspots(obj, "bt", p->bt_touch_hotspots);
 }
 
@@ -1772,6 +1778,7 @@ static cJSON *dump_bt(const ui_profile_t *p)
     add_font(o, "bt_time_font",           p->bt_time_font);
     add_i16 (o, "bt_label_bg_opa",        p->bt_label_bg_opa);
     add_str (o, "bt_wallpaper",           p->bt_wallpaper);
+    add_bool(o, "bt_show_ctrl_overlay",   p->bt_show_ctrl_overlay);
     dump_hotspots(o, "bt", p->bt_touch_hotspots);
     return o;
 }

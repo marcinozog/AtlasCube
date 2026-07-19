@@ -149,6 +149,7 @@ const BT_FIELDS = [
     { key: 'bt_clock_widget_x',      label: 'Clock X',          type: 'number' },
     { key: 'bt_clock_widget_y',      label: 'Clock Y',          type: 'number' },
     { key: 'bt_clock_font',          label: 'Clock font',       type: 'font'   },
+    { key: 'bt_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('bt'),
 ];
 
@@ -312,6 +313,7 @@ const FORM_GROUPS = {
         { title: 'Playback', fields: ['bt_time_x', 'bt_time_y', 'bt_time_font', 'bt_vol_label_font'] },
         { title: 'Mode indicator', enabledBy: 'bt_show_mode_indicator', fields: ['bt_show_mode_indicator', 'bt_mode_indic_x', 'bt_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'bt_show_clock', fields: ['bt_show_clock', 'bt_clock_widget_x', 'bt_clock_widget_y', 'bt_clock_font'] },
+        { title: 'Tap controls overlay', enabledBy: 'bt_show_ctrl_overlay', fields: ['bt_show_ctrl_overlay'] },
         ...touchHotspotGroups('bt'),
     ],
     radio: [

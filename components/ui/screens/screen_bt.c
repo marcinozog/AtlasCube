@@ -179,7 +179,9 @@ static void bt_create(lv_obj_t *parent)
 
     refresh_from_state();
 
-    controls_overlay_create(parent, CTRL_OVL_MODE_BT);
+    if (p->bt_show_ctrl_overlay) {
+        controls_overlay_create(parent, CTRL_OVL_MODE_BT);
+    }
     touch_hotspots_widget_create(parent, CONTROL_SOURCE_BT, p->bt_touch_hotspots);
 
     ESP_LOGI(TAG, "Created (bt_volume=%d, theme=%d)",
