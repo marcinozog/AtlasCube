@@ -94,9 +94,10 @@ typedef struct {
     int16_t          clock_strip_w;
     int16_t          clock_strip_h;
     int16_t          clock_strip_bg_opa;           // background opacity, 0-100 %
-    int16_t          clock_strip_label_w;          // station/title label width inside strip
+    int16_t          clock_strip_station_w;        // label width (centre-anchored)
     int16_t          clock_strip_station_x;        // X offset from strip centre
     int16_t          clock_strip_station_y;        // Y offset inside strip
+    int16_t          clock_strip_title_w;
     int16_t          clock_strip_title_x;
     int16_t          clock_strip_title_y;
     const lv_font_t *clock_strip_station_font;

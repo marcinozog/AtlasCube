@@ -48,7 +48,7 @@ events, wifi), each with a dozen-ish fields:
 |---|---|---|
 | `int16_t` (position) | `clock_strip_x`, `clock_strip_y` | 0..screen_w/h (top-left origin) |
 | `int16_t` (size) | `clock_strip_w`, `clock_strip_h` | 0..screen_w/h |
-| `int16_t` (Y inside container) | `clock_strip_station_y` | Y offset inside the strip (e.g. from its TOP) |
+| `int16_t` (offset from anchor) | `clock_strip_station_x`, `clock_strip_station_y` | X/Y offset from the strip's top-centre |
 | `bool` (visibility) | `clock_show_strip`, `clock_show_time` | true/false |
 | `const lv_font_t *` | `clock_strip_station_font`, `clock_time_font` | id from registry → pointer |
 
@@ -61,8 +61,11 @@ meaningless on another. The JSON is stamped with `w`/`h` on save, and
 `DISPLAY_WIDTH/HEIGHT` — switching LCD size falls back to the
 compile-time defaults automatically (no manual reset needed).
 
-Strip station/title are exceptions — they're labels inside the strip,
-with only a Y offset (X centered relative to `clock_strip_label_w`).
+Strip station/title are exceptions — they're anchored to the strip's
+top-centre (`LV_ALIGN_TOP_MID`): `_x`/`_y` are offsets from that anchor
+and `_w` is the label width, which grows symmetrically around the centre.
+Legacy JSON with the shared `clock_strip_label_w` still loads (it seeds
+both widths, per-label keys override).
 
 Two instances: `k_defaults` (const, compile-time, picked by `#if
 UI_PROFILE_MONO_128X64`) and `s_runtime` (mutable, returned by
@@ -98,8 +101,9 @@ holding the struct field names.
   "clock": {
     "clock_strip_x": 0, "clock_strip_y": 178,
     "clock_strip_w": 320, "clock_strip_h": 62,
-    "clock_strip_label_w": 296,
-    "clock_strip_station_y": 8, "clock_strip_title_y": 32,
+    "clock_strip_station_w": 296, "clock_strip_title_w": 296,
+    "clock_strip_station_x": 0, "clock_strip_station_y": 8,
+    "clock_strip_title_x": 0, "clock_strip_title_y": 32,
     "clock_strip_station_font": "montserrat_14_pl",
     "clock_strip_title_font": "montserrat_12_pl",
     "clock_time_x": 40, "clock_time_y": 25,

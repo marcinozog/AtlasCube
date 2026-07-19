@@ -283,7 +283,7 @@ static void home_create(lv_obj_t *parent)
     // their profile coordinates strip-relative.
     s_strip_station = lv_label_create(parent);
     lv_label_set_long_mode(s_strip_station, LV_LABEL_LONG_SCROLL_CIRCULAR);
-    lv_obj_set_width(s_strip_station, p->clock_strip_label_w);
+    lv_obj_set_width(s_strip_station, p->clock_strip_station_w);
     lv_obj_set_style_text_font(s_strip_station, p->clock_strip_station_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_strip_station,
         lv_color_hex(th->text_secondary), LV_PART_MAIN);
@@ -293,7 +293,7 @@ static void home_create(lv_obj_t *parent)
 
     s_strip_title = lv_label_create(parent);
     lv_label_set_long_mode(s_strip_title, LV_LABEL_LONG_SCROLL_CIRCULAR);
-    lv_obj_set_width(s_strip_title, p->clock_strip_label_w);
+    lv_obj_set_width(s_strip_title, p->clock_strip_title_w);
     lv_obj_set_style_text_font(s_strip_title, p->clock_strip_title_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_strip_title,
         lv_color_hex(th->text_muted), LV_PART_MAIN);

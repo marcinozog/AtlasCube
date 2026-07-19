@@ -29,9 +29,10 @@ static const ui_profile_t k_defaults = {
     .clock_strip_w             = 128,
     .clock_strip_h             = 20,
     .clock_strip_bg_opa        = 100,
-    .clock_strip_label_w       = 124,
+    .clock_strip_station_w     = 124,
     .clock_strip_station_x     = 0,
     .clock_strip_station_y     = 2,
+    .clock_strip_title_w       = 124,
     .clock_strip_title_x       = 0,
     .clock_strip_title_y       = 10,
     .clock_strip_station_font  = &lv_font_montserrat_12_pl,
@@ -227,9 +228,10 @@ static const ui_profile_t k_defaults = {
     .clock_strip_w             = 256,
     .clock_strip_h             = 30,
     .clock_strip_bg_opa        = 100,
-    .clock_strip_label_w       = 252,
+    .clock_strip_station_w     = 252,
     .clock_strip_station_x     = 0,
     .clock_strip_station_y     = 2,
+    .clock_strip_title_w       = 252,
     .clock_strip_title_x       = 0,
     .clock_strip_title_y       = 12,
     .clock_strip_station_font  = &lv_font_montserrat_12_pl,
@@ -423,9 +425,10 @@ static const ui_profile_t k_defaults = {
     .clock_strip_w             = 240,
     .clock_strip_h             = 103,
     .clock_strip_bg_opa        = 100,
-    .clock_strip_label_w       = 220,
+    .clock_strip_station_w     = 220,
     .clock_strip_station_x     = 0,
     .clock_strip_station_y     = 10,
+    .clock_strip_title_w       = 220,
     .clock_strip_title_x       = 0,
     .clock_strip_title_y       = 40,
     .clock_strip_station_font  = &lv_font_montserrat_14_pl,
@@ -685,9 +688,10 @@ static const ui_profile_t k_defaults = {
     .clock_strip_w             = 320,
     .clock_strip_h             = 62,
     .clock_strip_bg_opa        = 100,
-    .clock_strip_label_w       = 296,
+    .clock_strip_station_w     = 296,
     .clock_strip_station_x     = 0,
     .clock_strip_station_y     = 8,
+    .clock_strip_title_w       = 296,
     .clock_strip_title_x       = 0,
     .clock_strip_title_y       = 32,
     .clock_strip_station_font  = &lv_font_montserrat_14_pl,
@@ -940,9 +944,10 @@ static const ui_profile_t k_defaults = {
     .clock_strip_w             = 480,
     .clock_strip_h             = 82,
     .clock_strip_bg_opa        = 100,
-    .clock_strip_label_w       = 444,
+    .clock_strip_station_w     = 444,
     .clock_strip_station_x     = 0,
     .clock_strip_station_y     = 10,
+    .clock_strip_title_w       = 444,
     .clock_strip_title_x       = 0,
     .clock_strip_title_y       = 42,
     .clock_strip_station_font  = &lv_font_montserrat_18_pl,
@@ -1365,9 +1370,13 @@ static void load_clock(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "clock_strip_bg_opa",         &p->clock_strip_bg_opa);
     if (p->clock_strip_bg_opa < 0) p->clock_strip_bg_opa = 0;
     if (p->clock_strip_bg_opa > 100) p->clock_strip_bg_opa = 100;
-    load_i16 (obj, "clock_strip_label_w",        &p->clock_strip_label_w);
+    // Legacy shared width: seed both labels, per-label keys below override.
+    load_i16 (obj, "clock_strip_label_w",        &p->clock_strip_station_w);
+    load_i16 (obj, "clock_strip_label_w",        &p->clock_strip_title_w);
+    load_i16 (obj, "clock_strip_station_w",      &p->clock_strip_station_w);
     load_i16 (obj, "clock_strip_station_x",      &p->clock_strip_station_x);
     load_i16 (obj, "clock_strip_station_y",      &p->clock_strip_station_y);
+    load_i16 (obj, "clock_strip_title_w",        &p->clock_strip_title_w);
     load_i16 (obj, "clock_strip_title_x",        &p->clock_strip_title_x);
     load_i16 (obj, "clock_strip_title_y",        &p->clock_strip_title_y);
     load_font(obj, "clock_strip_station_font",   &p->clock_strip_station_font);
@@ -1772,9 +1781,10 @@ static cJSON *dump_clock(const ui_profile_t *p)
     add_i16 (o, "clock_strip_w",              p->clock_strip_w);
     add_i16 (o, "clock_strip_h",              p->clock_strip_h);
     add_i16 (o, "clock_strip_bg_opa",         p->clock_strip_bg_opa);
-    add_i16 (o, "clock_strip_label_w",        p->clock_strip_label_w);
+    add_i16 (o, "clock_strip_station_w",      p->clock_strip_station_w);
     add_i16 (o, "clock_strip_station_x",      p->clock_strip_station_x);
     add_i16 (o, "clock_strip_station_y",      p->clock_strip_station_y);
+    add_i16 (o, "clock_strip_title_w",        p->clock_strip_title_w);
     add_i16 (o, "clock_strip_title_x",        p->clock_strip_title_x);
     add_i16 (o, "clock_strip_title_y",        p->clock_strip_title_y);
     add_font(o, "clock_strip_station_font",   p->clock_strip_station_font);
