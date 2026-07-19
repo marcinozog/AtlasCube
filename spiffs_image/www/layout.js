@@ -22,6 +22,8 @@ const HOTSPOT_ACTIONS = [
     { value: 3, label: 'Volume -' },
     { value: 4, label: 'Volume +' },
     { value: 5, label: 'Stop' },
+    { value: 7, label: 'Open playlist' },
+    { value: 8, label: 'Open SD browser' },
 ];
 
 function touchHotspotFields(prefix) {

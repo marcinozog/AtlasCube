@@ -22,7 +22,7 @@ void touch_hotspots_widget_create(lv_obj_t *parent, control_source_t source,
         const ui_touch_hotspot_t *cfg = &hotspots[i];
         if (!cfg->enabled || cfg->w <= 0 || cfg->h <= 0 ||
             cfg->action < CONTROL_ACTION_PLAY_TOGGLE ||
-            cfg->action > CONTROL_ACTION_PLAY_PAUSE) continue;
+            cfg->action > CONTROL_ACTION_OPEN_SD_BROWSER) continue;
 
         lv_obj_t *btn = lv_btn_create(parent);
         s_hotspots[i] = btn;

@@ -161,7 +161,10 @@ static ui_touch_hotspot_t *hotspot_for(const editor_element_t *d)
 
 static const char *hotspot_action_name(int action)
 {
-    static const char *NAMES[] = { "PLAY", "PREV", "NEXT", "VOL-", "VOL+", "STOP" };
+    static const char *NAMES[] = {
+        "PLAY", "PREV", "NEXT", "VOL-", "VOL+", "STOP", "PAUSE",
+        "PLAYLIST", "SD BROWSER"
+    };
     return action >= 0 && action < ARRAY_LEN(NAMES) ? NAMES[action] : "?";
 }
 

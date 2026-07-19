@@ -1,5 +1,6 @@
 #include "defines.h"
 #include "ui_profile.h"
+#include "control_action.h"
 #include "fonts/ui_fonts.h"
 #include "cJSON.h"
 #include "esp_log.h"
@@ -1213,7 +1214,8 @@ static void ensure_hotspot_defaults(ui_touch_hotspot_t *hotspots)
             hotspots[i].action = i % 6;
         } else {
             hotspots[i].radius = LV_CLAMP(0, hotspots[i].radius, 100);
-            hotspots[i].action = LV_CLAMP(0, hotspots[i].action, 6);
+            hotspots[i].action = LV_CLAMP(0, hotspots[i].action,
+                                          CONTROL_ACTION_OPEN_SD_BROWSER);
         }
     }
 }
