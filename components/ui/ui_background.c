@@ -39,7 +39,7 @@ typedef struct __attribute__((packed)) {
 } bin_header_t;
 
 typedef struct {
-    char           path[64];   // resolved fopen path ("" → slot unused)
+    char           path[128];  // resolved fopen path ("" → slot unused)
     uint16_t      *buf;        // panel-sized PSRAM buffer, reused across reloads
     lv_image_dsc_t img;
     bool           loaded;     // buf holds a valid image of `path`

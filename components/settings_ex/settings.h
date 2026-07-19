@@ -42,7 +42,7 @@ typedef struct {
     bool            date_mdy;        // date as MM/DD/YYYY (false = YYYY-MM-DD)
     bool            bg_gradient;     // dithered gradient background on/off
     bool            wallpaper_on;       // SD wallpaper background on/off (wins over gradient)
-    char            wallpaper_path[64]; // full path to a panel-sized RGB565 .bin on SD
+    char            wallpaper_path[128]; // full path to a panel-sized RGB565 .bin on SD
     int             wallpaper_dim;      // darken wallpaper by 0-80% (SD + internet; gradient unaffected)
     char            wallpaper_url[192]; // internet-wallpaper source URL ("" = none; {w}/{h} ok)
     int             wallpaper_fetch_mode; // auto refresh: 0=off, 1=once after boot, 2=daily

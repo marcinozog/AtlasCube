@@ -86,7 +86,7 @@ static bool s_prev_bt_enable = false;
 static ui_theme_t     s_prev_theme    = THEME_DARK;
 static bool           s_prev_bg_gradient = true;
 static bool           s_prev_wallpaper_on = false;
-static char           s_prev_wallpaper_path[64] = "";
+static char           s_prev_wallpaper_path[128] = "";
 static int            s_prev_wallpaper_dim = 0;
 
 // Screensaver overlay — runs on top of an existing screen.
