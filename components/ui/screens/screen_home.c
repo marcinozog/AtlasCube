@@ -268,35 +268,36 @@ static void home_create(lv_obj_t *parent)
                               p->clock_label_bg_opa);
     }
 
-    // The strip container also anchors the station/title labels, so it must
-    // always exist. clock_show_strip controls only its background plate.
+    // The strip also anchors the station/title labels (align_to base), so it
+    // must always exist. clock_show_strip controls only its background plate.
     s_strip = make_panel(parent, p->clock_strip_x, p->clock_strip_y,
                          p->clock_strip_w, p->clock_strip_h, th->bg_secondary);
-    // Station/title may be dragged above/below the strip plate in the layout
-    // editor (negative Y offsets) — don't clip them to the strip bounds.
-    lv_obj_add_flag(s_strip, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
     int strip_opa = p->clock_show_strip ? p->clock_strip_bg_opa : 0;
     if (strip_opa < 0) strip_opa = 0;
     if (strip_opa > 100) strip_opa = 100;
     lv_obj_set_style_bg_opa(s_strip, (strip_opa * 255) / 100, LV_PART_MAIN);
 
-    s_strip_station = lv_label_create(s_strip);
+    // Station/title live on the screen, not inside the strip: LVGL clips
+    // children to the parent, which would cut labels dragged above/below the
+    // strip plate in the layout editor (negative Y offsets). align_to keeps
+    // their profile coordinates strip-relative.
+    s_strip_station = lv_label_create(parent);
     lv_label_set_long_mode(s_strip_station, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_width(s_strip_station, p->clock_strip_label_w);
     lv_obj_set_style_text_font(s_strip_station, p->clock_strip_station_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_strip_station,
         lv_color_hex(th->text_secondary), LV_PART_MAIN);
     ui_label_scrim(s_strip_station, p->clock_label_bg_opa);
-    lv_obj_align(s_strip_station, LV_ALIGN_TOP_MID, 0, p->clock_strip_station_y);
+    lv_obj_align_to(s_strip_station, s_strip, LV_ALIGN_TOP_MID, 0, p->clock_strip_station_y);
 
-    s_strip_title = lv_label_create(s_strip);
+    s_strip_title = lv_label_create(parent);
     lv_label_set_long_mode(s_strip_title, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_width(s_strip_title, p->clock_strip_label_w);
     lv_obj_set_style_text_font(s_strip_title, p->clock_strip_title_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_strip_title,
         lv_color_hex(th->text_muted), LV_PART_MAIN);
     ui_label_scrim(s_strip_title, p->clock_label_bg_opa);
-    lv_obj_align(s_strip_title, LV_ALIGN_TOP_MID, 0, p->clock_strip_title_y);
+    lv_obj_align_to(s_strip_title, s_strip, LV_ALIGN_TOP_MID, 0, p->clock_strip_title_y);
 
     strip_update();
 
