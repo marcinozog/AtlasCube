@@ -272,6 +272,9 @@ static void home_create(lv_obj_t *parent)
     // always exist. clock_show_strip controls only its background plate.
     s_strip = make_panel(parent, p->clock_strip_x, p->clock_strip_y,
                          p->clock_strip_w, p->clock_strip_h, th->bg_secondary);
+    // Station/title may be dragged above/below the strip plate in the layout
+    // editor (negative Y offsets) — don't clip them to the strip bounds.
+    lv_obj_add_flag(s_strip, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
     int strip_opa = p->clock_show_strip ? p->clock_strip_bg_opa : 0;
     if (strip_opa < 0) strip_opa = 0;
     if (strip_opa > 100) strip_opa = 100;
