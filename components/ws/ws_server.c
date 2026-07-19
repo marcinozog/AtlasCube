@@ -493,6 +493,16 @@ static void send_full_state(void)
     cJSON_AddBoolToObject(json, "sd_shuffle", s->sd_shuffle);
     cJSON_AddNumberToObject(json, "sd_repeat", s->sd_repeat);
 
+    // Current media source (radio|sd|bt) — resolved server-side so clients
+    // don't replicate the kept-SD-queue nuance (paused SD still counts as SD).
+    const char *src = "radio";
+    switch (media_source_current()) {
+        case MEDIA_SOURCE_SD:    src = "sd"; break;
+        case MEDIA_SOURCE_BT:    src = "bt"; break;
+        case MEDIA_SOURCE_RADIO: break;
+    }
+    cJSON_AddStringToObject(json, "source", src);
+
     // WiFi RSSI (dBm) — 0 when STA not connected / AP mode
     wifi_ap_record_t ap;
     cJSON_AddNumberToObject(json, "rssi",
