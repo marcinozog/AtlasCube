@@ -18,6 +18,10 @@ A hobby project — internet radio and smart clock running on a generic dev boar
     <td>Install prebuilt firmware over USB from a Chromium browser — no ESP-IDF, no esptool, no CLI</td>
   </tr>
   <tr>
+    <td>🖼️ <b><a href="https://atlascube.net/wallpapers/">Wallpaper gallery</a></b></td>
+    <td>Download ready-made AtlasCube wallpapers grouped by display resolution</td>
+  </tr>
+  <tr>
     <td>🔧 <b><a href="#build">Build from source</a></b></td>
     <td>Different display or your own pin layout? Pick the variant and set every GPIO in <a href="main/include/defines.h"><code>main/include/defines.h</code></a>, then build with one command</td>
   </tr>
@@ -130,7 +134,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Analog needle VU meter — two independently placed left/right channel meters, each just a thin frame and a pivoting needle drawn over the wallpaper, so the meter faces can be painted right into the background image (e.g. a vintage amplifier photo); position and size each meter separately in the layout editor
 - Weather widget — optional current temperature and conditions on the home screen, with day/night condition icons; choose keyless Open-Meteo or OpenWeatherMap (API key required), then configure coordinates and refresh interval in Settings → Weather
 - Configurable layout — position and style widgets in the visual web editor (stored as JSON); optional theme-aware background plates and adjustable opacity keep labels, the weather widget and station information readable over wallpapers
-- Screen background — choose a gradient, a solid color, an **SD wallpaper image** (panel-sized RGB565 `.bin`), or fetch a JPEG directly from an internet URL. Built-in presets, on-boot/daily refresh, saving to SD and 0–80% dimming are available from the Settings web UI
+- Screen background — choose a gradient, a solid color, an **SD wallpaper image** (panel-sized RGB565 `.bin`), or fetch a JPEG directly from an internet URL. The layout editor can also browse the [online wallpaper gallery](https://atlascube.net/wallpapers/), automatically show images matching the configured display resolution, convert and install one to the SD card, and let you choose its filename. Built-in presets, on-boot/daily refresh, saving to SD and 0–80% dimming are available from the Settings web UI
 - Custom boot splash logo — drop a panel-sized RGB565 `.bin` on the SD card to replace the built-in logo (auto-fit; falls back to the built-in logo if missing)
 - Optional per-source screens in the home ring — show or hide the Radio, SD player and Bluetooth screens from the Settings web UI (the home hub stays, so the ring is never empty)
 - 180° flip & colour inversion — rotate the whole screen upside-down (for inverted mounting) or invert panel colours (fixes batches where e.g. yellow shows as blue); both toggle from the Settings web UI and apply live, no restart
@@ -452,6 +456,8 @@ Available at the device IP or `<hostname>.local` (STA mode), or `192.168.4.1` (A
 | MQTT widgets | `/mqtt.html` |
 
 WebSocket endpoint: `ws://<device-ip>/ws` — pushes state changes (volume, track, radio state) in real time.
+
+In **Layout editor → Wallpaper**, use **Online gallery** to browse wallpapers matching the active display resolution. **Preview** opens the source image, while **Install** downloads it through the browser, converts it to the panel-sized RGB565 `.bin` format and uploads it to `/wallpapers` on the SD card. Before upload you can change the destination filename; `.bin` is added automatically. An internet connection is required only while browsing and installing from the gallery.
 
 The running firmware version (from `git describe`) is shown in the web UI header, on the Wi-Fi setup page, and — together with the device IP — on the **boot splash** for a few seconds in STA mode (toggleable in Settings → Display). A quick way to confirm what was flashed and how to reach the device.
 

@@ -18,6 +18,10 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
     <td>Gotowy firmware przez USB z przeglądarki Chromium — bez ESP-IDF, bez esptool, bez konsoli</td>
   </tr>
   <tr>
+    <td>🖼️ <b><a href="https://atlascube.net/wallpapers/">Galeria tapet</a></b></td>
+    <td>Gotowe tapety dla AtlasCube pogrupowane według rozdzielczości wyświetlacza</td>
+  </tr>
+  <tr>
     <td>🔧 <b><a href="#build">Zbuduj ze źródeł</a></b></td>
     <td>Inny wyświetlacz albo własny układ pinów? Wybierz wariant i ustaw każdy GPIO w <a href="main/include/defines.h"><code>main/include/defines.h</code></a>, a potem zbuduj jedną komendą</td>
   </tr>
@@ -128,7 +132,7 @@ Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tym
 - Wychyłowy wskaźnik VU — dwa niezależnie rozmieszczane mierniki kanałów lewego i prawego, każdy to tylko cienka ramka i wskazówka rysowane na tapecie, więc tarcze mierników mogą być namalowane wprost w obrazku tła (np. zdjęciu wzmacniacza vintage); pozycję i rozmiar każdego miernika ustawiasz osobno w edytorze layoutu
 - Widget pogody — opcjonalna bieżąca temperatura i warunki na ekranie głównym, z ikonami zależnymi od pogody oraz dnia/nocy; do wyboru Open-Meteo bez klucza lub OpenWeatherMap (wymaga klucza API), ze współrzędnymi i interwałem odświeżania ustawianymi w Ustawienia → Pogoda
 - Konfigurowalny layout — pozycje i wygląd widgetów ustawiasz w wizualnym edytorze webowym (zapis w JSON-ie); opcjonalne tła dopasowane do motywu i regulowana przezroczystość utrzymują czytelność etykiet, widgetu pogody i informacji o stacji na tapetach
-- Tło ekranu — do wyboru gradient, jednolity kolor, **tapeta z karty SD** (`.bin` RGB565 w rozmiarze panelu) albo JPEG pobierany bezpośrednio z internetowego URL-a. W web UI dostępne są presety, odświeżanie przy starcie lub codziennie, zapis na SD i przyciemnienie 0–80%
+- Tło ekranu — do wyboru gradient, jednolity kolor, **tapeta z karty SD** (`.bin` RGB565 w rozmiarze panelu) albo JPEG pobierany bezpośrednio z internetowego URL-a. Edytor layoutu pozwala też przeglądać [galerię tapet online](https://atlascube.net/wallpapers/), automatycznie pokazuje obrazy pasujące do skonfigurowanej rozdzielczości, konwertuje wybraną tapetę i instaluje ją na karcie SD z możliwością zmiany nazwy pliku. W web UI dostępne są również presety, odświeżanie przy starcie lub codziennie, zapis na SD i przyciemnienie 0–80%
 - Własne logo splash — wrzuć na kartę SD plik `.bin` RGB565 w rozmiarze panelu, żeby podmienić wbudowane logo (auto-skalowanie; gdy brak pliku, wraca do wbudowanego)
 - Opcjonalne ekrany per źródło w pierścieniu głównym — pokazujesz albo chowasz ekrany Radio, odtwarzacza SD i Bluetooth z web UI (hub główny zostaje, więc pierścień nigdy nie jest pusty)
 - Obrót 180° i inwersja kolorów — odwrócenie całego ekranu (przy montażu „do góry nogami") albo inwersja kolorów panelu (naprawia partie, gdzie np. żółty wychodzi niebieski); oba przełączniki w web UI, działają na żywo, bez restartu
@@ -449,6 +453,8 @@ Dostępne pod IP urządzenia lub `<nazwa>.local` (tryb STA), albo pod `192.168.4
 | Widgety MQTT | `/mqtt.html` |
 
 Endpoint WebSocket: `ws://<ip-urzadzenia>/ws` — wypycha zmiany stanu (głośność, utwór, stan radia) na żywo.
+
+W sekcji **Edytor layoutu → Tapeta** przycisk **Online gallery** otwiera tapety pasujące do aktywnej rozdzielczości ekranu. **Preview** pokazuje obraz źródłowy, a **Install** pobiera go przez przeglądarkę, konwertuje do panelowego formatu RGB565 `.bin` i zapisuje w katalogu `/wallpapers` na karcie SD. Przed wysłaniem można zmienić nazwę pliku; rozszerzenie `.bin` jest dodawane automatycznie. Internet jest potrzebny tylko podczas przeglądania i instalowania tapet z galerii.
 
 Wersja działającego firmware (z `git describe`) jest pokazywana w nagłówku web UI, na stronie konfiguracji Wi-Fi oraz — razem z adresem IP urządzenia — na **ekranie powitalnym (splash)** przez kilka sekund w trybie STA (przełączane w Ustawienia → Display). Szybki sposób na potwierdzenie, co się wgrało i jak dostać się do urządzenia.
 
