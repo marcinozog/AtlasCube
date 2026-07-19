@@ -16,12 +16,17 @@ static const char *TAG = "UI_BG";
 #if !defined(UI_PROFILE_MONO_128X64) && !defined(UI_PROFILE_MONO_256X64)
 
 // ── Wallpaper ───────────────────────────────────────────────────────────────
-// A single full-screen LVGL .bin (RGB565, DISPLAY_WIDTH x DISPLAY_HEIGHT) loaded
-// from the SD path in settings (display.wallpaper_path) and used as the shared
-// screen background in place of the gradient when display.wallpaper_on is set.
-// Same .bin format the photo screensaver consumes — see scripts/img2lvgl.py.
+// Full-screen LVGL .bin (RGB565, DISPLAY_WIDTH x DISPLAY_HEIGHT) backgrounds
+// loaded from SD, used in place of the gradient when display.wallpaper_on is
+// set. The path is resolved per screen: the hub sections in ui_profile
+// (clock/radio/sd/bt) may override the global default (display.wallpaper_path)
+// with their own file, or opt out with "none". Every distinct path gets its own
+// PSRAM slot so navigating between screens never re-reads the SD card (which
+// would contend with SD music playback). Same .bin format the photo screensaver
+// consumes — see scripts/img2lvgl.py.
 #define LV_BIN_MAGIC     0x19
 #define LV_BIN_RGB565    0x12
+#define WP_SLOTS         5   // 4 per-screen overrides + the global default
 
 typedef struct __attribute__((packed)) {
     uint8_t  magic;
@@ -33,10 +38,16 @@ typedef struct __attribute__((packed)) {
     uint16_t reserved;
 } bin_header_t;
 
-static uint16_t      *s_wp_buf    = NULL;
-static lv_image_dsc_t s_wp_img;
-static bool           s_wp_loaded = false;
-static bool           s_wp_tried  = false;   // load attempted (success or not)
+typedef struct {
+    char           path[64];   // resolved fopen path ("" → slot unused)
+    uint16_t      *buf;        // panel-sized PSRAM buffer, reused across reloads
+    lv_image_dsc_t img;
+    bool           loaded;     // buf holds a valid image of `path`
+    bool           tried;      // load attempted — a failure latches until reload
+} wp_slot_t;
+
+static wp_slot_t s_wp[WP_SLOTS];
+static int       s_wp_evict = 0;   // round-robin victim when every slot is taken
 
 // Descriptor to display for the internet wallpaper: the pristine original when
 // dim is off, otherwise a dimmed PSRAM copy (built in net_dimmed()), rebuilt
@@ -65,35 +76,64 @@ static void dim_rgb565(uint16_t *px, size_t n, int dim_pct)
     }
 }
 
-// Read the wallpaper .bin into PSRAM once. Returns true if a valid, correctly
-// sized image is now in s_wp_img. Failures (off / no SD / no file / wrong size)
-// are latched and never retried until ui_background_reload_wallpaper() clears
-// the latch, so apply() falls back to the gradient meanwhile.
-static bool load_wallpaper(void)
+// Per-screen wallpaper override from ui_profile: "" inherit, "none" opt out,
+// else an fopen path. Returns NULL for screens without a hub section — they
+// always follow the global default.
+static const char *screen_wp_override(ui_screen_id_t screen)
 {
-    if (s_wp_tried) return s_wp_loaded;
-
-    // Disabled, or no path set: settle without touching the SD card so a
-    // radio-only session never pays the SDMMC+FATFS mount cost.
-    const app_settings_t *st = settings_get();
-    if (!st->display.wallpaper_on || !st->display.wallpaper_path[0]) {
-        s_wp_tried = true;
-        return false;
+    const ui_profile_t *p = ui_profile_get();
+    switch (screen) {
+        case SCREEN_HOME:  return p->clock_wallpaper;
+        case SCREEN_RADIO: return p->radio_wallpaper;
+        case SCREEN_SD:    return p->sd_wallpaper;
+        case SCREEN_BT:    return p->bt_wallpaper;
+        default:           return NULL;
     }
+}
+
+// Find (or claim) the cache slot for `path`. Prefers an existing match, then an
+// unused slot; when all are taken, evicts round-robin — with WP_SLOTS above the
+// number of screens that can override, eviction only happens after the user has
+// cycled through many distinct files in one session.
+static wp_slot_t *wp_slot_for(const char *path)
+{
+    wp_slot_t *victim = NULL;
+    for (int i = 0; i < WP_SLOTS; i++) {
+        if (strcmp(s_wp[i].path, path) == 0) return &s_wp[i];
+        if (!victim && !s_wp[i].path[0]) victim = &s_wp[i];
+    }
+    if (!victim) {
+        victim = &s_wp[s_wp_evict];
+        s_wp_evict = (s_wp_evict + 1) % WP_SLOTS;
+    }
+    if (victim->loaded) lv_image_cache_drop(&victim->img);
+    strncpy(victim->path, path, sizeof(victim->path) - 1);
+    victim->path[sizeof(victim->path) - 1] = '\0';
+    victim->loaded = false;
+    victim->tried  = false;
+    return victim;
+}
+
+// Read the slot's .bin into its PSRAM buffer once. Returns true if a valid,
+// correctly sized image is now in s->img. Failures (no file / wrong size) are
+// latched and never retried until ui_background_reload_wallpaper() clears the
+// latch, so apply() falls back to the gradient meanwhile.
+static bool wp_slot_load(wp_slot_t *s)
+{
+    if (s->tried) return s->loaded;
 
     // ui_background_apply() runs very early (before the splash), so the SD card
-    // may not be mounted yet — mount it lazily. Until it's up, leave s_wp_tried
+    // may not be mounted yet — mount it lazily. Until it's up, leave s->tried
     // unset so a later re-apply (e.g. UI_EVT_BG_CHANGED) retries.
     if (sdcard_init() != ESP_OK || !sdcard_is_mounted()) {
         ESP_LOGI(TAG, "SD not ready — wallpaper deferred");
         return false;
     }
-    s_wp_tried = true;
+    s->tried = true;
 
     const int W = DISPLAY_WIDTH, H = DISPLAY_HEIGHT;
-    const char *path = st->display.wallpaper_path;
-    FILE *fp = fopen(path, "rb");
-    if (!fp) { ESP_LOGI(TAG, "no wallpaper at %s", path); return false; }
+    FILE *fp = fopen(s->path, "rb");
+    if (!fp) { ESP_LOGI(TAG, "no wallpaper at %s", s->path); return false; }
 
     bin_header_t h;
     if (fread(&h, sizeof(h), 1, fp) != 1 ||
@@ -104,39 +144,43 @@ static bool load_wallpaper(void)
         return false;
     }
 
-    if (!s_wp_buf) {
-        s_wp_buf = heap_caps_malloc((size_t)W * H * 2, MALLOC_CAP_SPIRAM);
-        if (!s_wp_buf) { ESP_LOGE(TAG, "wallpaper buffer alloc failed"); fclose(fp); return false; }
+    if (!s->buf) {
+        s->buf = heap_caps_malloc((size_t)W * H * 2, MALLOC_CAP_SPIRAM);
+        if (!s->buf) { ESP_LOGE(TAG, "wallpaper buffer alloc failed"); fclose(fp); return false; }
     }
-    size_t got = fread(s_wp_buf, (size_t)W * 2, H, fp);
+    size_t got = fread(s->buf, (size_t)W * 2, H, fp);
     fclose(fp);
     if (got != (size_t)H) { ESP_LOGW(TAG, "wallpaper short read (%u/%d rows)", (unsigned)got, H); return false; }
 
     // Dim changes ride UI_EVT_BG_CHANGED → reload_wallpaper() → fresh re-read
     // from the file, so dimming in place here is always applied exactly once.
-    dim_rgb565(s_wp_buf, (size_t)W * H, st->display.wallpaper_dim);
+    dim_rgb565(s->buf, (size_t)W * H, settings_get()->display.wallpaper_dim);
 
-    s_wp_img.header.magic  = LV_IMAGE_HEADER_MAGIC;
-    s_wp_img.header.cf     = LV_COLOR_FORMAT_RGB565;
-    s_wp_img.header.w      = W;
-    s_wp_img.header.h      = H;
-    s_wp_img.header.stride = W * 2;
-    s_wp_img.data_size     = (uint32_t)(W * H * 2);
-    s_wp_img.data          = (const uint8_t *)s_wp_buf;
-    s_wp_loaded = true;
-    ESP_LOGI(TAG, "wallpaper loaded from %s", path);
+    s->img.header.magic  = LV_IMAGE_HEADER_MAGIC;
+    s->img.header.cf     = LV_COLOR_FORMAT_RGB565;
+    s->img.header.w      = W;
+    s->img.header.h      = H;
+    s->img.header.stride = W * 2;
+    s->img.data_size     = (uint32_t)(W * H * 2);
+    s->img.data          = (const uint8_t *)s->buf;
+    s->loaded = true;
+    ESP_LOGI(TAG, "wallpaper loaded from %s", s->path);
     return true;
 }
 
-// Forget the loaded wallpaper so the next ui_background_apply() re-reads it from
-// SD. Must run on the LVGL task (drops the image cache for the reused
-// descriptor); UI_EVT_BG_CHANGED is dispatched there.
+// Forget every loaded wallpaper so the next ui_background_apply() re-reads from
+// SD (fresh file content, dim re-baked). Must run on the LVGL task (drops the
+// image cache for reused descriptors); UI_EVT_BG_CHANGED is dispatched there.
+// Buffers stay allocated — the next load reuses the same panel-sized blocks.
 void ui_background_reload_wallpaper(void)
 {
     net_wallpaper_commit();   // adopt a finished internet fetch, if any (LVGL task)
-    if (s_wp_loaded) lv_image_cache_drop(&s_wp_img);
-    s_wp_tried  = false;
-    s_wp_loaded = false;
+    for (int i = 0; i < WP_SLOTS; i++) {
+        if (s_wp[i].loaded) lv_image_cache_drop(&s_wp[i].img);
+        s_wp[i].path[0] = '\0';
+        s_wp[i].loaded  = false;
+        s_wp[i].tried   = false;
+    }
     // Invalidate the dimmed net-wallpaper copy: a new fetch may land at the
     // same PSRAM address, so the data pointer alone can't be trusted as a key.
     s_net_dim_src = NULL;
@@ -253,31 +297,51 @@ static const lv_image_dsc_t *net_dimmed(const lv_image_dsc_t *src)
     return &s_net_dim_img;
 }
 
-void ui_background_apply(lv_obj_t *obj)
+void ui_background_apply(lv_obj_t *obj, ui_screen_id_t screen)
 {
     const ui_theme_t t = theme_current();
     const app_settings_t *st = settings_get();
 
-    // Internet wallpaper (PSRAM only, via /api/wallpaper/fetch): exists only
-    // after an explicit user fetch, so it outranks both the SD wallpaper and
-    // the gradient until the next reboot.
-    const lv_image_dsc_t *net_wp = net_wallpaper_image();
-    if (net_wp) {
-        lv_obj_set_style_bg_image_src(obj, net_dimmed(net_wp), LV_PART_MAIN);
-        lv_obj_set_style_bg_image_tiled(obj, false, LV_PART_MAIN);
-        lv_obj_set_style_bg_image_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
-        lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
-        return;
+    // Per-screen override — honoured only while the global feature switch is
+    // on (wallpaper_on gates every SD wallpaper, overrides included).
+    const char *ovr = st->display.wallpaper_on ? screen_wp_override(screen) : NULL;
+    if (ovr && !ovr[0]) ovr = NULL;   // "" → inherit the global default
+    const bool ovr_none = ovr && strcmp(ovr, "none") == 0;
+
+    // Internet wallpaper (PSRAM only, via /api/wallpaper/fetch): an explicit
+    // user fetch that temporarily replaces the GLOBAL wallpaper until the next
+    // reboot. It substitutes only the inherited tier — a screen with its own
+    // override ("none" or a path) keeps its explicit choice.
+    if (!ovr) {
+        const lv_image_dsc_t *net_wp = net_wallpaper_image();
+        if (net_wp) {
+            lv_obj_set_style_bg_image_src(obj, net_dimmed(net_wp), LV_PART_MAIN);
+            lv_obj_set_style_bg_image_tiled(obj, false, LV_PART_MAIN);
+            lv_obj_set_style_bg_image_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
+            return;
+        }
     }
 
-    // Wallpaper (test): if a valid full-screen .bin is on the SD card, it wins
-    // over the gradient entirely.
-    if (load_wallpaper()) {
-        lv_obj_set_style_bg_image_src(obj, &s_wp_img, LV_PART_MAIN);
-        lv_obj_set_style_bg_image_tiled(obj, false, LV_PART_MAIN);
-        lv_obj_set_style_bg_image_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
-        lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
-        return;
+    // SD wallpaper for this screen (override path, else the global default):
+    // a valid full-screen .bin wins over the gradient entirely. A "none"
+    // override or a failed load falls through to the gradient/solid below.
+    const char *wp_path = NULL;
+    if (!ovr_none) {
+        if (ovr)
+            wp_path = ovr;
+        else if (st->display.wallpaper_on && st->display.wallpaper_path[0])
+            wp_path = st->display.wallpaper_path;
+    }
+    if (wp_path) {
+        wp_slot_t *slot = wp_slot_for(wp_path);
+        if (wp_slot_load(slot)) {
+            lv_obj_set_style_bg_image_src(obj, &slot->img, LV_PART_MAIN);
+            lv_obj_set_style_bg_image_tiled(obj, false, LV_PART_MAIN);
+            lv_obj_set_style_bg_image_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
+            return;
+        }
     }
 
     // Solid background (gradient disabled): the pre-gradient look, theme-aware.
@@ -307,7 +371,7 @@ void ui_background_apply(lv_obj_t *obj)
 
 #else  // mono panel — no gradient background
 
-void ui_background_apply(lv_obj_t *obj) { (void)obj; }
+void ui_background_apply(lv_obj_t *obj, ui_screen_id_t screen) { (void)obj; (void)screen; }
 void ui_background_reload_wallpaper(void) { }
 
 #endif

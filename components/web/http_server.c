@@ -3205,6 +3205,10 @@ static esp_err_t api_wallpaper_status_handler(httpd_req_t *req)
 {
     cJSON *json = cJSON_CreateObject();
     cJSON_AddStringToObject(json, "status", net_wallpaper_status());
+    // Whether a fetched internet wallpaper is currently displayed (it outranks
+    // the inherited SD/gradient background until reboot or dismissal) — the
+    // layout editor uses this to avoid previewing the wrong background.
+    cJSON_AddBoolToObject(json, "active", net_wallpaper_image() != NULL);
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
     return send_json_or_500(req, str);

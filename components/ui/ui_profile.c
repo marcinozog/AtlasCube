@@ -1257,6 +1257,14 @@ static void load_font(const cJSON *obj, const char *key, const lv_font_t **dst)
     if (f) *dst = f;
 }
 
+static void load_str(const cJSON *obj, const char *key, char *dst, size_t cap)
+{
+    const cJSON *it = cJSON_GetObjectItem(obj, key);
+    if (!cJSON_IsString(it)) return;
+    strncpy(dst, it->valuestring, cap - 1);
+    dst[cap - 1] = '\0';
+}
+
 static void add_i16(cJSON *obj, const char *key, int16_t v)
 {
     cJSON_AddNumberToObject(obj, key, v);
@@ -1270,6 +1278,11 @@ static void add_bool(cJSON *obj, const char *key, bool v)
 static void add_font(cJSON *obj, const char *key, const lv_font_t *f)
 {
     cJSON_AddStringToObject(obj, key, ui_font_id(f));
+}
+
+static void add_str(cJSON *obj, const char *key, const char *v)
+{
+    cJSON_AddStringToObject(obj, key, v);
 }
 
 static void clamp_reel_size(int16_t *size)
@@ -1378,6 +1391,7 @@ static void load_clock(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "clock_weather_y",            &p->clock_weather_y);
     load_i16 (obj, "clock_weather_w",            &p->clock_weather_w);
     load_font(obj, "clock_weather_font",         &p->clock_weather_font);
+    load_str (obj, "clock_wallpaper",            p->clock_wallpaper, sizeof(p->clock_wallpaper));
 }
 
 static void load_bt(const cJSON *obj, ui_profile_t *p)
@@ -1414,6 +1428,7 @@ static void load_bt(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "bt_time_x",              &p->bt_time_x);
     load_i16 (obj, "bt_time_y",              &p->bt_time_y);
     load_font(obj, "bt_time_font",           &p->bt_time_font);
+    load_str (obj, "bt_wallpaper",           p->bt_wallpaper, sizeof(p->bt_wallpaper));
 }
 
 static void load_radio(const cJSON *obj, ui_profile_t *p)
@@ -1482,6 +1497,7 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_weather_w",            &p->radio_weather_w);
     load_font(obj, "radio_weather_font",         &p->radio_weather_font);
     load_bool(obj, "radio_show_ctrl_overlay",    &p->radio_show_ctrl_overlay);
+    load_str (obj, "radio_wallpaper",            p->radio_wallpaper, sizeof(p->radio_wallpaper));
     load_hotspots(obj, "radio", p->radio_touch_hotspots);
 }
 
@@ -1546,6 +1562,7 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_weather_w",            p->radio_weather_w);
     add_font(o, "radio_weather_font",         p->radio_weather_font);
     add_bool(o, "radio_show_ctrl_overlay",    p->radio_show_ctrl_overlay);
+    add_str (o, "radio_wallpaper",            p->radio_wallpaper);
     dump_hotspots(o, "radio", p->radio_touch_hotspots);
     return o;
 }
@@ -1616,6 +1633,7 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "sd_weather_w",              &p->sd_weather_w);
     load_font(obj, "sd_weather_font",           &p->sd_weather_font);
     load_bool(obj, "sd_show_ctrl_overlay",      &p->sd_show_ctrl_overlay);
+    load_str (obj, "sd_wallpaper",              p->sd_wallpaper, sizeof(p->sd_wallpaper));
     load_hotspots(obj, "sd", p->sd_touch_hotspots);
 }
 
@@ -1682,6 +1700,7 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_weather_w",              p->sd_weather_w);
     add_font(o, "sd_weather_font",           p->sd_weather_font);
     add_bool(o, "sd_show_ctrl_overlay",      p->sd_show_ctrl_overlay);
+    add_str (o, "sd_wallpaper",              p->sd_wallpaper);
     dump_hotspots(o, "sd", p->sd_touch_hotspots);
     return o;
 }
@@ -1720,6 +1739,7 @@ static cJSON *dump_bt(const ui_profile_t *p)
     add_i16 (o, "bt_time_x",              p->bt_time_x);
     add_i16 (o, "bt_time_y",              p->bt_time_y);
     add_font(o, "bt_time_font",           p->bt_time_font);
+    add_str (o, "bt_wallpaper",           p->bt_wallpaper);
     return o;
 }
 
@@ -1769,6 +1789,7 @@ static cJSON *dump_clock(const ui_profile_t *p)
     add_i16 (o, "clock_weather_y",            p->clock_weather_y);
     add_i16 (o, "clock_weather_w",            p->clock_weather_w);
     add_font(o, "clock_weather_font",         p->clock_weather_font);
+    add_str (o, "clock_wallpaper",            p->clock_wallpaper);
     return o;
 }
 

@@ -174,11 +174,12 @@ static void on_state_change(void)
 
 // Each screen's create() re-asserts an opaque background on lv_scr_act(), which
 // would hide an animated background living on lv_layer_bottom() (the VU meter).
-// Re-apply the shared background after every screen build so it survives nav.
+// Re-apply the shared background after every screen build so it survives nav —
+// this is also where a per-screen wallpaper override (ui_profile) kicks in.
 // For static gradient/wallpaper/solid modes this is a cheap no-op repaint.
 static void reassert_background(void)
 {
-    ui_background_apply(lv_scr_act());
+    ui_background_apply(lv_scr_act(), s_active_id);
 }
 
 // Rebuild the current screen — used after a ui_profile (layout) change from
@@ -534,7 +535,8 @@ void ui_manager_run(void)
 
     // Dithered gradient background, applied once to the singleton screen object.
     // lv_obj_clean() only removes children, so it persists under every screen.
-    ui_background_apply(lv_scr_act());
+    // s_active_id is still the SCREEN_COUNT sentinel here → global wallpaper.
+    ui_background_apply(lv_scr_act(), s_active_id);
 
     for (lv_indev_t *id = lv_indev_get_next(NULL); id; id = lv_indev_get_next(id)) {
         if (lv_indev_get_type(id) == LV_INDEV_TYPE_POINTER) {
@@ -557,14 +559,14 @@ void ui_manager_run(void)
                 continue;
             }
             if (ev.type == UI_EVT_THEME_CHANGED) {
-                ui_background_apply(lv_scr_act());   // swap gradient to match theme
+                ui_background_apply(lv_scr_act(), s_active_id);   // swap gradient to match theme
                 if (s_active && s_active->apply_theme)
                     s_active->apply_theme();
                 continue;
             }
             if (ev.type == UI_EVT_BG_CHANGED) {
-                ui_background_reload_wallpaper();     // re-read SD wallpaper if any
-                ui_background_apply(lv_scr_act());    // gradient/wallpaper toggled
+                ui_background_reload_wallpaper();     // re-read SD wallpapers if any
+                ui_background_apply(lv_scr_act(), s_active_id);   // gradient/wallpaper toggled
                 lv_obj_invalidate(lv_scr_act());
                 continue;
             }

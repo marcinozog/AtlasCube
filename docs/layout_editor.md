@@ -268,12 +268,43 @@ are all section-agnostic.
   rebuild event. If the device restarts immediately after a POST, the
   LCD state will still be consistent with the file (read back on boot).
 
+## Per-screen wallpapers
+
+Each hub section carries a `<section>_wallpaper` string field
+(`clock_wallpaper`, `radio_wallpaper`, `sd_wallpaper`, `bt_wallpaper`):
+
+- `""` (default) — inherit the global wallpaper (`display.wallpaper_path`
+  in settings),
+- `"none"` — no wallpaper on this screen (gradient/solid background),
+- anything else — an fopen path to a panel-sized RGB565 `.bin` on SD.
+
+The firmware resolves the path in `ui_background_apply()` for the active
+screen (`SCREEN_HOME` → clock, `SCREEN_RADIO`, `SCREEN_SD`, `SCREEN_BT`;
+every other screen follows the global default) and caches each distinct
+file in its own PSRAM slot, so navigating between screens never re-reads
+the SD card. `display.wallpaper_on` remains the global feature switch and
+gates every SD wallpaper, overrides included. An internet-fetched
+wallpaper (`/api/wallpaper/fetch`) substitutes only the inherited tier:
+screens with their own override (a path or `"none"`) keep their explicit
+choice.
+Typical use: the BT screen has no audio signal inside the ESP (external
+BT module), so a wallpaper designed around VU meters can be replaced or
+disabled there.
+
+In the editor, the wallpaper picker above the canvas edits the **active
+tab's** screen: *Choose from SD…* sets the override, *Global* reverts to
+inheritance, *None* disables the wallpaper for that screen. The preview
+always shows the effective wallpaper of the active tab; when the device
+is currently displaying an internet-fetched wallpaper (its pixels aren't
+available to the editor), the canvas shows a "net wallpaper" placeholder
+instead (`GET /api/wallpaper/status` reports `active`).
+
 ## Per-wallpaper layout presets
 
 Different wallpapers usually need different widget placement (hotspots,
-now-playing, VU meter…). The editor can therefore snapshot the **entire**
-profile (all sections) into a preset file on the SD card, named after the
-current wallpaper:
+now-playing, VU meter…). The editor can therefore snapshot the **active
+section** into a preset file on the SD card, named after that screen's
+effective wallpaper:
 
 ```
 /wallpapers/layouts/<wallpaper-basename>.json
@@ -281,22 +312,28 @@ current wallpaper:
 
 e.g. wallpaper `/sdcard/wallpapers/sunset.bin` → preset
 `/wallpapers/layouts/sunset.json`. Format: `{ w, h, wallpaper,
-sections: { clock, bt, radio, sd } }`.
+sections: { clock?, bt?, radio?, sd? } }` — sections are optional; Save
+merges the active section into the existing file, so one wallpaper can
+accumulate layouts for several screens.
 
 This is a **frontend-only** feature — no firmware involvement. Save
 uploads the editor's current state via `POST /api/sd/file` (parent
-directories are auto-created). Load fetches the file and POSTs each
-section to the existing `/api/ui/profile/<section>` endpoints, so the
-layout is applied live and persisted to `ui_profile.json` exactly like a
-manual Apply. When you switch wallpapers from the editor's picker, it
-checks for a matching preset and offers to apply it.
+directories are auto-created). Load fetches the file and POSTs the
+active section to the existing `/api/ui/profile/<section>` endpoint, so
+the layout is applied live and persisted to `ui_profile.json` exactly
+like a manual Apply — and never touches the other screens' layouts. When
+you pick a wallpaper for a screen in the editor, it checks for a preset
+with that screen's section and offers to apply it.
 
 The `w`/`h` stamp guards against cross-LCD presets: a file saved for a
 different resolution is refused on load (same rule as `ui_profile.json`).
 
 Note: **Save** snapshots what the editor currently shows — including
 tweaks not yet applied to the device. Load-then-Save round-trips
-losslessly.
+losslessly. Save also pins the screen's **effective wallpaper path** into
+the stored section (even when the screen was inheriting the global
+default), so loading the preset later re-applies both the layout and its
+wallpaper regardless of what the global default is by then.
 
 ## Limits
 
