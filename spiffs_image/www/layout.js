@@ -658,10 +658,12 @@ function buildWallpaperPicker() {
 // active section — switching the SD screen's wallpaper never touches the
 // radio/BT layouts. One file can accumulate layouts for several screens.
 
+const LAYOUTS_DIR = '/wallpapers/layouts';
+
 function presetPath() {
     if (!currentWallpaperPath) return '';
     const base = currentWallpaperPath.split('/').pop().replace(/\.bin$/i, '');
-    return '/wallpapers/layouts/' + base + '.json';
+    return LAYOUTS_DIR + '/' + base + '.json';
 }
 
 function setPresetStatus(msg, error = false) {
@@ -780,6 +782,155 @@ async function offerPresetForWallpaper() {
         }
     } catch {
         // No preset / no SD — nothing to offer.
+    }
+}
+
+// ── Orphaned layout presets (Presets tab) ───────────────────────────────────
+// Presets become orphans when their wallpaper .bin is deleted or renamed.
+// A wallpaper can live anywhere on the card, so name matching against
+// /wallpapers alone would flag false orphans — instead each preset is opened
+// and the full paths it stores in its <section>_wallpaper fields are checked.
+// Only when none of the referenced files exist is the preset an orphan.
+const SD_MOUNT = '/sdcard';
+
+// Existence checks share one /api/sd/list request per directory.
+function sdDirFiles(dir, cache) {
+    if (!cache.has(dir)) {
+        cache.set(dir, fetch('/api/sd/list?path=' + encodeURIComponent(dir))
+            .then(r => r.ok ? r.json() : { entries: [] })
+            .then(d => new Set((d.entries || []).filter(e => !e.dir).map(e => e.name)))
+            .catch(() => new Set()));
+    }
+    return cache.get(dir);
+}
+
+async function sdFileExists(relPath, cache) {
+    const dir = relPath.replace(/\/[^/]+$/, '') || '/';
+    return (await sdDirFiles(dir, cache)).has(relPath.split('/').pop());
+}
+
+// Walks a preset's JSON and collects every "/sdcard/..." string stored under a
+// *_wallpaper key ("" and "none" fall through the startsWith test).
+function collectWallpaperRefs(node, out = []) {
+    if (Array.isArray(node)) { node.forEach(v => collectWallpaperRefs(v, out)); return out; }
+    if (node && typeof node === 'object') {
+        for (const [k, v] of Object.entries(node)) {
+            if (k.endsWith('_wallpaper') && typeof v === 'string' &&
+                v.startsWith(SD_MOUNT + '/')) {
+                if (!out.includes(v)) out.push(v);
+            } else {
+                collectWallpaperRefs(v, out);
+            }
+        }
+    }
+    return out;
+}
+
+async function checkOrphanPresets() {
+    const status = document.getElementById('presetOrphanStatus');
+    document.getElementById('presetOrphanList').innerHTML = '';
+    status.textContent = 'Scanning…';
+    try {
+        const r = await fetch('/api/sd/list?path=' + encodeURIComponent(LAYOUTS_DIR),
+                              { cache: 'no-store' });
+        if (!r.ok) {
+            status.textContent = 'No presets found (SD card or ' + LAYOUTS_DIR +
+                                 ' not available).';
+            return;
+        }
+        const d = await r.json();
+        const jsons = (d.entries || []).filter(e => !e.dir && /\.json$/i.test(e.name));
+        if (!jsons.length) { status.textContent = 'No preset files found.'; return; }
+
+        const cache = new Map();
+        const orphans = [];
+        let okCount = 0;
+        for (const e of jsons) {
+            const rel = LAYOUTS_DIR + '/' + e.name;
+            let refs = [];
+            try {
+                const jr = await fetch('/api/sd/file?path=' + encodeURIComponent(rel),
+                                       { cache: 'no-store' });
+                if (jr.ok) refs = collectWallpaperRefs(await jr.json());
+            } catch (_) { /* unreadable/invalid JSON — fall back to name matching */ }
+            // Old presets may predate the stored full paths — assume the two
+            // standard wallpaper locations for <stem>.bin.
+            if (!refs.length) {
+                const stem = e.name.replace(/\.json$/i, '');
+                refs = [SD_MOUNT + '/wallpapers/' + stem + '.bin',
+                        SD_MOUNT + '/wallpapers/saved/' + stem + '.bin'];
+            }
+            const found = await Promise.all(
+                refs.map(p => sdFileExists(p.slice(SD_MOUNT.length), cache)));
+            if (found.some(x => x)) okCount++;
+            else orphans.push({ name: e.name, rel, refs });
+        }
+        renderOrphanList(orphans, okCount);
+    } catch (err) {
+        status.textContent = 'Scan failed: ' + err.message;
+    }
+}
+
+function renderOrphanList(orphans, okCount) {
+    const status = document.getElementById('presetOrphanStatus');
+    const list = document.getElementById('presetOrphanList');
+    list.innerHTML = '';
+    if (!orphans.length) {
+        status.textContent = '✓ No orphans — all ' + okCount +
+                             ' preset(s) have their wallpaper.';
+        return;
+    }
+    status.textContent = orphans.length + ' orphan(s) found, ' + okCount + ' preset(s) OK.';
+
+    orphans.forEach(o => {
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:3px 0';
+        const name = document.createElement('div');
+        name.style.cssText = 'flex:1;font-family:monospace;font-size:12px;min-width:0';
+        const title = document.createElement('div');
+        title.textContent = '📄 ' + o.name;
+        const missing = document.createElement('div');
+        missing.style.cssText = 'opacity:.6;overflow-wrap:anywhere';
+        missing.textContent = 'missing: ' + o.refs.join(', ');
+        name.append(title, missing);
+        const del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'btn-secondary';
+        del.textContent = '🗑 Delete';
+        del.onclick = async () => {
+            del.disabled = true;
+            if (await deleteOrphanPreset(o)) row.remove();
+            else del.disabled = false;
+        };
+        row.append(name, del);
+        list.appendChild(row);
+    });
+
+    if (orphans.length > 1) {
+        const all = document.createElement('button');
+        all.type = 'button';
+        all.className = 'btn-secondary';
+        all.textContent = '🗑 Delete all orphans';
+        all.style.marginTop = '6px';
+        all.onclick = async () => {
+            if (!confirm('Delete ' + orphans.length + ' orphaned preset file(s)?')) return;
+            for (const o of orphans) await deleteOrphanPreset(o);
+            checkOrphanPresets();   // re-scan to show the result
+        };
+        list.appendChild(all);
+    }
+}
+
+async function deleteOrphanPreset(o) {
+    try {
+        const r = await fetch('/api/sd/file?path=' + encodeURIComponent(o.rel),
+                              { method: 'DELETE' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return true;
+    } catch (err) {
+        document.getElementById('presetOrphanStatus').textContent =
+            'Delete of ' + o.name + ' failed: ' + err.message;
+        return false;
     }
 }
 
@@ -1005,15 +1156,23 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 function selectSection(name) {
-    if (!SECTIONS[name]) return;
+    // 'presets' is not a screen — it swaps the editor grid for the
+    // preset-housekeeping card and leaves state.active untouched, so returning
+    // to any screen tab restores the editor exactly where it was.
+    const isPresets = name === 'presets';
+    if (!isPresets && !SECTIONS[name]) return;
+
+    for (const tab of document.querySelectorAll('.section-tab')) {
+        tab.classList.toggle('active', tab.dataset.section === name);
+    }
+    document.querySelector('.layout-grid').style.display = isPresets ? 'none' : '';
+    document.getElementById('presets_card').style.display = isPresets ? '' : 'none';
+    if (isPresets) { checkOrphanPresets(); return; }
+
     if (state.active !== name) keyboardSelection = null;
     state.active = name;
 
     document.getElementById('form_section_title').textContent = SECTIONS[name].title;
-    for (const tab of document.querySelectorAll('.section-tab')) {
-        tab.classList.toggle('active', tab.dataset.section === name);
-    }
-
     buildForm();
     updateLabelPlateControl();
     renderSvg();
