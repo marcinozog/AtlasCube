@@ -564,6 +564,18 @@ function buildWallpaperPicker() {
         b.addEventListener('click', onClick);
         return b;
     };
+    // Hidden file input backing the Upload button: converts a browser image to
+    // the panel-sized .bin, stores it next to the current wallpaper on SD and
+    // assigns it to the active screen — without touching the global wallpaper.
+    const uploadInput = document.createElement('input');
+    uploadInput.type = 'file';
+    uploadInput.accept = 'image/*';
+    uploadInput.hidden = true;
+    uploadInput.addEventListener('change',
+        () => uploadWallpaperTo(wallpaperDirectory(), uploadInput));
+    const uploadBtn = smallBtn('layout_wp_btn_upload', '⬆ Upload...',
+        'Upload an image as this screen\'s wallpaper', () => uploadInput.click());
+    uploadBtn.style.cssText = 'padding:6px 10px;color:var(--accent);border-color:var(--accent)';
     const button = smallBtn('layout_wp_btn_sd', 'Choose from SD...',
         'Pick a wallpaper file for this screen', toggleWallpaperBrowser);
     const defaultBtn = smallBtn('layout_wp_btn_global', 'Global',
@@ -587,7 +599,14 @@ function buildWallpaperPicker() {
         localStorage.setItem('layout_preset_autoload', autoCheck.checked ? '1' : '0');
     });
     autoLabel.append(autoCheck, document.createTextNode('Auto-apply preset'));
-    row.append(caption, name, button, defaultBtn, noneBtn, autoLabel);
+    row.append(uploadBtn, button, defaultBtn, noneBtn, autoLabel, uploadInput);
+
+    // The active wallpaper path gets its own full-width line under the
+    // buttons — inside the button row it was squeezed to a few characters.
+    const nameRow = document.createElement('div');
+    nameRow.style.cssText =
+        'display:flex;align-items:center;gap:8px;margin-top:7px;min-width:0';
+    nameRow.append(caption, name);
 
     const plateRow = document.createElement('div');
     plateRow.style.cssText =
@@ -652,7 +671,7 @@ function buildWallpaperPicker() {
     status.id = 'layout_wallpaper_status';
     status.style.cssText = 'min-height:14px;margin-top:5px;font-size:11px;color:var(--text-dim)';
 
-    picker.append(row, plateRow, browser, presetRow, status);
+    picker.append(row, nameRow, plateRow, browser, presetRow, status);
     frame.insertAdjacentElement('afterend', picker);
     updateLabelPlateControl();
 }
@@ -1029,25 +1048,6 @@ function renderWallpaperDirectory(data) {
         empty.style.cssText = 'padding:7px 9px;font-size:11px;color:var(--text-dim)';
         list.appendChild(empty);
     }
-
-    // Upload straight into the browsed folder: converts a browser image to the
-    // panel-sized .bin and assigns it to the active screen, same as picking an
-    // existing file — without touching the global wallpaper in Settings.
-    const upload = document.createElement('label');
-    upload.textContent = '⬆ Upload image…';
-    upload.style.cssText =
-        'display:block;padding:6px 9px;cursor:pointer;font-size:11px;' +
-        'color:var(--accent);border-top:1px solid var(--border)';
-    upload.onmouseenter = () => { upload.style.background = 'var(--bg-input)'; };
-    upload.onmouseleave = () => { upload.style.background = ''; };
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.accept = 'image/*';
-    fileInput.hidden = true;
-    fileInput.addEventListener('change', () => uploadWallpaperTo(path, fileInput));
-    upload.appendChild(fileInput);
-    list.appendChild(upload);
-
     browser.append(heading, list);
 }
 
