@@ -79,7 +79,7 @@ const CLOCK_FIELDS = [
     { key: 'clock_netinfo_y',    label: 'IP/host Y',    type: 'number' },
     { key: 'clock_netinfo_font', label: 'IP/host font', type: 'font'   },
 
-    { key: 'clock_show_strip', label: 'Show strip',   type: 'bool' },
+    { key: 'clock_show_strip', label: 'Show strip background', type: 'bool' },
     { key: 'clock_strip_x',    label: 'Strip X',      type: 'number' },
     { key: 'clock_strip_y',    label: 'Strip Y',      type: 'number' },
     { key: 'clock_strip_w',    label: 'Strip W',      type: 'number' },
@@ -298,7 +298,7 @@ const FORM_GROUPS = {
         { title: 'Time', enabledBy: 'clock_show_time', fields: ['clock_show_time', 'clock_time_x', 'clock_time_y', 'clock_time_font'] },
         { title: 'Date', enabledBy: 'clock_show_date', fields: ['clock_show_date', 'clock_date_x', 'clock_date_y', 'clock_date_font'] },
         { title: 'Network info', enabledBy: 'clock_show_netinfo', fields: ['clock_show_netinfo', 'clock_netinfo_x', 'clock_netinfo_y', 'clock_netinfo_font'] },
-        { title: 'Station strip', enabledBy: 'clock_show_strip', fields: ['clock_show_strip', 'clock_strip_x', 'clock_strip_y', 'clock_strip_w', 'clock_strip_h', 'clock_strip_bg_opa', 'clock_strip_label_w', 'clock_strip_station_y', 'clock_strip_title_y', 'clock_strip_station_font', 'clock_strip_title_font'] },
+        { title: 'Station / title', fields: ['clock_show_strip', 'clock_strip_x', 'clock_strip_y', 'clock_strip_w', 'clock_strip_h', 'clock_strip_bg_opa', 'clock_strip_label_w', 'clock_strip_station_y', 'clock_strip_title_y', 'clock_strip_station_font', 'clock_strip_title_font'] },
         { title: 'Mode indicator', enabledBy: 'clock_show_mode_indicator', fields: ['clock_show_mode_indicator', 'clock_mode_indic_x', 'clock_mode_indic_y'] },
         { title: 'Event indicator', enabledBy: 'clock_show_event_indicator', fields: ['clock_show_event_indicator', 'clock_event_indic_x', 'clock_event_indic_y'] },
         { title: 'Calendar', enabledBy: 'clock_show_calendar', fields: ['clock_show_calendar', 'clock_calendar_x', 'clock_calendar_y', 'clock_calendar_w', 'clock_calendar_font'] },
@@ -427,6 +427,12 @@ function showKeyboardSelection(el, fields) {
 }
 
 function selectForKeyboard(el, fields) {
+    // Pointer handlers call preventDefault() to support dragging, which also
+    // keeps focus in the last form control. Release it so subsequent arrow
+    // keys are delivered to the page and can nudge the selected placeholder.
+    const focused = document.activeElement;
+    if (focused instanceof HTMLElement && focused !== document.body) focused.blur();
+
     keyboardSelection = {
         section: state.active,
         x: fields.x,
@@ -1355,9 +1361,9 @@ function renderClock(svg) {
         });
     }
 
+    const sx = c.clock_strip_x, sy = c.clock_strip_y;
+    const sw = c.clock_strip_w, sh = c.clock_strip_h;
     if (c.clock_show_strip) {
-        const sx = c.clock_strip_x, sy = c.clock_strip_y;
-        const sw = c.clock_strip_w, sh = c.clock_strip_h;
         drawFreeElement(svg, {
             x: sx, y: sy, w: sw, h: sh,
             label: 'strip', cls: 'panel',
@@ -1365,13 +1371,13 @@ function renderClock(svg) {
             fields: { x: 'clock_strip_x', y: 'clock_strip_y',
                       w: 'clock_strip_w', h: 'clock_strip_h' },
         });
-
-        const labW = clamp(c.clock_strip_label_w, 8, sw);
-        drawStripLabel(svg, sx, sy, c.clock_strip_station_y, labW, sw,
-                       'station', 'clock_strip_station_y');
-        drawStripLabel(svg, sx, sy, c.clock_strip_title_y, labW, sw,
-                       'title', 'clock_strip_title_y');
     }
+
+    const labW = clamp(c.clock_strip_label_w, 8, sw);
+    drawStripLabel(svg, sx, sy, c.clock_strip_station_y, labW, sw,
+                   'station', 'clock_strip_station_y');
+    drawStripLabel(svg, sx, sy, c.clock_strip_title_y, labW, sw,
+                   'title', 'clock_strip_title_y');
 }
 
 function drawStripLabel(svg, sx, sy, yWithinStrip, labelW, stripW, name, fieldKey) {
