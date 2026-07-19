@@ -199,6 +199,17 @@
         </div>
 
         <div class="panel">
+            <label class="field-label">Layout presets</label>
+            <div class="field-hint">Per-wallpaper layout presets are stored as
+                <code>/wallpapers/layouts/&lt;name&gt;.json</code> on the SD card (saved from the
+                Layout editor). A preset becomes an orphan when its wallpaper <code>.bin</code>
+                has been deleted or renamed.</div>
+            <button class="btn-secondary" onclick="checkOrphanPresets()">🧹 Check for orphans</button>
+            <div id="presetOrphanStatus" class="field-hint" style="margin-top:6px"></div>
+            <div id="presetOrphanList" style="margin-top:4px"></div>
+        </div>
+
+        <div class="panel">
             <label class="field-label">Internet wallpaper</label>
             <div class="field-hint">The device downloads a photo straight from the selected service
                 (on that service's own terms) and uses it as the screen background, kept in RAM
