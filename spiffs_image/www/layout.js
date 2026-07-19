@@ -382,6 +382,9 @@ let globalWallpaperPath = '';    // settings display.wallpaper_path
 let globalWallpaperOn = false;   // settings display.wallpaper_on
 let netWallpaperActive = false;  // device shows a fetched internet wallpaper
 let keyboardSelection = null;
+const ONLINE_WALLPAPER_CATALOG = 'https://atlascube.net/wallpapers/catalog.php';
+const ONLINE_WALLPAPER_ORIGIN = 'https://atlascube.net';
+const ONLINE_WALLPAPER_MAX_BYTES = 8 * 1024 * 1024;
 
 function sectionWallpaperKey() {
     return state.active + '_wallpaper';
@@ -576,6 +579,9 @@ function buildWallpaperPicker() {
     const uploadBtn = smallBtn('layout_wp_btn_upload', '⬆ Upload...',
         'Upload an image as this screen\'s wallpaper', () => uploadInput.click());
     uploadBtn.style.cssText = 'padding:6px 10px;color:var(--accent);border-color:var(--accent)';
+    const onlineBtn = smallBtn('layout_wp_btn_online', 'Online gallery',
+        'Browse wallpapers from atlascube.net', toggleOnlineWallpaperGallery);
+    onlineBtn.style.cssText = 'padding:6px 10px;color:#ff6b6f;border-color:#e5484d';
     const button = smallBtn('layout_wp_btn_sd', 'Choose from SD...',
         'Pick a wallpaper file for this screen', toggleWallpaperBrowser);
     const defaultBtn = smallBtn('layout_wp_btn_global', 'Global',
@@ -599,7 +605,7 @@ function buildWallpaperPicker() {
         localStorage.setItem('layout_preset_autoload', autoCheck.checked ? '1' : '0');
     });
     autoLabel.append(autoCheck, document.createTextNode('Auto-apply preset'));
-    row.append(uploadBtn, button, defaultBtn, noneBtn, autoLabel, uploadInput);
+    row.append(uploadBtn, onlineBtn, button, defaultBtn, noneBtn, autoLabel, uploadInput);
 
     // The active wallpaper path gets its own full-width line under the
     // buttons — inside the button row it was squeezed to a few characters.
@@ -639,6 +645,11 @@ function buildWallpaperPicker() {
     browser.hidden = true;
     browser.style.marginTop = '8px';
 
+    const onlineGallery = document.createElement('div');
+    onlineGallery.id = 'layout_online_wallpaper_gallery';
+    onlineGallery.className = 'online-wallpaper-gallery';
+    onlineGallery.hidden = true;
+
     // Per-wallpaper layout presets — each save merges the active section into
     // the file on SD, leaving layouts saved for the other screens untouched.
     const presetRow = document.createElement('div');
@@ -671,7 +682,7 @@ function buildWallpaperPicker() {
     status.id = 'layout_wallpaper_status';
     status.style.cssText = 'min-height:14px;margin-top:5px;font-size:11px;color:var(--text-dim)';
 
-    picker.append(row, nameRow, plateRow, browser, presetRow, status);
+    picker.append(row, nameRow, plateRow, browser, onlineGallery, presetRow, status);
     frame.insertAdjacentElement('afterend', picker);
     updateLabelPlateControl();
 }
@@ -973,6 +984,7 @@ async function toggleWallpaperBrowser() {
         browser.hidden = true;
         return;
     }
+    setOnlineWallpaperGalleryOpen(false);
     browser.hidden = false;
     await browseWallpaperDirectory(wallpaperDirectory());
 }
@@ -1062,11 +1074,198 @@ async function uploadWallpaperTo(dir, input) {
     const note = msg => { if (status) status.textContent = msg; };
     try {
         await ensureLvBin();
+        const saveAs = askWallpaperSaveAs(file.name);
+        if (saveAs === null) {
+            note('Upload cancelled.');
+            return;
+        }
         const relPath = await window.LvBin.uploadImage(
-            file, dir, state.meta.screen_w, state.meta.screen_h, note);
+            file, dir, state.meta.screen_w, state.meta.screen_h, note, saveAs);
         await selectWallpaper(relPath);
     } catch (err) {
         note('Upload failed: ' + err.message);
+    }
+}
+
+function askWallpaperSaveAs(suggestedFilename) {
+    const suggested = String(suggestedFilename || 'wallpaper').replace(/\.[^.]*$/, '');
+    const entered = window.prompt(
+        'Save wallpaper as (.bin is added automatically; an existing file with the same name will be replaced):',
+        suggested);
+    if (entered === null) return null;
+    const trimmed = entered.trim();
+    return window.LvBin.fileStem(trimmed || suggested);
+}
+
+function setOnlineWallpaperGalleryOpen(open) {
+    const panel = document.getElementById('layout_online_wallpaper_gallery');
+    const button = document.getElementById('layout_wp_btn_online');
+    if (panel) panel.hidden = !open;
+    if (button) {
+        button.style.background = open ? '#e5484d' : '';
+        button.style.color = open ? '#fff' : '#ff6b6f';
+    }
+}
+
+async function toggleOnlineWallpaperGallery() {
+    const panel = document.getElementById('layout_online_wallpaper_gallery');
+    if (!panel) return;
+    const open = panel.hidden;
+    setOnlineWallpaperGalleryOpen(open);
+    if (!open) return;
+
+    const sdBrowser = document.getElementById('layout_wallpaper_browser');
+    if (sdBrowser) sdBrowser.hidden = true;
+    await loadOnlineWallpaperGallery();
+}
+
+function onlineWallpaperMessage(panel, message) {
+    panel.replaceChildren();
+    const note = document.createElement('div');
+    note.className = 'online-wallpaper-message';
+    note.textContent = message;
+    panel.appendChild(note);
+}
+
+function trustedOnlineWallpaperUrl(raw) {
+    const url = new URL(String(raw || ''));
+    if (url.origin !== ONLINE_WALLPAPER_ORIGIN ||
+        url.pathname !== '/wallpapers/asset.php') {
+        throw new Error('catalog returned an untrusted image URL');
+    }
+    return url.toString();
+}
+
+async function loadOnlineWallpaperGallery() {
+    const panel = document.getElementById('layout_online_wallpaper_gallery');
+    if (!panel) return;
+    const w = Number(state.meta.screen_w);
+    const h = Number(state.meta.screen_h);
+    const resolution = `${w}x${h}`;
+    onlineWallpaperMessage(panel, `Loading ${w} × ${h} wallpapers...`);
+
+    try {
+        const endpoint = new URL(ONLINE_WALLPAPER_CATALOG);
+        endpoint.searchParams.set('resolution', resolution);
+        const response = await fetch(endpoint.toString(), {
+            cache: 'no-store',
+            mode: 'cors',
+        });
+        if (!response.ok) throw new Error('catalog HTTP ' + response.status);
+        const catalog = await response.json();
+        if (catalog.resolution !== resolution || !Array.isArray(catalog.wallpapers))
+            throw new Error('invalid catalog response');
+        renderOnlineWallpaperGallery(catalog);
+    } catch (err) {
+        onlineWallpaperMessage(panel,
+            'Online gallery unavailable: ' + err.message +
+            '. Check that this browser has internet access.');
+    }
+}
+
+function renderOnlineWallpaperGallery(catalog) {
+    const panel = document.getElementById('layout_online_wallpaper_gallery');
+    if (!panel) return;
+    panel.replaceChildren();
+
+    const heading = document.createElement('div');
+    heading.className = 'online-wallpaper-heading';
+    const title = document.createElement('span');
+    title.textContent = `${catalog.resolution} online wallpapers`;
+    const count = document.createElement('span');
+    count.textContent = `${catalog.wallpapers.length} available`;
+    heading.append(title, count);
+    panel.appendChild(heading);
+
+    if (!catalog.wallpapers.length) {
+        onlineWallpaperMessage(panel, 'No wallpapers published for this resolution yet.');
+        return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'online-wallpaper-grid';
+    const [rw, rh] = catalog.resolution.split('x').map(Number);
+    grid.style.setProperty('--online-wallpaper-ratio', `${rw} / ${rh}`);
+
+    for (const item of catalog.wallpapers) {
+        let imageUrl;
+        try { imageUrl = trustedOnlineWallpaperUrl(item.image); }
+        catch { continue; }
+
+        const card = document.createElement('article');
+        card.className = 'online-wallpaper-card';
+        const image = document.createElement('img');
+        image.src = imageUrl;
+        image.alt = String(item.title || 'Online wallpaper');
+        image.loading = 'lazy';
+
+        const body = document.createElement('div');
+        body.className = 'online-wallpaper-body';
+        const cardTitle = document.createElement('div');
+        cardTitle.className = 'online-wallpaper-title';
+        cardTitle.textContent = String(item.title || item.filename || 'Wallpaper');
+        cardTitle.title = cardTitle.textContent;
+        const meta = document.createElement('div');
+        meta.className = 'online-wallpaper-meta';
+        meta.textContent = item.aiGenerated ? 'AI-generated artwork' : '';
+
+        const actions = document.createElement('div');
+        actions.className = 'online-wallpaper-actions';
+        const preview = document.createElement('a');
+        preview.href = imageUrl;
+        preview.target = '_blank';
+        preview.rel = 'noopener';
+        preview.textContent = 'Preview';
+        const install = document.createElement('button');
+        install.type = 'button';
+        install.textContent = 'Install';
+        install.addEventListener('click', () => installOnlineWallpaper(item, install));
+        actions.append(preview, install);
+        body.append(cardTitle, meta, actions);
+        card.append(image, body);
+        grid.appendChild(card);
+    }
+    panel.appendChild(grid);
+}
+
+async function installOnlineWallpaper(item, button) {
+    const status = document.getElementById('layout_wallpaper_status');
+    const note = message => { if (status) status.textContent = message; };
+    const oldLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Working...';
+    try {
+        await ensureLvBin();
+        const saveAs = askWallpaperSaveAs(item.filename || item.id || 'online-wallpaper');
+        if (saveAs === null) {
+            note('Installation cancelled.');
+            return;
+        }
+        const imageUrl = trustedOnlineWallpaperUrl(item.image);
+        note('Downloading online wallpaper...');
+        const response = await fetch(imageUrl, { cache: 'no-store', mode: 'cors' });
+        if (!response.ok) throw new Error('image HTTP ' + response.status);
+        const declaredSize = Number(response.headers.get('content-length') || 0);
+        if (declaredSize > ONLINE_WALLPAPER_MAX_BYTES)
+            throw new Error('image is too large');
+        const blob = await response.blob();
+        if (blob.size > ONLINE_WALLPAPER_MAX_BYTES)
+            throw new Error('image is too large');
+        if (!/^image\/(png|jpeg|webp)$/i.test(blob.type))
+            throw new Error('unsupported image format');
+
+        const fallbackName = String(item.id || 'online-wallpaper') + '.png';
+        const filename = String(item.filename || fallbackName).split(/[\\/]/).pop();
+        const file = new File([blob], filename, { type: blob.type });
+        const relPath = await window.LvBin.uploadImage(
+            file, '/wallpapers', state.meta.screen_w, state.meta.screen_h, note, saveAs);
+        await selectWallpaper(relPath);
+        setOnlineWallpaperGalleryOpen(false);
+    } catch (err) {
+        note('Online wallpaper failed: ' + err.message);
+    } finally {
+        button.disabled = false;
+        button.textContent = oldLabel;
     }
 }
 

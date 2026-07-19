@@ -116,7 +116,9 @@
     // and the JSON config files that reference them.
     function fileStem(name) {
         const raw = String(name || "").replace(/\.[^.]*$/, "");
-        const ascii = raw.normalize ? raw.normalize("NFKD").replace(/[\u0300-\u036f]/g, "") : raw;
+        // NFKD handles most Polish diacritics, but Ł/ł needs an explicit mapping.
+        const latin = raw.replace(/ł/g, "l").replace(/Ł/g, "L");
+        const ascii = latin.normalize ? latin.normalize("NFKD").replace(/[\u0300-\u036f]/g, "") : latin;
         return ascii.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) ||
                ("wallpaper-" + Date.now());
     }
@@ -125,13 +127,14 @@
     // card under `dir` (mount-relative, e.g. "/wallpapers"). Returns the
     // mount-relative path of the uploaded file. `onStatus`, when given, gets
     // progress messages for the caller's status line.
-    async function uploadImage(file, dir, w, h, onStatus) {
+    async function uploadImage(file, dir, w, h, onStatus, saveAs) {
         const note = typeof onStatus === "function" ? onStatus : () => {};
-        note("Converting…");
+        const stem = fileStem(saveAs || file.name);
+        note("Converting to " + stem + ".bin…");
         const bin = await encodeImage(file, w, h);
         const base = String(dir || "").replace(/\/+$/, "");
-        const relPath = base + "/" + fileStem(file.name) + ".bin";
-        note("Uploading " + w + "×" + h + "…");
+        const relPath = base + "/" + stem + ".bin";
+        note("Uploading " + w + "×" + h + " as " + stem + ".bin…");
         const r = await fetch("/api/sd/file?path=" + encodeURIComponent(relPath), {
             method: "POST", body: bin
         });
@@ -199,5 +202,5 @@
         }
     }
 
-    global.LvBin = { decodeToCanvas, encodeImage, uploadImage, openPreview };
+    global.LvBin = { decodeToCanvas, encodeImage, uploadImage, openPreview, fileStem };
 })(window);

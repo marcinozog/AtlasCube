@@ -301,6 +301,92 @@
             user-select: none;
             font-family: 'JetBrains Mono', monospace;
         }
+        .online-wallpaper-gallery {
+            margin-top: 8px;
+            padding: 9px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-input);
+        }
+        .online-wallpaper-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: var(--text-dim);
+            font-size: 11px;
+        }
+        .online-wallpaper-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+            gap: 8px;
+        }
+        .online-wallpaper-card {
+            min-width: 0;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: var(--bg-panel);
+        }
+        .online-wallpaper-card img {
+            display: block;
+            width: 100%;
+            aspect-ratio: var(--online-wallpaper-ratio, 4 / 3);
+            object-fit: cover;
+            background: #050508;
+        }
+        .online-wallpaper-body { padding: 7px; }
+        .online-wallpaper-title {
+            overflow: hidden;
+            color: var(--text);
+            font-size: 11px;
+            font-weight: 600;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .online-wallpaper-meta {
+            min-height: 14px;
+            margin-top: 2px;
+            color: var(--text-dim);
+            font-size: 9px;
+        }
+        .online-wallpaper-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 6px;
+        }
+        .online-wallpaper-actions a,
+        .online-wallpaper-actions button {
+            flex: 1;
+            min-width: 0;
+            padding: 5px 6px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: var(--bg-input);
+            color: var(--text-dim);
+            font-family: 'Chakra Petch', sans-serif;
+            font-size: 10px;
+            text-align: center;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .online-wallpaper-actions button {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .online-wallpaper-actions button:hover:not(:disabled) {
+            background: var(--accent);
+            color: #001019;
+        }
+        .online-wallpaper-actions button:disabled { opacity: .55; cursor: wait; }
+        .online-wallpaper-message {
+            padding: 12px 8px;
+            color: var(--text-dim);
+            font-size: 11px;
+            line-height: 1.5;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
