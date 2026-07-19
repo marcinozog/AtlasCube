@@ -12,6 +12,7 @@
 #include "app_state.h"
 #include "settings.h"
 #include "radio_service.h"
+#include "media_control.h"
 #include "playlist.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -125,26 +126,16 @@ static void handle_cmd(const char *suffix, const char *payload)
 {
     ESP_LOGI(TAG, "cmd %s = '%s'", suffix, payload);
 
+    // Semantic transport: acts on the active source (radio/SD/BT), same
+    // dispatcher as the WS plain commands.
     if (strcmp(suffix, "play") == 0) {
-        int n = playlist_get_count();
-        int idx = app_state_get()->curr_index;
-        if (idx < 0 || idx >= n) idx = 0;
-        radio_play_index(idx);
+        media_control_execute(media_source_current(), MEDIA_ACTION_PLAY);
     } else if (strcmp(suffix, "stop") == 0) {
-        radio_stop();
+        media_control_execute(media_source_current(), MEDIA_ACTION_STOP);
     } else if (strcmp(suffix, "next") == 0) {
-        int n = playlist_get_count();
-        if (n > 0) {
-            int idx = (app_state_get()->curr_index + 1) % n;
-            radio_play_index(idx);
-        }
+        media_control_execute(media_source_current(), MEDIA_ACTION_NEXT);
     } else if (strcmp(suffix, "prev") == 0) {
-        int n = playlist_get_count();
-        if (n > 0) {
-            int idx = app_state_get()->curr_index - 1;
-            if (idx < 0) idx = n - 1;
-            radio_play_index(idx);
-        }
+        media_control_execute(media_source_current(), MEDIA_ACTION_PREVIOUS);
     } else if (strcmp(suffix, "volume") == 0) {
         int v = atoi(payload);
         if (v < 0)   v = 0;

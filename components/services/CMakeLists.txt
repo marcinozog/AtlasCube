@@ -1,6 +1,7 @@
 idf_component_register(
     SRCS
         "radio_service.c"
+         "media_control.c"
          "sd_player.c"
          "ntp_service.c"
          "dim_schedule.c"

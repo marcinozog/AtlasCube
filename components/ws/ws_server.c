@@ -3,6 +3,7 @@
 #include "esp_log.h"
 #include "esp_wifi.h"
 #include "radio_service.h"
+#include "media_control.h"
 #include "sd_player.h"
 #include "cJSON.h"
 #include <string.h>
@@ -10,7 +11,6 @@
 #include <unistd.h>
 #include "settings.h"
 #include "app_state.h"
-#include "playlist.h"
 #include "bt.h"
 
 static const char *TAG = "WS";
@@ -74,27 +74,22 @@ static void handle_plain_cmd(const char *cmd)
 {
     ESP_LOGI(TAG, "Plain CMD: %s", cmd);
 
+    // Semantic transport (voice, remote): acts on whatever source is playing
+    // right now (radio/SD/BT), resolved by media_source_current().
     if (strcmp(cmd, "stop") == 0) {
-        radio_stop();
+        media_control_execute(media_source_current(), MEDIA_ACTION_STOP);
     }
     else if (strcmp(cmd, "play") == 0) {
-        radio_play_index(app_state_get()->curr_index);
+        media_control_execute(media_source_current(), MEDIA_ACTION_PLAY);
     }
     else if (strcmp(cmd, "toggle") == 0) {
-        if (radio_get_state() == RADIO_STATE_PLAYING)
-            radio_stop();
-        else
-            radio_play_index(app_state_get()->curr_index);
+        media_control_execute(media_source_current(), MEDIA_ACTION_PLAY_TOGGLE);
     }
     else if (strcmp(cmd, "next") == 0) {
-        int idx = app_state_get()->curr_index + 1;
-        if (idx >= playlist_get_count()) idx = 0;
-        radio_play_index(idx);
+        media_control_execute(media_source_current(), MEDIA_ACTION_NEXT);
     }
     else if (strcmp(cmd, "prev") == 0) {
-        int idx = app_state_get()->curr_index - 1;
-        if (idx < 0) idx = playlist_get_count() - 1;
-        radio_play_index(idx);
+        media_control_execute(media_source_current(), MEDIA_ACTION_PREVIOUS);
     }
     else if (strcmp(cmd, "volp") == 0) {
         int v = app_state_get()->volume + 5;

@@ -619,8 +619,8 @@ function buildWallpaperPicker() {
     browser.hidden = true;
     browser.style.marginTop = '8px';
 
-    // Per-wallpaper layout presets — the full profile (all sections) saved to
-    // SD next to the wallpapers, named after the wallpaper file.
+    // Per-wallpaper layout presets — each save merges the active section into
+    // the file on SD, leaving layouts saved for the other screens untouched.
     const presetRow = document.createElement('div');
     presetRow.style.cssText =
         'display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;' +
@@ -1521,7 +1521,8 @@ function renderRadio(svg) {
             x: r.radio_station_icon_x, y: r.radio_station_icon_y,
             w: r.radio_station_icon_size, h: r.radio_station_icon_size,
             label: 'station icon', cls: 'panel',
-            fields: { x: 'radio_station_icon_x', y: 'radio_station_icon_y' },
+            fields: { x: 'radio_station_icon_x', y: 'radio_station_icon_y',
+                      w: 'radio_station_icon_size', h: 'radio_station_icon_size' },
         });
     }
 
@@ -1556,7 +1557,8 @@ function renderRadio(svg) {
         drawFreeElement(svg, {
             x: r.radio_vu_x, y: r.radio_vu_y, w: r.radio_vu_w, h: r.radio_vu_h,
             label: 'VU', cls: 'label-rect',
-            fields: { x: 'radio_vu_x', y: 'radio_vu_y' },
+            fields: { x: 'radio_vu_x', y: 'radio_vu_y',
+                      w: 'radio_vu_w', h: 'radio_vu_h' },
         });
     }
     if (r.radio_needle_show_l) {
@@ -1661,7 +1663,8 @@ function renderSd(svg) {
         drawFreeElement(svg, {
             x: s.sd_vu_x, y: s.sd_vu_y, w: s.sd_vu_w, h: s.sd_vu_h,
             label: 'VU', cls: 'label-rect',
-            fields: { x: 'sd_vu_x', y: 'sd_vu_y' },
+            fields: { x: 'sd_vu_x', y: 'sd_vu_y',
+                      w: 'sd_vu_w', h: 'sd_vu_h' },
         });
     }
     if (s.sd_needle_show_l) {
@@ -1745,7 +1748,15 @@ function drawFreeElement(svg, opts) {
         x: opts.x, y: opts.y, width: opts.w, height: opts.h,
         class: `${opts.cls} ${placeholderClass(opts.label)}`,
     });
-    if (opts.fillOpacity !== undefined) r.style.fillOpacity = opts.fillOpacity;
+    if (opts.fillOpacity !== undefined) {
+        r.style.fillOpacity = opts.fillOpacity;
+    } else if (opts.text) {
+        // Floating labels use the active screen's configurable background plate.
+        // Keep the editor's placeholder colour, but scale it so the opacity
+        // slider has an immediate and truthful effect in Live preview.
+        r.style.fillOpacity = clamp(
+            state[state.active][sectionLabelBgKey()] ?? 50, 0, 100) / 100;
+    }
     if (opts.radius !== undefined) {
         r.setAttribute('rx', opts.radius);
         r.setAttribute('ry', opts.radius);
