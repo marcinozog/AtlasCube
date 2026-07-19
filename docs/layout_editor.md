@@ -46,14 +46,14 @@ events, wifi), each with a dozen-ish fields:
 
 | Field type | Example | Range |
 |---|---|---|
-| `int16_t` (position) | `clock_panel_x`, `clock_panel_y` | 0..screen_w/h (top-left origin) |
-| `int16_t` (size) | `clock_panel_w`, `clock_panel_h` | 0..screen_w/h |
+| `int16_t` (position) | `clock_strip_x`, `clock_strip_y` | 0..screen_w/h (top-left origin) |
+| `int16_t` (size) | `clock_strip_w`, `clock_strip_h` | 0..screen_w/h |
 | `int16_t` (Y inside container) | `clock_strip_station_y` | Y offset inside the strip (e.g. from its TOP) |
 | `bool` (visibility) | `clock_show_strip`, `clock_show_time` | true/false |
 | `const lv_font_t *` | `clock_strip_station_font`, `clock_time_font` | id from registry → pointer |
 
 **The clock section uses absolute LCD pixels (top-left origin)** for all
-"free elements" (panel, strip, time label, date label). No edge
+"free elements" (strip, time label, date label). No edge
 anchoring — each element has `_x`, `_y`, `_w`, `_h`. These hard pixel
 coords don't auto-scale, so a layout saved for one LCD size is
 meaningless on another. The JSON is stamped with `w`/`h` on save, and
@@ -96,8 +96,6 @@ holding the struct field names.
 ```json
 {
   "clock": {
-    "clock_panel_x": 0, "clock_panel_y": 0,
-    "clock_panel_w": 320, "clock_panel_h": 175,
     "clock_strip_x": 0, "clock_strip_y": 178,
     "clock_strip_w": 320, "clock_strip_h": 62,
     "clock_strip_label_w": 296,
@@ -175,7 +173,7 @@ which wipes the entire runtime to defaults — re-fetch everything.
 
 ### Drag & drop
 
-Each "free element" (panel, strip, time label, date label) supports:
+Each "free element" (strip, time label, date label) supports:
 
 | Action | Effect |
 |---|---|

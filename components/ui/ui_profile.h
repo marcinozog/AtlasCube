@@ -89,11 +89,6 @@ typedef struct {
 // without a runtime JSON parser.
 typedef struct {
     // clock face (screen_home) — absolute LCD coordinates (top-left origin)
-    int16_t          clock_panel_x;
-    int16_t          clock_panel_y;
-    int16_t          clock_panel_w;
-    int16_t          clock_panel_h;
-
     int16_t          clock_strip_x;
     int16_t          clock_strip_y;
     int16_t          clock_strip_w;

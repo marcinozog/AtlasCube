@@ -61,11 +61,6 @@ function touchHotspotGroups(prefix) {
 // ── Field schemas — order is purely UI grouping; doesn't affect backend ────
 
 const CLOCK_FIELDS = [
-    { key: 'clock_panel_x', label: 'Panel X',  type: 'number' },
-    { key: 'clock_panel_y', label: 'Panel Y',  type: 'number' },
-    { key: 'clock_panel_w', label: 'Panel W',  type: 'number' },
-    { key: 'clock_panel_h', label: 'Panel H',  type: 'number' },
-
     { key: 'clock_show_time', label: 'Show time',     type: 'bool' },
     { key: 'clock_time_x',    label: 'Time X',        type: 'number' },
     { key: 'clock_time_y',    label: 'Time Y',        type: 'number' },
@@ -296,7 +291,6 @@ const SD_FIELDS = [
 // switch visible while hiding the controls that have no effect when it is off.
 const FORM_GROUPS = {
     clock: [
-        { title: 'Panel', fields: ['clock_panel_x', 'clock_panel_y', 'clock_panel_w', 'clock_panel_h'] },
         { title: 'Time', enabledBy: 'clock_show_time', fields: ['clock_show_time', 'clock_time_x', 'clock_time_y', 'clock_time_font'] },
         { title: 'Date', enabledBy: 'clock_show_date', fields: ['clock_show_date', 'clock_date_x', 'clock_date_y', 'clock_date_font'] },
         { title: 'Network info', enabledBy: 'clock_show_netinfo', fields: ['clock_show_netinfo', 'clock_netinfo_x', 'clock_netinfo_y', 'clock_netinfo_font'] },
@@ -1281,14 +1275,6 @@ function renderSvg() {
 function renderClock(svg) {
     const c = state.clock;
     const W = state.meta.screen_w;
-
-    drawFreeElement(svg, {
-        x: c.clock_panel_x, y: c.clock_panel_y,
-        w: c.clock_panel_w, h: c.clock_panel_h,
-        label: 'panel', cls: 'panel',
-        fields: { x: 'clock_panel_x', y: 'clock_panel_y',
-                  w: 'clock_panel_w', h: 'clock_panel_h' },
-    });
 
     if (c.clock_show_time) {
         const fh = fontHeight(c.clock_time_font);

@@ -24,10 +24,6 @@ static const ui_profile_t k_defaults = {
     .radio_label_bg_opa       = 50,
     .sd_label_bg_opa          = 50,
     .bt_label_bg_opa          = 50,
-    .clock_panel_x             = 0,
-    .clock_panel_y             = 0,
-    .clock_panel_w             = 128,
-    .clock_panel_h             = 44,
     .clock_strip_x             = 0,
     .clock_strip_y             = 44,
     .clock_strip_w             = 128,
@@ -224,10 +220,6 @@ static const ui_profile_t k_defaults = {
     .radio_label_bg_opa       = 50,
     .sd_label_bg_opa          = 50,
     .bt_label_bg_opa          = 50,
-    .clock_panel_x             = 0,
-    .clock_panel_y             = 0,
-    .clock_panel_w             = 256,
-    .clock_panel_h             = 31,
     .clock_strip_x             = 0,
     .clock_strip_y             = 33,
     .clock_strip_w             = 256,
@@ -421,11 +413,7 @@ static const ui_profile_t k_defaults = {
     .radio_label_bg_opa       = 50,
     .sd_label_bg_opa          = 50,
     .bt_label_bg_opa          = 50,
-    // Clock Panel: Large clock on top, information bar underneath
-    .clock_panel_x             = 0,
-    .clock_panel_y             = 0,
-    .clock_panel_w             = 240,
-    .clock_panel_h             = 188,
+    // Clock face: large clock on top, station/title strip underneath
     .clock_strip_x             = 0,
     .clock_strip_y             = 193,
     .clock_strip_w             = 240,
@@ -686,10 +674,6 @@ static const ui_profile_t k_defaults = {
     .radio_label_bg_opa       = 50,
     .sd_label_bg_opa          = 50,
     .bt_label_bg_opa          = 50,
-    .clock_panel_x             = 0,
-    .clock_panel_y             = 0,
-    .clock_panel_w             = 320,
-    .clock_panel_h             = 175,
     .clock_strip_x             = 0,
     .clock_strip_y             = 178,
     .clock_strip_w             = 320,
@@ -943,10 +927,6 @@ static const ui_profile_t k_defaults = {
     .radio_label_bg_opa       = 50,
     .sd_label_bg_opa          = 50,
     .bt_label_bg_opa          = 50,
-    .clock_panel_x             = 0,
-    .clock_panel_y             = 0,
-    .clock_panel_w             = 480,
-    .clock_panel_h             = 234,
     .clock_strip_x             = 0,
     .clock_strip_y             = 238,
     .clock_strip_w             = 480,
@@ -1368,10 +1348,6 @@ static void dump_hotspots(cJSON *obj, const char *prefix,
 static void load_clock(const cJSON *obj, ui_profile_t *p)
 {
     if (!cJSON_IsObject(obj)) return;
-    load_i16 (obj, "clock_panel_x",              &p->clock_panel_x);
-    load_i16 (obj, "clock_panel_y",              &p->clock_panel_y);
-    load_i16 (obj, "clock_panel_w",              &p->clock_panel_w);
-    load_i16 (obj, "clock_panel_h",              &p->clock_panel_h);
     load_i16 (obj, "clock_strip_x",              &p->clock_strip_x);
     load_i16 (obj, "clock_strip_y",              &p->clock_strip_y);
     load_i16 (obj, "clock_strip_w",              &p->clock_strip_w);
@@ -1779,10 +1755,6 @@ static cJSON *dump_bt(const ui_profile_t *p)
 static cJSON *dump_clock(const ui_profile_t *p)
 {
     cJSON *o = cJSON_CreateObject();
-    add_i16 (o, "clock_panel_x",              p->clock_panel_x);
-    add_i16 (o, "clock_panel_y",              p->clock_panel_y);
-    add_i16 (o, "clock_panel_w",              p->clock_panel_w);
-    add_i16 (o, "clock_panel_h",              p->clock_panel_h);
     add_i16 (o, "clock_strip_x",              p->clock_strip_x);
     add_i16 (o, "clock_strip_y",              p->clock_strip_y);
     add_i16 (o, "clock_strip_w",              p->clock_strip_w);
