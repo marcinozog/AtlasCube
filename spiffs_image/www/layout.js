@@ -83,7 +83,9 @@ const CLOCK_FIELDS = [
     { key: 'clock_strip_h',    label: 'Strip H',      type: 'number' },
     { key: 'clock_strip_bg_opa', label: 'Strip BG opacity %', type: 'number', min: 0, max: 100, default: 100 },
     { key: 'clock_strip_label_w',         label: 'Strip label W',  type: 'number' },
+    { key: 'clock_strip_station_x',       label: 'Station X',      type: 'number' },
     { key: 'clock_strip_station_y',       label: 'Station Y',      type: 'number' },
+    { key: 'clock_strip_title_x',         label: 'Title X',        type: 'number' },
     { key: 'clock_strip_title_y',         label: 'Title Y',        type: 'number' },
     { key: 'clock_strip_station_font',    label: 'Station font',   type: 'font'   },
     { key: 'clock_strip_title_font',      label: 'Title font',     type: 'font'   },
@@ -294,7 +296,7 @@ const FORM_GROUPS = {
         { title: 'Time', enabledBy: 'clock_show_time', fields: ['clock_show_time', 'clock_time_x', 'clock_time_y', 'clock_time_font'] },
         { title: 'Date', enabledBy: 'clock_show_date', fields: ['clock_show_date', 'clock_date_x', 'clock_date_y', 'clock_date_font'] },
         { title: 'Network info', enabledBy: 'clock_show_netinfo', fields: ['clock_show_netinfo', 'clock_netinfo_x', 'clock_netinfo_y', 'clock_netinfo_font'] },
-        { title: 'Station / title', fields: ['clock_show_strip', 'clock_strip_x', 'clock_strip_y', 'clock_strip_w', 'clock_strip_h', 'clock_strip_bg_opa', 'clock_strip_label_w', 'clock_strip_station_y', 'clock_strip_title_y', 'clock_strip_station_font', 'clock_strip_title_font'] },
+        { title: 'Station / title', fields: ['clock_show_strip', 'clock_strip_x', 'clock_strip_y', 'clock_strip_w', 'clock_strip_h', 'clock_strip_bg_opa', 'clock_strip_label_w', 'clock_strip_station_x', 'clock_strip_station_y', 'clock_strip_title_x', 'clock_strip_title_y', 'clock_strip_station_font', 'clock_strip_title_font'] },
         { title: 'Mode indicator', enabledBy: 'clock_show_mode_indicator', fields: ['clock_show_mode_indicator', 'clock_mode_indic_x', 'clock_mode_indic_y'] },
         { title: 'Event indicator', enabledBy: 'clock_show_event_indicator', fields: ['clock_show_event_indicator', 'clock_event_indic_x', 'clock_event_indic_y'] },
         { title: 'Calendar', enabledBy: 'clock_show_calendar', fields: ['clock_show_calendar', 'clock_calendar_x', 'clock_calendar_y', 'clock_calendar_w', 'clock_calendar_font'] },
@@ -1521,14 +1523,18 @@ function renderClock(svg) {
     }
 
     const labW = clamp(c.clock_strip_label_w, 8, sw);
-    drawStripLabel(svg, sx, sy, c.clock_strip_station_y, labW, sw,
-                   'station', 'clock_strip_station_y');
-    drawStripLabel(svg, sx, sy, c.clock_strip_title_y, labW, sw,
-                   'title', 'clock_strip_title_y');
+    drawStripLabel(svg, sx, sy, c.clock_strip_station_x | 0, c.clock_strip_station_y,
+                   labW, sw, 'station',
+                   { x: 'clock_strip_station_x', y: 'clock_strip_station_y' });
+    drawStripLabel(svg, sx, sy, c.clock_strip_title_x | 0, c.clock_strip_title_y,
+                   labW, sw, 'title',
+                   { x: 'clock_strip_title_x', y: 'clock_strip_title_y' });
 }
 
-function drawStripLabel(svg, sx, sy, yWithinStrip, labelW, stripW, name, fieldKey) {
-    const x = sx + (stripW - labelW) / 2;
+// x/y are offsets from the strip's top-centre (mirrors LV_ALIGN_TOP_MID in
+// the firmware); the drag handler works on deltas so offset fields are fine.
+function drawStripLabel(svg, sx, sy, xOffset, yWithinStrip, labelW, stripW, name, fields) {
+    const x = sx + (stripW - labelW) / 2 + xOffset;
     const y = sy + yWithinStrip;
     const h = 14;
     const r = rect(svg, {
@@ -1536,7 +1542,7 @@ function drawStripLabel(svg, sx, sy, yWithinStrip, labelW, stripW, name, fieldKe
         class: `label-rect ${placeholderClass(name)}`,
     });
     text(svg, x + 4, y + 10, name, { 'font-size': 8 });
-    setupYDrag(r, fieldKey);
+    setupMove(r, svg, fields);
 }
 
 // ── BT renderer ────────────────────────────────────────────────────────────
@@ -2074,43 +2080,6 @@ function setupResize(el, svg, fields, dir) {
             // A handle click without an actual resize should still leave the
             // owning element visibly selected for keyboard nudging.
             renderSvg();
-        };
-        window.addEventListener('pointermove', onMove);
-        window.addEventListener('pointerup', onUp);
-    });
-}
-
-// ── Y-only drag (used by strip station/title labels) ──────────────────────
-
-function setupYDrag(el, field) {
-    const fields = { y: field };
-    showKeyboardSelection(el, fields);
-    el.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        selectForKeyboard(el, fields);
-        el.setPointerCapture(e.pointerId);
-        el.classList.add('dragging');
-
-        const data = state[state.active];
-        const startY = e.clientY;
-        const startVal = data[field] | 0;
-        const pxPerU = el.ownerSVGElement.getBoundingClientRect().height
-                       / state.meta.screen_h;
-
-        const onMove = (ev) => {
-            const dy = Math.round((ev.clientY - startY) / pxPerU);
-            const v = startVal + dy;
-            if (v !== data[field]) {
-                data[field] = v;
-                setFormValue(field, v);
-                renderSvg();
-            }
-        };
-        const onUp = () => {
-            window.removeEventListener('pointermove', onMove);
-            window.removeEventListener('pointerup', onUp);
-            el.classList.remove('dragging');
         };
         window.addEventListener('pointermove', onMove);
         window.addEventListener('pointerup', onUp);

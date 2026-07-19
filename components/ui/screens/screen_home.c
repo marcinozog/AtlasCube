@@ -288,7 +288,8 @@ static void home_create(lv_obj_t *parent)
     lv_obj_set_style_text_color(s_strip_station,
         lv_color_hex(th->text_secondary), LV_PART_MAIN);
     ui_label_scrim(s_strip_station, p->clock_label_bg_opa);
-    lv_obj_align_to(s_strip_station, s_strip, LV_ALIGN_TOP_MID, 0, p->clock_strip_station_y);
+    lv_obj_align_to(s_strip_station, s_strip, LV_ALIGN_TOP_MID,
+                    p->clock_strip_station_x, p->clock_strip_station_y);
 
     s_strip_title = lv_label_create(parent);
     lv_label_set_long_mode(s_strip_title, LV_LABEL_LONG_SCROLL_CIRCULAR);
@@ -297,7 +298,8 @@ static void home_create(lv_obj_t *parent)
     lv_obj_set_style_text_color(s_strip_title,
         lv_color_hex(th->text_muted), LV_PART_MAIN);
     ui_label_scrim(s_strip_title, p->clock_label_bg_opa);
-    lv_obj_align_to(s_strip_title, s_strip, LV_ALIGN_TOP_MID, 0, p->clock_strip_title_y);
+    lv_obj_align_to(s_strip_title, s_strip, LV_ALIGN_TOP_MID,
+                    p->clock_strip_title_x, p->clock_strip_title_y);
 
     strip_update();
 
