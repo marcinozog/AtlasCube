@@ -5,6 +5,7 @@
 #include "clock_widget.h"
 #include "mode_indicator_widget.h"
 #include "controls_overlay_widget.h"
+#include "touch_hotspots_widget.h"
 #include "vol_overlay_widget.h"
 #include "ui_events.h"
 #include "ui_manager.h"
@@ -179,6 +180,7 @@ static void bt_create(lv_obj_t *parent)
     refresh_from_state();
 
     controls_overlay_create(parent, CTRL_OVL_MODE_BT);
+    touch_hotspots_widget_create(parent, CONTROL_SOURCE_BT, p->bt_touch_hotspots);
 
     ESP_LOGI(TAG, "Created (bt_volume=%d, theme=%d)",
              app_state_get()->bt_volume, theme_current());
@@ -186,6 +188,7 @@ static void bt_create(lv_obj_t *parent)
 
 static void bt_destroy(void)
 {
+    touch_hotspots_widget_destroy();
     controls_overlay_destroy();
     vol_overlay_hide();
     mode_indicator_destroy();

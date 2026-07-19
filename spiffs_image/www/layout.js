@@ -149,6 +149,7 @@ const BT_FIELDS = [
     { key: 'bt_clock_widget_x',      label: 'Clock X',          type: 'number' },
     { key: 'bt_clock_widget_y',      label: 'Clock Y',          type: 'number' },
     { key: 'bt_clock_font',          label: 'Clock font',       type: 'font'   },
+    ...touchHotspotFields('bt'),
 ];
 
 const RADIO_FIELDS = [
@@ -311,6 +312,7 @@ const FORM_GROUPS = {
         { title: 'Playback', fields: ['bt_time_x', 'bt_time_y', 'bt_time_font', 'bt_vol_label_font'] },
         { title: 'Mode indicator', enabledBy: 'bt_show_mode_indicator', fields: ['bt_show_mode_indicator', 'bt_mode_indic_x', 'bt_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'bt_show_clock', fields: ['bt_show_clock', 'bt_clock_widget_x', 'bt_clock_widget_y', 'bt_clock_font'] },
+        ...touchHotspotGroups('bt'),
     ],
     radio: [
         { title: 'Now playing', enabledBy: 'radio_show_np', fields: ['radio_show_np', 'radio_show_np_title', 'radio_np_x', 'radio_np_y', 'radio_np_station_font', 'radio_np_title_font'] },
@@ -1627,6 +1629,7 @@ function renderBt(svg) {
                   '00:00', 'clock',
                   { x: 'bt_clock_widget_x', y: 'bt_clock_widget_y' });
     }
+    drawTouchHotspots(svg, 'bt', b);
 }
 
 // ── RADIO renderer ─────────────────────────────────────────────────────────

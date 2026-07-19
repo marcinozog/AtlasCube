@@ -1219,6 +1219,7 @@ static void ensure_all_hotspot_defaults(ui_profile_t *p)
 {
     ensure_hotspot_defaults(p->radio_touch_hotspots);
     ensure_hotspot_defaults(p->sd_touch_hotspots);
+    ensure_hotspot_defaults(p->bt_touch_hotspots);
 }
 
 static void ensure_initialized(void)
@@ -1452,6 +1453,7 @@ static void load_bt(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "bt_label_bg_opa",        &p->bt_label_bg_opa);
     p->bt_label_bg_opa = LV_CLAMP(0, p->bt_label_bg_opa, 100);
     load_str (obj, "bt_wallpaper",           p->bt_wallpaper, sizeof(p->bt_wallpaper));
+    load_hotspots(obj, "bt", p->bt_touch_hotspots);
 }
 
 static void load_radio(const cJSON *obj, ui_profile_t *p)
@@ -1770,6 +1772,7 @@ static cJSON *dump_bt(const ui_profile_t *p)
     add_font(o, "bt_time_font",           p->bt_time_font);
     add_i16 (o, "bt_label_bg_opa",        p->bt_label_bg_opa);
     add_str (o, "bt_wallpaper",           p->bt_wallpaper);
+    dump_hotspots(o, "bt", p->bt_touch_hotspots);
     return o;
 }
 
