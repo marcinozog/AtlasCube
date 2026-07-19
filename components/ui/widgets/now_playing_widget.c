@@ -19,6 +19,7 @@ static lv_obj_t *s_text_col      = NULL;
 static lv_obj_t *s_label_station = NULL;
 static lv_obj_t *s_label_title   = NULL;
 static int       s_content_w     = 8;
+static int       s_label_bg_opa  = 0;
 
 // Both lines have a fixed one-line viewport. Long metadata scrolls inside it
 // instead of growing vertically into the widgets below.
@@ -27,9 +28,11 @@ static int       s_content_w     = 8;
 void now_playing_widget_create(lv_obj_t *parent, int x, int y, lv_text_align_t align,
                                const lv_font_t *station_font,
                                bool show_title,
-                               const lv_font_t *title_font)
+                               const lv_font_t *title_font,
+                               int label_bg_opa)
 {
     const ui_theme_colors_t *th = theme_get();
+    s_label_bg_opa = label_bg_opa;
 
     if (!station_font) station_font = &lv_font_montserrat_18_pl;
     if (!title_font)   title_font   = &lv_font_montserrat_14_pl;
@@ -52,7 +55,7 @@ void now_playing_widget_create(lv_obj_t *parent, int x, int y, lv_text_align_t a
     lv_obj_clear_flag(s_frame, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
 
     // Content-sized pill centered in the frame — holds the station+title pair
-    // and the optional plate (global display.label_bg setting).
+    // and the optional per-screen plate.
     s_pill = lv_obj_create(s_frame);
     lv_obj_remove_style_all(s_pill);
     lv_obj_set_size(s_pill, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
@@ -61,7 +64,7 @@ void now_playing_widget_create(lv_obj_t *parent, int x, int y, lv_text_align_t a
                           LV_FLEX_ALIGN_CENTER);
     lv_obj_set_style_pad_row(s_pill, 4, LV_PART_MAIN);
     lv_obj_clear_flag(s_pill, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
-    ui_label_scrim(s_pill);
+    ui_label_scrim(s_pill, s_label_bg_opa);
 
     s_text_col = lv_obj_create(s_pill);
     lv_obj_remove_style_all(s_text_col);
@@ -99,6 +102,7 @@ void now_playing_widget_destroy(void)
     s_label_station = NULL;
     s_label_title   = NULL;
     s_content_w     = 8;
+    s_label_bg_opa  = 0;
     ESP_LOGI(TAG, "Destroyed");
 }
 
@@ -139,5 +143,5 @@ void now_playing_widget_apply_theme(void)
         lv_obj_set_style_text_color(s_label_title,
             lv_color_hex(th->text_secondary), LV_PART_MAIN);
     }
-    ui_label_scrim(s_pill);   // refresh plate colour for the new theme
+    ui_label_scrim(s_pill, s_label_bg_opa);   // refresh plate colour for the new theme
 }

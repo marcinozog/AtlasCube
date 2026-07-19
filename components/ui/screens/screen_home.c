@@ -84,11 +84,10 @@ static bool clock_is_large_font(void)
 
 static void home_time_scrim(lv_obj_t *label)
 {
-    ui_label_scrim(label);
+    const ui_profile_t *p = ui_profile_get();
+    ui_label_scrim(label, p->clock_label_bg_opa);
 
-    const app_settings_t *st = settings_get();
-    if (!label || !clock_is_large_font() || !st->display.label_bg ||
-        st->display.label_bg_opa <= 0) return;
+    if (!label || !clock_is_large_font() || p->clock_label_bg_opa <= 0) return;
 
     // Large digit-only fonts leave slightly more unused line-box space above
     // the glyphs than below. Remove 2 px from the plate's top while keeping the
@@ -185,7 +184,7 @@ static void netinfo_update(void)
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_netinfo_label,
             lv_color_hex(th->text_muted), LV_PART_MAIN);
-        ui_label_scrim(s_netinfo_label);
+        ui_label_scrim(s_netinfo_label, p->clock_label_bg_opa);
     }
 
     char ip[16];
@@ -230,7 +229,7 @@ static void home_create(lv_obj_t *parent)
         lv_obj_set_style_text_font(s_ampm_label, af, LV_PART_MAIN);
         lv_obj_set_style_text_color(s_ampm_label,
             lv_color_hex(th->text_secondary), LV_PART_MAIN);
-        ui_label_scrim(s_ampm_label);
+        ui_label_scrim(s_ampm_label, p->clock_label_bg_opa);
         // Align the two baselines: OUT_RIGHT_BOTTOM matches the line-box
         // bottoms, so shift by the difference of the fonts' baseline offsets.
         s_ampm_y_ofs = (int32_t)af->base_line - (int32_t)tf->base_line;
@@ -245,7 +244,7 @@ static void home_create(lv_obj_t *parent)
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_date_label,
             lv_color_hex(th->text_secondary), LV_PART_MAIN);
-        ui_label_scrim(s_date_label);
+        ui_label_scrim(s_date_label, p->clock_label_bg_opa);
     }
 
     s_clock_timer = lv_timer_create(clock_timer_cb, 60 * 1000, NULL);
@@ -265,7 +264,8 @@ static void home_create(lv_obj_t *parent)
     }
     if (p->clock_show_weather) {
         weather_widget_create(parent, p->clock_weather_x, p->clock_weather_y,
-                              p->clock_weather_w, p->clock_weather_font);
+                              p->clock_weather_w, p->clock_weather_font,
+                              p->clock_label_bg_opa);
     }
 
     if (p->clock_show_strip) {
@@ -402,6 +402,7 @@ static void home_apply_theme(void)
 {
     if (!s_root) return;
     const ui_theme_colors_t *th = theme_get();
+    const ui_profile_t      *p  = ui_profile_get();
 
     if (s_time_label) {
         lv_obj_set_style_text_color(s_time_label,
@@ -411,17 +412,17 @@ static void home_apply_theme(void)
     if (s_ampm_label) {
         lv_obj_set_style_text_color(s_ampm_label,
             lv_color_hex(th->text_secondary), LV_PART_MAIN);
-        ui_label_scrim(s_ampm_label);
+        ui_label_scrim(s_ampm_label, p->clock_label_bg_opa);
     }
     if (s_date_label) {
         lv_obj_set_style_text_color(s_date_label,
             lv_color_hex(th->text_secondary), LV_PART_MAIN);
-        ui_label_scrim(s_date_label);
+        ui_label_scrim(s_date_label, p->clock_label_bg_opa);
     }
     if (s_netinfo_label) {
         lv_obj_set_style_text_color(s_netinfo_label,
             lv_color_hex(th->text_muted), LV_PART_MAIN);
-        ui_label_scrim(s_netinfo_label);
+        ui_label_scrim(s_netinfo_label, p->clock_label_bg_opa);
     }
 
     if (s_strip) {

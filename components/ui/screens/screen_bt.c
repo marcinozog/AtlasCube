@@ -95,7 +95,7 @@ static void bt_create(lv_obj_t *parent)
     }
     if (p->bt_show_clock) {
         clock_widget_create(parent, p->bt_clock_widget_x, p->bt_clock_widget_y,
-                            p->bt_clock_font, UI_ALIGN_LEFT);
+                            p->bt_clock_font, UI_ALIGN_LEFT, p->bt_label_bg_opa);
     }
 
     if (p->bt_show_circle) {
@@ -117,11 +117,11 @@ static void bt_create(lv_obj_t *parent)
     lv_label_set_text(s_brand_label, "Bluetooth Audio");
     lv_obj_set_style_text_font(s_brand_label, p->bt_brand_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_brand_label, lv_color_hex(th->bt_brand), LV_PART_MAIN);
-    ui_label_scrim(s_brand_label);
+    ui_label_scrim(s_brand_label, p->bt_label_bg_opa);
 
     s_status_label = ui_anchored_label(parent, p->bt_status_x, p->bt_status_y, UI_ALIGN_CENTER);
     lv_obj_set_style_text_font(s_status_label, p->bt_status_font, LV_PART_MAIN);
-    ui_label_scrim(s_status_label);
+    ui_label_scrim(s_status_label, p->bt_label_bg_opa);
 
     bt_state_t btState = app_state_get()->bt_state;
 
@@ -147,7 +147,7 @@ static void bt_create(lv_obj_t *parent)
     lv_label_set_text(s_vol_label, "VOL: 0%");
     lv_obj_set_style_text_font(s_vol_label, p->bt_vol_label_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_vol_label, lv_color_hex(th->text_muted), LV_PART_MAIN);
-    ui_label_scrim(s_vol_label);
+    ui_label_scrim(s_vol_label, p->bt_label_bg_opa);
 
     // Track metadata labels — content-hugging & centered on the (former fixed-
     // width) box centre, so the label_bg plate tracks the text. Long text is
@@ -158,7 +158,7 @@ static void bt_create(lv_obj_t *parent)
     lv_obj_set_style_text_align(s_title_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(s_title_label, p->bt_title_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_title_label, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    ui_label_scrim(s_title_label);
+    ui_label_scrim(s_title_label, p->bt_label_bg_opa);
     ui_label_set_text(s_title_label, "");
 
     s_artist_label = ui_anchored_label(parent, p->bt_artist_x + p->bt_artist_w / 2,
@@ -167,14 +167,14 @@ static void bt_create(lv_obj_t *parent)
     lv_obj_set_style_text_align(s_artist_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(s_artist_label, p->bt_artist_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_artist_label, lv_color_hex(th->text_secondary), LV_PART_MAIN);
-    ui_label_scrim(s_artist_label);
+    ui_label_scrim(s_artist_label, p->bt_label_bg_opa);
     ui_label_set_text(s_artist_label, "");
 
     s_time_label = ui_anchored_label(parent, p->bt_time_x, p->bt_time_y, UI_ALIGN_CENTER);
     lv_obj_set_style_text_font(s_time_label, p->bt_time_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_time_label, lv_color_hex(th->text_secondary), LV_PART_MAIN);
     lv_label_set_text(s_time_label, "0:00 / 0:00");
-    ui_label_scrim(s_time_label);
+    ui_label_scrim(s_time_label, p->bt_label_bg_opa);
 
     refresh_from_state();
 
@@ -254,6 +254,7 @@ static void bt_apply_theme(void)
 {
     if (!s_root) return;
     const ui_theme_colors_t *th = theme_get();
+    const ui_profile_t      *p  = ui_profile_get();
 
     lv_obj_set_style_bg_color(s_root, lv_color_hex(th->bg_primary), LV_PART_MAIN);
 
@@ -268,31 +269,31 @@ static void bt_apply_theme(void)
     // napis "Bluetooth Audio"
     lv_obj_set_style_text_color(s_brand_label,
         lv_color_hex(th->bt_brand), LV_PART_MAIN);
-    ui_label_scrim(s_brand_label);
+    ui_label_scrim(s_brand_label, p->bt_label_bg_opa);
 
     // status (Connected / Not connected / Discoverable)
     lv_obj_set_style_text_color(s_status_label,
         lv_color_hex(th->status_ok), LV_PART_MAIN);
-    ui_label_scrim(s_status_label);
+    ui_label_scrim(s_status_label, p->bt_label_bg_opa);
 
     lv_obj_set_style_text_color(s_vol_label,
         lv_color_hex(th->text_muted), LV_PART_MAIN);
-    ui_label_scrim(s_vol_label);
+    ui_label_scrim(s_vol_label, p->bt_label_bg_opa);
 
     if (s_title_label) {
         lv_obj_set_style_text_color(s_title_label,
             lv_color_hex(th->text_primary), LV_PART_MAIN);
-        ui_label_scrim(s_title_label);
+        ui_label_scrim(s_title_label, p->bt_label_bg_opa);
     }
     if (s_artist_label) {
         lv_obj_set_style_text_color(s_artist_label,
             lv_color_hex(th->text_secondary), LV_PART_MAIN);
-        ui_label_scrim(s_artist_label);
+        ui_label_scrim(s_artist_label, p->bt_label_bg_opa);
     }
     if (s_time_label) {
         lv_obj_set_style_text_color(s_time_label,
             lv_color_hex(th->text_secondary), LV_PART_MAIN);
-        ui_label_scrim(s_time_label);
+        ui_label_scrim(s_time_label, p->bt_label_bg_opa);
     }
 
     mode_indicator_apply_theme();

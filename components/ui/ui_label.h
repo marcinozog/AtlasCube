@@ -24,11 +24,11 @@ typedef enum {
 lv_obj_t *ui_anchored_label(lv_obj_t *parent, int x, int y, ui_label_align_t align);
 
 // Semi-transparent, theme-coloured rounded plate behind a floating label (or any
-// object) so its text stays readable over a wallpaper. Controlled globally by
-// display.label_bg / display.label_bg_opa. No-op — and adds no padding, so the
-// object's geometry is unchanged — when disabled. Idempotent: call again from a
-// widget's apply_theme() to refresh the plate colour on a theme change.
-void ui_label_scrim(lv_obj_t *obj);
+// object) so its text stays readable over a wallpaper. `opa_pct` is the owning
+// screen's ui_profile value (0..100). No-op — and adds no padding, so the
+// object's geometry is unchanged — at 0. Idempotent: call again from a widget's
+// apply_theme() to refresh the plate colour on a theme change.
+void ui_label_scrim(lv_obj_t *obj, int opa_pct);
 
 // Set a label's text, hiding the whole label when the text is empty — so a
 // scrim plate is never left showing behind nothing. Use for fields that go

@@ -147,6 +147,7 @@ typedef struct {
     // Per-screen wallpaper override: "" inherits the global default
     // (display.wallpaper_path), "none" forces the gradient/solid background,
     // anything else is an fopen path to a panel-sized RGB565 .bin on SD.
+    int16_t          clock_label_bg_opa;       // floating label plate opacity, 0..100
     char             clock_wallpaper[128];
 
     // screen_radio — absolute LCD coordinates (top-left origin)
@@ -213,6 +214,7 @@ typedef struct {
     const lv_font_t *radio_weather_font;
     bool             radio_show_ctrl_overlay;   // tap-anywhere transport/volume overlay
     ui_touch_hotspot_t radio_touch_hotspots[UI_TOUCH_HOTSPOT_COUNT];
+    int16_t          radio_label_bg_opa;        // floating label plate opacity, 0..100
     char             radio_wallpaper[128];      // see clock_wallpaper
 
     // screen_sd_player — absolute LCD coordinates (top-left origin). The title
@@ -282,6 +284,7 @@ typedef struct {
     const lv_font_t *sd_weather_font;
     bool             sd_show_ctrl_overlay;      // tap-anywhere transport/volume overlay
     ui_touch_hotspot_t sd_touch_hotspots[UI_TOUCH_HOTSPOT_COUNT];
+    int16_t          sd_label_bg_opa;           // floating label plate opacity, 0..100
     char             sd_wallpaper[128];         // see clock_wallpaper
 
     // screen_playlist
@@ -336,6 +339,7 @@ typedef struct {
     int16_t          bt_time_x;
     int16_t          bt_time_y;
     const lv_font_t *bt_time_font;
+    int16_t          bt_label_bg_opa;           // floating label plate opacity, 0..100
     char             bt_wallpaper[128];         // see clock_wallpaper
 
     // screen_settings

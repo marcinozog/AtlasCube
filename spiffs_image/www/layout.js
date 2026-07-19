@@ -384,6 +384,18 @@ function sectionWallpaperKey() {
     return state.active + '_wallpaper';
 }
 
+function sectionLabelBgKey() {
+    return state.active + '_label_bg_opa';
+}
+
+function updateLabelPlateControl() {
+    const slider = document.getElementById('layout_label_bg_opa');
+    const value = document.getElementById('layout_label_bg_opa_value');
+    const opa = clamp(state[state.active][sectionLabelBgKey()] ?? 50, 0, 100);
+    if (slider) slider.value = opa;
+    if (value) value.textContent = opa + '%';
+}
+
 function sectionWallpaperValue() {
     return String(state[state.active][sectionWallpaperKey()] || '');
 }
@@ -505,6 +517,7 @@ function updateWallpaperPickerLabel() {
 
     const preset = document.getElementById('layout_preset_name');
     if (preset) preset.textContent = presetPath() || '(select a wallpaper first)';
+    updateLabelPlateControl();
 }
 
 function buildWallpaperPicker() {
@@ -567,6 +580,32 @@ function buildWallpaperPicker() {
     autoLabel.append(autoCheck, document.createTextNode('Auto-apply preset'));
     row.append(caption, name, button, defaultBtn, noneBtn, autoLabel);
 
+    const plateRow = document.createElement('div');
+    plateRow.style.cssText =
+        'display:grid;grid-template-columns:auto minmax(120px,1fr) 42px;' +
+        'align-items:center;gap:8px;margin-top:8px;padding-top:8px;' +
+        'border-top:1px solid var(--border)';
+    const plateLabel = document.createElement('label');
+    plateLabel.htmlFor = 'layout_label_bg_opa';
+    plateLabel.textContent = 'Label plate opacity:';
+    plateLabel.style.cssText = 'font-size:11px;color:var(--text-dim)';
+    const plateSlider = document.createElement('input');
+    plateSlider.type = 'range';
+    plateSlider.id = 'layout_label_bg_opa';
+    plateSlider.min = '0';
+    plateSlider.max = '100';
+    plateSlider.step = '5';
+    plateSlider.addEventListener('input', () => {
+        const opa = clamp(parseInt(plateSlider.value, 10) || 0, 0, 100);
+        state[state.active][sectionLabelBgKey()] = opa;
+        document.getElementById('layout_label_bg_opa_value').textContent = opa + '%';
+        renderSvg();
+    });
+    const plateValue = document.createElement('span');
+    plateValue.id = 'layout_label_bg_opa_value';
+    plateValue.style.cssText = 'font-size:11px;text-align:right;color:var(--text-dim)';
+    plateRow.append(plateLabel, plateSlider, plateValue);
+
     const browser = document.createElement('div');
     browser.id = 'layout_wallpaper_browser';
     browser.hidden = true;
@@ -604,8 +643,9 @@ function buildWallpaperPicker() {
     status.id = 'layout_wallpaper_status';
     status.style.cssText = 'min-height:14px;margin-top:5px;font-size:11px;color:var(--text-dim)';
 
-    picker.append(row, browser, presetRow, status);
+    picker.append(row, plateRow, browser, presetRow, status);
     frame.insertAdjacentElement('afterend', picker);
+    updateLabelPlateControl();
 }
 
 // ── Per-wallpaper layout presets on SD ─────────────────────────────────────
@@ -973,6 +1013,7 @@ function selectSection(name) {
     }
 
     buildForm();
+    updateLabelPlateControl();
     renderSvg();
     // Wallpapers are per screen — refresh the preview for this tab, then
     // repaint once the (async) decode lands.

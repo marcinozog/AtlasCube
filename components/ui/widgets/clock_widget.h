@@ -21,7 +21,7 @@ extern "C" {
  *                  on x as the proportional digits change width
  */
 void clock_widget_create(lv_obj_t *parent, int x, int y, const lv_font_t *font,
-                         ui_label_align_t align);
+                         ui_label_align_t align, int label_bg_opa);
 
 /**
  * Destroys the widget and stops the LVGL timer.

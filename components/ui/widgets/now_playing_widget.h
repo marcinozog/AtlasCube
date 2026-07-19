@@ -18,7 +18,8 @@ extern "C" {
 void now_playing_widget_create(lv_obj_t *parent, int x, int y, lv_text_align_t align,
                                const lv_font_t *station_font,
                                bool show_title,
-                               const lv_font_t *title_font);
+                               const lv_font_t *title_font,
+                               int label_bg_opa);
 void now_playing_widget_destroy(void);
 
 /** Refresh from current app_state — call from on_event(UI_EVT_STATE_CHANGED). */

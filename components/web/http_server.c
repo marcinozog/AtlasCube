@@ -152,8 +152,6 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddBoolToObject(display, "bg_gradient", s->display.bg_gradient);
     cJSON_AddBoolToObject(display, "wallpaper_on", s->display.wallpaper_on);
     cJSON_AddNumberToObject(display, "wallpaper_dim", s->display.wallpaper_dim);
-    cJSON_AddBoolToObject(display, "label_bg", s->display.label_bg);
-    cJSON_AddNumberToObject(display, "label_bg_opa", s->display.label_bg_opa);
     cJSON_AddStringToObject(display, "wallpaper_path", s->display.wallpaper_path);
     cJSON_AddStringToObject(display, "wallpaper_url", s->display.wallpaper_url);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_mode", s->display.wallpaper_fetch_mode);
@@ -405,19 +403,6 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         if (cJSON_IsNumber(wpd)) {
             ESP_LOGI("HTTP", "POST wallpaper_dim: %d", wpd->valueint);
             settings_set_wallpaper_dim(wpd->valueint);
-        }
-        // Global label-background plate (readability over a wallpaper). Rebuild
-        // the active screen so the scrim re-applies live (it is set at build).
-        cJSON *lbg = cJSON_GetObjectItem(display, "label_bg");
-        cJSON *lbo = cJSON_GetObjectItem(display, "label_bg_opa");
-        if (cJSON_IsBool(lbg) || cJSON_IsNumber(lbo)) {
-            app_settings_t *cur = settings_get();
-            bool on  = cJSON_IsBool(lbg)   ? cJSON_IsTrue(lbg) : cur->display.label_bg;
-            int  opa = cJSON_IsNumber(lbo) ? lbo->valueint     : cur->display.label_bg_opa;
-            ESP_LOGI("HTTP", "POST label_bg: on=%d opa=%d", on, opa);
-            settings_set_label_bg(on, opa);
-            ui_event_t ev = { .type = UI_EVT_PROFILE_CHANGED };
-            ui_event_send(&ev);
         }
         cJSON *wp  = cJSON_GetObjectItem(display, "wallpaper_on");
         cJSON *wpp = cJSON_GetObjectItem(display, "wallpaper_path");

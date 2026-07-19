@@ -164,14 +164,6 @@ function setWallpaperDim(v) {
     postDisplay({ wallpaper_dim: parseInt(v, 10) || 0 });
 }
 
-// Global label-background plate (on/off + opacity), read from both controls so
-// either one changing sends the full pair.
-function setLabelBg() {
-    const on  = document.getElementById('label_bg_toggle').checked;
-    const opa = parseInt(document.getElementById('label_bg_opa_slider').value, 10) || 0;
-    postDisplay({ label_bg: on, label_bg_opa: opa });
-}
-
 // Folder of the currently selected file (mount-relative), or '/' if none.
 function sdDirOf(fullText) {
     if (fullText && fullText.startsWith(SD_MOUNT + '/')) {
@@ -1028,12 +1020,6 @@ function populateForm(s) {
         const wpBright = 100 - (s.display.wallpaper_dim || 0);
         document.getElementById('wp_dim_slider').value = wpBright;
         document.getElementById('wp_dim_value').textContent = wpBright + '%';
-
-        const lbgOn  = s.display.label_bg !== false;   // default on
-        const lbgOpa = (s.display.label_bg_opa ?? 50);
-        document.getElementById('label_bg_toggle').checked = lbgOn;
-        document.getElementById('label_bg_opa_slider').value = lbgOpa;
-        document.getElementById('label_bg_opa_value').textContent = lbgOpa + '%';
 
         if (s.display.wallpaper_url)
             document.getElementById('netWpUrl').value = s.display.wallpaper_url;

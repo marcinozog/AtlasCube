@@ -70,8 +70,6 @@ esp_err_t settings_init(void)
         s_settings.display.wallpaper_fetch_mode = 0;
         s_settings.display.wallpaper_fetch_hour = 4;
         s_settings.display.wallpaper_fetch_min  = 0;
-        s_settings.display.label_bg         = true;
-        s_settings.display.label_bg_opa     = 50;
         s_settings.display.logo_path[0]     = '\0';
         s_settings.display.show_boot_info   = true;
         s_settings.display.sd_show_screen   = true;
@@ -278,11 +276,6 @@ static esp_err_t load_from_file(void)
         s_settings.display.wallpaper_fetch_hour = cJSON_IsNumber(wfh) ? wfh->valueint : 4;
         cJSON *wfn = cJSON_GetObjectItem(display, "wallpaper_fetch_min");
         s_settings.display.wallpaper_fetch_min = cJSON_IsNumber(wfn) ? wfn->valueint : 0;
-        cJSON *lbg = cJSON_GetObjectItem(display, "label_bg");
-        s_settings.display.label_bg = cJSON_IsBool(lbg) ? cJSON_IsTrue(lbg) : true;
-        cJSON *lbo = cJSON_GetObjectItem(display, "label_bg_opa");
-        int lbopa = cJSON_IsNumber(lbo) ? lbo->valueint : 50;
-        s_settings.display.label_bg_opa = (lbopa < 0) ? 0 : (lbopa > 100) ? 100 : lbopa;
         cJSON *lgp = cJSON_GetObjectItem(display, "logo_path");
         s_settings.display.logo_path[0] = '\0';
         if (cJSON_IsString(lgp))
@@ -588,8 +581,6 @@ static esp_err_t save_to_file_locked(void)
     cJSON_AddStringToObject(display, "wallpaper_path", s_settings.display.wallpaper_path);
     cJSON_AddNumberToObject(display, "wallpaper_dim", s_settings.display.wallpaper_dim);
     cJSON_AddStringToObject(display, "wallpaper_url", s_settings.display.wallpaper_url);
-    cJSON_AddBoolToObject(display, "label_bg", s_settings.display.label_bg);
-    cJSON_AddNumberToObject(display, "label_bg_opa", s_settings.display.label_bg_opa);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_mode", s_settings.display.wallpaper_fetch_mode);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_hour", s_settings.display.wallpaper_fetch_hour);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_min",  s_settings.display.wallpaper_fetch_min);
@@ -1070,18 +1061,6 @@ void settings_set_wallpaper_dim(int pct)
     // wallpaper_on so app_state notifies and ui_manager spots the new value.
     app_state_update(&(app_state_patch_t){ .has_wallpaper_on = true,
                                            .wallpaper_on = s_settings.display.wallpaper_on });
-    save_to_file();
-}
-
-void settings_set_label_bg(bool on, int opa)
-{
-    if (opa < 0)   opa = 0;
-    if (opa > 100) opa = 100;
-    if (s_settings.display.label_bg == on && s_settings.display.label_bg_opa == opa) return;
-    s_settings.display.label_bg     = on;
-    s_settings.display.label_bg_opa = opa;
-    // Live effect (re-scrim on the active screen) is the caller's job via
-    // UI_EVT_PROFILE_CHANGED — settings_ex must not depend on ui_manager.
     save_to_file();
 }
 

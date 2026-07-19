@@ -159,7 +159,7 @@ static lv_obj_t *make_centered_label(lv_obj_t *parent, const lv_font_t *font,
     lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(lbl, font, LV_PART_MAIN);
     lv_obj_set_style_text_color(lbl, lv_color_hex(color), LV_PART_MAIN);
-    ui_label_scrim(lbl);
+    ui_label_scrim(lbl, ui_profile_get()->sd_label_bg_opa);
     return lbl;
 }
 
@@ -228,7 +228,7 @@ static void sd_player_screen_create(lv_obj_t *parent)
     // Clock + indicators (own sd_* layout fields, same widgets as screen_radio).
     if (p->sd_show_clock) {
         clock_widget_create(parent, p->sd_clock_widget_x, p->sd_clock_widget_y,
-                            p->sd_clock_font, UI_ALIGN_CENTER);
+                            p->sd_clock_font, UI_ALIGN_CENTER, p->sd_label_bg_opa);
     }
     if (p->sd_show_mode_indicator) {
         mode_indicator_create(parent, p->sd_mode_indic_x, p->sd_mode_indic_y);
@@ -252,7 +252,8 @@ static void sd_player_screen_create(lv_obj_t *parent)
     }
     if (p->sd_show_weather) {
         weather_widget_create(parent, p->sd_weather_x, p->sd_weather_y,
-                              p->sd_weather_w, p->sd_weather_font);
+                              p->sd_weather_w, p->sd_weather_font,
+                              p->sd_label_bg_opa);
     }
 
     refresh_from_state();
@@ -345,12 +346,13 @@ static void sd_player_apply_theme(void)
 {
     if (!s_root) return;
     const ui_theme_colors_t *th = theme_get();
+    const ui_profile_t      *p  = ui_profile_get();
 
     lv_obj_set_style_bg_color(s_root, lv_color_hex(th->bg_primary), LV_PART_MAIN);
-    if (s_title)  { lv_obj_set_style_text_color(s_title,  lv_color_hex(th->text_primary), LV_PART_MAIN); ui_label_scrim(s_title); }
-    if (s_folder) { lv_obj_set_style_text_color(s_folder, lv_color_hex(th->accent),       LV_PART_MAIN); ui_label_scrim(s_folder); }
-    if (s_info)   { lv_obj_set_style_text_color(s_info,   lv_color_hex(th->text_muted),   LV_PART_MAIN); ui_label_scrim(s_info); }
-    if (s_time)   ui_label_scrim(s_time);
+    if (s_title)  { lv_obj_set_style_text_color(s_title,  lv_color_hex(th->text_primary), LV_PART_MAIN); ui_label_scrim(s_title, p->sd_label_bg_opa); }
+    if (s_folder) { lv_obj_set_style_text_color(s_folder, lv_color_hex(th->accent),       LV_PART_MAIN); ui_label_scrim(s_folder, p->sd_label_bg_opa); }
+    if (s_info)   { lv_obj_set_style_text_color(s_info,   lv_color_hex(th->text_muted),   LV_PART_MAIN); ui_label_scrim(s_info, p->sd_label_bg_opa); }
+    if (s_time)   ui_label_scrim(s_time, p->sd_label_bg_opa);
     if (s_bar) {
         lv_obj_set_style_bg_color(s_bar, lv_color_hex(th->text_muted), LV_PART_MAIN);
         lv_obj_set_style_bg_color(s_bar, lv_color_hex(th->accent),     LV_PART_INDICATOR);

@@ -3,7 +3,6 @@
 #include "theme.h"
 #include "fonts/ui_fonts.h"
 #include "ui_profile.h"
-#include "settings.h"
 #include <math.h>
 #include <stdio.h>
 
@@ -16,14 +15,13 @@
 static lv_obj_t *s_row, *s_pill, *s_icon, *s_label;
 static lv_timer_t *s_timer;
 static int16_t s_row_x, s_row_min_w;
+static int s_label_bg_opa;
 
-// Plate opacity 0-255 from the global display.label_bg / label_bg_opa setting
-// (0 = no plate). Read at create; the screen rebuilds on a settings change.
+// Plate opacity 0-255 from the owning screen's profile (0 = no plate).
 static uint8_t plate_opa(void)
 {
-    const app_settings_t *st = settings_get();
-    if (!st->display.label_bg || st->display.label_bg_opa <= 0) return 0;
-    int pct = st->display.label_bg_opa;
+    if (s_label_bg_opa <= 0) return 0;
+    int pct = s_label_bg_opa;
     if (pct > 100) pct = 100;
     return (uint8_t)((pct * 255) / 100);
 }
@@ -61,8 +59,9 @@ static const char *icon_glyph(int code, bool day)
 static void tick(lv_timer_t *t) { (void)t; weather_widget_update(); }
 
 void weather_widget_create(lv_obj_t *parent, int16_t x, int16_t y, int16_t w,
-                           const lv_font_t *font)
+                           const lv_font_t *font, int label_bg_opa)
 {
+    s_label_bg_opa = label_bg_opa;
     s_row_x = x;
     s_row_min_w = w > 0 ? w : DISPLAY_WIDTH;
     s_row = lv_obj_create(parent);
@@ -89,8 +88,8 @@ void weather_widget_create(lv_obj_t *parent, int16_t x, int16_t y, int16_t w,
     lv_obj_set_style_pad_column(s_pill, 6, LV_PART_MAIN);
     lv_obj_clear_flag(s_pill, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
 
-    // Semi-transparent plate behind the icon+text pair, controlled by the global
-    // display.label_bg setting. Padding is added only when the plate is on, so
+    // Semi-transparent plate behind the icon+text pair, controlled per screen.
+    // Padding is added only when the plate is on, so
     // the widget's geometry is unchanged when disabled.
     uint8_t opa = plate_opa();
     if (opa > 0) {
@@ -120,6 +119,7 @@ void weather_widget_destroy(void)
 {
     if (s_timer) { lv_timer_delete(s_timer); s_timer = NULL; }
     s_row = s_pill = s_icon = s_label = NULL;
+    s_label_bg_opa = 0;
 }
 
 void weather_widget_update(void)

@@ -91,7 +91,7 @@ static void radio_create(lv_obj_t *parent)
     if (p->radio_show_np) {
         now_playing_widget_create(parent, p->radio_np_x, p->radio_np_y, LV_TEXT_ALIGN_CENTER,
                                   p->radio_np_station_font, p->radio_show_np_title,
-                                  p->radio_np_title_font);
+                                  p->radio_np_title_font, p->radio_label_bg_opa);
     }
     if (p->radio_show_station_icon) {
         station_icon_widget_create(parent,
@@ -103,7 +103,7 @@ static void radio_create(lv_obj_t *parent)
     }
     if (p->radio_show_clock) {
         clock_widget_create(parent, p->radio_clock_widget_x, p->radio_clock_widget_y,
-                            p->radio_clock_font, UI_ALIGN_CENTER);
+                            p->radio_clock_font, UI_ALIGN_CENTER, p->radio_label_bg_opa);
     }
     if (p->radio_show_event_indicator) {
         event_indicator_create(parent, p->radio_event_indic_x, p->radio_event_indic_y);
@@ -124,7 +124,8 @@ static void radio_create(lv_obj_t *parent)
     }
     if (p->radio_show_weather) {
         weather_widget_create(parent, p->radio_weather_x, p->radio_weather_y,
-                              p->radio_weather_w, p->radio_weather_font);
+                              p->radio_weather_w, p->radio_weather_font,
+                              p->radio_label_bg_opa);
     }
 
     if (p->radio_show_playback_status) {
@@ -135,14 +136,14 @@ static void radio_create(lv_obj_t *parent)
         lv_label_set_text(s_label_state, "");
         lv_obj_set_style_text_font(s_label_state, p->radio_state_font, LV_PART_MAIN);
         lv_obj_set_style_text_color(s_label_state, lv_color_hex(th->status_ok), LV_PART_MAIN);
-        ui_label_scrim(s_label_state);
+        ui_label_scrim(s_label_state, p->radio_label_bg_opa);
 
         s_label_audio_info = ui_anchored_label(parent, DISPLAY_WIDTH / 2,
                                                p->radio_audio_info_y, UI_ALIGN_CENTER);
         lv_label_set_text(s_label_audio_info, "");
         lv_obj_set_style_text_font(s_label_audio_info, p->radio_audio_info_font, LV_PART_MAIN);
         lv_obj_set_style_text_color(s_label_audio_info, lv_color_hex(th->text_muted), LV_PART_MAIN);
-        ui_label_scrim(s_label_audio_info);
+        ui_label_scrim(s_label_audio_info, p->radio_label_bg_opa);
     }
 
     refresh_from_state();
@@ -245,18 +246,19 @@ static void radio_apply_theme(void)
 {
     if (!s_root) return;
     const ui_theme_colors_t *th = theme_get();
+    const ui_profile_t      *p  = ui_profile_get();
 
     lv_obj_set_style_bg_color(s_root, lv_color_hex(th->bg_primary), LV_PART_MAIN);
 
     if (s_label_state) {
         lv_obj_set_style_text_color(s_label_state,
             lv_color_hex(th->status_ok), LV_PART_MAIN);
-        ui_label_scrim(s_label_state);
+        ui_label_scrim(s_label_state, p->radio_label_bg_opa);
     }
     if (s_label_audio_info) {
         lv_obj_set_style_text_color(s_label_audio_info,
             lv_color_hex(th->text_muted), LV_PART_MAIN);
-        ui_label_scrim(s_label_audio_info);
+        ui_label_scrim(s_label_audio_info, p->radio_label_bg_opa);
     }
 
     now_playing_widget_apply_theme();

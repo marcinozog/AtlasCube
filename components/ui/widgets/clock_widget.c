@@ -12,6 +12,7 @@ static const char *TAG = "CLK_WIDGET";
 
 static lv_obj_t   *s_label_time   = NULL;
 static lv_timer_t *s_timer        = NULL;
+static int         s_label_bg_opa = 0;
 
 static void update_display(void)
 {
@@ -41,9 +42,10 @@ static void timer_cb(lv_timer_t *timer)
 }
 
 void clock_widget_create(lv_obj_t *parent, int x, int y, const lv_font_t *font,
-                         ui_label_align_t align)
+                         ui_label_align_t align, int label_bg_opa)
 {
     const ui_theme_colors_t *th = theme_get();
+    s_label_bg_opa = label_bg_opa;
 
     s_label_time = ui_anchored_label(parent, x, y, align);
     lv_label_set_text(s_label_time, "--:--");
@@ -51,7 +53,7 @@ void clock_widget_create(lv_obj_t *parent, int x, int y, const lv_font_t *font,
         font ? font : &lv_font_montserrat_18_pl, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_label_time,
         lv_color_hex(th->text_primary), LV_PART_MAIN);
-    ui_label_scrim(s_label_time);
+    ui_label_scrim(s_label_time, s_label_bg_opa);
 
     s_timer = lv_timer_create(timer_cb, 60 * 1000, NULL);
     update_display();
@@ -63,6 +65,7 @@ void clock_widget_destroy(void)
 {
     if (s_timer) { lv_timer_delete(s_timer); s_timer = NULL; }
     s_label_time = NULL;
+    s_label_bg_opa = 0;
     ESP_LOGI(TAG, "Destroyed");
 }
 
@@ -78,5 +81,5 @@ void clock_widget_apply_theme(void)
 
     lv_obj_set_style_text_color(s_label_time,
         lv_color_hex(th->text_primary), LV_PART_MAIN);
-    ui_label_scrim(s_label_time);
+    ui_label_scrim(s_label_time, s_label_bg_opa);
 }
