@@ -263,6 +263,7 @@ function sdRender(entries) {
                 `<span class="icon">📁</span>${esc(e.name)}</td>` +
                 `<td class="size">—</td>` +
                 `<td class="actions">` +
+                `<button class="act" onclick="event.stopPropagation();sdMove('${esc(full)}','${esc(e.name)}',true)" title="Move">📂</button>` +
                 `<button class="act" onclick="event.stopPropagation();sdRename('${esc(full)}','${esc(e.name)}')" title="Rename">✏️</button>` +
                 `<button class="act del" onclick="event.stopPropagation();sdDelete('${esc(full)}','${esc(e.name)}',true)" title="Delete">🗑</button>` +
                 `</td></tr>`
@@ -289,6 +290,7 @@ function sdRender(entries) {
                 play +
                 view +
                 `<a class="act" href="${dl}" title="Download">⬇</a>` +
+                `<button class="act" onclick="sdMove('${esc(full)}','${esc(e.name)}',false)" title="Move">📂</button>` +
                 `<button class="act" onclick="sdRename('${esc(full)}','${esc(e.name)}')" title="Rename">✏️</button>` +
                 `<button class="act del" onclick="sdDelete('${esc(full)}','${esc(e.name)}',false)" title="Delete">🗑</button>` +
                 `</td></tr>`
@@ -350,6 +352,40 @@ async function sdRename(path, name) {
         if (!r.ok) { alert("Rename failed (" + r.status + ")."); return; }
         sdRefresh();
     } catch (e) { alert("Connection error."); }
+}
+
+// Move a file/folder to another SD directory. Destination folder is typed in a
+// prompt; missing levels are created via /api/sd/mkdir (one level at a time),
+// then /api/sd/rename with a full '/'-prefixed target performs the move.
+async function sdMove(path, name, isDir) {
+    const input = prompt("Move to folder:", sdParent(path));
+    if (input === null) return;
+    let dir = input.trim();
+    if (!dir.startsWith("/")) dir = "/" + dir;
+    dir = dir.replace(/\/+$/, "") || "/";
+    if (dir.includes("..")) { alert("Invalid path."); return; }
+    if (dir === sdParent(path)) return;                         // same folder — nothing to do
+    if (isDir && (dir === path || dir.startsWith(path + "/"))) {
+        alert("Cannot move a folder into itself."); return;
+    }
+    setLog(`Moving ${name} → ${dir}…`);
+    try {
+        let acc = "";
+        for (const part of dir.split("/").filter(Boolean)) {
+            acc += "/" + part;
+            const m = await fetch("/api/sd/mkdir?path=" + encodeURIComponent(acc), { method: "POST" });
+            if (m.status === 503) throw new Error("no SD card");
+            if (!m.ok) throw new Error(`cannot create ${acc} (${m.status})`);
+        }
+        const r = await fetch("/api/sd/rename?path=" + encodeURIComponent(path) +
+                              "&to=" + encodeURIComponent(sdJoin(dir, name)), { method: "POST" });
+        if (r.status === 503) throw new Error("no SD card");
+        if (!r.ok) throw new Error(`HTTP ${r.status} — target may already exist`);
+        setLog(`✓ Moved ${name} to ${dir}`, "ok");
+        sdRefresh();
+    } catch (e) {
+        setLog(`✗ Move failed: ${e.message}`, "err");
+    }
 }
 
 async function sdNewFolder() {

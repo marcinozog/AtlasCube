@@ -90,6 +90,7 @@ function renderList(entries) {
                 `<span class="icon">📁</span>${esc(e.name)}</td>` +
                 `<td class="size">—</td>` +
                 `<td class="actions">` +
+                `<button class="act" onclick="event.stopPropagation();moveEntry('${esc(full)}','${esc(e.name)}',true)" title="Move">📂</button>` +
                 `<button class="act" onclick="event.stopPropagation();renameEntry('${esc(full)}','${esc(e.name)}')" title="Rename">✏️</button>` +
                 `<button class="act del" onclick="event.stopPropagation();delEntry('${esc(full)}','${esc(e.name)}',true)" title="Delete">🗑</button>` +
                 `</td></tr>`
@@ -102,6 +103,7 @@ function renderList(entries) {
                 `<td class="size">${fmtSize(e.size || 0)}</td>` +
                 `<td class="actions">` +
                 `<a class="act" href="${dl}" title="Download">⬇</a>` +
+                `<button class="act" onclick="moveEntry('${esc(full)}','${esc(e.name)}',false)" title="Move">📂</button>` +
                 `<button class="act" onclick="renameEntry('${esc(full)}','${esc(e.name)}')" title="Rename">✏️</button>` +
                 `<button class="act del" onclick="delEntry('${esc(full)}','${esc(e.name)}',false)" title="Delete">🗑</button>` +
                 `</td></tr>`
@@ -129,6 +131,36 @@ async function renameEntry(path, name) {
                               "&to=" + encodeURIComponent(trimmed), { method: "POST" });
         if (r.status === 503) { alert("No SD card."); return; }
         if (!r.ok) { alert("Rename failed (" + r.status + ")."); return; }
+        refresh();
+    } catch (e) { alert("Connection error."); }
+}
+
+// Move a file/folder to another directory. The destination folder is typed in
+// a prompt; missing levels are created via /api/sd/mkdir (one level at a time),
+// then /api/sd/rename with a full '/'-prefixed target performs the move.
+async function moveEntry(path, name, isDir) {
+    const input = prompt("Move to folder:", parentPath(path));
+    if (input === null) return;
+    let dir = input.trim();
+    if (!dir.startsWith("/")) dir = "/" + dir;
+    dir = dir.replace(/\/+$/, "") || "/";
+    if (dir.includes("..")) { alert("Invalid path."); return; }
+    if (dir === parentPath(path)) return;                       // same folder — nothing to do
+    if (isDir && (dir === path || dir.startsWith(path + "/"))) {
+        alert("Cannot move a folder into itself."); return;
+    }
+    try {
+        let acc = "";
+        for (const part of dir.split("/").filter(Boolean)) {
+            acc += "/" + part;
+            const m = await fetch("/api/sd/mkdir?path=" + encodeURIComponent(acc), { method: "POST" });
+            if (m.status === 503) { alert("No SD card."); return; }
+            if (!m.ok) { alert(`Cannot create ${acc} (${m.status}).`); return; }
+        }
+        const r = await fetch("/api/sd/rename?path=" + encodeURIComponent(path) +
+                              "&to=" + encodeURIComponent(joinPath(dir, name)), { method: "POST" });
+        if (r.status === 503) { alert("No SD card."); return; }
+        if (!r.ok) { alert(`Move failed (${r.status}). Target may already exist.`); return; }
         refresh();
     } catch (e) { alert("Connection error."); }
 }

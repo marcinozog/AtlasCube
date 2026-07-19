@@ -2696,13 +2696,14 @@ static esp_err_t api_sd_mkdir_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-// POST /api/sd/rename?path=/dir/old&to=new  → renames within the same directory
+// POST /api/sd/rename?path=/dir/old&to=new  → renames within the same directory.
+// When `to` starts with '/', it is a full card-relative destination path instead
+// and the entry is moved there (FATFS rename works across directories).
 static esp_err_t api_sd_rename_handler(httpd_req_t *req)
 {
     char src[256];
     if (!sd_resolve_path(req, NULL, src, sizeof(src))) return ESP_FAIL;
 
-    // `to` is a bare new name (no path) — the file stays in the same directory.
     char to[160];
     to[0] = '\0';
     size_t qlen = httpd_req_get_url_query_len(req) + 1;
@@ -2716,16 +2717,24 @@ static esp_err_t api_sd_rename_handler(httpd_req_t *req)
         }
         free(q);
     }
-    if (to[0] == '\0' || strchr(to, '/') || strstr(to, "..")) {
+    if (to[0] == '\0' || strstr(to, "..") ||
+        (to[0] != '/' && strchr(to, '/'))) {
         httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad target name");
         return ESP_FAIL;
     }
 
-    // dest = parent directory of src + '/' + to
-    char *slash = strrchr(src, '/');
-    int dirlen = slash ? (int)(slash - src) : (int)strlen(src);
     char dest[sizeof(src) + sizeof(to)];
-    snprintf(dest, sizeof(dest), "%.*s/%s", dirlen, src, to);
+    if (to[0] == '/') {
+        // move: dest = mount point + card-relative path
+        const char *r = to;
+        while (*r == '/') r++;
+        snprintf(dest, sizeof(dest), "%s/%s", SD_MOUNT_POINT, r);
+    } else {
+        // rename: dest = parent directory of src + '/' + to
+        char *slash = strrchr(src, '/');
+        int dirlen = slash ? (int)(slash - src) : (int)strlen(src);
+        snprintf(dest, sizeof(dest), "%.*s/%s", dirlen, src, to);
+    }
 
     if (rename(src, dest) != 0) {
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Rename failed");
