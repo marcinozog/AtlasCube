@@ -472,9 +472,10 @@ All radio topics use the prefix `<base_topic>/` (default: `atlascube/`). The MQT
 
 | Topic suffix | Direction | Payload | Notes |
 |---|---|---|---|
-| `cmd/play` | subscribe | any | resumes the currently selected station |
-| `cmd/stop` | subscribe | any | |
-| `cmd/next` / `cmd/prev` | subscribe | any | wraps around the playlist |
+| `cmd/play` | subscribe | any | resumes the active source (radio / SD player / Bluetooth) |
+| `cmd/stop` | subscribe | any | stops the active source |
+| `cmd/next` / `cmd/prev` | subscribe | any | next/previous on the active source; radio wraps around the playlist |
+| `cmd/source` | subscribe | `radio` \| `sd` \| `bt` | switches the audio source |
 | `cmd/volume` | subscribe | `0`–`100` | clamped |
 | `cmd/station` | subscribe | playlist index | 0-based |
 | `state/playing` | publish (retain) | `playing` \| `stopped` \| `buffering` \| `error` | |

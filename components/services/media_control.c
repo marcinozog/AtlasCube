@@ -31,6 +31,39 @@ media_source_t media_source_current(void)
 }
 
 /*
+media_source_switch
+*/
+void media_source_switch(media_source_t target)
+{
+    app_state_t *s = app_state_get();
+
+    switch (target) {
+        case MEDIA_SOURCE_RADIO:
+            // radio_play_url pauses+disables BT and drops the SD session.
+            if (s->radio_state != RADIO_STATE_PLAYING &&
+                s->radio_state != RADIO_STATE_BUFFERING)
+                radio_play_index(s->curr_index);
+            break;
+
+        case MEDIA_SOURCE_SD:
+            // take_over_output() inside the player handles BT and the radio.
+            // No kept queue → start the default music folder from the top.
+            if (sd_player_is_active()) break;
+            if (sd_player_has_queue()) sd_player_resume_current();
+            else                       sd_player_play_folder(NULL);
+            break;
+
+        case MEDIA_SOURCE_BT:
+            // Same as the WS "bt_play" command: the phone may already be
+            // playing (no rising edge for on_bt_play_event), so switch the
+            // source here; bt_play() then ensures the module is playing.
+            settings_set_bt_enable_volatile(true);
+            bt_play();
+            break;
+    }
+}
+
+/*
 media_control_execute
 */
 void media_control_execute(media_source_t source, media_action_t action)

@@ -110,6 +110,13 @@ static void handle_plain_cmd(const char *cmd)
         int idx = atoi(cmd + 12);
         radio_play_index(idx);
     }
+    else if (strncmp(cmd, "source=", 7) == 0) {
+        const char *t = cmd + 7;
+        if      (strcmp(t, "radio") == 0) media_source_switch(MEDIA_SOURCE_RADIO);
+        else if (strcmp(t, "sd")    == 0) media_source_switch(MEDIA_SOURCE_SD);
+        else if (strcmp(t, "bt")    == 0) media_source_switch(MEDIA_SOURCE_BT);
+        else ESP_LOGW(TAG, "Unknown source: %s", t);
+    }
     else {
         ESP_LOGW(TAG, "Unknown plain CMD: %s", cmd);
     }

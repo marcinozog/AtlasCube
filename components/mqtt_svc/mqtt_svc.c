@@ -136,6 +136,11 @@ static void handle_cmd(const char *suffix, const char *payload)
         media_control_execute(media_source_current(), MEDIA_ACTION_NEXT);
     } else if (strcmp(suffix, "prev") == 0) {
         media_control_execute(media_source_current(), MEDIA_ACTION_PREVIOUS);
+    } else if (strcmp(suffix, "source") == 0) {
+        if      (strcmp(payload, "radio") == 0) media_source_switch(MEDIA_SOURCE_RADIO);
+        else if (strcmp(payload, "sd")    == 0) media_source_switch(MEDIA_SOURCE_SD);
+        else if (strcmp(payload, "bt")    == 0) media_source_switch(MEDIA_SOURCE_BT);
+        else ESP_LOGW(TAG, "unknown source: %s", payload);
     } else if (strcmp(suffix, "volume") == 0) {
         int v = atoi(payload);
         if (v < 0)   v = 0;

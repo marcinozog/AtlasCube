@@ -469,9 +469,10 @@ Wszystkie topice radia mają prefix `<base_topic>/` (domyślnie `atlascube/`). `
 
 | Suffix topiku | Kierunek | Payload | Uwagi |
 |---|---|---|---|
-| `cmd/play` | subscribe | cokolwiek | wznawia aktualnie wybraną stację |
-| `cmd/stop` | subscribe | cokolwiek | |
-| `cmd/next` / `cmd/prev` | subscribe | cokolwiek | przewija po playliście w kółko |
+| `cmd/play` | subscribe | cokolwiek | wznawia aktywne źródło (radio / odtwarzacz SD / Bluetooth) |
+| `cmd/stop` | subscribe | cokolwiek | zatrzymuje aktywne źródło |
+| `cmd/next` / `cmd/prev` | subscribe | cokolwiek | następny/poprzedni na aktywnym źródle; radio przewija playlistę w kółko |
+| `cmd/source` | subscribe | `radio` \| `sd` \| `bt` | przełącza źródło dźwięku |
 | `cmd/volume` | subscribe | `0`–`100` | przycinane do zakresu |
 | `cmd/station` | subscribe | indeks stacji | liczone od 0 |
 | `state/playing` | publish (retain) | `playing` \| `stopped` \| `buffering` \| `error` | |

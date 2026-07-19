@@ -36,6 +36,15 @@ media_source_t media_source_current(void);
  */
 void media_control_execute(media_source_t source, media_action_t action);
 
+/**
+ * Explicit source switch ("switch to radio/SD/BT" voice command). No-op when
+ * the target is already playing. The services handle the mux themselves:
+ * starting the radio or the SD player takes the output over from the other
+ * sources; BT is enabled volatile (no SPIFFS write — safe on shallow
+ * httpd/mqtt task stacks) and told to play.
+ */
+void media_source_switch(media_source_t target);
+
 #ifdef __cplusplus
 }
 #endif
