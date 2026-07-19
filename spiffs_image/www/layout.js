@@ -1029,7 +1029,45 @@ function renderWallpaperDirectory(data) {
         empty.style.cssText = 'padding:7px 9px;font-size:11px;color:var(--text-dim)';
         list.appendChild(empty);
     }
+
+    // Upload straight into the browsed folder: converts a browser image to the
+    // panel-sized .bin and assigns it to the active screen, same as picking an
+    // existing file — without touching the global wallpaper in Settings.
+    const upload = document.createElement('label');
+    upload.textContent = '⬆ Upload image…';
+    upload.style.cssText =
+        'display:block;padding:6px 9px;cursor:pointer;font-size:11px;' +
+        'color:var(--accent);border-top:1px solid var(--border)';
+    upload.onmouseenter = () => { upload.style.background = 'var(--bg-input)'; };
+    upload.onmouseleave = () => { upload.style.background = ''; };
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.hidden = true;
+    fileInput.addEventListener('change', () => uploadWallpaperTo(path, fileInput));
+    upload.appendChild(fileInput);
+    list.appendChild(upload);
+
     browser.append(heading, list);
+}
+
+// Convert the picked image, store it on the SD card under `dir` and hand the
+// resulting file to the regular selection flow (enables wallpapers globally if
+// needed, sets the section override, offers the layout preset).
+async function uploadWallpaperTo(dir, input) {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    const status = document.getElementById('layout_wallpaper_status');
+    const note = msg => { if (status) status.textContent = msg; };
+    try {
+        await ensureLvBin();
+        const relPath = await window.LvBin.uploadImage(
+            file, dir, state.meta.screen_w, state.meta.screen_h, note);
+        await selectWallpaper(relPath);
+    } catch (err) {
+        note('Upload failed: ' + err.message);
+    }
 }
 
 // Store `value` ("", "none" or an fopen path) as the active section's

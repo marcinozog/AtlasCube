@@ -257,13 +257,6 @@ function wallpaperUploadStatus(message, kind) {
     el.className = 'save-status' + (kind ? ' ' + kind : '');
 }
 
-function wallpaperFileStem(name) {
-    const raw = String(name || '').replace(/\.[^.]*$/, '');
-    const ascii = raw.normalize ? raw.normalize('NFKD').replace(/[\u0300-\u036f]/g, '') : raw;
-    return ascii.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) ||
-           ('wallpaper-' + Date.now());
-}
-
 async function wallpaperPanelSize() {
     if (netWpPanelW > 0 && netWpPanelH > 0) return { w: netWpPanelW, h: netWpPanelH };
     const r = await fetch('/api/ui/profile/meta', { cache: 'no-store' });
@@ -284,17 +277,10 @@ async function uploadWallpaperImage(input) {
     const label = document.getElementById('wallpaperUploadBtn');
     label.style.pointerEvents = 'none';
     label.style.opacity = '.6';
-    wallpaperUploadStatus('Converting…', '');
     try {
         const { w, h } = await wallpaperPanelSize();
-        const bin = await LvBin.encodeImage(file, w, h);
-        const relPath = '/wallpapers/' + wallpaperFileStem(file.name) + '.bin';
-        wallpaperUploadStatus('Uploading ' + w + '×' + h + '…', '');
-        const r = await fetch('/api/sd/file?path=' + encodeURIComponent(relPath), {
-            method: 'POST', body: bin
-        });
-        if (r.status === 503) throw new Error('no SD card');
-        if (!r.ok) throw new Error('SD upload HTTP ' + r.status);
+        const relPath = await LvBin.uploadImage(file, '/wallpapers', w, h,
+            msg => wallpaperUploadStatus(msg, ''));
         selectWallpaper(relPath);
         wallpaperUploadStatus('✓ Uploaded and applied', 'ok');
     } catch (e) {

@@ -112,6 +112,34 @@
         return new Blob([out], { type: "application/octet-stream" });
     }
 
+    // Sanitize an original filename into an ASCII stem safe for FATFS paths
+    // and the JSON config files that reference them.
+    function fileStem(name) {
+        const raw = String(name || "").replace(/\.[^.]*$/, "");
+        const ascii = raw.normalize ? raw.normalize("NFKD").replace(/[\u0300-\u036f]/g, "") : raw;
+        return ascii.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) ||
+               ("wallpaper-" + Date.now());
+    }
+
+    // Convert a browser image to a panel-sized .bin and store it on the SD
+    // card under `dir` (mount-relative, e.g. "/wallpapers"). Returns the
+    // mount-relative path of the uploaded file. `onStatus`, when given, gets
+    // progress messages for the caller's status line.
+    async function uploadImage(file, dir, w, h, onStatus) {
+        const note = typeof onStatus === "function" ? onStatus : () => {};
+        note("Converting…");
+        const bin = await encodeImage(file, w, h);
+        const base = String(dir || "").replace(/\/+$/, "");
+        const relPath = base + "/" + fileStem(file.name) + ".bin";
+        note("Uploading " + w + "×" + h + "…");
+        const r = await fetch("/api/sd/file?path=" + encodeURIComponent(relPath), {
+            method: "POST", body: bin
+        });
+        if (r.status === 503) throw new Error("no SD card");
+        if (!r.ok) throw new Error("SD upload HTTP " + r.status);
+        return relPath;
+    }
+
     // Lazily-built modal overlay (one per page). Self-styled so it works on any
     // page that loads style.css for its CSS variables.
     let overlay, bodyEl, captionEl;
@@ -171,5 +199,5 @@
         }
     }
 
-    global.LvBin = { decodeToCanvas, encodeImage, openPreview };
+    global.LvBin = { decodeToCanvas, encodeImage, uploadImage, openPreview };
 })(window);
