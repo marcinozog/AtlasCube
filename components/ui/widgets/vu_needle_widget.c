@@ -46,6 +46,7 @@ static lv_timer_t    *s_timer = NULL;
 static bool           s_created = false;
 static float          s_agc_ref = NEEDLE_AGC_REF_MIN; // shared L/R reference (dBFS)
 static uint32_t       s_last_count = 0;               // stall (pause) detection
+static media_source_t s_owner = MEDIA_SOURCE_RADIO;   // source these meters belong to
 
 static void tip_for_level(const needle_meter_t *m, float lvl, int *tx, int *ty)
 {
@@ -135,9 +136,12 @@ static void tick_cb(lv_timer_t *t)
     (void)t;
     float target[2] = { 0.0f, 0.0f };
 
-    // No new audio since last tick (paused / stopped): needles fall to rest.
+    // No new audio since last tick (paused / stopped) or another source holds
+    // the audio path (media_source_current() != owner): needles fall to rest.
+    // s_last_count stays stale in the foreign-source case so the meter resumes
+    // the moment the owner takes the path back.
     uint32_t count = audio_levels_count();
-    if (count != s_last_count) {
+    if (count != s_last_count && media_source_current() == s_owner) {
         s_last_count = count;
 
         float rms_l, rms_r;
@@ -217,11 +221,12 @@ static void meter_create(needle_meter_t *m, lv_obj_t *parent,
 void vu_needle_widget_create(lv_obj_t *parent,
                              bool show_l, int16_t l_x, int16_t l_y, int16_t l_w, int16_t l_h,
                              bool show_r, int16_t r_x, int16_t r_y, int16_t r_w, int16_t r_h,
-                             bool frame)
+                             bool frame, media_source_t owner)
 {
     if (s_created) return;
     if (!show_l && !show_r) return;
     s_created = true;
+    s_owner = owner;
 
     s_m[0] = (needle_meter_t){ 0 };
     s_m[1] = (needle_meter_t){ 0 };

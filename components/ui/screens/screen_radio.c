@@ -110,7 +110,7 @@ static void radio_create(lv_obj_t *parent)
     }
     if (p->radio_show_vu) {
         vu_widget_create(parent, p->radio_vu_x, p->radio_vu_y, p->radio_vu_w, p->radio_vu_h,
-                         p->radio_vu_transparent);
+                         p->radio_vu_transparent, MEDIA_SOURCE_RADIO);
     }
     if (p->radio_needle_show_l || p->radio_needle_show_r) {
         vu_needle_widget_create(parent,
@@ -120,7 +120,7 @@ static void radio_create(lv_obj_t *parent)
                                 p->radio_needle_show_r,
                                 p->radio_needle_r_x, p->radio_needle_r_y,
                                 p->radio_needle_r_w, p->radio_needle_r_h,
-                                p->radio_needle_frame);
+                                p->radio_needle_frame, MEDIA_SOURCE_RADIO);
     }
     if (p->radio_show_weather) {
         weather_widget_create(parent, p->radio_weather_x, p->radio_weather_y,

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lvgl.h"
+#include "media_control.h"
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -21,10 +22,14 @@ extern "C" {
 //
 // One instance at a time (radio or SD-player screen — only one is shown at
 // once). create() spins up the refresh timer; destroy() tears it down.
+//
+// owner ties the meters to their screen's source: when another source holds
+// the audio path (media_source_current() != owner) the needles fall to rest
+// instead of visualizing the foreign programme.
 void vu_needle_widget_create(lv_obj_t *parent,
                              bool show_l, int16_t l_x, int16_t l_y, int16_t l_w, int16_t l_h,
                              bool show_r, int16_t r_x, int16_t r_y, int16_t r_w, int16_t r_h,
-                             bool frame);
+                             bool frame, media_source_t owner);
 void vu_needle_widget_destroy(void);
 
 // Recolour needle + frame from the active theme. Safe to call when not created.

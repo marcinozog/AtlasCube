@@ -1,6 +1,7 @@
 #pragma once
 
 #include "lvgl.h"
+#include "media_control.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,7 +20,12 @@ extern "C" {
 //
 // One instance at a time (radio or SD-player screen — only one is shown at once).
 // create() spins up the refresh timer; destroy() tears it and the bars down.
-void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h, bool transparent);
+//
+// owner ties the meter to its screen's source: when another source holds the
+// audio path (media_source_current() != owner) the bars rest at zero instead
+// of visualizing the foreign programme.
+void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h, bool transparent,
+                      media_source_t owner);
 void vu_widget_destroy(void);
 
 // Recolour bars + container from the active theme. Safe to call when not created.

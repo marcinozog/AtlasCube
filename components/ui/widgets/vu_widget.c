@@ -68,6 +68,7 @@ static int         s_slot   = 0;   // per-bar horizontal slot width
 static int         s_bar_w  = 0;   // drawn bar width (< slot → leaves the gap)
 static int         s_pad    = 0;   // left padding to centre the row
 static bool        s_transparent = false; // no bg fill: bars sit on the screen bg
+static media_source_t s_owner = MEDIA_SOURCE_RADIO; // source this meter belongs to
 
 // ── FFT task (core 0) ────────────────────────────────────────────────────────
 static TaskHandle_t      s_fft_task = NULL;
@@ -196,6 +197,15 @@ static void fft_compute(void)
 {
     if (!s_table_ready || !s_cf) return;
 
+    // Another source holds the audio path (e.g. radio playing under the SD
+    // screen): rest instead of visualizing the foreign programme. s_last_count
+    // is left stale on purpose so the meter resumes the moment the owner takes
+    // the path back.
+    if (media_source_current() != s_owner) {
+        for (int b = 0; b < s_nbars; b++) smooth_to(b, 0.0f);
+        return;
+    }
+
     // No new audio since last frame (paused / stopped): decay to rest.
     uint32_t count = audio_levels_count();
     if (count == s_last_count || !audio_levels_snapshot(s_raw, VU_FFT_N)) {
@@ -265,11 +275,13 @@ static void tick_cb(lv_timer_t *t)
     render_deltas();   // invalidates only the changed strip of each bar
 }
 
-void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h, bool transparent)
+void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h, bool transparent,
+                      media_source_t owner)
 {
     if (s_cont) return;
     const ui_theme_colors_t *th = theme_get();
     s_transparent = transparent;
+    s_owner       = owner;
 
     // Working buffers in PSRAM — kept out of the tight internal-RAM budget
     // (TLS/LVGL). The FFT runs ~20 fps on the LVGL task, so the slower PSRAM
