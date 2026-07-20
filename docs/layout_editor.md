@@ -309,14 +309,15 @@ section** into a preset file on the SD card, named after that screen's
 effective wallpaper:
 
 ```
-/wallpapers/layouts/<wallpaper-basename>.json
+/wallpapers/layouts/<width>x<height>/<wallpaper-basename>.json
 ```
 
-e.g. wallpaper `/sdcard/wallpapers/sunset.bin` → preset
-`/wallpapers/layouts/sunset.json`. Format: `{ w, h, wallpaper,
+e.g. wallpaper `/sdcard/wallpapers/sunset.bin` on a 480×320 panel → preset
+`/wallpapers/layouts/480x320/sunset.json`. Format: `{ w, h, wallpaper,
 sections: { clock?, bt?, radio?, sd? } }` — sections are optional; Save
 merges the active section into the existing file, so one wallpaper can
-accumulate layouts for several screens.
+accumulate layouts for several screens. The resolution directory keeps
+independent presets for the same wallpaper on different LCD variants.
 
 This is a **frontend-only** feature — no firmware involvement. Save
 uploads the editor's current state via `POST /api/sd/file` (parent
@@ -327,8 +328,10 @@ like a manual Apply — and never touches the other screens' layouts. When
 you pick a wallpaper for a screen in the editor, it checks for a preset
 with that screen's section and offers to apply it.
 
-The `w`/`h` stamp guards against cross-LCD presets: a file saved for a
-different resolution is refused on load (same rule as `ui_profile.json`).
+The `w`/`h` stamp is checked against both the active panel and the resolution
+directory. A mismatched file is refused on load (same cross-LCD guard as
+`ui_profile.json`). Presets from the old flat `/wallpapers/layouts/*.json`
+format are intentionally not loaded.
 
 Note: **Save** snapshots what the editor currently shows — including
 tweaks not yet applied to the device. Load-then-Save round-trips

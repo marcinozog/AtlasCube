@@ -453,11 +453,11 @@
     <!-- ── Presets tab: layout-preset housekeeping (shown instead of the grid) ── -->
     <div class="panel" id="presets_card" style="display:none">
         <label class="field-label">Layout presets</label>
-        <div class="field-hint">Per-wallpaper layout presets are stored as
-            <code>/wallpapers/layouts/&lt;name&gt;.json</code> on the SD card (saved with the
-            preset buttons under the live preview). A preset becomes an orphan when its
-            wallpaper <code>.bin</code> has been deleted or renamed.</div>
-        <button class="btn-secondary" onclick="checkOrphanPresets()">🧹 Check for orphans</button>
+        <div class="field-hint">Per-wallpaper layout presets are stored by panel resolution as
+            <code>/wallpapers/layouts/&lt;width&gt;x&lt;height&gt;/&lt;name&gt;.json</code> on the SD card
+            (saved with the preset buttons under the live preview). The check finds missing
+            wallpapers, invalid JSON and resolution stamps that do not match their directory.</div>
+        <button class="btn-secondary" onclick="checkOrphanPresets()">🧹 Check presets</button>
         <div id="presetOrphanStatus" class="field-hint" style="margin-top:6px"></div>
         <div id="presetOrphanList" style="margin-top:4px"></div>
     </div>

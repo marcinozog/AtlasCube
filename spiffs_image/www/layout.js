@@ -688,19 +688,20 @@ function buildWallpaperPicker() {
 }
 
 // ── Per-wallpaper layout presets on SD ─────────────────────────────────────
-// One file per wallpaper: /wallpapers/layouts/<wallpaper-basename>.json with a
-// screen-size stamp (same guard as ui_profile.json — a preset saved for
-// another LCD is refused on load). Since wallpapers are assigned per screen,
-// Save merges only the ACTIVE section into the file and Load applies only the
-// active section — switching the SD screen's wallpaper never touches the
-// radio/BT layouts. One file can accumulate layouts for several screens.
+// One file per wallpaper and panel resolution:
+// /wallpapers/layouts/<width>x<height>/<wallpaper-basename>.json. The w/h
+// stamp remains a second guard against a misplaced or damaged preset. Since
+// wallpapers are assigned per screen, Save merges only the ACTIVE section into
+// the file and Load applies only the active section. One file can accumulate
+// layouts for several screens, but never for different panel resolutions.
 
 const LAYOUTS_DIR = '/wallpapers/layouts';
 
 function presetPath() {
     if (!currentWallpaperPath) return '';
     const base = currentWallpaperPath.split('/').pop().replace(/\.bin$/i, '');
-    return LAYOUTS_DIR + '/' + base + '.json';
+    const resolution = `${state.meta.screen_w}x${state.meta.screen_h}`;
+    return LAYOUTS_DIR + '/' + resolution + '/' + base + '.json';
 }
 
 function setPresetStatus(msg, error = false) {
@@ -724,15 +725,19 @@ async function savePreset() {
             wallpaper: currentWallpaperPath.split('/').pop(),
             sections: {},
         };
-        // Merge into the existing file so layouts saved for other screens
-        // under the same wallpaper survive.
+        // Merge only a correctly stamped file. The resolution directory keeps
+        // panel variants separate; this check also prevents a manually moved
+        // or damaged file from contaminating the new preset.
         try {
             const old = await fetch('/api/sd/file?path=' + encodeURIComponent(path), {
                 cache: 'no-store',
             });
             if (old.ok) {
                 const parsed = await old.json();
-                if (parsed && parsed.sections) preset.sections = parsed.sections;
+                if (parsed && parsed.w === state.meta.screen_w &&
+                    parsed.h === state.meta.screen_h && parsed.sections) {
+                    preset.sections = parsed.sections;
+                }
             }
         } catch { /* no existing preset — start fresh */ }
         // Pin the wallpaper association in the stored copy: an inherited ("")
@@ -811,6 +816,8 @@ async function offerPresetForWallpaper() {
         });
         if (!r.ok) return;
         const preset = await r.json();
+        if (preset.w !== state.meta.screen_w || preset.h !== state.meta.screen_h)
+            return;
         if (!preset.sections || !preset.sections[state.active]) return;
         const auto = document.getElementById('layout_preset_autoload');
         if ((auto && auto.checked) ||
@@ -822,12 +829,13 @@ async function offerPresetForWallpaper() {
     }
 }
 
-// ── Orphaned layout presets (Presets tab) ───────────────────────────────────
-// Presets become orphans when their wallpaper .bin is deleted or renamed.
+// ── Layout preset housekeeping (Presets tab) ────────────────────────────────
+// Presets become invalid when their resolution stamp differs from their
+// directory; they become orphans when their wallpaper .bin is deleted/renamed.
 // A wallpaper can live anywhere on the card, so name matching against
 // /wallpapers alone would flag false orphans — instead each preset is opened
 // and the full paths it stores in its <section>_wallpaper fields are checked.
-// Only when none of the referenced files exist is the preset an orphan.
+// Both kinds of problem are reported, with deletion left to the user.
 const SD_MOUNT = '/sdcard';
 
 // Existence checks share one /api/sd/list request per directory.
@@ -863,35 +871,70 @@ function collectWallpaperRefs(node, out = []) {
     return out;
 }
 
+async function listResolutionPresetFiles() {
+    const root = await fetch('/api/sd/list?path=' + encodeURIComponent(LAYOUTS_DIR),
+                             { cache: 'no-store' });
+    if (!root.ok) return null;
+    const data = await root.json();
+    const dirs = (data.entries || []).filter(
+        e => e.dir && /^\d+x\d+$/i.test(e.name));
+    const nested = await Promise.all(dirs.map(async dir => {
+        const relDir = LAYOUTS_DIR + '/' + dir.name;
+        const r = await fetch('/api/sd/list?path=' + encodeURIComponent(relDir),
+                              { cache: 'no-store' });
+        if (!r.ok) return [];
+        const d = await r.json();
+        return (d.entries || [])
+            .filter(e => !e.dir && /\.json$/i.test(e.name))
+            .map(e => ({
+                name: e.name,
+                rel: relDir + '/' + e.name,
+                resolution: dir.name.toLowerCase(),
+            }));
+    }));
+    return nested.flat();
+}
+
 async function checkOrphanPresets() {
     const status = document.getElementById('presetOrphanStatus');
     document.getElementById('presetOrphanList').innerHTML = '';
     status.textContent = 'Scanning…';
     try {
-        const r = await fetch('/api/sd/list?path=' + encodeURIComponent(LAYOUTS_DIR),
-                              { cache: 'no-store' });
-        if (!r.ok) {
+        const jsons = await listResolutionPresetFiles();
+        if (jsons === null) {
             status.textContent = 'No presets found (SD card or ' + LAYOUTS_DIR +
                                  ' not available).';
             return;
         }
-        const d = await r.json();
-        const jsons = (d.entries || []).filter(e => !e.dir && /\.json$/i.test(e.name));
         if (!jsons.length) { status.textContent = 'No preset files found.'; return; }
 
         const cache = new Map();
-        const orphans = [];
+        const problems = [];
         let okCount = 0;
         for (const e of jsons) {
-            const rel = LAYOUTS_DIR + '/' + e.name;
             let refs = [];
+            let invalid = '';
             try {
-                const jr = await fetch('/api/sd/file?path=' + encodeURIComponent(rel),
+                const jr = await fetch('/api/sd/file?path=' + encodeURIComponent(e.rel),
                                        { cache: 'no-store' });
-                if (jr.ok) refs = collectWallpaperRefs(await jr.json());
-            } catch (_) { /* unreadable/invalid JSON — fall back to name matching */ }
-            // Old presets may predate the stored full paths — assume the two
-            // standard wallpaper locations for <stem>.bin.
+                if (!jr.ok) throw new Error('HTTP ' + jr.status);
+                const preset = await jr.json();
+                const expected = e.resolution.split('x').map(Number);
+                if (preset.w !== expected[0] || preset.h !== expected[1]) {
+                    invalid = `resolution stamp ${preset.w}×${preset.h} does not match ` +
+                              e.resolution + ' directory';
+                } else {
+                    refs = collectWallpaperRefs(preset);
+                }
+            } catch (err) {
+                invalid = 'unreadable or invalid JSON (' + err.message + ')';
+            }
+            if (invalid) {
+                problems.push({ name: e.rel, rel: e.rel, detail: invalid });
+                continue;
+            }
+            // If no full wallpaper paths were stored, use the two standard
+            // wallpaper locations for <stem>.bin.
             if (!refs.length) {
                 const stem = e.name.replace(/\.json$/i, '');
                 refs = [SD_MOUNT + '/wallpapers/' + stem + '.bin',
@@ -900,26 +943,30 @@ async function checkOrphanPresets() {
             const found = await Promise.all(
                 refs.map(p => sdFileExists(p.slice(SD_MOUNT.length), cache)));
             if (found.some(x => x)) okCount++;
-            else orphans.push({ name: e.name, rel, refs });
+            else problems.push({
+                name: e.rel,
+                rel: e.rel,
+                detail: 'missing wallpaper: ' + refs.join(', '),
+            });
         }
-        renderOrphanList(orphans, okCount);
+        renderPresetProblems(problems, okCount);
     } catch (err) {
         status.textContent = 'Scan failed: ' + err.message;
     }
 }
 
-function renderOrphanList(orphans, okCount) {
+function renderPresetProblems(problems, okCount) {
     const status = document.getElementById('presetOrphanStatus');
     const list = document.getElementById('presetOrphanList');
     list.innerHTML = '';
-    if (!orphans.length) {
-        status.textContent = '✓ No orphans — all ' + okCount +
-                             ' preset(s) have their wallpaper.';
+    if (!problems.length) {
+        status.textContent = '✓ All ' + okCount + ' preset(s) are valid.';
         return;
     }
-    status.textContent = orphans.length + ' orphan(s) found, ' + okCount + ' preset(s) OK.';
+    status.textContent = problems.length + ' problem preset(s) found, ' +
+                         okCount + ' preset(s) OK.';
 
-    orphans.forEach(o => {
+    problems.forEach(o => {
         const row = document.createElement('div');
         row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:3px 0';
         const name = document.createElement('div');
@@ -928,7 +975,7 @@ function renderOrphanList(orphans, okCount) {
         title.textContent = '📄 ' + o.name;
         const missing = document.createElement('div');
         missing.style.cssText = 'opacity:.6;overflow-wrap:anywhere';
-        missing.textContent = 'missing: ' + o.refs.join(', ');
+        missing.textContent = o.detail;
         name.append(title, missing);
         const del = document.createElement('button');
         del.type = 'button';
@@ -943,15 +990,15 @@ function renderOrphanList(orphans, okCount) {
         list.appendChild(row);
     });
 
-    if (orphans.length > 1) {
+    if (problems.length > 1) {
         const all = document.createElement('button');
         all.type = 'button';
         all.className = 'btn-secondary';
-        all.textContent = '🗑 Delete all orphans';
+        all.textContent = '🗑 Delete all problem presets';
         all.style.marginTop = '6px';
         all.onclick = async () => {
-            if (!confirm('Delete ' + orphans.length + ' orphaned preset file(s)?')) return;
-            for (const o of orphans) await deleteOrphanPreset(o);
+            if (!confirm('Delete ' + problems.length + ' problem preset file(s)?')) return;
+            for (const o of problems) await deleteOrphanPreset(o);
             checkOrphanPresets();   // re-scan to show the result
         };
         list.appendChild(all);
