@@ -38,12 +38,13 @@
     </nav>
 
     <!-- ══════════════════════════════════════════
-         Display (panel options + theme, background & custom palettes)
+         Display (panel options + theme/palettes + wallpapers)
     ══════════════════════════════════════════ -->
     <section class="tab-pane" id="tab-display" data-tab="display">
         <nav class="tab-nav" id="displaySubNav" role="tablist">
             <button type="button" class="tab-btn" data-sub="panel" onclick="selectDisplaySub('panel')">🖥️ Panel</button>
             <button type="button" class="tab-btn" data-sub="theme" onclick="selectDisplaySub('theme')">🎨 Theme</button>
+            <button type="button" class="tab-btn" data-sub="wallpapers" onclick="selectDisplaySub('wallpapers')">🖼️ Wallpapers</button>
         </nav>
 
         <div class="sub-pane" data-sub="panel">
@@ -159,6 +160,27 @@
             </div>
         </div>
 
+        <div class="field-group">
+            <label class="field-label">Editing palette</label>
+            <nav class="tab-nav" role="tablist" style="margin:6px 0 0">
+                <button type="button" class="tab-btn active" id="palTabDark"  onclick="selectPaletteTab('dark')">🌙 Dark</button>
+                <button type="button" class="tab-btn"        id="palTabLight" onclick="selectPaletteTab('light')">☀️ Light</button>
+            </nav>
+            <div class="field-hint">Changes apply instantly on the device display.</div>
+        </div>
+
+        <div class="panel">
+            <div id="colorGrid"></div>
+            <div class="color-actions">
+                <button id="colors_save_btn" onclick="saveColors()">💾 Save palette</button>
+                <button id="colors_reset_btn" class="btn-secondary" onclick="resetColors()">↺ Reset to defaults</button>
+            </div>
+            <div id="colors_status" class="save-status"></div>
+        </div>
+        </div><!-- /sub-pane theme -->
+
+        <div class="sub-pane" data-sub="wallpapers">
+
         <div class="panel">
             <label class="field-label">Background</label>
             <div class="theme-toggle wide" id="bgGradientToggle" style="width:fit-content">
@@ -243,24 +265,7 @@
             </div>
         </div>
 
-        <div class="field-group">
-            <label class="field-label">Editing palette</label>
-            <nav class="tab-nav" role="tablist" style="margin:6px 0 0">
-                <button type="button" class="tab-btn active" id="palTabDark"  onclick="selectPaletteTab('dark')">🌙 Dark</button>
-                <button type="button" class="tab-btn"        id="palTabLight" onclick="selectPaletteTab('light')">☀️ Light</button>
-            </nav>
-            <div class="field-hint">Changes apply instantly on the device display.</div>
-        </div>
-
-        <div class="panel">
-            <div id="colorGrid"></div>
-            <div class="color-actions">
-                <button id="colors_save_btn" onclick="saveColors()">💾 Save palette</button>
-                <button id="colors_reset_btn" class="btn-secondary" onclick="resetColors()">↺ Reset to defaults</button>
-            </div>
-            <div id="colors_status" class="save-status"></div>
-        </div>
-        </div><!-- /sub-pane theme -->
+        </div><!-- /sub-pane wallpapers -->
     </section>
 
     <!-- ══════════════════════════════════════════

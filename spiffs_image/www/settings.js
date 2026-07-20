@@ -34,7 +34,7 @@ function updateTabHash(tab, sub) {
     }
 }
 
-// Sub-tabs inside the Display tab (Panel / Theme).
+// Sub-tabs inside the Display tab (Panel / Theme / Wallpapers).
 function selectDisplaySub(name) {
     if (!getKnownSubs().includes(name)) name = DEFAULT_SUB;
 
