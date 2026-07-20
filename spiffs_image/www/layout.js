@@ -1189,11 +1189,14 @@ async function loadOnlineWallpaperGallery() {
     const w = Number(state.meta.screen_w);
     const h = Number(state.meta.screen_h);
     const resolution = `${w}x${h}`;
+    const category = state.active === 'clock' ? 'home' :
+        (state.active === 'bt' ? 'wireless' : 'radio-sd-player');
     onlineWallpaperMessage(panel, `Loading ${w} × ${h} wallpapers...`);
 
     try {
         const endpoint = new URL(ONLINE_WALLPAPER_CATALOG);
         endpoint.searchParams.set('resolution', resolution);
+        endpoint.searchParams.set('category', category);
         const response = await fetch(endpoint.toString(), {
             cache: 'no-store',
             mode: 'cors',
@@ -1202,7 +1205,7 @@ async function loadOnlineWallpaperGallery() {
         const catalog = await response.json();
         if (catalog.resolution !== resolution || !Array.isArray(catalog.wallpapers))
             throw new Error('invalid catalog response');
-        renderOnlineWallpaperGallery(catalog);
+        renderOnlineWallpaperGallery(catalog, category);
     } catch (err) {
         onlineWallpaperMessage(panel,
             'Online gallery unavailable: ' + err.message +
@@ -1210,7 +1213,7 @@ async function loadOnlineWallpaperGallery() {
     }
 }
 
-function renderOnlineWallpaperGallery(catalog) {
+function renderOnlineWallpaperGallery(catalog, category) {
     const panel = document.getElementById('layout_online_wallpaper_gallery');
     if (!panel) return;
     panel.replaceChildren();
@@ -1218,7 +1221,9 @@ function renderOnlineWallpaperGallery(catalog) {
     const heading = document.createElement('div');
     heading.className = 'online-wallpaper-heading';
     const title = document.createElement('span');
-    title.textContent = `${catalog.resolution} online wallpapers`;
+    const categoryLabel = catalog.categories?.[category] ||
+        (category === 'home' ? 'Home' : category === 'wireless' ? 'Wireless' : 'Radio / SD Player');
+    title.textContent = `${catalog.resolution} · ${categoryLabel}`;
     const count = document.createElement('span');
     count.textContent = `${catalog.wallpapers.length} available`;
     heading.append(title, count);
