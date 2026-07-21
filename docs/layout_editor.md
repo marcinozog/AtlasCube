@@ -287,11 +287,12 @@ PSRAM and replaces the General background on every screen at once — one
 fetch shown everywhere — until the next reboot or an explicit background
 change (`net_wallpaper_dismiss()`). A screen set to an SD file keeps it;
 a screen set to Internet always shows the fetched image. Explicit
-per-screen choices are **not** gated by `display.wallpaper_on`; that
-switch only controls the global SD wallpaper, which now applies solely to
-screens without a hub section (screensavers etc.). Each distinct SD file
-is cached in its own PSRAM slot, so navigating between screens never
-re-reads the SD card.
+per-screen choices are **not** gated by `display.wallpaper_on`. That
+global SD-wallpaper switch has been retired from the UI (its picker was
+removed), so it now stays off and screens without a hub section
+(screensavers etc.) fall back to the gradient/solid background. Each
+distinct SD file is cached in its own PSRAM slot, so navigating between
+screens never re-reads the SD card.
 
 Typical use: the BT screen has no audio signal inside the ESP (external
 BT module), so a wallpaper designed around VU meters can be replaced or
@@ -305,6 +306,29 @@ when the device is currently displaying an internet-fetched wallpaper
 (its pixels aren't available to the editor), the canvas shows a "net
 wallpaper" placeholder instead (`GET /api/wallpaper/status` reports
 `active`).
+
+## Background & internet wallpaper (General / Internet tabs)
+
+The global background config lives in two section tabs next to the screen
+tabs — it used to be in Settings → Display → Wallpapers, now removed:
+
+- **🎨 General** — the gradient-vs-solid look that every *General* screen
+  falls back to. The two buttons post `bg_gradient` (and force
+  `wallpaper_on` off) to `/api/settings`. The gradient/solid **colours**
+  (`bg_primary`, `bg_grad_top`, `bg_grad_bottom`) live in the theme
+  palette, so this tab only links out to Settings → Display → Theme for
+  them.
+- **🌍 Internet** — the internet-fetched wallpaper: a URL preset picker,
+  *Fetch now* (`POST /api/wallpaper/fetch`), *Save to SD*
+  (`POST /api/wallpaper/save`) and an auto-refresh schedule
+  (`wallpaper_fetch_mode` / `_hour` / `_min`). It also carries the
+  wallpaper **brightness** slider (`wallpaper_dim`, applied to both SD and
+  internet wallpapers). See `net_wallpaper.c` for the fetch/decode path.
+
+Both tabs read their state from `/api/settings` via `loadBackgroundTab()`
+and write on every change; the device repaints itself. Like *Presets*,
+they swap the editor grid for a full-width card and leave the active
+screen untouched.
 
 ## Per-wallpaper layout presets
 
