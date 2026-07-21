@@ -302,26 +302,26 @@ void ui_background_apply(lv_obj_t *obj, ui_screen_id_t screen)
     const ui_theme_t t = theme_current();
     const app_settings_t *st = settings_get();
 
+    // Internet wallpaper (PSRAM only, via /api/wallpaper/fetch): an explicit
+    // user fetch outranks EVERY other background — gradient, solid, and any SD
+    // wallpaper including per-screen overrides ("none" or a path) — on every
+    // screen. It lives only in PSRAM, so it lasts until the next reboot or an
+    // explicit background change (which calls net_wallpaper_dismiss()); the SD
+    // wallpapers underneath are untouched and return once it is cleared.
+    const lv_image_dsc_t *net_wp = net_wallpaper_image();
+    if (net_wp) {
+        lv_obj_set_style_bg_image_src(obj, net_dimmed(net_wp), LV_PART_MAIN);
+        lv_obj_set_style_bg_image_tiled(obj, false, LV_PART_MAIN);
+        lv_obj_set_style_bg_image_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
+        return;
+    }
+
     // Per-screen override — honoured only while the global feature switch is
     // on (wallpaper_on gates every SD wallpaper, overrides included).
     const char *ovr = st->display.wallpaper_on ? screen_wp_override(screen) : NULL;
     if (ovr && !ovr[0]) ovr = NULL;   // "" → inherit the global default
     const bool ovr_none = ovr && strcmp(ovr, "none") == 0;
-
-    // Internet wallpaper (PSRAM only, via /api/wallpaper/fetch): an explicit
-    // user fetch that temporarily replaces the GLOBAL wallpaper until the next
-    // reboot. It substitutes only the inherited tier — a screen with its own
-    // override ("none" or a path) keeps its explicit choice.
-    if (!ovr) {
-        const lv_image_dsc_t *net_wp = net_wallpaper_image();
-        if (net_wp) {
-            lv_obj_set_style_bg_image_src(obj, net_dimmed(net_wp), LV_PART_MAIN);
-            lv_obj_set_style_bg_image_tiled(obj, false, LV_PART_MAIN);
-            lv_obj_set_style_bg_image_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
-            lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
-            return;
-        }
-    }
 
     // SD wallpaper for this screen (override path, else the global default):
     // a valid full-screen .bin wins over the gradient entirely. A "none"
