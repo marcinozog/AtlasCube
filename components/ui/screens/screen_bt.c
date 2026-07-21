@@ -140,10 +140,9 @@ static void bt_create(lv_obj_t *parent)
     // lv_obj_set_style_text_color(s_status_label,
     //     lv_color_hex(connected == BT_CONNECTED ? 0x00C853 : th->text_muted), LV_PART_MAIN);
 
-    // Center-anchored on bt_time_x, one line below the time label (same model as
-    // the layout editor), so it no longer needs lv_obj_align_to.
-    s_vol_label = ui_anchored_label(parent, p->bt_time_x,
-                                    p->bt_time_y + lv_font_get_line_height(p->bt_time_font) + 4,
+    // Independent center-anchored position (bt_vol_x/y) — no longer derived
+    // from the time label.
+    s_vol_label = ui_anchored_label(parent, p->bt_vol_x, p->bt_vol_y,
                                     UI_ALIGN_CENTER);
     lv_label_set_text(s_vol_label, "VOL: 0%");
     lv_obj_set_style_text_font(s_vol_label, p->bt_vol_label_font, LV_PART_MAIN);

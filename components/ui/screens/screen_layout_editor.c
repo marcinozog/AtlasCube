@@ -51,18 +51,30 @@ typedef struct {
 // This table is the Radio-specific part of the editor. Home and SD can add
 // equivalent descriptor tables without duplicating the drag/save UI.
 static const editor_element_t RADIO_ELEMENTS[] = {
-    { "Now playing", "Atlas Radio", SHAPE_NOW_PLAYING,
-      OFF(radio_show_np), OFF(radio_np_x), OFF(radio_np_y), OFF_NONE, OFF_NONE,
+    { "Station", "Atlas Radio", SHAPE_NOW_PLAYING,
+      OFF(radio_show_np), OFF(radio_np_x), OFF(radio_np_y), OFF(radio_np_w), OFF_NONE,
       OFF(radio_np_station_font), false, false },
+    { "Title", "Song title", SHAPE_NOW_PLAYING,
+      OFF(radio_show_np_title), OFF(radio_title_x), OFF(radio_title_y),
+      OFF(radio_title_w), OFF_NONE, OFF(radio_np_title_font), false, false },
     { "Station icon", "ICON", SHAPE_STATION_ICON,
       OFF(radio_show_station_icon), OFF(radio_station_icon_x), OFF(radio_station_icon_y),
       OFF(radio_station_icon_size), OFF(radio_station_icon_size), OFF_NONE, false, false },
     { "Playback", "PLAYING", SHAPE_STATE,
-      OFF(radio_show_playback_status), OFF_NONE, OFF(radio_state_y), OFF_NONE, OFF_NONE,
-      OFF(radio_state_font), true, false },
-    { "Audio info", "44100 Hz  2ch  128kbps", SHAPE_AUDIO_INFO,
-      OFF(radio_show_playback_status), OFF_NONE, OFF(radio_audio_info_y), OFF_NONE, OFF_NONE,
-      OFF(radio_audio_info_font), true, false },
+      OFF(radio_show_playback_status), OFF(radio_state_x), OFF(radio_state_y),
+      OFF_NONE, OFF_NONE, OFF(radio_state_font), true, false },
+    { "Rate", "44100 Hz", SHAPE_AUDIO_INFO,
+      OFF(radio_samplerate_show), OFF(radio_samplerate_x), OFF(radio_samplerate_y),
+      OFF_NONE, OFF_NONE, OFF(radio_audio_info_font), true, false },
+    { "Channels", "STEREO", SHAPE_AUDIO_INFO,
+      OFF(radio_channels_show), OFF(radio_channels_x), OFF(radio_channels_y),
+      OFF_NONE, OFF_NONE, OFF(radio_audio_info_font), true, false },
+    { "Bitrate", "128 kbps", SHAPE_AUDIO_INFO,
+      OFF(radio_bitrate_show), OFF(radio_bitrate_x), OFF(radio_bitrate_y),
+      OFF_NONE, OFF_NONE, OFF(radio_audio_info_font), true, false },
+    { "Volume", "VOL: 42%", SHAPE_AUDIO_INFO,
+      OFF(radio_volume_show), OFF(radio_volume_x), OFF(radio_volume_y),
+      OFF_NONE, OFF_NONE, OFF(radio_audio_info_font), true, false },
     { "Mode", "M", SHAPE_INDICATOR,
       OFF(radio_show_mode_indicator), OFF(radio_mode_indic_x), OFF(radio_mode_indic_y),
       OFF_NONE, OFF_NONE, OFF_NONE, false, false },
@@ -197,12 +209,9 @@ static void element_geometry(const editor_element_t *d,
 
     switch (d->shape) {
         case SHAPE_NOW_PLAYING:
-            width = DISPLAY_WIDTH - x - 10;
+            // Independent single-line box: width comes from the profile field.
             if (width < 8) width = 8;
             height = line_h;
-            if (s_work.radio_show_np_title) {
-                height += lv_font_get_line_height(font_field(OFF(radio_np_title_font))) + 4;
-            }
             break;
         case SHAPE_STATION_ICON:
         case SHAPE_WHEEL:
@@ -213,8 +222,8 @@ static void element_geometry(const editor_element_t *d,
             height = line_h;
             break;
         case SHAPE_AUDIO_INFO:
-            width = DISPLAY_WIDTH - 8;
-            if (width > 236) width = 236;
+            // One short center-anchored label ("44100 Hz", "STEREO", ...).
+            width = DISPLAY_WIDTH < 100 ? DISPLAY_WIDTH - 8 : 90;
             height = line_h;
             break;
         case SHAPE_INDICATOR:
@@ -397,8 +406,8 @@ static void toggle_selected_visibility(void)
         *flag = !*flag;
     }
 
-    // Some descriptors share one visibility field (playback + audio info), so
-    // refresh every template instead of only the selected one.
+    // The wheels master flag can flip several templates at once, so refresh
+    // every template instead of only the selected one.
     for (int i = 0; i < element_count(); ++i) style_box(i);
     restack_boxes();
     update_status();

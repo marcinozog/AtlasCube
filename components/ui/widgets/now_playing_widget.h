@@ -1,23 +1,28 @@
 #pragma once
 #include "lvgl.h"
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * "Now playing" widget: station name (always) + ICY title below (when available).
- * Safe to create multiple times on different screens.
+ * "Now playing" widget: two INDEPENDENT single-line labels — station name and
+ * ICY title — each with its own box (x = left edge, w = box width). Text is
+ * centered in its box and scrolls when it doesn't fit. Each label carries its
+ * own background plate (label_bg_opa).
  *
- * @param align        horizontal text alignment applied to both station and title
- *                     labels (LV_TEXT_ALIGN_LEFT / _CENTER / _RIGHT).
- * @param station_font font for the station-name line
- * @param show_title   create and update the ICY-title line
- * @param title_font   font for the ICY-title line (placed below the station line)
+ * @param station_x/y/w box of the station-name line
+ * @param station_font  font for the station-name line
+ * @param show_title    create and update the ICY-title line
+ * @param title_x/y/w   box of the ICY-title line
+ * @param title_font    font for the ICY-title line
  */
-void now_playing_widget_create(lv_obj_t *parent, int x, int y, lv_text_align_t align,
+void now_playing_widget_create(lv_obj_t *parent,
+                               int station_x, int station_y, int station_w,
                                const lv_font_t *station_font,
                                bool show_title,
+                               int title_x, int title_y, int title_w,
                                const lv_font_t *title_font,
                                int label_bg_opa);
 void now_playing_widget_destroy(void);

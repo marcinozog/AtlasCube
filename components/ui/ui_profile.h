@@ -148,11 +148,17 @@ typedef struct {
     int16_t          clock_label_bg_opa;       // floating label plate opacity, 0..100
     char             clock_wallpaper[128];
 
-    // screen_radio — absolute LCD coordinates (top-left origin)
-    int16_t          radio_np_x;               // now-playing widget (station + title labels)
+    // screen_radio — absolute LCD coordinates (top-left origin). The station
+    // and ICY-title lines are independent boxes: x is the left edge, w the box
+    // width; text is centered in the box and scrolls when it doesn't fit.
+    int16_t          radio_np_x;               // station-name line box
     int16_t          radio_np_y;
+    int16_t          radio_np_w;
     bool             radio_show_np;
     bool             radio_show_np_title;
+    int16_t          radio_title_x;            // ICY-title line box
+    int16_t          radio_title_y;
+    int16_t          radio_title_w;
     bool             radio_show_station_icon;
     int16_t          radio_station_icon_x;     // station artwork top-left position
     int16_t          radio_station_icon_y;
@@ -161,10 +167,24 @@ typedef struct {
     const lv_font_t *radio_np_title_font;      // now-playing ICY-title line
 
     bool             radio_show_playback_status;
-    int16_t          radio_state_y;            // "PLAYING / STOPPED / ..." label (centered)
+    int16_t          radio_state_x;            // "PLAYING / STOPPED / ..." label (center-anchored)
+    int16_t          radio_state_y;
     const lv_font_t *radio_state_font;
 
-    int16_t          radio_audio_info_y;       // "44100 Hz  2ch  128kbps   VOL: 42%" (centered)
+    // Audio-info split into independent center-anchored labels ("44100 Hz",
+    // "STEREO"/"MONO", "128 kbps", "VOL: 42%"), all sharing one font.
+    bool             radio_samplerate_show;
+    int16_t          radio_samplerate_x;
+    int16_t          radio_samplerate_y;
+    bool             radio_channels_show;
+    int16_t          radio_channels_x;
+    int16_t          radio_channels_y;
+    bool             radio_bitrate_show;
+    int16_t          radio_bitrate_x;
+    int16_t          radio_bitrate_y;
+    bool             radio_volume_show;
+    int16_t          radio_volume_x;
+    int16_t          radio_volume_y;
     const lv_font_t *radio_audio_info_font;
 
     bool             radio_show_mode_indicator;
@@ -223,14 +243,22 @@ typedef struct {
     int16_t          sd_title_y;
     int16_t          sd_title_w;               // box width
     const lv_font_t *sd_title_font;
-    int16_t          sd_folder_y;              // "<folder>   idx/count"
+    int16_t          sd_folder_x;              // "<folder>   idx/count" (center-anchored)
+    int16_t          sd_folder_y;
     const lv_font_t *sd_folder_font;
     bool             sd_show_folder;           // folder/index row
-    int16_t          sd_info_y;                // "VOL: n%   PAUSED   SHUFFLE ..."
+    // Info row split into independent center-anchored labels sharing sd_info_font
+    // (which the time row uses too).
+    bool             sd_volume_show;           // "VOL: n%"
+    int16_t          sd_volume_x;
+    int16_t          sd_volume_y;
+    bool             sd_status_show;           // "PAUSED   SHUFFLE   REPEAT ..."
+    int16_t          sd_status_x;
+    int16_t          sd_status_y;
     const lv_font_t *sd_info_font;
-    bool             sd_show_info;             // VOL/mode row
     bool             sd_show_time;             // "elapsed / total" row (needs a spare line; off on mono)
-    int16_t          sd_time_y;                // "elapsed / total" row Y
+    int16_t          sd_time_x;                // "elapsed / total" row (center-anchored)
+    int16_t          sd_time_y;
     bool             sd_show_bar;              // read-only progress bar (needs a known duration)
     int16_t          sd_bar_x;                 // progress bar geometry (LCD px, top-left origin)
     int16_t          sd_bar_y;
@@ -315,7 +343,9 @@ typedef struct {
     int16_t          bt_status_y;
     const lv_font_t *bt_status_font;
 
-    const lv_font_t *bt_vol_label_font;        // "VOL: NN%", positioned below time label
+    int16_t          bt_vol_x;                 // "VOL: NN%" label (center-anchored)
+    int16_t          bt_vol_y;
+    const lv_font_t *bt_vol_label_font;
 
     bool             bt_show_mode_indicator;
     bool             bt_show_clock;

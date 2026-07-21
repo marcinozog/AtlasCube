@@ -140,6 +140,8 @@ const BT_FIELDS = [
     { key: 'bt_time_y',      label: 'Time Y',          type: 'number' },
     { key: 'bt_time_font',   label: 'Time font',       type: 'font'   },
 
+    { key: 'bt_vol_x',           label: 'Vol X',          type: 'number' },
+    { key: 'bt_vol_y',           label: 'Vol Y',          type: 'number' },
     { key: 'bt_vol_label_font',  label: 'Vol label font', type: 'font'   },
 
     { key: 'bt_show_mode_indicator', label: 'Show mode indic.', type: 'bool' },
@@ -154,23 +156,39 @@ const BT_FIELDS = [
 ];
 
 const RADIO_FIELDS = [
-    { key: 'radio_show_np',           label: 'Show now-playing', type: 'bool' },
+    { key: 'radio_show_np',           label: 'Show station name', type: 'bool' },
+    { key: 'radio_np_x',              label: 'Station X',        type: 'number' },
+    { key: 'radio_np_y',              label: 'Station Y',        type: 'number' },
+    { key: 'radio_np_w',              label: 'Station W',        type: 'number' },
+    { key: 'radio_np_station_font',   label: 'Station font',     type: 'font'   },
     { key: 'radio_show_np_title',     label: 'Show track title', type: 'bool' },
-    { key: 'radio_np_x',              label: 'NP X',             type: 'number' },
-    { key: 'radio_np_y',              label: 'NP Y',             type: 'number' },
+    { key: 'radio_title_x',           label: 'Title X',          type: 'number' },
+    { key: 'radio_title_y',           label: 'Title Y',          type: 'number' },
+    { key: 'radio_title_w',           label: 'Title W',          type: 'number' },
+    { key: 'radio_np_title_font',     label: 'Title font',       type: 'font'   },
     { key: 'radio_show_station_icon', label: 'Show station icon', type: 'bool' },
     { key: 'radio_station_icon_x',    label: 'Station icon X',   type: 'number' },
     { key: 'radio_station_icon_y',    label: 'Station icon Y',   type: 'number' },
     { key: 'radio_station_icon_size', label: 'Station icon size', type: 'number', min: 16, max: 64, default: 64 },
-    { key: 'radio_np_station_font',   label: 'NP station font',  type: 'font'   },
-    { key: 'radio_np_title_font',     label: 'NP title font',    type: 'font'   },
 
     { key: 'radio_show_playback_status', label: 'Show playback status', type: 'bool' },
+    { key: 'radio_state_x',           label: 'State X',          type: 'number' },
     { key: 'radio_state_y',           label: 'State Y',          type: 'number' },
     { key: 'radio_state_font',        label: 'State font',       type: 'font'   },
 
-    { key: 'radio_audio_info_y',      label: 'Audio info Y',     type: 'number' },
     { key: 'radio_audio_info_font',   label: 'Audio info font',  type: 'font'   },
+    { key: 'radio_samplerate_show',   label: 'Show sample rate', type: 'bool' },
+    { key: 'radio_samplerate_x',      label: 'Sample rate X',    type: 'number' },
+    { key: 'radio_samplerate_y',      label: 'Sample rate Y',    type: 'number' },
+    { key: 'radio_channels_show',     label: 'Show channels',    type: 'bool' },
+    { key: 'radio_channels_x',        label: 'Channels X',       type: 'number' },
+    { key: 'radio_channels_y',        label: 'Channels Y',       type: 'number' },
+    { key: 'radio_bitrate_show',      label: 'Show bitrate',     type: 'bool' },
+    { key: 'radio_bitrate_x',         label: 'Bitrate X',        type: 'number' },
+    { key: 'radio_bitrate_y',         label: 'Bitrate Y',        type: 'number' },
+    { key: 'radio_volume_show',       label: 'Show volume',      type: 'bool' },
+    { key: 'radio_volume_x',          label: 'Volume X',         type: 'number' },
+    { key: 'radio_volume_y',          label: 'Volume Y',         type: 'number' },
 
     { key: 'radio_show_mode_indicator',  label: 'Show mode indic.',  type: 'bool' },
     { key: 'radio_mode_indic_x',         label: 'Mode indic. X',     type: 'number' },
@@ -227,14 +245,20 @@ const SD_FIELDS = [
     { key: 'sd_title_font', label: 'Title font',       type: 'font'   },
 
     { key: 'sd_show_folder', label: 'Show folder',     type: 'bool'   },
+    { key: 'sd_folder_x',    label: 'Folder X',        type: 'number' },
     { key: 'sd_folder_y',    label: 'Folder Y',        type: 'number' },
     { key: 'sd_folder_font', label: 'Folder font',     type: 'font'   },
 
-    { key: 'sd_show_info', label: 'Show info',         type: 'bool'   },
-    { key: 'sd_info_y',    label: 'Info Y',            type: 'number' },
-    { key: 'sd_info_font', label: 'Info font',         type: 'font'   },
+    { key: 'sd_info_font',    label: 'Info font',      type: 'font'   },
+    { key: 'sd_volume_show',  label: 'Show volume',    type: 'bool'   },
+    { key: 'sd_volume_x',     label: 'Volume X',       type: 'number' },
+    { key: 'sd_volume_y',     label: 'Volume Y',       type: 'number' },
+    { key: 'sd_status_show',  label: 'Show status flags', type: 'bool' },
+    { key: 'sd_status_x',     label: 'Status X',       type: 'number' },
+    { key: 'sd_status_y',     label: 'Status Y',       type: 'number' },
 
     { key: 'sd_show_time',            label: 'Show playback time', type: 'bool' },
+    { key: 'sd_time_x',               label: 'Time X',            type: 'number' },
     { key: 'sd_time_y',               label: 'Time Y',            type: 'number' },
 
     { key: 'sd_show_bar',             label: 'Show progress bar', type: 'bool' },
@@ -310,16 +334,23 @@ const FORM_GROUPS = {
         { title: 'Device status', fields: ['bt_brand_x', 'bt_brand_y', 'bt_brand_font', 'bt_status_x', 'bt_status_y', 'bt_status_font'] },
         { title: 'Track title', fields: ['bt_title_x', 'bt_title_y', 'bt_title_w', 'bt_title_font'] },
         { title: 'Artist', fields: ['bt_artist_x', 'bt_artist_y', 'bt_artist_w', 'bt_artist_font'] },
-        { title: 'Playback', fields: ['bt_time_x', 'bt_time_y', 'bt_time_font', 'bt_vol_label_font'] },
+        { title: 'Playback', fields: ['bt_time_x', 'bt_time_y', 'bt_time_font', 'bt_vol_x', 'bt_vol_y', 'bt_vol_label_font'] },
         { title: 'Mode indicator', enabledBy: 'bt_show_mode_indicator', fields: ['bt_show_mode_indicator', 'bt_mode_indic_x', 'bt_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'bt_show_clock', fields: ['bt_show_clock', 'bt_clock_widget_x', 'bt_clock_widget_y', 'bt_clock_font'] },
         { title: 'Tap controls overlay', enabledBy: 'bt_show_ctrl_overlay', fields: ['bt_show_ctrl_overlay'] },
         ...touchHotspotGroups('bt'),
     ],
     radio: [
-        { title: 'Now playing', enabledBy: 'radio_show_np', fields: ['radio_show_np', 'radio_show_np_title', 'radio_np_x', 'radio_np_y', 'radio_np_station_font', 'radio_np_title_font'] },
+        { title: 'Station name', enabledBy: 'radio_show_np', fields: ['radio_show_np', 'radio_np_x', 'radio_np_y', 'radio_np_w', 'radio_np_station_font'] },
+        { title: 'Track title', enabledBy: 'radio_show_np_title', fields: ['radio_show_np_title', 'radio_title_x', 'radio_title_y', 'radio_title_w', 'radio_np_title_font'] },
         { title: 'Station icon', enabledBy: 'radio_show_station_icon', fields: ['radio_show_station_icon', 'radio_station_icon_x', 'radio_station_icon_y', 'radio_station_icon_size'] },
-        { title: 'Playback status', enabledBy: 'radio_show_playback_status', fields: ['radio_show_playback_status', 'radio_state_y', 'radio_state_font', 'radio_audio_info_y', 'radio_audio_info_font'] },
+        { title: 'Playback status', enabledBy: 'radio_show_playback_status', fields: ['radio_show_playback_status', 'radio_state_x', 'radio_state_y', 'radio_state_font'] },
+        { title: 'Audio info', fields: ['radio_audio_info_font'], subgroups: [
+            { title: 'Sample rate', enabledBy: 'radio_samplerate_show', fields: ['radio_samplerate_show', 'radio_samplerate_x', 'radio_samplerate_y'] },
+            { title: 'Channels (stereo/mono)', enabledBy: 'radio_channels_show', fields: ['radio_channels_show', 'radio_channels_x', 'radio_channels_y'] },
+            { title: 'Bitrate', enabledBy: 'radio_bitrate_show', fields: ['radio_bitrate_show', 'radio_bitrate_x', 'radio_bitrate_y'] },
+            { title: 'Volume', enabledBy: 'radio_volume_show', fields: ['radio_volume_show', 'radio_volume_x', 'radio_volume_y'] },
+        ] },
         { title: 'Mode indicator', enabledBy: 'radio_show_mode_indicator', fields: ['radio_show_mode_indicator', 'radio_mode_indic_x', 'radio_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'radio_show_clock', fields: ['radio_show_clock', 'radio_clock_widget_x', 'radio_clock_widget_y', 'radio_clock_font'] },
         { title: 'Event indicator', enabledBy: 'radio_show_event_indicator', fields: ['radio_show_event_indicator', 'radio_event_indic_x', 'radio_event_indic_y'] },
@@ -332,9 +363,12 @@ const FORM_GROUPS = {
     ],
     sd: [
         { title: 'Track title', fields: ['sd_title_x', 'sd_title_y', 'sd_title_w', 'sd_title_font'] },
-        { title: 'Folder', enabledBy: 'sd_show_folder', fields: ['sd_show_folder', 'sd_folder_y', 'sd_folder_font'] },
-        { title: 'Playback info', enabledBy: 'sd_show_info', fields: ['sd_show_info', 'sd_info_y', 'sd_info_font'] },
-        { title: 'Playback time', enabledBy: 'sd_show_time', fields: ['sd_show_time', 'sd_time_y'] },
+        { title: 'Folder', enabledBy: 'sd_show_folder', fields: ['sd_show_folder', 'sd_folder_x', 'sd_folder_y', 'sd_folder_font'] },
+        { title: 'Playback info', fields: ['sd_info_font'], subgroups: [
+            { title: 'Volume', enabledBy: 'sd_volume_show', fields: ['sd_volume_show', 'sd_volume_x', 'sd_volume_y'] },
+            { title: 'Status flags', enabledBy: 'sd_status_show', fields: ['sd_status_show', 'sd_status_x', 'sd_status_y'] },
+        ] },
+        { title: 'Playback time', enabledBy: 'sd_show_time', fields: ['sd_show_time', 'sd_time_x', 'sd_time_y'] },
         { title: 'Progress bar', enabledBy: 'sd_show_bar', fields: ['sd_show_bar', 'sd_bar_x', 'sd_bar_y', 'sd_bar_w', 'sd_bar_h'] },
         { title: 'Mode indicator', enabledBy: 'sd_show_mode_indicator', fields: ['sd_show_mode_indicator', 'sd_mode_indic_x', 'sd_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'sd_show_clock', fields: ['sd_show_clock', 'sd_clock_widget_x', 'sd_clock_widget_y', 'sd_clock_font'] },
@@ -1899,13 +1933,9 @@ function renderBt(svg) {
     drawLabel(svg, b.bt_time_x, b.bt_time_y, b.bt_time_font, '0:00 / 0:00',
               'time', { x: 'bt_time_x', y: 'bt_time_y' }, true);
 
-    // Vol label is center-anchored on bt_time_x, one line below time — non-draggable preview
-    const timeFh   = fontHeight(b.bt_time_font);
-    const volFh    = fontHeight(b.bt_vol_label_font);
-    const volX     = b.bt_time_x;
-    const volY     = b.bt_time_y + timeFh + 4;
-    text(svg, volX, volY + volFh * 0.78, 'VOL: 50%', { 'font-size': volFh, 'text-anchor': 'middle' });
-    tag(svg, volX + 2, volY + 7, 'vol');
+    // Vol label — independently positioned center-anchored element.
+    drawLabel(svg, b.bt_vol_x, b.bt_vol_y, b.bt_vol_label_font, 'VOL: 50%',
+              'vol', { x: 'bt_vol_x', y: 'bt_vol_y' }, true);
 
     if (b.bt_show_mode_indicator) {
         drawFreeElement(svg, {
@@ -1943,23 +1973,23 @@ function renderRadio(svg) {
     }
 
     if (r.radio_show_np) {
-        // Now-playing widget = two stacked labels (station + title). Width is fixed
-        // in firmware to screen_w - 20 (full-screen scrolling line); the title sits
-        // a station-font-height + 4px below the station (mirrors the firmware).
+        // Station and title are independent single-line boxes (x/y/w each);
+        // text is centered in the box and scrolls when it doesn't fit.
         const stationFh = fontHeight(r.radio_np_station_font);
-        const titleFh   = fontHeight(r.radio_np_title_font);
-        const npW       = Math.max(W - r.radio_np_x - 10, 8);
         drawFreeElement(svg, {
-            x: r.radio_np_x, y: r.radio_np_y, w: npW, h: stationFh,
+            x: r.radio_np_x, y: r.radio_np_y,
+            w: Math.max(r.radio_np_w | 0, 8), h: stationFh,
             label: 'np_station', cls: 'label-rect',
-            fields: { x: 'radio_np_x', y: 'radio_np_y' },
+            fields: { x: 'radio_np_x', y: 'radio_np_y', w: 'radio_np_w' },
             text: 'Atlas Radio', textSize: stationFh,
         });
         if (r.radio_show_np_title) {
+            const titleFh = fontHeight(r.radio_np_title_font);
             drawFreeElement(svg, {
-                x: r.radio_np_x, y: r.radio_np_y + stationFh + 4, w: npW, h: titleFh,
+                x: r.radio_title_x, y: r.radio_title_y,
+                w: Math.max(r.radio_title_w | 0, 8), h: titleFh,
                 label: 'np_title', cls: 'label-rect',
-                fields: { x: 'radio_np_x', y: 'radio_np_y' },
+                fields: { x: 'radio_title_x', y: 'radio_title_y', w: 'radio_title_w' },
                 text: 'Title — Artist', textSize: titleFh,
             });
         }
@@ -1976,11 +2006,29 @@ function renderRadio(svg) {
     }
 
     if (r.radio_show_playback_status) {
-        drawLabel(svg, 0, r.radio_state_y, r.radio_state_font, 'PLAYING',
-                  'state', { y: 'radio_state_y' });
-        drawLabel(svg, 0, r.radio_audio_info_y, r.radio_audio_info_font,
-                  '44100 Hz  2ch  128kbps   VOL: 42%',
-                  'info', { y: 'radio_audio_info_y' });
+        drawLabel(svg, r.radio_state_x, r.radio_state_y, r.radio_state_font, 'PLAYING',
+                  'state', { x: 'radio_state_x', y: 'radio_state_y' }, true);
+    }
+    // Audio-info split — independent center-anchored labels, one shared font.
+    if (r.radio_samplerate_show) {
+        drawLabel(svg, r.radio_samplerate_x, r.radio_samplerate_y, r.radio_audio_info_font,
+                  '44100 Hz', 'rate',
+                  { x: 'radio_samplerate_x', y: 'radio_samplerate_y' }, true);
+    }
+    if (r.radio_channels_show) {
+        drawLabel(svg, r.radio_channels_x, r.radio_channels_y, r.radio_audio_info_font,
+                  'STEREO', 'ch',
+                  { x: 'radio_channels_x', y: 'radio_channels_y' }, true);
+    }
+    if (r.radio_bitrate_show) {
+        drawLabel(svg, r.radio_bitrate_x, r.radio_bitrate_y, r.radio_audio_info_font,
+                  '128 kbps', 'kbps',
+                  { x: 'radio_bitrate_x', y: 'radio_bitrate_y' }, true);
+    }
+    if (r.radio_volume_show) {
+        drawLabel(svg, r.radio_volume_x, r.radio_volume_y, r.radio_audio_info_font,
+                  'VOL: 42%', 'vol',
+                  { x: 'radio_volume_x', y: 'radio_volume_y' }, true);
     }
 
     if (r.radio_show_mode_indicator) {
@@ -2068,17 +2116,23 @@ function renderSd(svg) {
         text: 'Artist - Title', textSize: sdTitleFh,
     });
     if (s.sd_show_folder) {
-        drawLabel(svg, 0, s.sd_folder_y, s.sd_folder_font, 'Folder   3/12',
-                  'folder', { y: 'sd_folder_y' });
+        drawLabel(svg, s.sd_folder_x, s.sd_folder_y, s.sd_folder_font, 'Folder   3/12',
+                  'folder', { x: 'sd_folder_x', y: 'sd_folder_y' }, true);
     }
-    if (s.sd_show_info) {
-        drawLabel(svg, 0, s.sd_info_y, s.sd_info_font, 'VOL: 42%   SHUFFLE   REPEAT ALL',
-                  'info', { y: 'sd_info_y' });
+    // Info row split — volume and status flags are independent labels.
+    if (s.sd_volume_show) {
+        drawLabel(svg, s.sd_volume_x, s.sd_volume_y, s.sd_info_font, 'VOL: 42%',
+                  'vol', { x: 'sd_volume_x', y: 'sd_volume_y' }, true);
+    }
+    if (s.sd_status_show) {
+        drawLabel(svg, s.sd_status_x, s.sd_status_y, s.sd_info_font,
+                  'SHUFFLE   REPEAT ALL',
+                  'status', { x: 'sd_status_x', y: 'sd_status_y' }, true);
     }
 
     if (s.sd_show_time) {
-        drawLabel(svg, 0, s.sd_time_y, s.sd_info_font, '1:23 / 4:56',
-                  'time', { y: 'sd_time_y' });
+        drawLabel(svg, s.sd_time_x, s.sd_time_y, s.sd_info_font, '1:23 / 4:56',
+                  'time', { x: 'sd_time_x', y: 'sd_time_y' }, true);
     }
 
     if (s.sd_show_bar && s.sd_bar_w > 0) {
@@ -2442,6 +2496,7 @@ function placeholderClass(name) {
         station: 'ph-media-primary', np_station: 'ph-media-primary', brand: 'ph-media-primary',
         title: 'ph-media-secondary', np_title: 'ph-media-secondary', artist: 'ph-media-secondary',
         ip: 'ph-info', info: 'ph-info', status: 'ph-info', state: 'ph-info', folder: 'ph-info',
+        rate: 'ph-info', ch: 'ph-info', kbps: 'ph-info', vol: 'ph-info',
         mode: 'ph-mode',
         evt: 'ph-event',
         calendar: 'ph-calendar',

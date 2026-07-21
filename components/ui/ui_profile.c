@@ -57,8 +57,12 @@ static const ui_profile_t k_defaults = {
 
     .radio_np_x                = 10,
     .radio_np_y                = 35,
+    .radio_np_w                = 108,
     .radio_show_np             = true,
     .radio_show_np_title       = true,
+    .radio_title_x             = 10,
+    .radio_title_y             = 60,
+    .radio_title_w             = 108,
     .radio_show_station_icon   = true,
     .radio_station_icon_x      = 10,
     .radio_station_icon_y      = 35,
@@ -66,9 +70,22 @@ static const ui_profile_t k_defaults = {
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_show_playback_status = true,
+    .radio_state_x             = DISPLAY_WIDTH / 2,  // centered
     .radio_state_y             = 16,
     .radio_state_font          = &lv_font_montserrat_12_pl,
-    .radio_audio_info_y        = 30,
+    // Only volume fits the 128px mono strip — the rest is off by default.
+    .radio_samplerate_show     = false,
+    .radio_samplerate_x        = 25,
+    .radio_samplerate_y        = 30,
+    .radio_channels_show       = false,
+    .radio_channels_x          = 57,
+    .radio_channels_y          = 30,
+    .radio_bitrate_show        = false,
+    .radio_bitrate_x           = 96,
+    .radio_bitrate_y           = 30,
+    .radio_volume_show         = true,
+    .radio_volume_x            = DISPLAY_WIDTH / 2,  // centered
+    .radio_volume_y            = 30,
     .radio_audio_info_font     = &lv_font_montserrat_12_pl,
     .radio_show_mode_indicator = false,
     .radio_show_clock          = false,
@@ -88,13 +105,20 @@ static const ui_profile_t k_defaults = {
     .sd_title_y                = 35,
     .sd_title_w                = 108,
     .sd_title_font             = &lv_font_montserrat_14_pl,
+    .sd_folder_x               = DISPLAY_WIDTH / 2,  // centered
     .sd_folder_y               = 16,
     .sd_folder_font            = &lv_font_montserrat_12_pl,
-    .sd_info_y                 = 30,
+    // Only volume fits the 128px mono strip — status flags off by default.
+    .sd_volume_show            = true,
+    .sd_volume_x               = DISPLAY_WIDTH / 2,  // centered
+    .sd_volume_y               = 30,
+    .sd_status_show            = false,
+    .sd_status_x               = 96,
+    .sd_status_y               = 30,
     .sd_info_font              = &lv_font_montserrat_12_pl,
     .sd_show_folder            = true,
-    .sd_show_info              = true,
     .sd_show_time              = false,   // no spare line on a 64px mono panel
+    .sd_time_x                 = DISPLAY_WIDTH / 2,  // centered
     .sd_time_y                 = 49,
     .sd_show_bar               = false,
     .sd_bar_x                  = 0,
@@ -138,6 +162,8 @@ static const ui_profile_t k_defaults = {
     .bt_status_x               = DISPLAY_WIDTH / 2,  // centered
     .bt_status_y               = 22,
     .bt_status_font            = &lv_font_montserrat_12_pl,
+    .bt_vol_x                  = DISPLAY_WIDTH / 2,  // centered, one line below time
+    .bt_vol_y                  = 70,
     .bt_vol_label_font         = &lv_font_montserrat_12_pl,
     .bt_show_mode_indicator    = false,
     .bt_show_clock             = false,
@@ -257,8 +283,12 @@ static const ui_profile_t k_defaults = {
 
     .radio_np_x                = 10,
     .radio_np_y                = 1,
+    .radio_np_w                = 236,
     .radio_show_np             = true,
     .radio_show_np_title       = true,
+    .radio_title_x             = 10,
+    .radio_title_y             = 26,
+    .radio_title_w             = 236,
     .radio_show_station_icon   = true,
     .radio_station_icon_x      = 10,
     .radio_station_icon_y      = 1,
@@ -266,9 +296,22 @@ static const ui_profile_t k_defaults = {
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_show_playback_status = true,
+    .radio_state_x             = DISPLAY_WIDTH / 2,  // centered
     .radio_state_y             = 44,
     .radio_state_font          = &lv_font_montserrat_12_pl,
-    .radio_audio_info_y        = 52,
+    // One row, spread like the former combined audio-info line.
+    .radio_samplerate_show     = true,
+    .radio_samplerate_x        = 38,
+    .radio_samplerate_y        = 52,
+    .radio_channels_show       = true,
+    .radio_channels_x          = 100,
+    .radio_channels_y          = 52,
+    .radio_bitrate_show        = true,
+    .radio_bitrate_x           = 154,
+    .radio_bitrate_y           = 52,
+    .radio_volume_show         = true,
+    .radio_volume_x            = 218,
+    .radio_volume_y            = 52,
     .radio_audio_info_font     = &lv_font_montserrat_12_pl,
     .radio_show_mode_indicator = false,
     .radio_show_clock          = false,
@@ -288,13 +331,19 @@ static const ui_profile_t k_defaults = {
     .sd_title_y                = 1,
     .sd_title_w                = 236,
     .sd_title_font             = &lv_font_montserrat_14_pl,
+    .sd_folder_x               = DISPLAY_WIDTH / 2,  // centered
     .sd_folder_y               = 44,
     .sd_folder_font            = &lv_font_montserrat_12_pl,
-    .sd_info_y                 = 52,
+    .sd_volume_show            = true,
+    .sd_volume_x               = 64,
+    .sd_volume_y               = 52,
+    .sd_status_show            = true,
+    .sd_status_x               = 176,
+    .sd_status_y               = 52,
     .sd_info_font              = &lv_font_montserrat_12_pl,
     .sd_show_folder            = true,
-    .sd_show_info              = true,
     .sd_show_time              = false,   // no spare line on a 64px mono panel
+    .sd_time_x                 = DISPLAY_WIDTH / 2,  // centered
     .sd_time_y                 = 71,
     .sd_show_bar               = false,
     .sd_bar_x                  = 0,
@@ -338,6 +387,8 @@ static const ui_profile_t k_defaults = {
     .bt_status_x               = DISPLAY_WIDTH / 2,  // centered
     .bt_status_y               = 18,
     .bt_status_font            = &lv_font_montserrat_10_pl,
+    .bt_vol_x                  = DISPLAY_WIDTH / 2,  // centered, one line below time
+    .bt_vol_y                  = 66,
     .bt_vol_label_font         = &lv_font_montserrat_10_pl,
     .bt_show_mode_indicator    = false,
     .bt_show_clock             = false,
@@ -463,8 +514,12 @@ static const ui_profile_t k_defaults = {
     // Radio: Station info and large volume slider
     .radio_np_x                = 82,     // after the default 64px station icon
     .radio_np_y                = 60,
+    .radio_np_w                = 148,
     .radio_show_np             = true,
     .radio_show_np_title       = true,
+    .radio_title_x             = 82,
+    .radio_title_y             = 85,
+    .radio_title_w             = 148,
     .radio_show_station_icon   = true,
     .radio_station_icon_x      = 10,
     .radio_station_icon_y      = 60,
@@ -472,9 +527,22 @@ static const ui_profile_t k_defaults = {
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_show_playback_status = true,
+    .radio_state_x             = DISPLAY_WIDTH / 2,  // centered
     .radio_state_y             = 216,
     .radio_state_font          = &lv_font_montserrat_14_pl,
-    .radio_audio_info_y        = 164,
+    // One row, spread like the former combined audio-info line.
+    .radio_samplerate_show     = true,
+    .radio_samplerate_x        = 36,
+    .radio_samplerate_y        = 164,
+    .radio_channels_show       = true,
+    .radio_channels_x          = 91,
+    .radio_channels_y          = 164,
+    .radio_bitrate_show        = true,
+    .radio_bitrate_x           = 144,
+    .radio_bitrate_y           = 164,
+    .radio_volume_show         = true,
+    .radio_volume_x            = 204,
+    .radio_volume_y            = 164,
     .radio_audio_info_font     = &lv_font_montserrat_12_pl,
     .radio_show_mode_indicator = true,
     .radio_show_clock          = true,
@@ -520,13 +588,20 @@ static const ui_profile_t k_defaults = {
     .sd_title_y                = 60,
     .sd_title_w                = 220,
     .sd_title_font             = &lv_font_montserrat_14_pl,
+    .sd_folder_x               = DISPLAY_WIDTH / 2,  // centered
     .sd_folder_y               = 216,
     .sd_folder_font            = &lv_font_montserrat_14_pl,
-    .sd_info_y                 = 170,   // raised so the "elapsed/total" line below fits above the VU
+    // Info row split; y raised so the "elapsed/total" line fits above the VU.
+    .sd_volume_show            = true,
+    .sd_volume_x               = 60,
+    .sd_volume_y               = 170,
+    .sd_status_show            = true,
+    .sd_status_x               = 160,
+    .sd_status_y               = 170,
     .sd_info_font              = &lv_font_montserrat_12_pl,
     .sd_show_folder            = true,
-    .sd_show_info              = true,
     .sd_show_time              = true,
+    .sd_time_x                 = DISPLAY_WIDTH / 2,  // centered
     .sd_time_y                 = 189,
     .sd_show_bar               = true,
     .sd_bar_x                  = 20,    // (240 - 200) / 2, under the time row
@@ -601,6 +676,8 @@ static const ui_profile_t k_defaults = {
     .bt_status_x               = DISPLAY_WIDTH / 2,  // centered
     .bt_status_y               = 122,
     .bt_status_font            = &lv_font_montserrat_12_pl,
+    .bt_vol_x                  = DISPLAY_WIDTH / 2,  // centered, one line below time
+    .bt_vol_y                  = 258,
     .bt_vol_label_font         = &lv_font_montserrat_14_pl,
     .bt_show_mode_indicator    = true,
     .bt_show_clock             = true,
@@ -727,8 +804,12 @@ static const ui_profile_t k_defaults = {
     
     .radio_np_x                = 82,     // after the default 64px station icon
     .radio_np_y                = 64,
+    .radio_np_w                = 228,
     .radio_show_np             = true,
     .radio_show_np_title       = true,
+    .radio_title_x             = 82,
+    .radio_title_y             = 89,
+    .radio_title_w             = 228,
     .radio_show_station_icon   = true,
     .radio_station_icon_x      = 10,
     .radio_station_icon_y      = 64,
@@ -736,9 +817,22 @@ static const ui_profile_t k_defaults = {
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_show_playback_status = true,
+    .radio_state_x             = DISPLAY_WIDTH / 2,  // centered
     .radio_state_y             = 160,
     .radio_state_font          = &lv_font_montserrat_14_pl,
-    .radio_audio_info_y        = 130,
+    // One row, spread like the former combined audio-info line.
+    .radio_samplerate_show     = true,
+    .radio_samplerate_x        = 48,
+    .radio_samplerate_y        = 130,
+    .radio_channels_show       = true,
+    .radio_channels_x          = 122,
+    .radio_channels_y          = 130,
+    .radio_bitrate_show        = true,
+    .radio_bitrate_x           = 192,
+    .radio_bitrate_y           = 130,
+    .radio_volume_show         = true,
+    .radio_volume_x            = 272,
+    .radio_volume_y            = 130,
     .radio_audio_info_font     = &lv_font_montserrat_12_pl,
     .radio_show_mode_indicator = true,
     .radio_show_clock          = true,
@@ -784,13 +878,20 @@ static const ui_profile_t k_defaults = {
     .sd_title_y                = 64,
     .sd_title_w                = 300,
     .sd_title_font             = &lv_font_montserrat_14_pl,
+    .sd_folder_x               = DISPLAY_WIDTH / 2,  // centered
     .sd_folder_y               = 160,
     .sd_folder_font            = &lv_font_montserrat_14_pl,
-    .sd_info_y                 = 100,   // raised so the "elapsed/total" line below fits above the VU
+    // Info row split; y raised so the "elapsed/total" line fits above the VU.
+    .sd_volume_show            = true,
+    .sd_volume_x               = 70,
+    .sd_volume_y               = 100,
+    .sd_status_show            = true,
+    .sd_status_x               = 210,
+    .sd_status_y               = 100,
     .sd_info_font              = &lv_font_montserrat_12_pl,
     .sd_show_folder            = true,
-    .sd_show_info              = true,
     .sd_show_time              = true,
+    .sd_time_x                 = DISPLAY_WIDTH / 2,  // centered
     .sd_time_y                 = 119,
     .sd_show_bar               = true,
     .sd_bar_x                  = 20,    // (320 - 280) / 2, under the time row
@@ -860,6 +961,8 @@ static const ui_profile_t k_defaults = {
     .bt_status_x               = DISPLAY_WIDTH / 2,  // centered
     .bt_status_y               = 112,
     .bt_status_font            = &lv_font_montserrat_12_pl,
+    .bt_vol_x                  = DISPLAY_WIDTH / 2,  // centered, one line below time
+    .bt_vol_y                  = 218,
     .bt_vol_label_font         = &lv_font_montserrat_12_pl,
     .bt_show_mode_indicator    = true,
     .bt_show_clock             = true,
@@ -984,8 +1087,12 @@ static const ui_profile_t k_defaults = {
 
     .radio_np_x                = 77,     // after the default 64px station icon
     .radio_np_y                = 85,
+    .radio_np_w                = 393,
     .radio_show_np             = true,
     .radio_show_np_title       = true,
+    .radio_title_x             = 77,
+    .radio_title_y             = 110,
+    .radio_title_w             = 393,
     .radio_show_station_icon   = true,
     .radio_station_icon_x      = 5,
     .radio_station_icon_y      = 85,
@@ -993,9 +1100,22 @@ static const ui_profile_t k_defaults = {
     .radio_np_station_font     = &lv_font_montserrat_18_pl,
     .radio_np_title_font       = &lv_font_montserrat_14_pl,
     .radio_show_playback_status = true,
+    .radio_state_x             = DISPLAY_WIDTH / 2,  // centered
     .radio_state_y             = 226,
     .radio_state_font          = &lv_font_montserrat_14_pl,
-    .radio_audio_info_y        = 174,
+    // One row, spread like the former combined audio-info line.
+    .radio_samplerate_show     = true,
+    .radio_samplerate_x        = 72,
+    .radio_samplerate_y        = 174,
+    .radio_channels_show       = true,
+    .radio_channels_x          = 182,
+    .radio_channels_y          = 174,
+    .radio_bitrate_show        = true,
+    .radio_bitrate_x           = 288,
+    .radio_bitrate_y           = 174,
+    .radio_volume_show         = true,
+    .radio_volume_x            = 408,
+    .radio_volume_y            = 174,
     .radio_audio_info_font     = &lv_font_montserrat_14_pl,
     .radio_show_mode_indicator = true,
     .radio_show_clock          = true,
@@ -1041,13 +1161,20 @@ static const ui_profile_t k_defaults = {
     .sd_title_y                = 85,
     .sd_title_w                = 460,
     .sd_title_font             = &lv_font_montserrat_14_pl,
+    .sd_folder_x               = DISPLAY_WIDTH / 2,  // centered
     .sd_folder_y               = 226,
     .sd_folder_font            = &lv_font_montserrat_14_pl,
-    .sd_info_y                 = 140,   // raised so the "elapsed/total" line below fits above the VU
+    // Info row split; y raised so the "elapsed/total" line fits above the VU.
+    .sd_volume_show            = true,
+    .sd_volume_x               = 100,
+    .sd_volume_y               = 140,
+    .sd_status_show            = true,
+    .sd_status_x               = 310,
+    .sd_status_y               = 140,
     .sd_info_font              = &lv_font_montserrat_14_pl,
     .sd_show_folder            = true,
-    .sd_show_info              = true,
     .sd_show_time              = true,
+    .sd_time_x                 = DISPLAY_WIDTH / 2,  // centered
     .sd_time_y                 = 161,
     .sd_show_bar               = true,
     .sd_bar_x                  = 30,    // (480 - 420) / 2, under the time row
@@ -1117,6 +1244,8 @@ static const ui_profile_t k_defaults = {
     .bt_status_x               = DISPLAY_WIDTH / 2,  // centered
     .bt_status_y               = 150,
     .bt_status_font            = &lv_font_montserrat_14_pl,
+    .bt_vol_x                  = DISPLAY_WIDTH / 2,  // centered, one line below time
+    .bt_vol_y                  = 290,
     .bt_vol_label_font         = &lv_font_montserrat_14_pl,
     .bt_show_mode_indicator    = true,
     .bt_show_clock             = true,
@@ -1436,6 +1565,8 @@ static void load_bt(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "bt_status_x",            &p->bt_status_x);
     load_i16 (obj, "bt_status_y",            &p->bt_status_y);
     load_font(obj, "bt_status_font",         &p->bt_status_font);
+    load_i16 (obj, "bt_vol_x",               &p->bt_vol_x);
+    load_i16 (obj, "bt_vol_y",               &p->bt_vol_y);
     load_font(obj, "bt_vol_label_font",      &p->bt_vol_label_font);
     load_bool(obj, "bt_show_mode_indicator", &p->bt_show_mode_indicator);
     load_bool(obj, "bt_show_clock",          &p->bt_show_clock);
@@ -1467,8 +1598,12 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     if (!cJSON_IsObject(obj)) return;
     load_i16 (obj, "radio_np_x",                &p->radio_np_x);
     load_i16 (obj, "radio_np_y",                &p->radio_np_y);
+    load_i16 (obj, "radio_np_w",                &p->radio_np_w);
     load_bool(obj, "radio_show_np",             &p->radio_show_np);
     load_bool(obj, "radio_show_np_title",       &p->radio_show_np_title);
+    load_i16 (obj, "radio_title_x",             &p->radio_title_x);
+    load_i16 (obj, "radio_title_y",             &p->radio_title_y);
+    load_i16 (obj, "radio_title_w",             &p->radio_title_w);
     load_bool(obj, "radio_show_station_icon",   &p->radio_show_station_icon);
     load_i16 (obj, "radio_station_icon_x",      &p->radio_station_icon_x);
     load_i16 (obj, "radio_station_icon_y",      &p->radio_station_icon_y);
@@ -1478,9 +1613,21 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_font(obj, "radio_np_station_font",     &p->radio_np_station_font);
     load_font(obj, "radio_np_title_font",       &p->radio_np_title_font);
     load_bool(obj, "radio_show_playback_status", &p->radio_show_playback_status);
+    load_i16 (obj, "radio_state_x",             &p->radio_state_x);
     load_i16 (obj, "radio_state_y",             &p->radio_state_y);
     load_font(obj, "radio_state_font",          &p->radio_state_font);
-    load_i16 (obj, "radio_audio_info_y",        &p->radio_audio_info_y);
+    load_bool(obj, "radio_samplerate_show",     &p->radio_samplerate_show);
+    load_i16 (obj, "radio_samplerate_x",        &p->radio_samplerate_x);
+    load_i16 (obj, "radio_samplerate_y",        &p->radio_samplerate_y);
+    load_bool(obj, "radio_channels_show",       &p->radio_channels_show);
+    load_i16 (obj, "radio_channels_x",          &p->radio_channels_x);
+    load_i16 (obj, "radio_channels_y",          &p->radio_channels_y);
+    load_bool(obj, "radio_bitrate_show",        &p->radio_bitrate_show);
+    load_i16 (obj, "radio_bitrate_x",           &p->radio_bitrate_x);
+    load_i16 (obj, "radio_bitrate_y",           &p->radio_bitrate_y);
+    load_bool(obj, "radio_volume_show",         &p->radio_volume_show);
+    load_i16 (obj, "radio_volume_x",            &p->radio_volume_x);
+    load_i16 (obj, "radio_volume_y",            &p->radio_volume_y);
     load_font(obj, "radio_audio_info_font",     &p->radio_audio_info_font);
     load_bool(obj, "radio_show_mode_indicator",  &p->radio_show_mode_indicator);
     load_bool(obj, "radio_show_clock",           &p->radio_show_clock);
@@ -1539,8 +1686,12 @@ static cJSON *dump_radio(const ui_profile_t *p)
     cJSON *o = cJSON_CreateObject();
     add_i16 (o, "radio_np_x",                p->radio_np_x);
     add_i16 (o, "radio_np_y",                p->radio_np_y);
+    add_i16 (o, "radio_np_w",                p->radio_np_w);
     add_bool(o, "radio_show_np",             p->radio_show_np);
     add_bool(o, "radio_show_np_title",       p->radio_show_np_title);
+    add_i16 (o, "radio_title_x",             p->radio_title_x);
+    add_i16 (o, "radio_title_y",             p->radio_title_y);
+    add_i16 (o, "radio_title_w",             p->radio_title_w);
     add_bool(o, "radio_show_station_icon",   p->radio_show_station_icon);
     add_i16 (o, "radio_station_icon_x",      p->radio_station_icon_x);
     add_i16 (o, "radio_station_icon_y",      p->radio_station_icon_y);
@@ -1548,9 +1699,21 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_font(o, "radio_np_station_font",     p->radio_np_station_font);
     add_font(o, "radio_np_title_font",       p->radio_np_title_font);
     add_bool(o, "radio_show_playback_status", p->radio_show_playback_status);
+    add_i16 (o, "radio_state_x",             p->radio_state_x);
     add_i16 (o, "radio_state_y",             p->radio_state_y);
     add_font(o, "radio_state_font",          p->radio_state_font);
-    add_i16 (o, "radio_audio_info_y",        p->radio_audio_info_y);
+    add_bool(o, "radio_samplerate_show",     p->radio_samplerate_show);
+    add_i16 (o, "radio_samplerate_x",        p->radio_samplerate_x);
+    add_i16 (o, "radio_samplerate_y",        p->radio_samplerate_y);
+    add_bool(o, "radio_channels_show",       p->radio_channels_show);
+    add_i16 (o, "radio_channels_x",          p->radio_channels_x);
+    add_i16 (o, "radio_channels_y",          p->radio_channels_y);
+    add_bool(o, "radio_bitrate_show",        p->radio_bitrate_show);
+    add_i16 (o, "radio_bitrate_x",           p->radio_bitrate_x);
+    add_i16 (o, "radio_bitrate_y",           p->radio_bitrate_y);
+    add_bool(o, "radio_volume_show",         p->radio_volume_show);
+    add_i16 (o, "radio_volume_x",            p->radio_volume_x);
+    add_i16 (o, "radio_volume_y",            p->radio_volume_y);
     add_font(o, "radio_audio_info_font",     p->radio_audio_info_font);
     add_bool(o, "radio_show_mode_indicator",  p->radio_show_mode_indicator);
     add_bool(o, "radio_show_clock",           p->radio_show_clock);
@@ -1608,13 +1771,19 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "sd_title_y",                &p->sd_title_y);
     load_i16 (obj, "sd_title_w",                &p->sd_title_w);
     load_font(obj, "sd_title_font",             &p->sd_title_font);
+    load_i16 (obj, "sd_folder_x",               &p->sd_folder_x);
     load_i16 (obj, "sd_folder_y",               &p->sd_folder_y);
     load_font(obj, "sd_folder_font",            &p->sd_folder_font);
-    load_i16 (obj, "sd_info_y",                 &p->sd_info_y);
+    load_bool(obj, "sd_volume_show",            &p->sd_volume_show);
+    load_i16 (obj, "sd_volume_x",               &p->sd_volume_x);
+    load_i16 (obj, "sd_volume_y",               &p->sd_volume_y);
+    load_bool(obj, "sd_status_show",            &p->sd_status_show);
+    load_i16 (obj, "sd_status_x",               &p->sd_status_x);
+    load_i16 (obj, "sd_status_y",               &p->sd_status_y);
     load_font(obj, "sd_info_font",              &p->sd_info_font);
     load_bool(obj, "sd_show_folder",            &p->sd_show_folder);
-    load_bool(obj, "sd_show_info",              &p->sd_show_info);
     load_bool(obj, "sd_show_time",              &p->sd_show_time);
+    load_i16 (obj, "sd_time_x",                 &p->sd_time_x);
     load_i16 (obj, "sd_time_y",                 &p->sd_time_y);
     load_bool(obj, "sd_show_bar",               &p->sd_show_bar);
     load_i16 (obj, "sd_bar_x",                  &p->sd_bar_x);
@@ -1680,13 +1849,19 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_title_y",                p->sd_title_y);
     add_i16 (o, "sd_title_w",                p->sd_title_w);
     add_font(o, "sd_title_font",             p->sd_title_font);
+    add_i16 (o, "sd_folder_x",               p->sd_folder_x);
     add_i16 (o, "sd_folder_y",               p->sd_folder_y);
     add_font(o, "sd_folder_font",            p->sd_folder_font);
-    add_i16 (o, "sd_info_y",                 p->sd_info_y);
+    add_bool(o, "sd_volume_show",            p->sd_volume_show);
+    add_i16 (o, "sd_volume_x",               p->sd_volume_x);
+    add_i16 (o, "sd_volume_y",               p->sd_volume_y);
+    add_bool(o, "sd_status_show",            p->sd_status_show);
+    add_i16 (o, "sd_status_x",               p->sd_status_x);
+    add_i16 (o, "sd_status_y",               p->sd_status_y);
     add_font(o, "sd_info_font",              p->sd_info_font);
     add_bool(o, "sd_show_folder",            p->sd_show_folder);
-    add_bool(o, "sd_show_info",              p->sd_show_info);
     add_bool(o, "sd_show_time",              p->sd_show_time);
+    add_i16 (o, "sd_time_x",                 p->sd_time_x);
     add_i16 (o, "sd_time_y",                 p->sd_time_y);
     add_bool(o, "sd_show_bar",               p->sd_show_bar);
     add_i16 (o, "sd_bar_x",                  p->sd_bar_x);
@@ -1757,6 +1932,8 @@ static cJSON *dump_bt(const ui_profile_t *p)
     add_i16 (o, "bt_status_x",            p->bt_status_x);
     add_i16 (o, "bt_status_y",            p->bt_status_y);
     add_font(o, "bt_status_font",         p->bt_status_font);
+    add_i16 (o, "bt_vol_x",               p->bt_vol_x);
+    add_i16 (o, "bt_vol_y",               p->bt_vol_y);
     add_font(o, "bt_vol_label_font",      p->bt_vol_label_font);
     add_bool(o, "bt_show_mode_indicator", p->bt_show_mode_indicator);
     add_bool(o, "bt_show_clock",          p->bt_show_clock);

@@ -37,7 +37,8 @@ static const char *TAG = "SCR_SD";
 static lv_obj_t   *s_root   = NULL;
 static lv_obj_t   *s_title  = NULL;   // track title (ID3 or file name)
 static lv_obj_t   *s_folder = NULL;   // "<folder>   idx/count"
-static lv_obj_t   *s_info   = NULL;   // "VOL: n%   PAUSED   SHUFFLE   REPEAT ..."
+static lv_obj_t   *s_volume = NULL;   // "VOL: n%"
+static lv_obj_t   *s_status = NULL;   // "PAUSED   SHUFFLE   REPEAT ..."
 static lv_obj_t   *s_time   = NULL;   // "1:23 / 4:56" playback progress
 static lv_obj_t   *s_bar    = NULL;   // read-only progress bar (hidden without a duration)
 static lv_timer_t *s_tick   = NULL;   // 1 Hz refresh for the progress counter
@@ -131,14 +132,24 @@ static void refresh_from_state(void)
         }
     }
 
-    if (s_info) {
-        char info[96];
-        int n = snprintf(info, sizeof(info), "VOL: %d%%", s->volume);
-        if (s->sd_paused)  n += snprintf(info + n, sizeof(info) - n, "   PAUSED");
-        if (s->sd_shuffle) n += snprintf(info + n, sizeof(info) - n, "   SHUFFLE");
+    if (s_volume) {
+        char vol[16];
+        snprintf(vol, sizeof(vol), "VOL: %d%%", s->volume);
+        lv_label_set_text(s_volume, vol);
+    }
+
+    if (s_status) {
+        // Flags only — hidden (empty) when nothing is active, so no plate shows.
+        char flags[64];
+        int n = 0;
+        flags[0] = '\0';
+        if (s->sd_paused)  n += snprintf(flags + n, sizeof(flags) - n, "PAUSED");
+        if (s->sd_shuffle) n += snprintf(flags + n, sizeof(flags) - n, "%sSHUFFLE",
+                                         n ? "   " : "");
         const char *r = repeat_str(s->sd_repeat);
-        if (r[0])          n += snprintf(info + n, sizeof(info) - n, "   %s", r);
-        lv_label_set_text(s_info, info);
+        if (r[0])          n += snprintf(flags + n, sizeof(flags) - n, "%s%s",
+                                         n ? "   " : "", r);
+        ui_label_set_text(s_status, flags);
     }
 
     progress_update();            // snap the counter on track/source change
@@ -189,12 +200,18 @@ static void sd_player_screen_create(lv_obj_t *parent)
 
     if (p->sd_show_folder) {
         s_folder = make_centered_label(parent, p->sd_folder_font, th->accent,
-                                       DISPLAY_WIDTH / 2, p->sd_folder_y,
+                                       p->sd_folder_x, p->sd_folder_y,
                                        DISPLAY_WIDTH - 20);
     }
-    if (p->sd_show_info) {
-        s_info   = make_centered_label(parent, p->sd_info_font,   th->text_muted,
-                                       DISPLAY_WIDTH / 2, p->sd_info_y,
+    // Info row split: volume and status flags are independent elements.
+    if (p->sd_volume_show) {
+        s_volume = make_centered_label(parent, p->sd_info_font, th->text_muted,
+                                       p->sd_volume_x, p->sd_volume_y,
+                                       DISPLAY_WIDTH - 20);
+    }
+    if (p->sd_status_show) {
+        s_status = make_centered_label(parent, p->sd_info_font, th->text_muted,
+                                       p->sd_status_x, p->sd_status_y,
                                        DISPLAY_WIDTH - 20);
     }
 
@@ -202,7 +219,7 @@ static void sd_player_screen_create(lv_obj_t *parent)
     // with no spare line (mono).
     if (p->sd_show_time) {
         s_time = make_centered_label(parent, p->sd_info_font, th->text_muted,
-                                     DISPLAY_WIDTH / 2, p->sd_time_y,
+                                     p->sd_time_x, p->sd_time_y,
                                      DISPLAY_WIDTH - 20);
     }
 
@@ -283,7 +300,8 @@ static void sd_player_screen_destroy(void)
     s_root   = NULL;
     s_title  = NULL;
     s_folder = NULL;
-    s_info   = NULL;
+    s_volume = NULL;
+    s_status = NULL;
     s_time   = NULL;
     s_bar    = NULL;
     ESP_LOGI(TAG, "Destroyed");
@@ -351,7 +369,8 @@ static void sd_player_apply_theme(void)
     lv_obj_set_style_bg_color(s_root, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     if (s_title)  { lv_obj_set_style_text_color(s_title,  lv_color_hex(th->text_primary), LV_PART_MAIN); ui_label_scrim(s_title, p->sd_label_bg_opa); }
     if (s_folder) { lv_obj_set_style_text_color(s_folder, lv_color_hex(th->accent),       LV_PART_MAIN); ui_label_scrim(s_folder, p->sd_label_bg_opa); }
-    if (s_info)   { lv_obj_set_style_text_color(s_info,   lv_color_hex(th->text_muted),   LV_PART_MAIN); ui_label_scrim(s_info, p->sd_label_bg_opa); }
+    if (s_volume) { lv_obj_set_style_text_color(s_volume, lv_color_hex(th->text_muted),   LV_PART_MAIN); ui_label_scrim(s_volume, p->sd_label_bg_opa); }
+    if (s_status) { lv_obj_set_style_text_color(s_status, lv_color_hex(th->text_muted),   LV_PART_MAIN); ui_label_scrim(s_status, p->sd_label_bg_opa); }
     if (s_time)   ui_label_scrim(s_time, p->sd_label_bg_opa);
     if (s_bar) {
         lv_obj_set_style_bg_color(s_bar, lv_color_hex(th->text_muted), LV_PART_MAIN);
