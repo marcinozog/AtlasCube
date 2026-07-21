@@ -15,6 +15,7 @@
 #include "weather_widget.h"
 #include "vu_widget.h"
 #include "vu_needle_widget.h"
+#include "vu_stereo_widget.h"
 #include "animated_wheels_widget.h"
 #include "app_state.h"
 #include "settings.h"
@@ -267,6 +268,18 @@ static void sd_player_screen_create(lv_obj_t *parent)
                                 p->sd_needle_r_w, p->sd_needle_r_h,
                                 p->sd_needle_frame, MEDIA_SOURCE_SD);
     }
+    if (p->sd_stereo_show_l || p->sd_stereo_show_r) {
+        vu_stereo_widget_create(parent,
+                                p->sd_stereo_show_l,
+                                p->sd_stereo_l_x, p->sd_stereo_l_y,
+                                p->sd_stereo_l_w, p->sd_stereo_l_h,
+                                p->sd_stereo_show_r,
+                                p->sd_stereo_r_x, p->sd_stereo_r_y,
+                                p->sd_stereo_r_w, p->sd_stereo_r_h,
+                                p->sd_stereo_horizontal, p->sd_stereo_frame,
+                                p->sd_stereo_transparent, p->sd_stereo_peak,
+                                MEDIA_SOURCE_SD);
+    }
     if (p->sd_show_weather) {
         weather_widget_create(parent, p->sd_weather_x, p->sd_weather_y,
                               p->sd_weather_w, p->sd_weather_font,
@@ -292,6 +305,7 @@ static void sd_player_screen_destroy(void)
     vol_overlay_hide();
     vu_widget_destroy();
     vu_needle_widget_destroy();
+    vu_stereo_widget_destroy();
     animated_wheels_widget_destroy();
     weather_widget_destroy();
     mode_indicator_destroy();
@@ -382,6 +396,7 @@ static void sd_player_apply_theme(void)
     event_indicator_apply_theme();
     vu_widget_apply_theme();
     vu_needle_widget_apply_theme();
+    vu_stereo_widget_apply_theme();
     animated_wheels_widget_apply_theme();
 
     lv_obj_invalidate(s_root);

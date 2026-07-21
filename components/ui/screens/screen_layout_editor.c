@@ -19,7 +19,7 @@ static const char *TAG = "SCR_LAYOUT";
     (offsetof(ui_profile_t, radio_touch_hotspots) + \
      (index) * sizeof(ui_touch_hotspot_t) + offsetof(ui_touch_hotspot_t, field))
 #define ARRAY_LEN(a) ((int)(sizeof(a) / sizeof((a)[0])))
-#define MAX_EDITOR_ELEMENTS 24
+#define MAX_EDITOR_ELEMENTS 26
 
 typedef enum {
     SHAPE_NOW_PLAYING,
@@ -93,6 +93,12 @@ static const editor_element_t RADIO_ELEMENTS[] = {
     { "Needle R", "R", SHAPE_VU,
       OFF(radio_needle_show_r), OFF(radio_needle_r_x), OFF(radio_needle_r_y),
       OFF(radio_needle_r_w), OFF(radio_needle_r_h), OFF_NONE, false, false },
+    { "Bar L", "L", SHAPE_VU,
+      OFF(radio_stereo_show_l), OFF(radio_stereo_l_x), OFF(radio_stereo_l_y),
+      OFF(radio_stereo_l_w), OFF(radio_stereo_l_h), OFF_NONE, false, false },
+    { "Bar R", "R", SHAPE_VU,
+      OFF(radio_stereo_show_r), OFF(radio_stereo_r_x), OFF(radio_stereo_r_y),
+      OFF(radio_stereo_r_w), OFF(radio_stereo_r_h), OFF_NONE, false, false },
     { "Wheel L", "L", SHAPE_WHEEL,
       OFF(radio_show_wheel_left), OFF(radio_cassette_l_x), OFF(radio_cassette_l_y),
       OFF(radio_cassette_l_size), OFF(radio_cassette_l_size), OFF_NONE, false, true },

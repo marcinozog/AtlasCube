@@ -215,6 +215,20 @@ typedef struct {
     int16_t          radio_needle_r_y;
     int16_t          radio_needle_r_w;
     int16_t          radio_needle_r_h;
+    bool             radio_stereo_show_l;      // stereo bar VU, left channel bar
+    bool             radio_stereo_show_r;      // right channel bar (each independent)
+    bool             radio_stereo_frame;       // thin 1 px frame around each bar
+    bool             radio_stereo_horizontal;  // bars fill left→right instead of bottom→up
+    bool             radio_stereo_transparent; // no bg fill: bars sit on wallpaper/gradient
+    bool             radio_stereo_peak;        // hold a thin peak marker with slow fall
+    int16_t          radio_stereo_l_x;         // per-bar top-left + size (LCD px)
+    int16_t          radio_stereo_l_y;
+    int16_t          radio_stereo_l_w;
+    int16_t          radio_stereo_l_h;
+    int16_t          radio_stereo_r_x;
+    int16_t          radio_stereo_r_y;
+    int16_t          radio_stereo_r_w;
+    int16_t          radio_stereo_r_h;
     bool             radio_show_cassette;      // legacy JSON name: show animated wheels overlay
     int16_t          radio_animation_style;    // 0 cassette reels, 1 car rims
     bool             radio_show_wheel_left;
@@ -293,6 +307,20 @@ typedef struct {
     int16_t          sd_needle_r_y;
     int16_t          sd_needle_r_w;
     int16_t          sd_needle_r_h;
+    bool             sd_stereo_show_l;         // stereo bar VU, left channel bar
+    bool             sd_stereo_show_r;         // right channel bar (each independent)
+    bool             sd_stereo_frame;          // thin 1 px frame around each bar
+    bool             sd_stereo_horizontal;     // bars fill left→right instead of bottom→up
+    bool             sd_stereo_transparent;    // no bg fill: bars sit on wallpaper/gradient
+    bool             sd_stereo_peak;           // hold a thin peak marker with slow fall
+    int16_t          sd_stereo_l_x;            // per-bar top-left + size (LCD px)
+    int16_t          sd_stereo_l_y;
+    int16_t          sd_stereo_l_w;
+    int16_t          sd_stereo_l_h;
+    int16_t          sd_stereo_r_x;
+    int16_t          sd_stereo_r_y;
+    int16_t          sd_stereo_r_w;
+    int16_t          sd_stereo_r_h;
     bool             sd_show_cassette;         // legacy JSON name: show animated wheels overlay
     int16_t          sd_animation_style;       // 0 cassette reels, 1 car rims
     bool             sd_show_wheel_left;

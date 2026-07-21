@@ -568,6 +568,16 @@ static const ui_profile_t k_defaults = {
     .radio_needle_r_y          = 118,
     .radio_needle_r_w          = 110,
     .radio_needle_r_h          = 72,
+    .radio_stereo_frame        = true,
+    .radio_stereo_peak         = true,
+    .radio_stereo_l_x          = 88,
+    .radio_stereo_l_y          = 118,
+    .radio_stereo_l_w          = 26,
+    .radio_stereo_l_h          = 72,
+    .radio_stereo_r_x          = 126,
+    .radio_stereo_r_y          = 118,
+    .radio_stereo_r_w          = 26,
+    .radio_stereo_r_h          = 72,
     .radio_show_cassette       = true,
     .radio_show_wheel_left     = true,
     .radio_show_wheel_right    = true,
@@ -632,6 +642,16 @@ static const ui_profile_t k_defaults = {
     .sd_needle_r_y             = 118,
     .sd_needle_r_w             = 110,
     .sd_needle_r_h             = 72,
+    .sd_stereo_frame           = true,
+    .sd_stereo_peak            = true,
+    .sd_stereo_l_x             = 88,
+    .sd_stereo_l_y             = 118,
+    .sd_stereo_l_w             = 26,
+    .sd_stereo_l_h             = 72,
+    .sd_stereo_r_x             = 126,
+    .sd_stereo_r_y             = 118,
+    .sd_stereo_r_w             = 26,
+    .sd_stereo_r_h             = 72,
     .sd_show_cassette          = true,
     .sd_show_wheel_left        = true,
     .sd_show_wheel_right       = true,
@@ -858,6 +878,16 @@ static const ui_profile_t k_defaults = {
     .radio_needle_r_y          = 80,
     .radio_needle_r_w          = 140,
     .radio_needle_r_h          = 90,
+    .radio_stereo_frame        = true,
+    .radio_stereo_peak         = true,
+    .radio_stereo_l_x          = 120,
+    .radio_stereo_l_y          = 80,
+    .radio_stereo_l_w          = 30,
+    .radio_stereo_l_h          = 90,
+    .radio_stereo_r_x          = 170,
+    .radio_stereo_r_y          = 80,
+    .radio_stereo_r_w          = 30,
+    .radio_stereo_r_h          = 90,
     .radio_show_cassette       = true,
     .radio_show_wheel_left     = true,
     .radio_show_wheel_right    = true,
@@ -922,6 +952,16 @@ static const ui_profile_t k_defaults = {
     .sd_needle_r_y             = 80,
     .sd_needle_r_w             = 140,
     .sd_needle_r_h             = 90,
+    .sd_stereo_frame           = true,
+    .sd_stereo_peak            = true,
+    .sd_stereo_l_x             = 120,
+    .sd_stereo_l_y             = 80,
+    .sd_stereo_l_w             = 30,
+    .sd_stereo_l_h             = 90,
+    .sd_stereo_r_x             = 170,
+    .sd_stereo_r_y             = 80,
+    .sd_stereo_r_w             = 30,
+    .sd_stereo_r_h             = 90,
     .sd_show_cassette          = true,
     .sd_show_wheel_left        = true,
     .sd_show_wheel_right       = true,
@@ -1141,6 +1181,16 @@ static const ui_profile_t k_defaults = {
     .radio_needle_r_y          = 100,
     .radio_needle_r_w          = 200,
     .radio_needle_r_h          = 130,
+    .radio_stereo_frame        = true,
+    .radio_stereo_peak         = true,
+    .radio_stereo_l_x          = 190,
+    .radio_stereo_l_y          = 100,
+    .radio_stereo_l_w          = 40,
+    .radio_stereo_l_h          = 130,
+    .radio_stereo_r_x          = 250,
+    .radio_stereo_r_y          = 100,
+    .radio_stereo_r_w          = 40,
+    .radio_stereo_r_h          = 130,
     .radio_show_cassette       = true,
     .radio_show_wheel_left     = true,
     .radio_show_wheel_right    = true,
@@ -1205,6 +1255,16 @@ static const ui_profile_t k_defaults = {
     .sd_needle_r_y             = 100,
     .sd_needle_r_w             = 200,
     .sd_needle_r_h             = 130,
+    .sd_stereo_frame           = true,
+    .sd_stereo_peak            = true,
+    .sd_stereo_l_x             = 190,
+    .sd_stereo_l_y             = 100,
+    .sd_stereo_l_w             = 40,
+    .sd_stereo_l_h             = 130,
+    .sd_stereo_r_x             = 250,
+    .sd_stereo_r_y             = 100,
+    .sd_stereo_r_w             = 40,
+    .sd_stereo_r_h             = 130,
     .sd_show_cassette          = true,
     .sd_show_wheel_left        = true,
     .sd_show_wheel_right       = true,
@@ -1656,6 +1716,20 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_needle_r_y",           &p->radio_needle_r_y);
     load_i16 (obj, "radio_needle_r_w",           &p->radio_needle_r_w);
     load_i16 (obj, "radio_needle_r_h",           &p->radio_needle_r_h);
+    load_bool(obj, "radio_stereo_show_l",        &p->radio_stereo_show_l);
+    load_bool(obj, "radio_stereo_show_r",        &p->radio_stereo_show_r);
+    load_bool(obj, "radio_stereo_frame",         &p->radio_stereo_frame);
+    load_bool(obj, "radio_stereo_horizontal",    &p->radio_stereo_horizontal);
+    load_bool(obj, "radio_stereo_transparent",   &p->radio_stereo_transparent);
+    load_bool(obj, "radio_stereo_peak",          &p->radio_stereo_peak);
+    load_i16 (obj, "radio_stereo_l_x",           &p->radio_stereo_l_x);
+    load_i16 (obj, "radio_stereo_l_y",           &p->radio_stereo_l_y);
+    load_i16 (obj, "radio_stereo_l_w",           &p->radio_stereo_l_w);
+    load_i16 (obj, "radio_stereo_l_h",           &p->radio_stereo_l_h);
+    load_i16 (obj, "radio_stereo_r_x",           &p->radio_stereo_r_x);
+    load_i16 (obj, "radio_stereo_r_y",           &p->radio_stereo_r_y);
+    load_i16 (obj, "radio_stereo_r_w",           &p->radio_stereo_r_w);
+    load_i16 (obj, "radio_stereo_r_h",           &p->radio_stereo_r_h);
     load_bool(obj, "radio_show_cassette",        &p->radio_show_cassette);
     load_i16 (obj, "radio_animation_style",      &p->radio_animation_style);
     p->radio_animation_style = LV_CLAMP(0, p->radio_animation_style, 1);
@@ -1742,6 +1816,20 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_needle_r_y",           p->radio_needle_r_y);
     add_i16 (o, "radio_needle_r_w",           p->radio_needle_r_w);
     add_i16 (o, "radio_needle_r_h",           p->radio_needle_r_h);
+    add_bool(o, "radio_stereo_show_l",        p->radio_stereo_show_l);
+    add_bool(o, "radio_stereo_show_r",        p->radio_stereo_show_r);
+    add_bool(o, "radio_stereo_frame",         p->radio_stereo_frame);
+    add_bool(o, "radio_stereo_horizontal",    p->radio_stereo_horizontal);
+    add_bool(o, "radio_stereo_transparent",   p->radio_stereo_transparent);
+    add_bool(o, "radio_stereo_peak",          p->radio_stereo_peak);
+    add_i16 (o, "radio_stereo_l_x",           p->radio_stereo_l_x);
+    add_i16 (o, "radio_stereo_l_y",           p->radio_stereo_l_y);
+    add_i16 (o, "radio_stereo_l_w",           p->radio_stereo_l_w);
+    add_i16 (o, "radio_stereo_l_h",           p->radio_stereo_l_h);
+    add_i16 (o, "radio_stereo_r_x",           p->radio_stereo_r_x);
+    add_i16 (o, "radio_stereo_r_y",           p->radio_stereo_r_y);
+    add_i16 (o, "radio_stereo_r_w",           p->radio_stereo_r_w);
+    add_i16 (o, "radio_stereo_r_h",           p->radio_stereo_r_h);
     add_bool(o, "radio_show_cassette",        p->radio_show_cassette);
     add_i16 (o, "radio_animation_style",      p->radio_animation_style);
     add_bool(o, "radio_show_wheel_left",      p->radio_show_wheel_left);
@@ -1817,6 +1905,20 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "sd_needle_r_y",             &p->sd_needle_r_y);
     load_i16 (obj, "sd_needle_r_w",             &p->sd_needle_r_w);
     load_i16 (obj, "sd_needle_r_h",             &p->sd_needle_r_h);
+    load_bool(obj, "sd_stereo_show_l",          &p->sd_stereo_show_l);
+    load_bool(obj, "sd_stereo_show_r",          &p->sd_stereo_show_r);
+    load_bool(obj, "sd_stereo_frame",           &p->sd_stereo_frame);
+    load_bool(obj, "sd_stereo_horizontal",      &p->sd_stereo_horizontal);
+    load_bool(obj, "sd_stereo_transparent",     &p->sd_stereo_transparent);
+    load_bool(obj, "sd_stereo_peak",            &p->sd_stereo_peak);
+    load_i16 (obj, "sd_stereo_l_x",             &p->sd_stereo_l_x);
+    load_i16 (obj, "sd_stereo_l_y",             &p->sd_stereo_l_y);
+    load_i16 (obj, "sd_stereo_l_w",             &p->sd_stereo_l_w);
+    load_i16 (obj, "sd_stereo_l_h",             &p->sd_stereo_l_h);
+    load_i16 (obj, "sd_stereo_r_x",             &p->sd_stereo_r_x);
+    load_i16 (obj, "sd_stereo_r_y",             &p->sd_stereo_r_y);
+    load_i16 (obj, "sd_stereo_r_w",             &p->sd_stereo_r_w);
+    load_i16 (obj, "sd_stereo_r_h",             &p->sd_stereo_r_h);
     load_bool(obj, "sd_show_cassette",          &p->sd_show_cassette);
     load_i16 (obj, "sd_animation_style",        &p->sd_animation_style);
     p->sd_animation_style = LV_CLAMP(0, p->sd_animation_style, 1);
@@ -1895,6 +1997,20 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_needle_r_y",             p->sd_needle_r_y);
     add_i16 (o, "sd_needle_r_w",             p->sd_needle_r_w);
     add_i16 (o, "sd_needle_r_h",             p->sd_needle_r_h);
+    add_bool(o, "sd_stereo_show_l",          p->sd_stereo_show_l);
+    add_bool(o, "sd_stereo_show_r",          p->sd_stereo_show_r);
+    add_bool(o, "sd_stereo_frame",           p->sd_stereo_frame);
+    add_bool(o, "sd_stereo_horizontal",      p->sd_stereo_horizontal);
+    add_bool(o, "sd_stereo_transparent",     p->sd_stereo_transparent);
+    add_bool(o, "sd_stereo_peak",            p->sd_stereo_peak);
+    add_i16 (o, "sd_stereo_l_x",             p->sd_stereo_l_x);
+    add_i16 (o, "sd_stereo_l_y",             p->sd_stereo_l_y);
+    add_i16 (o, "sd_stereo_l_w",             p->sd_stereo_l_w);
+    add_i16 (o, "sd_stereo_l_h",             p->sd_stereo_l_h);
+    add_i16 (o, "sd_stereo_r_x",             p->sd_stereo_r_x);
+    add_i16 (o, "sd_stereo_r_y",             p->sd_stereo_r_y);
+    add_i16 (o, "sd_stereo_r_w",             p->sd_stereo_r_w);
+    add_i16 (o, "sd_stereo_r_h",             p->sd_stereo_r_h);
     add_bool(o, "sd_show_cassette",          p->sd_show_cassette);
     add_i16 (o, "sd_animation_style",        p->sd_animation_style);
     add_bool(o, "sd_show_wheel_left",        p->sd_show_wheel_left);

@@ -218,6 +218,20 @@ const RADIO_FIELDS = [
     { key: 'radio_needle_r_y',           label: 'Right needle Y',    type: 'number' },
     { key: 'radio_needle_r_w',           label: 'Right needle W',    type: 'number', min: 20, max: 480 },
     { key: 'radio_needle_r_h',           label: 'Right needle H',    type: 'number', min: 20, max: 480 },
+    { key: 'radio_stereo_frame',         label: 'Thin frame',        type: 'bool' },
+    { key: 'radio_stereo_horizontal',    label: 'Horizontal bars',   type: 'bool' },
+    { key: 'radio_stereo_transparent',   label: 'Transparent bg',    type: 'bool' },
+    { key: 'radio_stereo_peak',          label: 'Peak hold',         type: 'bool' },
+    { key: 'radio_stereo_show_l',        label: 'Show left bar',     type: 'bool' },
+    { key: 'radio_stereo_l_x',           label: 'Left bar X',        type: 'number' },
+    { key: 'radio_stereo_l_y',           label: 'Left bar Y',        type: 'number' },
+    { key: 'radio_stereo_l_w',           label: 'Left bar W',        type: 'number', min: 8, max: 480 },
+    { key: 'radio_stereo_l_h',           label: 'Left bar H',        type: 'number', min: 8, max: 480 },
+    { key: 'radio_stereo_show_r',        label: 'Show right bar',    type: 'bool' },
+    { key: 'radio_stereo_r_x',           label: 'Right bar X',       type: 'number' },
+    { key: 'radio_stereo_r_y',           label: 'Right bar Y',       type: 'number' },
+    { key: 'radio_stereo_r_w',           label: 'Right bar W',       type: 'number', min: 8, max: 480 },
+    { key: 'radio_stereo_r_h',           label: 'Right bar H',       type: 'number', min: 8, max: 480 },
     { key: 'radio_show_cassette',        label: 'Show animated wheels', type: 'bool' },
     { key: 'radio_animation_style',      label: 'Graphic', type: 'choice', default: 0,
       options: [{ value: 0, label: 'Cassette reels' }, { value: 1, label: 'Car rims' }] },
@@ -295,6 +309,20 @@ const SD_FIELDS = [
     { key: 'sd_needle_r_y',           label: 'Right needle Y',    type: 'number' },
     { key: 'sd_needle_r_w',           label: 'Right needle W',    type: 'number', min: 20, max: 480 },
     { key: 'sd_needle_r_h',           label: 'Right needle H',    type: 'number', min: 20, max: 480 },
+    { key: 'sd_stereo_frame',         label: 'Thin frame',        type: 'bool' },
+    { key: 'sd_stereo_horizontal',    label: 'Horizontal bars',   type: 'bool' },
+    { key: 'sd_stereo_transparent',   label: 'Transparent bg',    type: 'bool' },
+    { key: 'sd_stereo_peak',          label: 'Peak hold',         type: 'bool' },
+    { key: 'sd_stereo_show_l',        label: 'Show left bar',     type: 'bool' },
+    { key: 'sd_stereo_l_x',           label: 'Left bar X',        type: 'number' },
+    { key: 'sd_stereo_l_y',           label: 'Left bar Y',        type: 'number' },
+    { key: 'sd_stereo_l_w',           label: 'Left bar W',        type: 'number', min: 8, max: 480 },
+    { key: 'sd_stereo_l_h',           label: 'Left bar H',        type: 'number', min: 8, max: 480 },
+    { key: 'sd_stereo_show_r',        label: 'Show right bar',    type: 'bool' },
+    { key: 'sd_stereo_r_x',           label: 'Right bar X',       type: 'number' },
+    { key: 'sd_stereo_r_y',           label: 'Right bar Y',       type: 'number' },
+    { key: 'sd_stereo_r_w',           label: 'Right bar W',       type: 'number', min: 8, max: 480 },
+    { key: 'sd_stereo_r_h',           label: 'Right bar H',       type: 'number', min: 8, max: 480 },
     { key: 'sd_show_cassette',        label: 'Show animated wheels', type: 'bool' },
     { key: 'sd_animation_style',      label: 'Graphic', type: 'choice', default: 0,
       options: [{ value: 0, label: 'Cassette reels' }, { value: 1, label: 'Car rims' }] },
@@ -357,6 +385,7 @@ const FORM_GROUPS = {
         { title: 'Animated wheels', enabledBy: 'radio_show_cassette', fields: ['radio_show_cassette', 'radio_animation_style', 'radio_show_wheel_left', 'radio_cassette_l_x', 'radio_cassette_l_y', 'radio_cassette_l_size', 'radio_show_wheel_right', 'radio_cassette_r_x', 'radio_cassette_r_y', 'radio_cassette_r_size'] },
         { title: 'VU meter', enabledBy: 'radio_show_vu', fields: ['radio_show_vu', 'radio_vu_x', 'radio_vu_y', 'radio_vu_w', 'radio_vu_h', 'radio_vu_transparent'] },
         { title: 'Needle VU', fields: ['radio_needle_frame', 'radio_needle_show_l', 'radio_needle_l_x', 'radio_needle_l_y', 'radio_needle_l_w', 'radio_needle_l_h', 'radio_needle_show_r', 'radio_needle_r_x', 'radio_needle_r_y', 'radio_needle_r_w', 'radio_needle_r_h'] },
+        { title: 'Stereo bar VU', fields: ['radio_stereo_frame', 'radio_stereo_horizontal', 'radio_stereo_transparent', 'radio_stereo_peak', 'radio_stereo_show_l', 'radio_stereo_l_x', 'radio_stereo_l_y', 'radio_stereo_l_w', 'radio_stereo_l_h', 'radio_stereo_show_r', 'radio_stereo_r_x', 'radio_stereo_r_y', 'radio_stereo_r_w', 'radio_stereo_r_h'] },
         { title: 'Weather', enabledBy: 'radio_show_weather', fields: ['radio_show_weather', 'radio_weather_x', 'radio_weather_y', 'radio_weather_w', 'radio_weather_font'] },
         { title: 'Tap controls overlay', enabledBy: 'radio_show_ctrl_overlay', fields: ['radio_show_ctrl_overlay'] },
         ...touchHotspotGroups('radio'),
@@ -376,6 +405,7 @@ const FORM_GROUPS = {
         { title: 'Animated wheels', enabledBy: 'sd_show_cassette', fields: ['sd_show_cassette', 'sd_animation_style', 'sd_show_wheel_left', 'sd_cassette_l_x', 'sd_cassette_l_y', 'sd_cassette_l_size', 'sd_show_wheel_right', 'sd_cassette_r_x', 'sd_cassette_r_y', 'sd_cassette_r_size'] },
         { title: 'VU meter', enabledBy: 'sd_show_vu', fields: ['sd_show_vu', 'sd_vu_x', 'sd_vu_y', 'sd_vu_w', 'sd_vu_h', 'sd_vu_transparent'] },
         { title: 'Needle VU', fields: ['sd_needle_frame', 'sd_needle_show_l', 'sd_needle_l_x', 'sd_needle_l_y', 'sd_needle_l_w', 'sd_needle_l_h', 'sd_needle_show_r', 'sd_needle_r_x', 'sd_needle_r_y', 'sd_needle_r_w', 'sd_needle_r_h'] },
+        { title: 'Stereo bar VU', fields: ['sd_stereo_frame', 'sd_stereo_horizontal', 'sd_stereo_transparent', 'sd_stereo_peak', 'sd_stereo_show_l', 'sd_stereo_l_x', 'sd_stereo_l_y', 'sd_stereo_l_w', 'sd_stereo_l_h', 'sd_stereo_show_r', 'sd_stereo_r_x', 'sd_stereo_r_y', 'sd_stereo_r_w', 'sd_stereo_r_h'] },
         { title: 'Weather', enabledBy: 'sd_show_weather', fields: ['sd_show_weather', 'sd_weather_x', 'sd_weather_y', 'sd_weather_w', 'sd_weather_font'] },
         { title: 'Tap controls overlay', enabledBy: 'sd_show_ctrl_overlay', fields: ['sd_show_ctrl_overlay'] },
         ...touchHotspotGroups('sd'),
@@ -2076,6 +2106,24 @@ function renderRadio(svg) {
                       w: 'radio_needle_r_w', h: 'radio_needle_r_h' },
         });
     }
+    if (r.radio_stereo_show_l) {
+        drawFreeElement(svg, {
+            x: r.radio_stereo_l_x, y: r.radio_stereo_l_y,
+            w: r.radio_stereo_l_w, h: r.radio_stereo_l_h,
+            label: 'BAR-L', cls: 'label-rect',
+            fields: { x: 'radio_stereo_l_x', y: 'radio_stereo_l_y',
+                      w: 'radio_stereo_l_w', h: 'radio_stereo_l_h' },
+        });
+    }
+    if (r.radio_stereo_show_r) {
+        drawFreeElement(svg, {
+            x: r.radio_stereo_r_x, y: r.radio_stereo_r_y,
+            w: r.radio_stereo_r_w, h: r.radio_stereo_r_h,
+            label: 'BAR-R', cls: 'label-rect',
+            fields: { x: 'radio_stereo_r_x', y: 'radio_stereo_r_y',
+                      w: 'radio_stereo_r_w', h: 'radio_stereo_r_h' },
+        });
+    }
     if (r.radio_show_weather) {
         const fh = fontHeight(r.radio_weather_font);
         const ww = r.radio_weather_w > 0 ? r.radio_weather_w : W;
@@ -2186,6 +2234,24 @@ function renderSd(svg) {
             label: 'VU-R', cls: 'label-rect',
             fields: { x: 'sd_needle_r_x', y: 'sd_needle_r_y',
                       w: 'sd_needle_r_w', h: 'sd_needle_r_h' },
+        });
+    }
+    if (s.sd_stereo_show_l) {
+        drawFreeElement(svg, {
+            x: s.sd_stereo_l_x, y: s.sd_stereo_l_y,
+            w: s.sd_stereo_l_w, h: s.sd_stereo_l_h,
+            label: 'BAR-L', cls: 'label-rect',
+            fields: { x: 'sd_stereo_l_x', y: 'sd_stereo_l_y',
+                      w: 'sd_stereo_l_w', h: 'sd_stereo_l_h' },
+        });
+    }
+    if (s.sd_stereo_show_r) {
+        drawFreeElement(svg, {
+            x: s.sd_stereo_r_x, y: s.sd_stereo_r_y,
+            w: s.sd_stereo_r_w, h: s.sd_stereo_r_h,
+            label: 'BAR-R', cls: 'label-rect',
+            fields: { x: 'sd_stereo_r_x', y: 'sd_stereo_r_y',
+                      w: 'sd_stereo_r_w', h: 'sd_stereo_r_h' },
         });
     }
     if (s.sd_show_weather) {
