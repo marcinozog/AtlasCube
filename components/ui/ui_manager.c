@@ -430,12 +430,20 @@ void ui_navigate(ui_screen_id_t screen_id)
     ui_event_send(&ev);
 }
 
+// Dropped-event counter. NEVER log from here: ui_event_send runs in the
+// caller's context (e.g. encoder_task, whose stack is tiny). Under a flood
+// (rapid encoder spin) the queue fills and ESP_LOGW's vprintf would blow that
+// small stack — which is exactly what caused the encoder_task stack-overflow /
+// spinlock-corruption resets. We only bump a counter here; the ui loop logs it
+// throttled, on its own generous stack.
+static volatile uint32_t s_dropped_events = 0;
+
 void ui_event_send(const ui_event_t *ev)
 {
     if (!s_event_queue) return;
-    // don't block — if queue is full, the event is dropped (could add a log)
+    // don't block — if the queue is full, drop the event (counted, logged later)
     if (xQueueSend(s_event_queue, ev, 0) != pdTRUE) {
-        ESP_LOGW(TAG, "Event queue full, dropping type=%d", ev->type);
+        s_dropped_events++;
     }
 }
 
@@ -607,6 +615,19 @@ void ui_manager_run(void)
             }
             if (s_active && s_active->on_event)
                 s_active->on_event(&ev);
+        }
+
+        // ── Report dropped events (throttled) ──────────────────────────────
+        // Logged here, on the ui task's stack — never in ui_event_send (see there).
+        if (s_dropped_events) {
+            static int64_t s_last_drop_log_us = 0;
+            int64_t now = esp_timer_get_time();
+            if (now - s_last_drop_log_us > 2000000) {   // at most once per 2 s
+                ESP_LOGW(TAG, "Event queue full: dropped %u event(s)",
+                         (unsigned)s_dropped_events);
+                s_dropped_events   = 0;
+                s_last_drop_log_us = now;
+            }
         }
 
         // ── Idle-driven screensaver activation ─────────────────────────────

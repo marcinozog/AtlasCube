@@ -18,7 +18,7 @@ static const char *TAG = "ENCODER";
 // --------------------------------------------------------------------------
 
 #define ENC_QUEUE_SIZE      32
-#define ENC_TASK_STACK      2048
+#define ENC_TASK_STACK      4096    // room for any callee that reaches esp_log
 #define ENC_TASK_PRIORITY   6       // higher than ui_manager (5), lower than audio
 
 #define DEBOUNCE_BTN_MS     70      // 50 ms between consecutive button events
