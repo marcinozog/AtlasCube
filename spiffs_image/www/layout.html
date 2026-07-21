@@ -417,8 +417,10 @@
         <button class="section-tab"        data-section="sd"    onclick="selectSection('sd')">💾 SD Player</button>
         <button class="section-tab"        data-section="radio" onclick="selectSection('radio')">📻 Radio</button>
         <button class="section-tab"        data-section="bt"    onclick="selectSection('bt')">🔵 Bluetooth</button>
-        <button class="section-tab"        data-section="presets" onclick="selectSection('presets')"
-                style="margin-left:auto">🧹 Presets</button>
+        <button class="section-tab"        data-section="general" onclick="selectSection('general')"
+                style="margin-left:auto">🎨 General</button>
+        <button class="section-tab"        data-section="internet" onclick="selectSection('internet')">🌍 Internet</button>
+        <button class="section-tab"        data-section="presets" onclick="selectSection('presets')">🧹 Presets</button>
     </div>
 
     <div class="layout-grid">
@@ -460,6 +462,84 @@
         <button class="btn-secondary" onclick="checkOrphanPresets()">🧹 Check presets</button>
         <div id="presetOrphanStatus" class="field-hint" style="margin-top:6px"></div>
         <div id="presetOrphanList" style="margin-top:4px"></div>
+    </div>
+
+    <!-- ── General tab: the gradient/solid look for General screens ── -->
+    <div id="general_card" style="display:none">
+        <div class="panel">
+            <label class="field-label">General background</label>
+            <div class="field-hint">The standard background for screens set to <b>General</b>. When an
+                internet wallpaper is fetched (Internet tab), it replaces this on every General/Internet
+                screen; screens set to a specific SD file keep it.</div>
+            <div class="theme-toggle wide" style="width:fit-content;margin-top:8px">
+                <button class="theme-btn" id="layoutBgGrad"  onclick="setGeneralBackground('gradient')">🌈 Gradient</button>
+                <button class="theme-btn" id="layoutBgSolid" onclick="setGeneralBackground('solid')">⬛ Solid</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Internet tab: the internet-fetched wallpaper + wallpaper brightness ── -->
+    <div id="internet_card" style="display:none">
+        <div class="panel">
+            <label class="field-label">Internet wallpaper</label>
+            <div class="field-hint">The device downloads a photo straight from the selected service
+                (on that service's own terms) and uses it as the screen background, kept in RAM
+                until reboot. A playing radio stream pauses during the download. NASA APOD API
+                links are resolved automatically (DEMO_KEY is rate-limited — a free personal key
+                from api.nasa.gov lifts that).</div>
+            <select id="netWpPreset" class="field-input" style="width:100%;margin-top:6px"
+                    onchange="netWpPresetChanged()">
+                <option value="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY">NASA — Astronomy Picture of the Day</option>
+                <option value="https://picsum.photos/{w}/{h}">Lorem Picsum — random photo</option>
+                <option value="https://loremflickr.com/{w}/{h}">LoremFlickr — random photo</option>
+                <option value="https://loremflickr.com/{w}/{h}/cosmos">LoremFlickr — keyword (edit URL)</option>
+                <option value="https://cataas.com/cat?width={w}&amp;height={h}">Cataas — random cat</option>
+                <option value="https://placedog.net/{w}/{h}">PlaceDog — random dog</option>
+                <option value="">Custom URL…</option>
+            </select>
+            <input type="text" id="netWpUrl" class="field-input" style="width:100%;margin-top:6px"
+                   value="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY"
+                   oninput="syncNetWpPreset()" />
+            <div id="netWpResolved" class="field-hint" style="font-family:monospace;overflow-wrap:anywhere"></div>
+            <div style="margin-top:8px">
+                <button class="btn-secondary" onclick="fetchNetWallpaper()">🌍 Fetch now</button>
+                <button class="btn-secondary" onclick="saveNetWallpaper()">💾 Save to SD</button>
+                <span id="netWpStatus" style="margin-left:8px;opacity:.7"></span>
+            </div>
+            <div style="margin-top:10px">
+                <label class="field-label" style="font-size:12px">Auto refresh</label>
+                <div style="margin-top:4px">
+                    <select id="netWpMode" class="field-input" style="width:auto"
+                            onchange="saveNetWpSchedule()">
+                        <option value="0">Off (manual only)</option>
+                        <option value="1">Once after boot</option>
+                        <option value="2">After boot + daily at:</option>
+                    </select>
+                    <input type="time" id="netWpTime" class="field-input"
+                           style="width:120px;display:none" value="04:00"
+                           onchange="saveNetWpSchedule()" />
+                </div>
+                <div class="field-hint">Uses the URL above (saved together with the schedule).
+                    The wallpaper lives in RAM only, so both auto modes re-fetch it ~30 s after
+                    every boot. A playing radio stream is paused for the few seconds of the download.</div>
+            </div>
+        </div>
+
+        <div class="panel" style="margin-top:12px">
+            <label class="field-label">Wallpaper brightness</label>
+            <div class="slider-row" style="margin-top:6px">
+                <span class="slider-label">🌒 Brightness</span>
+                <span id="wp_dim_value" class="slider-value">100%</span>
+            </div>
+            <!-- UI shows brightness (right = brighter, like the panel Brightness
+                 slider); the firmware setting is the inverse (wallpaper_dim). -->
+            <input type="range" min="20" max="100" step="5" value="100" id="wp_dim_slider"
+                   oninput="document.getElementById('wp_dim_value').textContent = this.value + '%'"
+                   onchange="setWallpaperDim(100 - this.value)" />
+            <div class="field-hint">Lower it to darken the wallpaper (both SD and internet) so
+                on-screen text stays readable. Gradient/solid backgrounds are not affected.
+                100% = original image.</div>
+        </div>
     </div>
 </main>
 

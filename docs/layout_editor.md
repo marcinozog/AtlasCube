@@ -272,34 +272,39 @@ are all section-agnostic.
 
 ## Per-screen wallpapers
 
-Each hub section carries a `<section>_wallpaper` string field
-(`clock_wallpaper`, `radio_wallpaper`, `sd_wallpaper`, `bt_wallpaper`):
+Each hub section carries a `<section>_wallpaper` source field
+(`clock_wallpaper`, `radio_wallpaper`, `sd_wallpaper`, `bt_wallpaper`),
+resolved per screen in `ui_background_apply()`:
 
-- `""` (default) — inherit the global wallpaper (`display.wallpaper_path`
-  in settings),
-- `"none"` — no wallpaper on this screen (gradient/solid background),
-- anything else — an fopen path to a panel-sized RGB565 `.bin` on SD.
+- `""` / `"none"` (default) — **General**: the gradient/solid theme
+  background, replaced by the internet wallpaper when one is fetched,
+- `"net"` — **Internet**: the fetched wallpaper, pinned to this screen,
+- anything else — **SD**: an fopen path to a panel-sized RGB565 `.bin` on
+  SD, which outranks the internet wallpaper.
 
-The firmware resolves the path in `ui_background_apply()` for the active
-screen (`SCREEN_HOME` → clock, `SCREEN_RADIO`, `SCREEN_SD`, `SCREEN_BT`;
-every other screen follows the global default) and caches each distinct
-file in its own PSRAM slot, so navigating between screens never re-reads
-the SD card. `display.wallpaper_on` remains the global feature switch and
-gates every SD wallpaper, overrides included. An internet-fetched
-wallpaper (`/api/wallpaper/fetch`) substitutes only the inherited tier:
-screens with their own override (a path or `"none"`) keep their explicit
-choice.
+An internet-fetched wallpaper (`/api/wallpaper/fetch`) lives only in
+PSRAM and replaces the General background on every screen at once — one
+fetch shown everywhere — until the next reboot or an explicit background
+change (`net_wallpaper_dismiss()`). A screen set to an SD file keeps it;
+a screen set to Internet always shows the fetched image. Explicit
+per-screen choices are **not** gated by `display.wallpaper_on`; that
+switch only controls the global SD wallpaper, which now applies solely to
+screens without a hub section (screensavers etc.). Each distinct SD file
+is cached in its own PSRAM slot, so navigating between screens never
+re-reads the SD card.
+
 Typical use: the BT screen has no audio signal inside the ESP (external
 BT module), so a wallpaper designed around VU meters can be replaced or
 disabled there.
 
 In the editor, the wallpaper picker above the canvas edits the **active
-tab's** screen: *Choose from SD…* sets the override, *Global* reverts to
-inheritance, *None* disables the wallpaper for that screen. The preview
-always shows the effective wallpaper of the active tab; when the device
-is currently displaying an internet-fetched wallpaper (its pixels aren't
-available to the editor), the canvas shows a "net wallpaper" placeholder
-instead (`GET /api/wallpaper/status` reports `active`).
+tab's** screen: *Choose from SD…* assigns an SD file, *Internet* shows
+the fetched wallpaper, *General* is the gradient/solid (or internet)
+default. The preview shows the effective wallpaper of the active tab;
+when the device is currently displaying an internet-fetched wallpaper
+(its pixels aren't available to the editor), the canvas shows a "net
+wallpaper" placeholder instead (`GET /api/wallpaper/status` reports
+`active`).
 
 ## Per-wallpaper layout presets
 

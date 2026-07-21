@@ -437,13 +437,12 @@ const state = {
 // The layout preview can use the active screen's SD wallpaper as its
 // background. It is decoded once and kept as a browser-native data URL so
 // dragging widgets does not re-fetch or re-decode the .bin on every render.
-// Each profile section carries a `<section>_wallpaper` override: "" inherits
-// the global default (display.wallpaper_path), "none" forces the gradient.
+// Each profile section carries a `<section>_wallpaper` source field:
+// "" / "none" = General (gradient/solid, or the internet wallpaper when one is
+// fetched), "net" = the fetched internet wallpaper, else an SD .bin path.
 let wallpaperPreviewUrl = '';
 let wallpaperPreviewDim = 0;
-let currentWallpaperPath = '';   // effective path for the ACTIVE section
-let globalWallpaperPath = '';    // settings display.wallpaper_path
-let globalWallpaperOn = false;   // settings display.wallpaper_on
+let currentWallpaperPath = '';   // effective SD path for the ACTIVE section
 let netWallpaperActive = false;  // device shows a fetched internet wallpaper
 let keyboardSelection = null;
 const ONLINE_WALLPAPER_CATALOG = 'https://atlascube.net/wallpapers/catalog.php';
@@ -470,15 +469,14 @@ function sectionWallpaperValue() {
     return String(state[state.active][sectionWallpaperKey()] || '');
 }
 
-// Mirror of the firmware's resolution in ui_background_apply(): wallpaper_on
-// gates every SD wallpaper (overrides included), then the section override
-// wins ("none" → no wallpaper), "" falls back to the global default.
+// Mirror of the firmware's resolution in ui_background_apply(): an explicit
+// per-screen SD file is the only background the editor can preview. General
+// ("" / "none") and Internet ("net") carry no SD file — their preview is the
+// gradient, or a "net wallpaper" placeholder when the device has one fetched.
 function effectiveWallpaperPath() {
-    if (!globalWallpaperOn) return '';
     const ovr = sectionWallpaperValue();
-    if (ovr === 'none') return '';
-    if (ovr) return ovr;
-    return globalWallpaperPath;
+    if (ovr && ovr !== 'none' && ovr !== 'net') return ovr;
+    return '';
 }
 
 function isKeyboardSelection(fields) {
@@ -563,25 +561,28 @@ function updateWallpaperPickerLabel() {
     const label = document.getElementById('layout_wallpaper_name');
     if (!label) return;
     const ovr = sectionWallpaperValue();
-    if (ovr === 'none') {
-        label.textContent = '(none — gradient)';
-    } else if (ovr) {
+    if (ovr === 'net') {
+        label.textContent = '(internet)';
+    } else if (ovr && ovr !== 'none') {
         label.textContent = ovr.split('/').pop();
-    } else if (currentWallpaperPath) {
-        label.textContent = currentWallpaperPath.split('/').pop() + ' (global)';
     } else {
-        label.textContent = globalWallpaperOn ? '(none)' : '(wallpapers off)';
+        // General: "" or "none" — gradient/solid, or the internet wallpaper
+        // when the device has one fetched.
+        label.textContent = netWallpaperActive ? '(general → internet)'
+                                               : '(general — gradient)';
     }
     label.title = currentWallpaperPath;
 
     // Highlight the mode button matching the section's current state. Inline
     // styles, not the .active class — selectSection() strips .active from
     // every .section-tab while toggling the screen tabs.
-    const mode = ovr === 'none' ? 'none' : (ovr ? 'sd' : 'global');
+    const mode = ovr === 'net' ? 'net'
+               : (ovr && ovr !== 'none') ? 'sd'
+               : 'general';
     const modeBtns = {
-        sd:     document.getElementById('layout_wp_btn_sd'),
-        global: document.getElementById('layout_wp_btn_global'),
-        none:   document.getElementById('layout_wp_btn_none'),
+        sd:      document.getElementById('layout_wp_btn_sd'),
+        net:     document.getElementById('layout_wp_btn_net'),
+        general: document.getElementById('layout_wp_btn_general'),
     };
     for (const [key, btn] of Object.entries(modeBtns)) {
         if (!btn) continue;
@@ -617,9 +618,10 @@ function buildWallpaperPicker() {
     name.style.cssText =
         'min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
         'font-family:"JetBrains Mono",monospace;font-size:11px';
-    // Three-state mode switch for the active screen: SD file override / inherit
-    // the global default / no wallpaper. The button matching the section's
-    // current mode is highlighted by updateWallpaperPickerLabel().
+    // Three-way source switch for the active screen: a specific SD file /
+    // Internet (the fetched wallpaper) / General (gradient-solid, replaced by
+    // the internet wallpaper when one is fetched). The button matching the
+    // section's current mode is highlighted by updateWallpaperPickerLabel().
     const smallBtn = (id, label, title, onClick) => {
         const b = document.createElement('button');
         b.type = 'button';
@@ -648,12 +650,12 @@ function buildWallpaperPicker() {
     onlineBtn.style.cssText = 'padding:6px 10px;color:#ff6b6f;border-color:#e5484d';
     const button = smallBtn('layout_wp_btn_sd', 'Choose from SD...',
         'Pick a wallpaper file for this screen', toggleWallpaperBrowser);
-    const defaultBtn = smallBtn('layout_wp_btn_global', 'Global',
-        'Inherit the global wallpaper (Settings)',
-        () => setSectionWallpaper('', 'Screen follows the global wallpaper.'));
-    const noneBtn = smallBtn('layout_wp_btn_none', 'None',
-        'No wallpaper on this screen (gradient)',
-        () => setSectionWallpaper('none', 'Wallpaper disabled for this screen.'));
+    const netBtn = smallBtn('layout_wp_btn_net', 'Internet',
+        'Show the fetched internet wallpaper on this screen',
+        () => setSectionWallpaper('net', 'Screen shows the internet wallpaper.'));
+    const generalBtn = smallBtn('layout_wp_btn_general', 'General',
+        'Standard background — gradient/solid, or the internet wallpaper when fetched',
+        () => setSectionWallpaper('', 'Screen uses the general background.'));
 
     // When checked, a wallpaper's saved preset is applied on switch without
     // the confirm() prompt. Sticky across visits via localStorage.
@@ -669,7 +671,7 @@ function buildWallpaperPicker() {
         localStorage.setItem('layout_preset_autoload', autoCheck.checked ? '1' : '0');
     });
     autoLabel.append(autoCheck, document.createTextNode('Auto-apply preset'));
-    row.append(uploadBtn, onlineBtn, button, defaultBtn, noneBtn, autoLabel, uploadInput);
+    row.append(uploadBtn, onlineBtn, button, netBtn, generalBtn, autoLabel, uploadInput);
 
     // The active wallpaper path gets its own full-width line under the
     // buttons — inside the button row it was squeezed to a few characters.
@@ -804,9 +806,9 @@ async function savePreset() {
                 }
             }
         } catch { /* no existing preset — start fresh */ }
-        // Pin the wallpaper association in the stored copy: an inherited ("")
-        // override would re-resolve against whatever the global default is at
-        // load time, silently detaching the preset from its wallpaper.
+        // Pin the SD wallpaper path into the stored copy so the preset stays
+        // attached to its file (presets only exist for screens set to an SD
+        // wallpaper; General/Internet screens carry no path here).
         const sectionCopy = Object.assign({}, state[state.active]);
         sectionCopy[sectionWallpaperKey()] = currentWallpaperPath;
         preset.sections[state.active] = sectionCopy;
@@ -1413,25 +1415,9 @@ async function setSectionWallpaper(value, doneMsg) {
 
 async function selectWallpaper(relPath) {
     const fullPath = '/sdcard' + (relPath.startsWith('/') ? relPath : '/' + relPath);
-    // The firmware renders SD wallpapers only when the global feature switch
-    // is on — flip it FIRST, so the preview/preset logic below already sees
-    // the effective path (with the switch off it resolves to "no wallpaper").
-    if (!globalWallpaperOn) {
-        const status = document.getElementById('layout_wallpaper_status');
-        try {
-            const r = await fetch('/api/settings', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ display: { wallpaper_on: true } }),
-            });
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            globalWallpaperOn = true;
-        } catch (err) {
-            if (status) status.textContent =
-                'Could not enable wallpapers globally: ' + err.message;
-            return;
-        }
-    }
+    // A per-screen SD file is honoured regardless of the global wallpaper
+    // switch, so assigning one no longer touches global settings — that also
+    // avoids dismissing a fetched internet wallpaper other screens may show.
     if (!await setSectionWallpaper(fullPath, 'Wallpaper changed.')) return;
     await offerPresetForWallpaper();
 }
@@ -1446,18 +1432,17 @@ async function loadWallpaperPreview() {
         if (!response.ok) throw new Error('settings HTTP ' + response.status);
         const settings = await response.json();
         const display = settings.display || {};
-        globalWallpaperPath = String(display.wallpaper_path || '');
-        globalWallpaperOn = !!display.wallpaper_on;
         const path = effectiveWallpaperPath();
         currentWallpaperPath = path;
         updateWallpaperPickerLabel();
 
-        // A fetched internet wallpaper replaces the inherited tier on the
-        // device (until reboot or dismissal). Its pixels aren't available to
-        // the editor, so show a "net wallpaper" placeholder instead of the
-        // wrong SD file. Screens with their own override are unaffected.
+        // A fetched internet wallpaper shows on the General tier and on screens
+        // set to Internet (until reboot or dismissal). Its pixels aren't
+        // available to the editor, so show a "net wallpaper" placeholder instead
+        // of the gradient. A screen with an explicit SD file is unaffected.
         const ovr = sectionWallpaperValue();
-        if (!ovr || !globalWallpaperOn) {
+        const isSdFile = ovr && ovr !== 'none' && ovr !== 'net';
+        if (!isSdFile) {
             try {
                 const st = await fetch('/api/wallpaper/status', { cache: 'no-store' });
                 const info = st.ok ? await st.json() : null;
@@ -1516,18 +1501,24 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 function selectSection(name) {
-    // 'presets' is not a screen — it swaps the editor grid for the
-    // preset-housekeeping card and leaves state.active untouched, so returning
+    // 'presets', 'general' and 'internet' aren't screens — they swap the editor
+    // grid for a full-width card and leave state.active untouched, so returning
     // to any screen tab restores the editor exactly where it was.
-    const isPresets = name === 'presets';
-    if (!isPresets && !SECTIONS[name]) return;
+    const isPresets  = name === 'presets';
+    const isGeneral  = name === 'general';
+    const isInternet = name === 'internet';
+    const isSpecial  = isPresets || isGeneral || isInternet;
+    if (!isSpecial && !SECTIONS[name]) return;
 
     for (const tab of document.querySelectorAll('.section-tab')) {
         tab.classList.toggle('active', tab.dataset.section === name);
     }
-    document.querySelector('.layout-grid').style.display = isPresets ? 'none' : '';
-    document.getElementById('presets_card').style.display = isPresets ? '' : 'none';
-    if (isPresets) { checkOrphanPresets(); return; }
+    document.querySelector('.layout-grid').style.display = isSpecial ? 'none' : '';
+    document.getElementById('presets_card').style.display  = isPresets  ? '' : 'none';
+    document.getElementById('general_card').style.display  = isGeneral  ? '' : 'none';
+    document.getElementById('internet_card').style.display = isInternet ? '' : 'none';
+    if (isPresets)              { checkOrphanPresets(); return; }
+    if (isGeneral || isInternet) { loadBackgroundTab(); return; }
 
     if (state.active !== name) keyboardSelection = null;
     state.active = name;
@@ -1539,6 +1530,148 @@ function selectSection(name) {
     // Wallpapers are per screen — refresh the preview for this tab, then
     // repaint once the (async) decode lands.
     loadWallpaperPreview().then(renderSvg);
+}
+
+// ── Background tabs (global) ──────────────────────────────────────────────────
+// The "🎨 General" and "🌍 Internet" section tabs host the global background
+// config that used to live in Settings → Display → Wallpapers: General owns the
+// gradient/solid look; Internet owns the internet-wallpaper fetch/schedule plus
+// the wallpaper brightness (dim). Both tabs share one loader (loadBackgroundTab);
+// every control posts straight to /api/settings and the device repaints itself.
+let netWpTimer = null;
+
+function postDisplay(patch) {
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: patch }),
+    }).catch(console.error);
+}
+
+// Populate the tab's controls from the current settings.
+async function loadBackgroundTab() {
+    try {
+        const r = await fetch('/api/settings', { cache: 'no-store' });
+        if (!r.ok) throw new Error('settings HTTP ' + r.status);
+        const d = (await r.json()).display || {};
+
+        const grad = d.bg_gradient !== false;   // default on
+        document.getElementById('layoutBgGrad') ?.classList.toggle('active', grad);
+        document.getElementById('layoutBgSolid')?.classList.toggle('active', !grad);
+
+        // Slider shows brightness (100 - dim): right = brighter.
+        const bright = 100 - (d.wallpaper_dim || 0);
+        document.getElementById('wp_dim_slider').value = bright;
+        document.getElementById('wp_dim_value').textContent = bright + '%';
+
+        if (d.wallpaper_url) document.getElementById('netWpUrl').value = d.wallpaper_url;
+        syncNetWpPreset();
+        const mode = d.wallpaper_fetch_mode || 0;
+        document.getElementById('netWpMode').value = String(mode);
+        const timeEl = document.getElementById('netWpTime');
+        timeEl.style.display = (mode === 2) ? '' : 'none';
+        const p2 = n => String(n === undefined ? 0 : n).padStart(2, '0');
+        timeEl.value = p2(d.wallpaper_fetch_hour === undefined ? 4 : d.wallpaper_fetch_hour) +
+                       ':' + p2(d.wallpaper_fetch_min);
+    } catch (err) {
+        console.error('background load failed', err);
+    }
+}
+
+// General background look — gradient or solid. wallpaper_on is forced off: the
+// global SD wallpaper was retired in favour of per-screen sources.
+function setGeneralBackground(mode) {
+    const grad = mode === 'gradient';
+    document.getElementById('layoutBgGrad') ?.classList.toggle('active', grad);
+    document.getElementById('layoutBgSolid')?.classList.toggle('active', !grad);
+    postDisplay({ wallpaper_on: false, bg_gradient: grad });
+}
+
+function setWallpaperDim(v) {
+    postDisplay({ wallpaper_dim: parseInt(v, 10) || 0 });
+}
+
+// Show what the device will actually request: {w}/{h} expanded to the panel
+// size, or a note that a placeholder-less URL is fetched as-is and scaled.
+function updateNetWpResolved() {
+    const el  = document.getElementById('netWpResolved');
+    const url = document.getElementById('netWpUrl').value.trim();
+    const w = state.meta && state.meta.screen_w, h = state.meta && state.meta.screen_h;
+    if (!url || !w) { el.textContent = ''; return; }
+    if (url.includes('{w}') || url.includes('{h}')) {
+        el.textContent = '→ ' + url.replaceAll('{w}', w).replaceAll('{h}', h);
+    } else {
+        el.textContent = '→ fetched as-is, scaled to ' + w + '×' + h + ' on the device';
+    }
+}
+
+function netWpPresetChanged() {
+    const v = document.getElementById('netWpPreset').value;
+    if (v) document.getElementById('netWpUrl').value = v;   // '' = Custom: keep what's typed
+    updateNetWpResolved();
+}
+
+// The URL field is the single source of truth; the select just mirrors it
+// (matching preset, or "Custom URL…" otherwise).
+function syncNetWpPreset() {
+    const url = document.getElementById('netWpUrl').value.trim();
+    const sel = document.getElementById('netWpPreset');
+    const match = Array.from(sel.options).find(o => o.value && o.value === url);
+    sel.value = match ? match.value : '';
+    updateNetWpResolved();
+}
+
+// Persist URL + auto-refresh mode/time in one patch; the firmware re-arms its
+// scheduler on this POST.
+function saveNetWpSchedule() {
+    const mode = parseInt(document.getElementById('netWpMode').value, 10) || 0;
+    const timeEl = document.getElementById('netWpTime');
+    timeEl.style.display = (mode === 2) ? '' : 'none';
+    const [h, m] = (timeEl.value || '04:00').split(':').map(Number);
+    postDisplay({
+        wallpaper_url:        document.getElementById('netWpUrl').value.trim(),
+        wallpaper_fetch_mode: mode,
+        wallpaper_fetch_hour: h,
+        wallpaper_fetch_min:  m,
+    });
+}
+
+function fetchNetWallpaper() {
+    const url = document.getElementById('netWpUrl').value.trim();
+    const st  = document.getElementById('netWpStatus');
+    if (!url) return;
+    postDisplay({ wallpaper_url: url });   // keep the scheduled URL in sync
+    st.textContent = 'starting…';
+    fetch('/api/wallpaper/fetch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+    }).then(r => r.json()).then(j => {
+        if (j.result !== 'started') { st.textContent = j.result; return; }
+        pollNetWallpaper();
+    }).catch(() => { st.textContent = 'request failed'; });
+}
+
+// Persist the fetched wallpaper on the SD card so it shows up in the per-screen
+// SD picker. Background settings are untouched — this only collects the image.
+function saveNetWallpaper() {
+    const st = document.getElementById('netWpStatus');
+    st.textContent = 'saving…';
+    fetch('/api/wallpaper/save', { method: 'POST' })
+        .then(r => r.json())
+        .then(j => {
+            st.textContent = (j.result === 'ok') ? ('saved: ' + j.path)
+                                                 : (j.error || 'save failed');
+        })
+        .catch(() => { st.textContent = 'request failed'; });
+}
+
+function pollNetWallpaper() {
+    clearTimeout(netWpTimer);
+    fetch('/api/wallpaper/status').then(r => r.json()).then(j => {
+        document.getElementById('netWpStatus').textContent = j.status;
+        if (j.status === 'busy') netWpTimer = setTimeout(pollNetWallpaper, 1000);
+    }).catch(console.error);
 }
 
 // ── Form ────────────────────────────────────────────────────────────────────

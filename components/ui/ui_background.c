@@ -302,37 +302,41 @@ void ui_background_apply(lv_obj_t *obj, ui_screen_id_t screen)
     const ui_theme_t t = theme_current();
     const app_settings_t *st = settings_get();
 
-    // Internet wallpaper (PSRAM only, via /api/wallpaper/fetch): an explicit
-    // user fetch outranks EVERY other background — gradient, solid, and any SD
-    // wallpaper including per-screen overrides ("none" or a path) — on every
-    // screen. It lives only in PSRAM, so it lasts until the next reboot or an
-    // explicit background change (which calls net_wallpaper_dismiss()); the SD
-    // wallpapers underneath are untouched and return once it is cleared.
-    const lv_image_dsc_t *net_wp = net_wallpaper_image();
-    if (net_wp) {
-        lv_obj_set_style_bg_image_src(obj, net_dimmed(net_wp), LV_PART_MAIN);
-        lv_obj_set_style_bg_image_tiled(obj, false, LV_PART_MAIN);
-        lv_obj_set_style_bg_image_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
-        lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
-        return;
+    // Per-screen wallpaper source (hub sections; NULL for screens without one):
+    //   "net"      → Internet : the fetched wallpaper, pinned to this screen
+    //   "<path>"   → SD       : a specific SD .bin, outranks the internet one
+    //   ""/"none"  → General  : internet if fetched, else the gradient/solid
+    //   NULL (non-hub screen) : like General, but falls back to the global SD
+    //                           wallpaper (Settings) before the gradient
+    const char *ovr = screen_wp_override(screen);
+    const bool is_net  = ovr && strcmp(ovr, "net") == 0;
+    const bool is_path = ovr && ovr[0] && strcmp(ovr, "none") != 0 && !is_net;
+
+    // Internet wallpaper (PSRAM only, via /api/wallpaper/fetch): it replaces the
+    // General background on every screen — one fetch shown everywhere at once —
+    // but an explicit per-screen SD file keeps its own choice. It lives only in
+    // PSRAM, so it lasts until the next reboot or an explicit background change
+    // (net_wallpaper_dismiss()); the SD wallpapers underneath are untouched and
+    // return once it is cleared.
+    if (!is_path) {
+        const lv_image_dsc_t *net_wp = net_wallpaper_image();
+        if (net_wp) {
+            lv_obj_set_style_bg_image_src(obj, net_dimmed(net_wp), LV_PART_MAIN);
+            lv_obj_set_style_bg_image_tiled(obj, false, LV_PART_MAIN);
+            lv_obj_set_style_bg_image_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
+            return;
+        }
     }
 
-    // Per-screen override — honoured only while the global feature switch is
-    // on (wallpaper_on gates every SD wallpaper, overrides included).
-    const char *ovr = st->display.wallpaper_on ? screen_wp_override(screen) : NULL;
-    if (ovr && !ovr[0]) ovr = NULL;   // "" → inherit the global default
-    const bool ovr_none = ovr && strcmp(ovr, "none") == 0;
-
-    // SD wallpaper for this screen (override path, else the global default):
-    // a valid full-screen .bin wins over the gradient entirely. A "none"
-    // override or a failed load falls through to the gradient/solid below.
+    // SD wallpaper: an explicit per-screen file, or (non-hub screens only) the
+    // global default. A valid full-screen .bin wins over the gradient entirely;
+    // a failed load falls through to the gradient/solid below.
     const char *wp_path = NULL;
-    if (!ovr_none) {
-        if (ovr)
-            wp_path = ovr;
-        else if (st->display.wallpaper_on && st->display.wallpaper_path[0])
-            wp_path = st->display.wallpaper_path;
-    }
+    if (is_path)
+        wp_path = ovr;
+    else if (!ovr && st->display.wallpaper_on && st->display.wallpaper_path[0])
+        wp_path = st->display.wallpaper_path;
     if (wp_path) {
         wp_slot_t *slot = wp_slot_for(wp_path);
         if (wp_slot_load(slot)) {

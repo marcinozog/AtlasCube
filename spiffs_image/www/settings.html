@@ -44,7 +44,6 @@
         <nav class="tab-nav" id="displaySubNav" role="tablist">
             <button type="button" class="tab-btn" data-sub="panel" onclick="selectDisplaySub('panel')">🖥️ Panel</button>
             <button type="button" class="tab-btn" data-sub="theme" onclick="selectDisplaySub('theme')">🎨 Theme</button>
-            <button type="button" class="tab-btn" data-sub="wallpapers" onclick="selectDisplaySub('wallpapers')">🖼️ Wallpapers</button>
         </nav>
 
         <div class="sub-pane" data-sub="panel">
@@ -179,93 +178,6 @@
         </div>
         </div><!-- /sub-pane theme -->
 
-        <div class="sub-pane" data-sub="wallpapers">
-
-        <div class="panel">
-            <label class="field-label">Background</label>
-            <div class="theme-toggle wide" id="bgGradientToggle" style="width:fit-content">
-                <button class="theme-btn" id="settingsBtnBgGrad"  onclick="setBackground('gradient')">🌈 Gradient</button>
-                <button class="theme-btn" id="settingsBtnBgSolid" onclick="setBackground('solid')">⬛ Solid</button>
-                <button class="theme-btn" id="settingsBtnBgWall"  onclick="setBackground('wallpaper')">🖼️ Wallpaper</button>
-            </div>
-            <div id="wallpaperPicker" style="display:none;margin-top:10px">
-                <div class="field-hint">Pick a panel-sized RGB565 <code>.bin</code> from the SD card (same format as photo-frame slides).</div>
-                <div style="margin:6px 0">
-                    <span style="opacity:.7">File:</span>
-                    <span id="wallpaperPath" style="font-family:monospace;font-size:12px">(none)</span>
-                </div>
-                <button class="btn-secondary" onclick="openWallpaperBrowser()">📂 Choose file…</button>
-                <label class="btn-secondary" id="wallpaperUploadBtn" style="display:inline-block;cursor:pointer">
-                    ⬆ Upload image
-                    <input id="wallpaperUpload" type="file" accept="image/*"
-                           onchange="uploadWallpaperImage(this)" hidden />
-                </label>
-                <span id="wallpaperUploadStatus" class="save-status" style="display:inline-block;margin-left:6px"></span>
-                <div class="field-hint">The image is center-cropped to fill this panel, converted in the browser to LVGL RGB565 and uploaded to <code>/wallpapers</code> on the SD card. A file with the same name is replaced.</div>
-                <div id="wallpaperBrowser" style="display:none;margin-top:8px"></div>
-            </div>
-            <div style="margin-top:12px">
-                <div class="slider-row">
-                    <span class="slider-label">🌒 Wallpaper brightness</span>
-                    <span id="wp_dim_value" class="slider-value">100%</span>
-                </div>
-                <!-- UI shows brightness (right = brighter, like the panel Brightness
-                     slider); the firmware setting is the inverse (wallpaper_dim). -->
-                <input type="range" min="20" max="100" step="5" value="100" id="wp_dim_slider"
-                       oninput="document.getElementById('wp_dim_value').textContent = this.value + '%'"
-                       onchange="setWallpaperDim(100 - this.value)" />
-                <div class="field-hint">Lower it to darken the wallpaper (both SD and internet) so
-                    on-screen text stays readable. Gradient/solid backgrounds are not affected.
-                    100% = original image.</div>
-            </div>
-        </div>
-
-        <div class="panel">
-            <label class="field-label">Internet wallpaper</label>
-            <div class="field-hint">The device downloads a photo straight from the selected service
-                (on that service's own terms) and uses it as the screen background, kept in RAM
-                until reboot. A playing radio stream pauses during the download. NASA APOD API
-                links are resolved automatically (DEMO_KEY is rate-limited — a free personal key
-                from api.nasa.gov lifts that).</div>
-            <select id="netWpPreset" class="field-input" style="width:100%;margin-top:6px"
-                    onchange="netWpPresetChanged()">
-                <option value="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY">NASA — Astronomy Picture of the Day</option>
-                <option value="https://picsum.photos/{w}/{h}">Lorem Picsum — random photo</option>
-                <option value="https://loremflickr.com/{w}/{h}">LoremFlickr — random photo</option>
-                <option value="https://loremflickr.com/{w}/{h}/cosmos">LoremFlickr — keyword (edit URL)</option>
-                <option value="https://cataas.com/cat?width={w}&amp;height={h}">Cataas — random cat</option>
-                <option value="https://placedog.net/{w}/{h}">PlaceDog — random dog</option>
-                <option value="">Custom URL…</option>
-            </select>
-            <input type="text" id="netWpUrl" class="field-input" style="width:100%;margin-top:6px"
-                   value="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY"
-                   oninput="syncNetWpPreset()" />
-            <div id="netWpResolved" class="field-hint" style="font-family:monospace;overflow-wrap:anywhere"></div>
-            <div style="margin-top:8px">
-                <button class="btn-secondary" onclick="fetchNetWallpaper()">🌍 Fetch now</button>
-                <button class="btn-secondary" onclick="saveNetWallpaper()">💾 Save to SD</button>
-                <span id="netWpStatus" style="margin-left:8px;opacity:.7"></span>
-            </div>
-            <div style="margin-top:10px">
-                <label class="field-label" style="font-size:12px">Auto refresh</label>
-                <div style="margin-top:4px">
-                    <select id="netWpMode" class="field-input" style="width:auto"
-                            onchange="saveNetWpSchedule()">
-                        <option value="0">Off (manual only)</option>
-                        <option value="1">Once after boot</option>
-                        <option value="2">After boot + daily at:</option>
-                    </select>
-                    <input type="time" id="netWpTime" class="field-input"
-                           style="width:120px;display:none" value="04:00"
-                           onchange="saveNetWpSchedule()" />
-                </div>
-                <div class="field-hint">Uses the URL above (saved together with the schedule).
-                    The wallpaper lives in RAM only, so both auto modes re-fetch it ~30 s after
-                    every boot. A playing radio stream is paused for the few seconds of the download.</div>
-            </div>
-        </div>
-
-        </div><!-- /sub-pane wallpapers -->
     </section>
 
     <!-- ══════════════════════════════════════════

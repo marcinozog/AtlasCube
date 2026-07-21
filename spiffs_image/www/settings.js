@@ -130,28 +130,6 @@ function setDeviceTheme(t) {
 // ─────────────────────────────────────────────────────────────────────────────
 const SD_MOUNT = '/sdcard';
 
-function setBackground(mode) {
-    const grad = mode === 'gradient';
-    const wall = mode === 'wallpaper';
-    document.getElementById('settingsBtnBgGrad') ?.classList.toggle('active', grad);
-    document.getElementById('settingsBtnBgSolid')?.classList.toggle('active', mode === 'solid');
-    document.getElementById('settingsBtnBgWall') ?.classList.toggle('active', wall);
-    document.getElementById('wallpaperPicker').style.display = wall ? '' : 'none';
-    const wpEl = document.getElementById('wallpaperPath');
-    const cur  = wpEl ? wpEl.textContent : '';
-    const realPath = (cur && cur !== '(none)') ? cur : '';
-    const body = wall ? { display: { wallpaper_on: true, wallpaper_path: realPath } }
-                      : { display: { wallpaper_on: false, bg_gradient: grad } };
-    fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-    }).catch(console.error);
-}
-
-// Generic SD .bin picker (reuses /api/sd/list), shared by the wallpaper and the
-// splash-logo controls. Renders into `box`; `onSelect(relPath)` fires when a
-// file is clicked, 👁 previews it (lvbin.js).
 function postDisplay(patch) {
     fetch('/api/settings', {
         method: 'POST',
@@ -160,9 +138,9 @@ function postDisplay(patch) {
     }).catch(console.error);
 }
 
-function setWallpaperDim(v) {
-    postDisplay({ wallpaper_dim: parseInt(v, 10) || 0 });
-}
+// ── Generic SD .bin picker (reuses /api/sd/list) ─────────────────────────────
+// Used by the splash-logo control. Renders into `box`; `onSelect(relPath)` fires
+// when a file is clicked, 👁 previews it (lvbin.js).
 
 // Folder of the currently selected file (mount-relative), or '/' if none.
 function sdDirOf(fullText) {
@@ -234,166 +212,6 @@ function renderBinBrowser(box, d, onSelect) {
         list.appendChild(row);
     });
     box.appendChild(list);
-}
-
-// ── Wallpaper picker ──────────────────────────────────────────────────────────
-function openWallpaperBrowser() {
-    const box = document.getElementById('wallpaperBrowser');
-    box.style.display = '';
-    browseBin(box, sdDirOf(document.getElementById('wallpaperPath').textContent),
-              selectWallpaper);
-}
-
-function selectWallpaper(relPath) {
-    const fullPath = SD_MOUNT + relPath;   // fopen needs the mount-point prefix
-    document.getElementById('wallpaperPath').textContent = fullPath;
-    document.getElementById('wallpaperBrowser').style.display = 'none';
-    postDisplay({ wallpaper_on: true, wallpaper_path: fullPath });
-}
-
-function wallpaperUploadStatus(message, kind) {
-    const el = document.getElementById('wallpaperUploadStatus');
-    el.textContent = message;
-    el.className = 'save-status' + (kind ? ' ' + kind : '');
-}
-
-async function wallpaperPanelSize() {
-    if (netWpPanelW > 0 && netWpPanelH > 0) return { w: netWpPanelW, h: netWpPanelH };
-    const r = await fetch('/api/ui/profile/meta', { cache: 'no-store' });
-    if (!r.ok) throw new Error('panel info HTTP ' + r.status);
-    const m = await r.json();
-    const w = Number(m.screen_w), h = Number(m.screen_h);
-    if (!Number.isInteger(w) || !Number.isInteger(h) || w < 1 || h < 1)
-        throw new Error('device returned invalid panel dimensions');
-    netWpPanelW = w; netWpPanelH = h;
-    return { w, h };
-}
-
-async function uploadWallpaperImage(input) {
-    const file = input.files && input.files[0];
-    input.value = '';
-    if (!file) return;
-
-    const label = document.getElementById('wallpaperUploadBtn');
-    label.style.pointerEvents = 'none';
-    label.style.opacity = '.6';
-    try {
-        const { w, h } = await wallpaperPanelSize();
-        const relPath = await LvBin.uploadImage(file, '/wallpapers', w, h,
-            msg => wallpaperUploadStatus(msg, ''));
-        selectWallpaper(relPath);
-        wallpaperUploadStatus('✓ Uploaded and applied', 'ok');
-    } catch (e) {
-        wallpaperUploadStatus('✕ ' + e.message, 'error');
-    } finally {
-        label.style.pointerEvents = '';
-        label.style.opacity = '';
-    }
-}
-
-// ── Internet wallpaper (test) ────────────────────────────────────────────────
-// POST the URL, then poll /api/wallpaper/status until the fetch task settles.
-// On success the device repaints itself (UI_EVT_BG_CHANGED) — nothing else to do.
-// The preset list lives in settings.html: plain bookmarks the user can pick
-// from — the device fetches directly from the service (nothing is re-hosted),
-// and the firmware only ever sees the final URL.
-let netWpTimer = null;
-let netWpPanelW = 0, netWpPanelH = 0;   // panel size for the {w}/{h} preview
-
-// Panel dimensions come from the layout-editor meta endpoint; the preview
-// line stays empty until they arrive.
-function loadNetWpMeta() {
-    fetch('/api/ui/profile/meta').then(r => r.json()).then(m => {
-        netWpPanelW = m.screen_w || 0;
-        netWpPanelH = m.screen_h || 0;
-        updateNetWpResolved();
-    }).catch(console.error);
-}
-
-// Show what the device will actually request: the URL with {w}/{h} expanded,
-// or a note that a placeholder-less URL is fetched as-is and scaled on-device.
-function updateNetWpResolved() {
-    const el  = document.getElementById('netWpResolved');
-    const url = document.getElementById('netWpUrl').value.trim();
-    if (!url || !netWpPanelW) { el.textContent = ''; return; }
-    if (url.includes('{w}') || url.includes('{h}')) {
-        el.textContent = '→ ' + url.replaceAll('{w}', netWpPanelW)
-                                   .replaceAll('{h}', netWpPanelH);
-    } else {
-        el.textContent = '→ fetched as-is, scaled to ' + netWpPanelW + '×' +
-                         netWpPanelH + ' on the device';
-    }
-}
-
-function netWpPresetChanged() {
-    const v = document.getElementById('netWpPreset').value;
-    if (v) document.getElementById('netWpUrl').value = v;   // '' = Custom: keep what's typed
-    updateNetWpResolved();
-}
-
-// The URL field is the single source of truth; the select just mirrors it
-// (matching preset, or "Custom URL…" otherwise — same behaviour as the
-// Android app). Fired on URL edits and after settings load.
-function syncNetWpPreset() {
-    const url = document.getElementById('netWpUrl').value.trim();
-    const sel = document.getElementById('netWpPreset');
-    const match = Array.from(sel.options).find(o => o.value && o.value === url);
-    sel.value = match ? match.value : '';
-    updateNetWpResolved();
-}
-
-// Persist URL + auto-refresh mode/time in one patch; the firmware re-arms its
-// scheduler on this POST. Fired by the mode select and the time picker.
-function saveNetWpSchedule() {
-    const mode = parseInt(document.getElementById('netWpMode').value, 10) || 0;
-    const timeEl = document.getElementById('netWpTime');
-    timeEl.style.display = (mode === 2) ? '' : 'none';
-    const [h, m] = (timeEl.value || '04:00').split(':').map(Number);
-    postDisplay({
-        wallpaper_url:        document.getElementById('netWpUrl').value.trim(),
-        wallpaper_fetch_mode: mode,
-        wallpaper_fetch_hour: h,
-        wallpaper_fetch_min:  m
-    });
-}
-
-function fetchNetWallpaper() {
-    const url = document.getElementById('netWpUrl').value.trim();
-    const st  = document.getElementById('netWpStatus');
-    if (!url) return;
-    postDisplay({ wallpaper_url: url });   // keep the scheduled URL in sync
-    st.textContent = 'starting…';
-    fetch('/api/wallpaper/fetch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url })
-    }).then(r => r.json()).then(j => {
-        if (j.result !== 'started') { st.textContent = j.result; return; }
-        pollNetWallpaper();
-    }).catch(() => { st.textContent = 'request failed'; });
-}
-
-// Persist the fetched wallpaper on the SD card (/sdcard/wallpapers/saved/…);
-// the file then shows up in the regular SD-wallpaper picker. Background
-// settings are untouched — this only collects the image.
-function saveNetWallpaper() {
-    const st = document.getElementById('netWpStatus');
-    st.textContent = 'saving…';
-    fetch('/api/wallpaper/save', { method: 'POST' })
-        .then(r => r.json())
-        .then(j => {
-            st.textContent = (j.result === 'ok') ? ('saved: ' + j.path)
-                                                 : (j.error || 'save failed');
-        })
-        .catch(() => { st.textContent = 'request failed'; });
-}
-
-function pollNetWallpaper() {
-    clearTimeout(netWpTimer);
-    fetch('/api/wallpaper/status').then(r => r.json()).then(j => {
-        document.getElementById('netWpStatus').textContent = j.status;
-        if (j.status === 'busy') netWpTimer = setTimeout(pollNetWallpaper, 1000);
-    }).catch(console.error);
 }
 
 // ── Splash-logo picker ──────────────────────────────────────────────────────────
@@ -991,33 +809,6 @@ function populateForm(s) {
         const t = s.display.theme || 'dark';
         document.getElementById('settingsBtnDark') ?.classList.toggle('active', t === 'dark');
         document.getElementById('settingsBtnLight')?.classList.toggle('active', t === 'light');
-
-        const wallOn = s.display.wallpaper_on === true;
-        const isWall = wallOn;
-        const bgGrad = s.display.bg_gradient !== false;   // default on
-        document.getElementById('settingsBtnBgWall') ?.classList.toggle('active', isWall);
-        document.getElementById('settingsBtnBgGrad') ?.classList.toggle('active', !wallOn && bgGrad);
-        document.getElementById('settingsBtnBgSolid')?.classList.toggle('active', !wallOn && !bgGrad);
-        document.getElementById('wallpaperPicker').style.display = isWall ? '' : 'none';
-        const wpEl = document.getElementById('wallpaperPath');
-        if (wpEl) wpEl.textContent = s.display.wallpaper_path || '(none)';
-        // Slider shows brightness (100 - dim): right = brighter, like the
-        // panel Brightness slider.
-        const wpBright = 100 - (s.display.wallpaper_dim || 0);
-        document.getElementById('wp_dim_slider').value = wpBright;
-        document.getElementById('wp_dim_value').textContent = wpBright + '%';
-
-        if (s.display.wallpaper_url)
-            document.getElementById('netWpUrl').value = s.display.wallpaper_url;
-        syncNetWpPreset();
-        const wfMode = s.display.wallpaper_fetch_mode || 0;
-        document.getElementById('netWpMode').value = String(wfMode);
-        const wfTime = document.getElementById('netWpTime');
-        wfTime.style.display = (wfMode === 2) ? '' : 'none';
-        const p2 = n => String(n === undefined ? 0 : n).padStart(2, '0');
-        wfTime.value = p2(s.display.wallpaper_fetch_hour === undefined ? 4
-                          : s.display.wallpaper_fetch_hour) + ':' +
-                       p2(s.display.wallpaper_fetch_min);
 
         const flip = s.display.flip === true;
         document.getElementById('settingsBtnFlipOn') ?.classList.toggle('active', flip);
@@ -1841,4 +1632,3 @@ loadSettings();
 loadColors();
 loadMqtt();
 loadWeather();
-loadNetWpMeta();
