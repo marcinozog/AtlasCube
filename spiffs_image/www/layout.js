@@ -1530,6 +1530,10 @@ function selectSection(name) {
     // Wallpapers are per screen — refresh the preview for this tab, then
     // repaint once the (async) decode lands.
     loadWallpaperPreview().then(renderSvg);
+    // The online gallery's category follows the active screen; close it on a
+    // tab switch so it can't show the previous screen's wallpapers (and reopens
+    // fresh on demand instead of re-fetching the catalog on every jump).
+    setOnlineWallpaperGalleryOpen(false);
 }
 
 // ── Background tabs (global) ──────────────────────────────────────────────────
