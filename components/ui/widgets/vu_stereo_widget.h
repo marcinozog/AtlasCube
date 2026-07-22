@@ -18,9 +18,11 @@ extern "C" {
 // Each bar has its own rectangle in absolute LCD pixels. horizontal=false grows
 // the bar from the bottom up; horizontal=true grows it from the left edge. Either
 // side can be hidden. With peak=true a thin marker holds the recent maximum and
-// falls back slowly. Bar colour comes from the theme's vu_bar, frame/background
-// from vu_bg; transparent=true drops the background so the bars sit on the
-// wallpaper behind (still delta-bounded, ~2× the pixel work of an opaque fill).
+// falls back slowly. zones=true paints classic positional colour zones
+// (green/orange/red); zones=false is a solid bar in the theme's vu_bar. Frame/
+// background come from vu_bg; transparent=true drops the background so the bars
+// sit on the wallpaper behind (still delta-bounded, ~2× the pixel work of an
+// opaque fill).
 //
 // One instance at a time (radio or SD-player screen — only one is shown at once).
 // create() spins up the refresh timer; destroy() tears it down.
@@ -32,7 +34,7 @@ void vu_stereo_widget_create(lv_obj_t *parent,
                              bool show_l, int16_t l_x, int16_t l_y, int16_t l_w, int16_t l_h,
                              bool show_r, int16_t r_x, int16_t r_y, int16_t r_w, int16_t r_h,
                              bool horizontal, bool frame, bool transparent,
-                             bool peak, media_source_t owner);
+                             bool peak, bool zones, media_source_t owner);
 void vu_stereo_widget_destroy(void);
 
 // Recolour bars + frame from the active theme. Safe to call when not created.

@@ -278,7 +278,7 @@ static void sd_player_screen_create(lv_obj_t *parent)
                                 p->sd_stereo_r_w, p->sd_stereo_r_h,
                                 p->sd_stereo_horizontal, p->sd_stereo_frame,
                                 p->sd_stereo_transparent, p->sd_stereo_peak,
-                                MEDIA_SOURCE_SD);
+                                p->sd_stereo_zones, MEDIA_SOURCE_SD);
     }
     if (p->sd_show_weather) {
         weather_widget_create(parent, p->sd_weather_x, p->sd_weather_y,

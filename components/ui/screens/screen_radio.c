@@ -163,7 +163,7 @@ static void radio_create(lv_obj_t *parent)
                                 p->radio_stereo_r_w, p->radio_stereo_r_h,
                                 p->radio_stereo_horizontal, p->radio_stereo_frame,
                                 p->radio_stereo_transparent, p->radio_stereo_peak,
-                                MEDIA_SOURCE_RADIO);
+                                p->radio_stereo_zones, MEDIA_SOURCE_RADIO);
     }
     if (p->radio_show_weather) {
         weather_widget_create(parent, p->radio_weather_x, p->radio_weather_y,

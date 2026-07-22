@@ -570,6 +570,7 @@ static const ui_profile_t k_defaults = {
     .radio_needle_r_h          = 72,
     .radio_stereo_frame        = true,
     .radio_stereo_peak         = true,
+    .radio_stereo_zones        = true,
     .radio_stereo_l_x          = 88,
     .radio_stereo_l_y          = 118,
     .radio_stereo_l_w          = 26,
@@ -644,6 +645,7 @@ static const ui_profile_t k_defaults = {
     .sd_needle_r_h             = 72,
     .sd_stereo_frame           = true,
     .sd_stereo_peak            = true,
+    .sd_stereo_zones           = true,
     .sd_stereo_l_x             = 88,
     .sd_stereo_l_y             = 118,
     .sd_stereo_l_w             = 26,
@@ -880,6 +882,7 @@ static const ui_profile_t k_defaults = {
     .radio_needle_r_h          = 90,
     .radio_stereo_frame        = true,
     .radio_stereo_peak         = true,
+    .radio_stereo_zones        = true,
     .radio_stereo_l_x          = 120,
     .radio_stereo_l_y          = 80,
     .radio_stereo_l_w          = 30,
@@ -954,6 +957,7 @@ static const ui_profile_t k_defaults = {
     .sd_needle_r_h             = 90,
     .sd_stereo_frame           = true,
     .sd_stereo_peak            = true,
+    .sd_stereo_zones           = true,
     .sd_stereo_l_x             = 120,
     .sd_stereo_l_y             = 80,
     .sd_stereo_l_w             = 30,
@@ -1183,6 +1187,7 @@ static const ui_profile_t k_defaults = {
     .radio_needle_r_h          = 130,
     .radio_stereo_frame        = true,
     .radio_stereo_peak         = true,
+    .radio_stereo_zones        = true,
     .radio_stereo_l_x          = 190,
     .radio_stereo_l_y          = 100,
     .radio_stereo_l_w          = 40,
@@ -1257,6 +1262,7 @@ static const ui_profile_t k_defaults = {
     .sd_needle_r_h             = 130,
     .sd_stereo_frame           = true,
     .sd_stereo_peak            = true,
+    .sd_stereo_zones           = true,
     .sd_stereo_l_x             = 190,
     .sd_stereo_l_y             = 100,
     .sd_stereo_l_w             = 40,
@@ -1722,6 +1728,7 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_bool(obj, "radio_stereo_horizontal",    &p->radio_stereo_horizontal);
     load_bool(obj, "radio_stereo_transparent",   &p->radio_stereo_transparent);
     load_bool(obj, "radio_stereo_peak",          &p->radio_stereo_peak);
+    load_bool(obj, "radio_stereo_zones",         &p->radio_stereo_zones);
     load_i16 (obj, "radio_stereo_l_x",           &p->radio_stereo_l_x);
     load_i16 (obj, "radio_stereo_l_y",           &p->radio_stereo_l_y);
     load_i16 (obj, "radio_stereo_l_w",           &p->radio_stereo_l_w);
@@ -1822,6 +1829,7 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_bool(o, "radio_stereo_horizontal",    p->radio_stereo_horizontal);
     add_bool(o, "radio_stereo_transparent",   p->radio_stereo_transparent);
     add_bool(o, "radio_stereo_peak",          p->radio_stereo_peak);
+    add_bool(o, "radio_stereo_zones",         p->radio_stereo_zones);
     add_i16 (o, "radio_stereo_l_x",           p->radio_stereo_l_x);
     add_i16 (o, "radio_stereo_l_y",           p->radio_stereo_l_y);
     add_i16 (o, "radio_stereo_l_w",           p->radio_stereo_l_w);
@@ -1911,6 +1919,7 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_bool(obj, "sd_stereo_horizontal",      &p->sd_stereo_horizontal);
     load_bool(obj, "sd_stereo_transparent",     &p->sd_stereo_transparent);
     load_bool(obj, "sd_stereo_peak",            &p->sd_stereo_peak);
+    load_bool(obj, "sd_stereo_zones",           &p->sd_stereo_zones);
     load_i16 (obj, "sd_stereo_l_x",             &p->sd_stereo_l_x);
     load_i16 (obj, "sd_stereo_l_y",             &p->sd_stereo_l_y);
     load_i16 (obj, "sd_stereo_l_w",             &p->sd_stereo_l_w);
@@ -2003,6 +2012,7 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_bool(o, "sd_stereo_horizontal",      p->sd_stereo_horizontal);
     add_bool(o, "sd_stereo_transparent",     p->sd_stereo_transparent);
     add_bool(o, "sd_stereo_peak",            p->sd_stereo_peak);
+    add_bool(o, "sd_stereo_zones",           p->sd_stereo_zones);
     add_i16 (o, "sd_stereo_l_x",             p->sd_stereo_l_x);
     add_i16 (o, "sd_stereo_l_y",             p->sd_stereo_l_y);
     add_i16 (o, "sd_stereo_l_w",             p->sd_stereo_l_w);

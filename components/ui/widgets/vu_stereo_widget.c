@@ -28,6 +28,15 @@ static const char *TAG = "VU_STEREO";
 // so a floating tick separates from the bar top and reads as the recent maximum.
 #define BAR_PEAK_FALL    0.015f    // peak level drop per tick (full scale in ~3 s)
 #define BAR_PEAK_W       2         // peak marker thickness in px
+// Colour zones, classic VU: green up to MID, orange up to HOT, red above. Zones
+// are POSITIONAL (a pixel's colour depends only on its distance from the
+// baseline, never on the current level) so the delta-invalidation in
+// meter_render stays valid — the unchanged part of the bar never repaints.
+#define BAR_ZONE_MID     0.60f     // green/orange boundary as a fraction of span
+#define BAR_ZONE_HOT     0.85f     // orange/red boundary as a fraction of span
+#define BAR_COLOR_LO     0x00C853  // green zone
+#define BAR_COLOR_MID    0xFFB300  // orange zone
+#define BAR_COLOR_HOT    0xF44336  // red zone
 
 typedef struct {
     lv_obj_t *cont;      // NULL when this side is hidden
@@ -46,26 +55,44 @@ static bool          s_created = false;
 static bool          s_horizontal = false;   // fill left→right instead of bottom→up
 static bool          s_transparent = false;  // no bg fill: bars sit on wallpaper
 static bool          s_peak = false;         // draw the peak-hold marker
+static bool          s_zones = false;        // colour zones; false = theme vu_bar
 static float         s_agc_ref = BAR_AGC_REF_MIN; // shared L/R reference (dBFS)
 static uint32_t      s_last_count = 0;            // stall (pause) detection
 static media_source_t s_owner = MEDIA_SOURCE_RADIO; // source these bars belong to
 
-// Custom draw: the filled bar plus an optional peak marker, painted over the
-// container. Vertical bars grow from the bottom edge up; horizontal from the
-// left edge right. Colours are read fresh from the theme each frame.
+// Fill the band [lo .. hi] (1-based distance from the baseline, inclusive)
+// across the bar with a solid colour. Pixel at distance d sits at
+// base_y - d + 1 (vertical) / base_x + d - 1 (horizontal).
+static void draw_band(lv_layer_t *layer, const bar_meter_t *m,
+                      int bx, int by, int base_x, int base_y,
+                      int lo, int hi, uint32_t color)
+{
+    if (hi < lo) return;
+    lv_draw_rect_dsc_t dsc;
+    lv_draw_rect_dsc_init(&dsc);
+    dsc.bg_color = lv_color_hex(color);
+    dsc.bg_opa   = LV_OPA_COVER;
+    lv_area_t r;
+    if (s_horizontal) {
+        r.x1 = base_x + lo - 1; r.x2 = base_x + hi - 1;
+        r.y1 = by;              r.y2 = by + m->cross - 1;
+    } else {
+        r.x1 = bx;              r.x2 = bx + m->cross - 1;
+        r.y1 = base_y - hi + 1; r.y2 = base_y - lo + 1;
+    }
+    lv_draw_rect(layer, &dsc, &r);
+}
+
+// Custom draw: the filled bar (split into colour zones) plus an optional peak
+// marker, painted over the container. Vertical bars grow from the bottom edge
+// up; horizontal from the left edge right.
 static void bar_draw_cb(lv_event_t *e)
 {
     bar_meter_t *m = lv_event_get_user_data(e);
     lv_layer_t  *layer = lv_event_get_layer(e);
-    const ui_theme_colors_t *th = theme_get();
 
     lv_area_t a;
     lv_obj_get_coords(m->cont, &a);
-
-    lv_draw_rect_dsc_t dsc;
-    lv_draw_rect_dsc_init(&dsc);
-    dsc.bg_color = lv_color_hex(th->vu_bar);
-    dsc.bg_opa   = LV_OPA_COVER;
 
     // Baseline (distance 0) and cross span both inset by the frame width.
     int bx = a.x1 + m->off;             // left/cross origin
@@ -73,32 +100,32 @@ static void bar_draw_cb(lv_event_t *e)
     int base_x = a.x1 + m->off;         // horizontal fill starts here
     int base_y = a.y2 - m->off;         // vertical fill starts here (baseline)
 
+    int z1 = (int)(BAR_ZONE_MID * (float)m->span + 0.5f);
+    int z2 = (int)(BAR_ZONE_HOT * (float)m->span + 0.5f);
+    uint32_t c_lo = BAR_COLOR_LO;
+    if (!s_zones) {
+        // Single zone spanning the whole bar, in the theme's bar colour.
+        z1 = z2 = m->span;
+        c_lo = theme_get()->vu_bar;
+    }
+
     int fill = m->fill < 0 ? 0 : (m->fill > m->span ? m->span : m->fill);
     if (fill > 0) {
-        lv_area_t bar;
-        if (s_horizontal) {
-            bar.x1 = base_x;            bar.x2 = base_x + fill - 1;
-            bar.y1 = by;                bar.y2 = by + m->cross - 1;
-        } else {
-            bar.x1 = bx;                bar.x2 = bx + m->cross - 1;
-            bar.y1 = base_y - fill + 1; bar.y2 = base_y;
-        }
-        lv_draw_rect(layer, &dsc, &bar);
+        draw_band(layer, m, bx, by, base_x, base_y,
+                  1, fill < z1 ? fill : z1, c_lo);
+        if (fill > z1) draw_band(layer, m, bx, by, base_x, base_y,
+                                 z1 + 1, fill < z2 ? fill : z2, BAR_COLOR_MID);
+        if (fill > z2) draw_band(layer, m, bx, by, base_x, base_y,
+                                 z2 + 1, fill, BAR_COLOR_HOT);
     }
 
     if (s_peak && m->peak > 0) {
         int p_hi = m->peak;                 // outer edge (distance from baseline)
         int p_lo = p_hi - BAR_PEAK_W + 1;   // marker band [p_lo .. p_hi]
         if (p_lo < 1) p_lo = 1;
-        lv_area_t mk;
-        if (s_horizontal) {
-            mk.x1 = base_x + p_lo - 1; mk.x2 = base_x + p_hi - 1;
-            mk.y1 = by;                mk.y2 = by + m->cross - 1;
-        } else {
-            mk.x1 = bx;                mk.x2 = bx + m->cross - 1;
-            mk.y1 = base_y - p_hi + 1; mk.y2 = base_y - p_lo + 1;
-        }
-        lv_draw_rect(layer, &dsc, &mk);
+        uint32_t pc = p_hi > z2 ? BAR_COLOR_HOT
+                    : p_hi > z1 ? BAR_COLOR_MID : c_lo;
+        draw_band(layer, m, bx, by, base_x, base_y, p_lo, p_hi, pc);
     }
 }
 
@@ -240,7 +267,7 @@ void vu_stereo_widget_create(lv_obj_t *parent,
                              bool show_l, int16_t l_x, int16_t l_y, int16_t l_w, int16_t l_h,
                              bool show_r, int16_t r_x, int16_t r_y, int16_t r_w, int16_t r_h,
                              bool horizontal, bool frame, bool transparent,
-                             bool peak, media_source_t owner)
+                             bool peak, bool zones, media_source_t owner)
 {
     if (s_created) return;
     if (!show_l && !show_r) return;
@@ -249,6 +276,7 @@ void vu_stereo_widget_create(lv_obj_t *parent,
     s_horizontal  = horizontal;
     s_transparent = transparent;
     s_peak        = peak;
+    s_zones       = zones;
 
     s_m[0] = (bar_meter_t){ 0 };
     s_m[1] = (bar_meter_t){ 0 };
@@ -281,6 +309,6 @@ void vu_stereo_widget_apply_theme(void)
         if (!s_m[i].cont) continue;
         if (!s_transparent) lv_obj_set_style_bg_color(s_m[i].cont, lv_color_hex(th->vu_bg), 0);
         lv_obj_set_style_border_color(s_m[i].cont, lv_color_hex(th->vu_bg), 0);
-        lv_obj_invalidate(s_m[i].cont);   // bar colour is read fresh in the draw cb
+        lv_obj_invalidate(s_m[i].cont);   // repaint bg/frame (+ bar when zones off)
     }
 }

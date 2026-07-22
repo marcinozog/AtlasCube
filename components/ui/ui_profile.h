@@ -221,6 +221,7 @@ typedef struct {
     bool             radio_stereo_horizontal;  // bars fill left→right instead of bottom→up
     bool             radio_stereo_transparent; // no bg fill: bars sit on wallpaper/gradient
     bool             radio_stereo_peak;        // hold a thin peak marker with slow fall
+    bool             radio_stereo_zones;       // green/orange/red zones; off = theme vu_bar
     int16_t          radio_stereo_l_x;         // per-bar top-left + size (LCD px)
     int16_t          radio_stereo_l_y;
     int16_t          radio_stereo_l_w;
@@ -313,6 +314,7 @@ typedef struct {
     bool             sd_stereo_horizontal;     // bars fill left→right instead of bottom→up
     bool             sd_stereo_transparent;    // no bg fill: bars sit on wallpaper/gradient
     bool             sd_stereo_peak;           // hold a thin peak marker with slow fall
+    bool             sd_stereo_zones;          // green/orange/red zones; off = theme vu_bar
     int16_t          sd_stereo_l_x;            // per-bar top-left + size (LCD px)
     int16_t          sd_stereo_l_y;
     int16_t          sd_stereo_l_w;
