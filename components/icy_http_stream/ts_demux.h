@@ -1,13 +1,15 @@
 /*
  * ts_demux — minimal MPEG-TS (188-byte packet) demultiplexer that extracts the
- * audio elementary stream (ADTS AAC) from an HLS .ts segment stream.
+ * audio elementary stream from an HLS .ts segment stream.
  *
  * It is intentionally tiny: it locates the audio PID from PAT/PMT (assuming both
  * sections fit in a single TS packet, which holds for typical HLS streams),
  * strips the TS/adaptation/PES headers and concatenates the elementary payload.
- * The output is a raw ADTS byte stream suitable for esp-adf's aac_decoder, which
- * resyncs on the 0xFFF ADTS sync word, so occasional header mishandling is
- * tolerated rather than fatal.
+ * The output is the raw elementary byte stream — ADTS AAC (preferred when the
+ * program offers several audio streams) or MPEG audio (MP2/MP3) — suitable for
+ * esp-adf's decoders, which resync on the frame sync word, so occasional header
+ * mishandling is tolerated rather than fatal. ts_demux_codec() reports which
+ * codec the PMT declared once the audio PID is known.
  *
  * The demuxer is fed arbitrary byte chunks (recv() boundaries do not need to
  * align to 188) and keeps a partial-packet accumulator across calls.
@@ -25,6 +27,12 @@ extern "C" {
 #endif
 
 typedef struct ts_demux ts_demux_t;
+
+typedef enum {
+    TS_DEMUX_CODEC_UNKNOWN = 0,  /*!< Audio PID not identified yet */
+    TS_DEMUX_CODEC_AAC,          /*!< stream_type 0x0F (ADTS) or 0x11 (LATM) */
+    TS_DEMUX_CODEC_MPEG,         /*!< stream_type 0x03/0x04 — MPEG-1/2 audio (MP2/MP3) */
+} ts_demux_codec_t;
 
 /**
  * @brief Create a TS demuxer instance (heap-allocated).
@@ -62,6 +70,14 @@ int ts_demux_process(ts_demux_t *d, const uint8_t *in, int in_len,
  * @brief Whether the audio PID has been identified from PAT/PMT yet.
  */
 bool ts_demux_has_audio(const ts_demux_t *d);
+
+/**
+ * @brief Codec of the selected audio stream, per the PMT's stream_type.
+ *
+ * Valid once ts_demux_has_audio() is true; TS_DEMUX_CODEC_UNKNOWN before that
+ * (or for an exotic stream_type the demuxer passed through anyway).
+ */
+ts_demux_codec_t ts_demux_codec(const ts_demux_t *d);
 
 /**
  * @brief Destroy a demuxer instance.

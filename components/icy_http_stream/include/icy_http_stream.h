@@ -5,9 +5,10 @@
  * Replacement for esp-adf's http_stream that does not require patching the
  * framework. Supports plain MP3/AAC/WAV streams over HTTP/HTTPS with optional
  * ICY (Icy-MetaData) parsing, plus basic HLS (.m3u8): a single audio rendition
- * is resolved, its .ts segments streamed and demuxed to ADTS AAC, with live
- * playlist refresh. Does NOT implement HLS AES decryption, byte-range/I-frame
- * playlists, gzip content-encoding or PLS/plain-M3U resolving.
+ * is resolved, its .ts segments streamed and demuxed to the elementary audio
+ * stream (ADTS AAC or MP3, per the TS PMT), with live playlist refresh. Does
+ * NOT implement HLS AES decryption, byte-range/I-frame playlists, gzip
+ * content-encoding or PLS/plain-M3U resolving.
  *
  * SPDX-License-Identifier: MIT
  */
@@ -35,7 +36,8 @@ typedef struct {
     audio_element_handle_t    el;
     void                     *user_data;
     int                       icy_metaint;  /*!< Meta interval in bytes; 0 if no ICY */
-    esp_codec_type_t          codec;        /*!< Codec from Content-Type, valid on POST_REQUEST;
+    esp_codec_type_t          codec;        /*!< Codec, valid on POST_REQUEST: from Content-Type
+                                                 (plain streams) or the TS PMT probe (HLS);
                                                  ESP_CODEC_TYPE_UNKNOW if the server gave no usable hint */
 } icy_http_event_msg_t;
 

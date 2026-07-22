@@ -111,7 +111,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 
 **Audio**
 - Internet radio streaming — MP3, AAC, FLAC (via [esp-adf](https://github.com/espressif/esp-adf))
-- HLS live streams — plays segmented `.m3u8` playlists alongside plain MP3/AAC/FLAC streams; the MPEG-TS segments are demuxed to ADTS on the fly
+- HLS live streams — plays segmented `.m3u8` playlists alongside plain MP3/AAC/FLAC streams; the MPEG-TS segments are demuxed on the fly (AAC or MP3 audio, per the stream)
 - Podcasts — plays a podcast episode as a **finite HTTP stream** (a distinct mode from endless radio: end-of-file is a clean stop, not a reconnect), with the episode title shown on screen, and **resumes mid-episode** via an HTTP `Range` request. The [Android app](https://github.com/marcinozog/AtlasCube-Remote/) is the catalog — it browses/searches feeds (iTunes search, Apple charts, or add-by-URL — all keyless), sends the episode's direct URL, and remembers the playback position; audio streams straight from the CDN to the device, exactly like a radio station
 - ICY metadata — station name and now-playing track shown on screen and in the web UI
 - 10-band parametric EQ + soft volume (custom DSP element, core 1)
