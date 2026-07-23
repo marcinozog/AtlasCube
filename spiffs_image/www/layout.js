@@ -474,9 +474,10 @@ function sectionWallpaperValue() {
 }
 
 // Mirror of the firmware's resolution in ui_background_apply(): an explicit
-// per-screen SD file is the only background the editor can preview. General
-// ("" / "none") and Internet ("net") carry no SD file — their preview is the
-// gradient, or a "net wallpaper" placeholder when the device has one fetched.
+// per-screen SD file resolves to its path here. General ("" / "none") and
+// Internet ("net") carry no SD file — their preview is the gradient, or the
+// fetched internet wallpaper (via /api/wallpaper/image) when the device has
+// one, with a "net wallpaper" text placeholder as the fallback.
 function effectiveWallpaperPath() {
     const ovr = sectionWallpaperValue();
     if (ovr && ovr !== 'none' && ovr !== 'net') return ovr;
@@ -1441,9 +1442,9 @@ async function loadWallpaperPreview() {
         updateWallpaperPickerLabel();
 
         // A fetched internet wallpaper shows on the General tier and on screens
-        // set to Internet (until reboot or dismissal). Its pixels aren't
-        // available to the editor, so show a "net wallpaper" placeholder instead
-        // of the gradient. A screen with an explicit SD file is unaffected.
+        // set to Internet (until reboot or dismissal). The firmware serves its
+        // pixels at /api/wallpaper/image, so preview them instead of the
+        // gradient. A screen with an explicit SD file is unaffected.
         const ovr = sectionWallpaperValue();
         const isSdFile = ovr && ovr !== 'none' && ovr !== 'net';
         if (!isSdFile) {
@@ -1454,6 +1455,20 @@ async function loadWallpaperPreview() {
                     netWallpaperActive = true;
                     const label = document.getElementById('layout_wallpaper_name');
                     if (label) label.textContent = '(net wallpaper — until reboot)';
+                    // The firmware serves the fetched pixels as an LVGL .bin —
+                    // decode them exactly like an SD wallpaper. If this fails,
+                    // the textual "net wallpaper" placeholder stays as fallback.
+                    const img = await fetch('/api/wallpaper/image', { cache: 'no-store' });
+                    if (img.ok) {
+                        await ensureLvBin();
+                        const decoded = window.LvBin.decodeToCanvas(await img.arrayBuffer());
+                        // Same stale-async guard as the SD path: the user may
+                        // have switched tabs or assigned an SD file meanwhile.
+                        if (state.active === section && !effectiveWallpaperPath()) {
+                            wallpaperPreviewUrl = decoded.canvas.toDataURL('image/png');
+                            wallpaperPreviewDim = clamp(display.wallpaper_dim || 0, 0, 100);
+                        }
+                    }
                     return;
                 }
             } catch { /* status unavailable — fall through to the SD preview */ }
@@ -1522,7 +1537,13 @@ function selectSection(name) {
     document.getElementById('general_card').style.display  = isGeneral  ? '' : 'none';
     document.getElementById('internet_card').style.display = isInternet ? '' : 'none';
     if (isPresets)              { checkOrphanPresets(); return; }
-    if (isGeneral || isInternet) { loadBackgroundTab(); return; }
+    if (isGeneral || isInternet) {
+        loadBackgroundTab();
+        // The thumbnail costs a ~panel-sized download — fetch it only for the
+        // tab that shows it, not every General visit.
+        if (isInternet) refreshNetWpThumb();
+        return;
+    }
 
     if (state.active !== name) keyboardSelection = null;
     state.active = name;
@@ -1678,8 +1699,37 @@ function pollNetWallpaper() {
     clearTimeout(netWpTimer);
     fetch('/api/wallpaper/status').then(r => r.json()).then(j => {
         document.getElementById('netWpStatus').textContent = j.status;
-        if (j.status === 'busy') netWpTimer = setTimeout(pollNetWallpaper, 1000);
+        if (j.status === 'busy') {
+            netWpTimer = setTimeout(pollNetWallpaper, 1000);
+        } else if (j.status === 'ok') {
+            // A fresh image landed — update the tab thumbnail and the layout
+            // preview. Retries cover the beat between the fetch task reporting
+            // "ok" and the LVGL task committing the buffer.
+            refreshNetWpThumb(3);
+            loadWallpaperPreview().then(renderSvg);
+        }
     }).catch(console.error);
+}
+
+// Thumbnail of the fetched wallpaper under "Fetch now" — the same .bin decode
+// as the layout preview. Hidden when the device has nothing fetched.
+async function refreshNetWpThumb(retries = 0) {
+    const img = document.getElementById('netWpPreviewImg');
+    if (!img) return;
+    try {
+        const r = await fetch('/api/wallpaper/image', { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        await ensureLvBin();
+        const decoded = window.LvBin.decodeToCanvas(await r.arrayBuffer());
+        img.src = decoded.canvas.toDataURL('image/png');
+        img.style.display = '';
+    } catch {
+        if (retries > 0) {
+            setTimeout(() => refreshNetWpThumb(retries - 1), 700);
+        } else {
+            img.style.display = 'none';
+        }
+    }
 }
 
 // ── Form ────────────────────────────────────────────────────────────────────

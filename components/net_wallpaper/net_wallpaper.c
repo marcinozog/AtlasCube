@@ -531,6 +531,33 @@ bool net_wallpaper_save_to_sd(char *out_path, size_t out_cap, const char **err)
     return true;
 }
 
+uint8_t *net_wallpaper_bin_snapshot(size_t *out_len)
+{
+    xSemaphoreTake(buf_lock(), portMAX_DELAY);
+    if (!s_have) {
+        xSemaphoreGive(s_buf_lock);
+        return NULL;
+    }
+    const int w = s_img.header.w, h = s_img.header.h;
+    const size_t bytes = (size_t)w * h * 2;
+    uint8_t *bin = heap_caps_malloc(sizeof(sd_bin_header_t) + bytes, MALLOC_CAP_SPIRAM);
+    if (bin) {
+        const sd_bin_header_t hdr = {
+            .magic  = 0x19,
+            .cf     = 0x12,
+            .w      = (uint16_t)w,
+            .h      = (uint16_t)h,
+            .stride = (uint16_t)(w * 2),
+        };
+        memcpy(bin, &hdr, sizeof(hdr));
+        memcpy(bin + sizeof(hdr), s_active_buf, bytes);
+    }
+    xSemaphoreGive(s_buf_lock);
+    if (!bin) return NULL;
+    *out_len = sizeof(sd_bin_header_t) + bytes;
+    return bin;
+}
+
 void net_wallpaper_set_done_cb(void (*cb)(bool ok))
 {
     s_done_cb = cb;

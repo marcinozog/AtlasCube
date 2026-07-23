@@ -303,9 +303,10 @@ tab's** screen: *Choose from SD…* assigns an SD file, *Internet* shows
 the fetched wallpaper, *General* is the gradient/solid (or internet)
 default. The preview shows the effective wallpaper of the active tab;
 when the device is currently displaying an internet-fetched wallpaper
-(its pixels aren't available to the editor), the canvas shows a "net
-wallpaper" placeholder instead (`GET /api/wallpaper/status` reports
-`active`).
+(`GET /api/wallpaper/status` reports `active`), the editor downloads its
+pixels from `GET /api/wallpaper/image` (an LVGL RGB565 `.bin`, decoded
+by the same `lvbin.js` path as SD wallpapers) and previews them; if that
+fails, a "net wallpaper" text placeholder is shown instead.
 
 ## Background & internet wallpaper (General / Internet tabs)
 
@@ -320,7 +321,9 @@ tabs — it used to be in Settings → Display → Wallpapers, now removed:
   them.
 - **🌍 Internet** — the internet-fetched wallpaper: a URL preset picker,
   *Fetch now* (`POST /api/wallpaper/fetch`), *Save to SD*
-  (`POST /api/wallpaper/save`) and an auto-refresh schedule
+  (`POST /api/wallpaper/save`), a thumbnail of the currently fetched
+  image (`GET /api/wallpaper/image`, shown on tab open and refreshed
+  after a fetch) and an auto-refresh schedule
   (`wallpaper_fetch_mode` / `_hour` / `_min`). It also carries the
   wallpaper **brightness** slider (`wallpaper_dim`, applied to both SD and
   internet wallpapers). See `net_wallpaper.c` for the fetch/decode path.

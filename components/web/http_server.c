@@ -3199,6 +3199,24 @@ static esp_err_t api_wallpaper_status_handler(httpd_req_t *req)
     return send_json_or_500(req, str);
 }
 
+// GET /api/wallpaper/image — the fetched internet wallpaper as an LVGL RGB565
+// .bin (same format as SD wallpapers), so the web layout editor can preview
+// the exact pixels the device shows. 404 until a fetch has been committed.
+static esp_err_t api_wallpaper_image_handler(httpd_req_t *req)
+{
+    size_t len = 0;
+    uint8_t *bin = net_wallpaper_bin_snapshot(&len);
+    if (!bin) {
+        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "No wallpaper fetched");
+        return ESP_FAIL;
+    }
+    httpd_resp_set_type(req, "application/octet-stream");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+    esp_err_t err = httpd_resp_send(req, (const char *)bin, len);
+    heap_caps_free(bin);
+    return err;
+}
+
 // POST /api/wallpaper/save — persist the fetched image as an LVGL .bin under
 // /sdcard/wallpapers/saved/, without touching the background settings.
 static esp_err_t api_wallpaper_save_handler(httpd_req_t *req)
@@ -3336,7 +3354,7 @@ void http_server_start(void)
     // 52 handlers are registered below and ws_register() adds one more before
     // them. Keep a little headroom so the final wildcard GET serving the web UI
     // can never be silently dropped when another API endpoint is added.
-    config.max_uri_handlers  = 56;
+    config.max_uri_handlers  = 60;
     // WS handlers run on this task and chain deep: cJSON_Parse of the inbound
     // payload → radio/settings play path → send_full_state (cJSON build of the
     // whole state). The 4 KB HTTPD default overflows on that path (e.g. an
@@ -3455,6 +3473,13 @@ void http_server_start(void)
         .handler = api_wallpaper_status_handler,
     };
     httpd_register_uri_handler(server, &api_wallpaper_status);
+
+    httpd_uri_t api_wallpaper_image = {
+        .uri     = "/api/wallpaper/image",
+        .method  = HTTP_GET,
+        .handler = api_wallpaper_image_handler,
+    };
+    httpd_register_uri_handler(server, &api_wallpaper_image);
 
     httpd_uri_t api_wallpaper_save = {
         .uri     = "/api/wallpaper/save",

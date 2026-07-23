@@ -38,6 +38,13 @@ void net_wallpaper_commit(void);
 // ("no SD card", "no wallpaper fetched", "fetch in progress", …).
 bool net_wallpaper_save_to_sd(char *out_path, size_t out_cap, const char **err);
 
+// Snapshot the committed wallpaper as a complete LVGL RGB565 .bin blob
+// (header + pixels) in a fresh PSRAM allocation, ready to stream over HTTP —
+// the web layout editor decodes it with the same lvbin.js path as SD
+// wallpapers. Returns NULL when nothing is fetched (or on OOM); the caller
+// frees the blob with heap_caps_free().
+uint8_t *net_wallpaper_bin_snapshot(size_t *out_len);
+
 // Drop the fetched wallpaper so the configured background (gradient/solid/SD
 // wallpaper) shows again — the net image otherwise outranks them until reboot.
 // Safe from any task: only marks the request; the actual free happens on the
