@@ -40,9 +40,9 @@
 
 
 // ===== DISPLAY DRIVER =====
-#define DISPLAY_ILI9341
+// #define DISPLAY_ILI9341
 // #define DISPLAY_ST7789V
-// #define DISPLAY_ST7796
+#define DISPLAY_ST7796
 // #define DISPLAY_ILI9488
 // #define DISPLAY_CO5300
 // #define DISPLAY_SSD1322
@@ -51,8 +51,8 @@
 
 // ===== UI PROFILE =====
 // #define UI_PROFILE_240X296
-#define UI_PROFILE_320x240
-// #define UI_PROFILE_480x320
+// #define UI_PROFILE_320x240
+#define UI_PROFILE_480x320
 // #define UI_PROFILE_MONO_128X64
 // #define UI_PROFILE_MONO_256X64
 

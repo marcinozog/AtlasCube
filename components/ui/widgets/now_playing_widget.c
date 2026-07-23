@@ -68,12 +68,17 @@ void now_playing_widget_destroy(void)
 
 // Size the label to its text, capped at the box width — the anchored label
 // re-centers itself on every width change, so the box centre stays put.
+// The scrim plate's horizontal padding counts into the object width, so add
+// it on top: otherwise the content area ends up narrower than the text and
+// SCROLL_CIRCULAR kicks in even for text that fits the box.
 static void set_single_line_text(lv_obj_t *label, const char *text, int box_w)
 {
     lv_point_t size;
     const lv_font_t *font = lv_obj_get_style_text_font(label, LV_PART_MAIN);
     lv_text_get_size(&size, text, font, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
-    lv_obj_set_width(label, LV_CLAMP(1, size.x, box_w));
+    lv_coord_t pad = lv_obj_get_style_pad_left(label, LV_PART_MAIN)
+                   + lv_obj_get_style_pad_right(label, LV_PART_MAIN);
+    lv_obj_set_width(label, LV_CLAMP(1, size.x + pad, box_w + pad));
     lv_label_set_text(label, text);
 }
 

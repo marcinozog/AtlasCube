@@ -281,23 +281,30 @@ static void home_create(lv_obj_t *parent)
     // children to the parent, which would cut labels dragged above/below the
     // strip plate in the layout editor (negative Y offsets). align_to keeps
     // their profile coordinates strip-relative.
+    // Scrim padding counts into the object width, so widen the labels by it —
+    // keeps the text area at the profile width, so text that fits the box in
+    // the layout editor does not start scrolling when the plate is enabled.
     s_strip_station = lv_label_create(parent);
     lv_label_set_long_mode(s_strip_station, LV_LABEL_LONG_SCROLL_CIRCULAR);
-    lv_obj_set_width(s_strip_station, p->clock_strip_station_w);
     lv_obj_set_style_text_font(s_strip_station, p->clock_strip_station_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_strip_station,
         lv_color_hex(th->text_secondary), LV_PART_MAIN);
     ui_label_scrim(s_strip_station, p->clock_label_bg_opa);
+    lv_obj_set_width(s_strip_station, p->clock_strip_station_w
+        + lv_obj_get_style_pad_left(s_strip_station, LV_PART_MAIN)
+        + lv_obj_get_style_pad_right(s_strip_station, LV_PART_MAIN));
     lv_obj_align_to(s_strip_station, s_strip, LV_ALIGN_TOP_MID,
                     p->clock_strip_station_x, p->clock_strip_station_y);
 
     s_strip_title = lv_label_create(parent);
     lv_label_set_long_mode(s_strip_title, LV_LABEL_LONG_SCROLL_CIRCULAR);
-    lv_obj_set_width(s_strip_title, p->clock_strip_title_w);
     lv_obj_set_style_text_font(s_strip_title, p->clock_strip_title_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_strip_title,
         lv_color_hex(th->text_muted), LV_PART_MAIN);
     ui_label_scrim(s_strip_title, p->clock_label_bg_opa);
+    lv_obj_set_width(s_strip_title, p->clock_strip_title_w
+        + lv_obj_get_style_pad_left(s_strip_title, LV_PART_MAIN)
+        + lv_obj_get_style_pad_right(s_strip_title, LV_PART_MAIN));
     lv_obj_align_to(s_strip_title, s_strip, LV_ALIGN_TOP_MID,
                     p->clock_strip_title_x, p->clock_strip_title_y);
 
