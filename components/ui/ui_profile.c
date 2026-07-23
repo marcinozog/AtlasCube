@@ -1740,6 +1740,7 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_bool(obj, "radio_show_cassette",        &p->radio_show_cassette);
     load_i16 (obj, "radio_animation_style",      &p->radio_animation_style);
     p->radio_animation_style = LV_CLAMP(0, p->radio_animation_style, 1);
+    load_bool(obj, "radio_wheels_reverse",       &p->radio_wheels_reverse);
     load_bool(obj, "radio_show_wheel_left",      &p->radio_show_wheel_left);
     load_bool(obj, "radio_show_wheel_right",     &p->radio_show_wheel_right);
     load_i16 (obj, "radio_cassette_l_x",         &p->radio_cassette_l_x);
@@ -1840,6 +1841,7 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_stereo_r_h",           p->radio_stereo_r_h);
     add_bool(o, "radio_show_cassette",        p->radio_show_cassette);
     add_i16 (o, "radio_animation_style",      p->radio_animation_style);
+    add_bool(o, "radio_wheels_reverse",       p->radio_wheels_reverse);
     add_bool(o, "radio_show_wheel_left",      p->radio_show_wheel_left);
     add_bool(o, "radio_show_wheel_right",     p->radio_show_wheel_right);
     add_i16 (o, "radio_cassette_l_x",         p->radio_cassette_l_x);
@@ -1931,6 +1933,7 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_bool(obj, "sd_show_cassette",          &p->sd_show_cassette);
     load_i16 (obj, "sd_animation_style",        &p->sd_animation_style);
     p->sd_animation_style = LV_CLAMP(0, p->sd_animation_style, 1);
+    load_bool(obj, "sd_wheels_reverse",         &p->sd_wheels_reverse);
     load_bool(obj, "sd_show_wheel_left",        &p->sd_show_wheel_left);
     load_bool(obj, "sd_show_wheel_right",       &p->sd_show_wheel_right);
     load_i16 (obj, "sd_cassette_l_x",           &p->sd_cassette_l_x);
@@ -2023,6 +2026,7 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_stereo_r_h",             p->sd_stereo_r_h);
     add_bool(o, "sd_show_cassette",          p->sd_show_cassette);
     add_i16 (o, "sd_animation_style",        p->sd_animation_style);
+    add_bool(o, "sd_wheels_reverse",         p->sd_wheels_reverse);
     add_bool(o, "sd_show_wheel_left",        p->sd_show_wheel_left);
     add_bool(o, "sd_show_wheel_right",       p->sd_show_wheel_right);
     add_i16 (o, "sd_cassette_l_x",           p->sd_cassette_l_x);

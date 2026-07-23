@@ -17,7 +17,9 @@ typedef enum {
 // coordinates. X/Y are the top-left corner of each square; size is its width
 // and height. Either overlay can be hidden for a single-wheel image such as a
 // turntable. The selected style can be placed over a cassette or car image.
+// reverse spins both wheels counter-clockwise instead of clockwise.
 void animated_wheels_widget_create(lv_obj_t *parent, animated_wheels_style_t style,
+                                   bool reverse,
                                    bool show_left,
                                    int16_t left_x, int16_t left_y, int16_t left_size,
                                    bool show_right,

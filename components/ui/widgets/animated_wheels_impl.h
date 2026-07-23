@@ -23,6 +23,7 @@ typedef struct {
 } animated_wheels_impl_palette_t;
 
 void animated_wheels_impl_create(lv_obj_t *parent, animated_wheels_impl_style_t style,
+                                 bool reverse,
                                  int16_t left_x,  int16_t left_y,  int16_t left_size,
                                  int16_t right_x, int16_t right_y, int16_t right_size,
                                  int16_t display_width, int16_t display_height,

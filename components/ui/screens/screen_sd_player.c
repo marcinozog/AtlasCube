@@ -187,6 +187,7 @@ static void sd_player_screen_create(lv_obj_t *parent)
     if (p->sd_show_cassette &&
         (p->sd_show_wheel_left || p->sd_show_wheel_right)) {
         animated_wheels_widget_create(parent, (animated_wheels_style_t)p->sd_animation_style,
+                                      p->sd_wheels_reverse,
                                       p->sd_show_wheel_left,
                                       p->sd_cassette_l_x, p->sd_cassette_l_y, p->sd_cassette_l_size,
                                       p->sd_show_wheel_right,

@@ -109,6 +109,7 @@ static void radio_create(lv_obj_t *parent)
     if (p->radio_show_cassette &&
         (p->radio_show_wheel_left || p->radio_show_wheel_right)) {
         animated_wheels_widget_create(parent, (animated_wheels_style_t)p->radio_animation_style,
+                                      p->radio_wheels_reverse,
                                       p->radio_show_wheel_left,
                                       p->radio_cassette_l_x, p->radio_cassette_l_y, p->radio_cassette_l_size,
                                       p->radio_show_wheel_right,

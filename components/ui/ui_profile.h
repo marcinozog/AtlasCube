@@ -232,6 +232,7 @@ typedef struct {
     int16_t          radio_stereo_r_h;
     bool             radio_show_cassette;      // legacy JSON name: show animated wheels overlay
     int16_t          radio_animation_style;    // 0 cassette reels, 1 car rims
+    bool             radio_wheels_reverse;     // spin counter-clockwise
     bool             radio_show_wheel_left;
     bool             radio_show_wheel_right;
     int16_t          radio_cassette_l_x;        // top-left + square size, LCD px
@@ -325,6 +326,7 @@ typedef struct {
     int16_t          sd_stereo_r_h;
     bool             sd_show_cassette;         // legacy JSON name: show animated wheels overlay
     int16_t          sd_animation_style;       // 0 cassette reels, 1 car rims
+    bool             sd_wheels_reverse;        // spin counter-clockwise
     bool             sd_show_wheel_left;
     bool             sd_show_wheel_right;
     int16_t          sd_cassette_l_x;           // top-left + square size, LCD px

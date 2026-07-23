@@ -19,6 +19,7 @@ static animated_wheels_impl_palette_t current_palette(void)
 }
 
 void animated_wheels_widget_create(lv_obj_t *parent, animated_wheels_style_t style,
+                                   bool reverse,
                                    bool show_left,
                                    int16_t left_x, int16_t left_y, int16_t left_size,
                                    bool show_right,
@@ -29,7 +30,7 @@ void animated_wheels_widget_create(lv_obj_t *parent, animated_wheels_style_t sty
     // just beyond the display clip instead of changing that binary boundary.
     if (!show_left)  { left_x  = DISPLAY_WIDTH; left_y  = DISPLAY_HEIGHT; }
     if (!show_right) { right_x = DISPLAY_WIDTH; right_y = DISPLAY_HEIGHT; }
-    animated_wheels_impl_create(parent, (animated_wheels_impl_style_t)style,
+    animated_wheels_impl_create(parent, (animated_wheels_impl_style_t)style, reverse,
                                 left_x, left_y, left_size,
                                 right_x, right_y, right_size,
                                 DISPLAY_WIDTH, DISPLAY_HEIGHT, &palette);
