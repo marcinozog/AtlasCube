@@ -48,6 +48,7 @@ idf_component_register(
         "widgets/touch_hotspots_widget.c"
         "widgets/hub_overlay_widget.c"
         "widgets/vol_overlay_widget.c"
+        "widgets/vol_slider_widget.c"
         "widgets/net_fetch_overlay_widget.c"
         "widgets/vu_widget.c"
         "widgets/vu_needle_widget.c"

@@ -151,6 +151,11 @@ const BT_FIELDS = [
     { key: 'bt_clock_widget_x',      label: 'Clock X',          type: 'number' },
     { key: 'bt_clock_widget_y',      label: 'Clock Y',          type: 'number' },
     { key: 'bt_clock_font',          label: 'Clock font',       type: 'font'   },
+    { key: 'bt_volslider_show',       label: 'Show volume slider', type: 'bool' },
+    { key: 'bt_volslider_x',          label: 'Slider X',           type: 'number' },
+    { key: 'bt_volslider_y',          label: 'Slider Y',           type: 'number' },
+    { key: 'bt_volslider_w',          label: 'Slider W',           type: 'number', min: 8, max: 480 },
+    { key: 'bt_volslider_h',          label: 'Slider H',           type: 'number', min: 8, max: 480 },
     { key: 'bt_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('bt'),
 ];
@@ -250,6 +255,11 @@ const RADIO_FIELDS = [
     { key: 'radio_weather_y', label: 'Weather Y', type: 'number' },
     { key: 'radio_weather_w', label: 'Weather W', type: 'number' },
     { key: 'radio_weather_font', label: 'Weather font', type: 'font' },
+    { key: 'radio_volslider_show',       label: 'Show volume slider', type: 'bool' },
+    { key: 'radio_volslider_x',          label: 'Slider X',           type: 'number' },
+    { key: 'radio_volslider_y',          label: 'Slider Y',           type: 'number' },
+    { key: 'radio_volslider_w',          label: 'Slider W',           type: 'number', min: 8, max: 480 },
+    { key: 'radio_volslider_h',          label: 'Slider H',           type: 'number', min: 8, max: 480 },
     { key: 'radio_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('radio'),
 ];
@@ -343,6 +353,11 @@ const SD_FIELDS = [
     { key: 'sd_weather_y', label: 'Weather Y', type: 'number' },
     { key: 'sd_weather_w', label: 'Weather W', type: 'number' },
     { key: 'sd_weather_font', label: 'Weather font', type: 'font' },
+    { key: 'sd_volslider_show',       label: 'Show volume slider', type: 'bool' },
+    { key: 'sd_volslider_x',          label: 'Slider X',           type: 'number' },
+    { key: 'sd_volslider_y',          label: 'Slider Y',           type: 'number' },
+    { key: 'sd_volslider_w',          label: 'Slider W',           type: 'number', min: 8, max: 480 },
+    { key: 'sd_volslider_h',          label: 'Slider H',           type: 'number', min: 8, max: 480 },
     { key: 'sd_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('sd'),
 ];
@@ -367,6 +382,7 @@ const FORM_GROUPS = {
         { title: 'Track title', fields: ['bt_title_x', 'bt_title_y', 'bt_title_w', 'bt_title_font'] },
         { title: 'Artist', fields: ['bt_artist_x', 'bt_artist_y', 'bt_artist_w', 'bt_artist_font'] },
         { title: 'Playback', fields: ['bt_time_x', 'bt_time_y', 'bt_time_font', 'bt_vol_x', 'bt_vol_y', 'bt_vol_label_font'] },
+        { title: 'Volume slider', enabledBy: 'bt_volslider_show', fields: ['bt_volslider_show', 'bt_volslider_x', 'bt_volslider_y', 'bt_volslider_w', 'bt_volslider_h'] },
         { title: 'Mode indicator', enabledBy: 'bt_show_mode_indicator', fields: ['bt_show_mode_indicator', 'bt_mode_indic_x', 'bt_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'bt_show_clock', fields: ['bt_show_clock', 'bt_clock_widget_x', 'bt_clock_widget_y', 'bt_clock_font'] },
         { title: 'Tap controls overlay', enabledBy: 'bt_show_ctrl_overlay', fields: ['bt_show_ctrl_overlay'] },
@@ -390,6 +406,7 @@ const FORM_GROUPS = {
         { title: 'VU meter', enabledBy: 'radio_show_vu', fields: ['radio_show_vu', 'radio_vu_x', 'radio_vu_y', 'radio_vu_w', 'radio_vu_h', 'radio_vu_transparent'] },
         { title: 'Needle VU', fields: ['radio_needle_frame', 'radio_needle_show_l', 'radio_needle_l_x', 'radio_needle_l_y', 'radio_needle_l_w', 'radio_needle_l_h', 'radio_needle_show_r', 'radio_needle_r_x', 'radio_needle_r_y', 'radio_needle_r_w', 'radio_needle_r_h'] },
         { title: 'Stereo bar VU', fields: ['radio_stereo_frame', 'radio_stereo_horizontal', 'radio_stereo_transparent', 'radio_stereo_peak', 'radio_stereo_zones', 'radio_stereo_show_l', 'radio_stereo_l_x', 'radio_stereo_l_y', 'radio_stereo_l_w', 'radio_stereo_l_h', 'radio_stereo_show_r', 'radio_stereo_r_x', 'radio_stereo_r_y', 'radio_stereo_r_w', 'radio_stereo_r_h'] },
+        { title: 'Volume slider', enabledBy: 'radio_volslider_show', fields: ['radio_volslider_show', 'radio_volslider_x', 'radio_volslider_y', 'radio_volslider_w', 'radio_volslider_h'] },
         { title: 'Weather', enabledBy: 'radio_show_weather', fields: ['radio_show_weather', 'radio_weather_x', 'radio_weather_y', 'radio_weather_w', 'radio_weather_font'] },
         { title: 'Tap controls overlay', enabledBy: 'radio_show_ctrl_overlay', fields: ['radio_show_ctrl_overlay'] },
         ...touchHotspotGroups('radio'),
@@ -410,6 +427,7 @@ const FORM_GROUPS = {
         { title: 'VU meter', enabledBy: 'sd_show_vu', fields: ['sd_show_vu', 'sd_vu_x', 'sd_vu_y', 'sd_vu_w', 'sd_vu_h', 'sd_vu_transparent'] },
         { title: 'Needle VU', fields: ['sd_needle_frame', 'sd_needle_show_l', 'sd_needle_l_x', 'sd_needle_l_y', 'sd_needle_l_w', 'sd_needle_l_h', 'sd_needle_show_r', 'sd_needle_r_x', 'sd_needle_r_y', 'sd_needle_r_w', 'sd_needle_r_h'] },
         { title: 'Stereo bar VU', fields: ['sd_stereo_frame', 'sd_stereo_horizontal', 'sd_stereo_transparent', 'sd_stereo_peak', 'sd_stereo_zones', 'sd_stereo_show_l', 'sd_stereo_l_x', 'sd_stereo_l_y', 'sd_stereo_l_w', 'sd_stereo_l_h', 'sd_stereo_show_r', 'sd_stereo_r_x', 'sd_stereo_r_y', 'sd_stereo_r_w', 'sd_stereo_r_h'] },
+        { title: 'Volume slider', enabledBy: 'sd_volslider_show', fields: ['sd_volslider_show', 'sd_volslider_x', 'sd_volslider_y', 'sd_volslider_w', 'sd_volslider_h'] },
         { title: 'Weather', enabledBy: 'sd_show_weather', fields: ['sd_show_weather', 'sd_weather_x', 'sd_weather_y', 'sd_weather_w', 'sd_weather_font'] },
         { title: 'Tap controls overlay', enabledBy: 'sd_show_ctrl_overlay', fields: ['sd_show_ctrl_overlay'] },
         ...touchHotspotGroups('sd'),
@@ -2172,6 +2190,15 @@ function renderBt(svg) {
                   '00:00', 'clock',
                   { x: 'bt_clock_widget_x', y: 'bt_clock_widget_y' });
     }
+    if (b.bt_volslider_show) {
+        drawFreeElement(svg, {
+            x: b.bt_volslider_x, y: b.bt_volslider_y,
+            w: b.bt_volslider_w, h: b.bt_volslider_h,
+            label: 'vol slider', cls: 'label-rect',
+            fields: { x: 'bt_volslider_x', y: 'bt_volslider_y',
+                      w: 'bt_volslider_w', h: 'bt_volslider_h' },
+        });
+    }
     drawTouchHotspots(svg, 'bt', b);
 }
 
@@ -2316,6 +2343,15 @@ function renderRadio(svg) {
                       w: 'radio_stereo_r_w', h: 'radio_stereo_r_h' },
         });
     }
+    if (r.radio_volslider_show) {
+        drawFreeElement(svg, {
+            x: r.radio_volslider_x, y: r.radio_volslider_y,
+            w: r.radio_volslider_w, h: r.radio_volslider_h,
+            label: 'vol slider', cls: 'label-rect',
+            fields: { x: 'radio_volslider_x', y: 'radio_volslider_y',
+                      w: 'radio_volslider_w', h: 'radio_volslider_h' },
+        });
+    }
     if (r.radio_show_weather) {
         const fh = fontHeight(r.radio_weather_font);
         const ww = r.radio_weather_w > 0 ? r.radio_weather_w : W;
@@ -2444,6 +2480,15 @@ function renderSd(svg) {
             label: 'BAR-R', cls: 'label-rect',
             fields: { x: 'sd_stereo_r_x', y: 'sd_stereo_r_y',
                       w: 'sd_stereo_r_w', h: 'sd_stereo_r_h' },
+        });
+    }
+    if (s.sd_volslider_show) {
+        drawFreeElement(svg, {
+            x: s.sd_volslider_x, y: s.sd_volslider_y,
+            w: s.sd_volslider_w, h: s.sd_volslider_h,
+            label: 'vol slider', cls: 'label-rect',
+            fields: { x: 'sd_volslider_x', y: 'sd_volslider_y',
+                      w: 'sd_volslider_w', h: 'sd_volslider_h' },
         });
     }
     if (s.sd_show_weather) {

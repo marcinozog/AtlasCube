@@ -15,6 +15,7 @@
 #include "controls_overlay_widget.h"
 #include "touch_hotspots_widget.h"
 #include "vol_overlay_widget.h"
+#include "vol_slider_widget.h"
 #include "vu_widget.h"
 #include "vu_needle_widget.h"
 #include "vu_stereo_widget.h"
@@ -82,6 +83,7 @@ static void refresh_from_state(void)
         lv_label_set_text(s_label_volume, buf);
     }
 
+    vol_slider_widget_update();   // knob follows encoder/WS/Android changes
     controls_overlay_refresh();   // keep center play/stop in sync with external changes
 }
 
@@ -203,12 +205,19 @@ static void radio_create(lv_obj_t *parent)
         controls_overlay_create(parent, CTRL_OVL_MODE_RADIO);
     }
     touch_hotspots_widget_create(parent, CONTROL_SOURCE_RADIO, p->radio_touch_hotspots);
+    // Created last so a hotspot rectangle configured over the same area can't
+    // shadow it (topmost clickable object wins the touch).
+    if (p->radio_volslider_show) {
+        vol_slider_widget_create(parent, p->radio_volslider_x, p->radio_volslider_y,
+                                 p->radio_volslider_w, p->radio_volslider_h, false);
+    }
 
     ESP_LOGI(TAG, "Created (theme=%d)", theme_current());
 }
 
 static void radio_destroy(void)
 {
+    vol_slider_widget_destroy();
     touch_hotspots_widget_destroy();
     controls_overlay_destroy();
     vol_overlay_hide();
@@ -320,6 +329,7 @@ static void radio_apply_theme(void)
     }
 
     now_playing_widget_apply_theme();
+    vol_slider_widget_apply_theme();
     vu_widget_apply_theme();
     vu_needle_widget_apply_theme();
     vu_stereo_widget_apply_theme();

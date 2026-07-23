@@ -7,6 +7,7 @@
 #include "controls_overlay_widget.h"
 #include "touch_hotspots_widget.h"
 #include "vol_overlay_widget.h"
+#include "vol_slider_widget.h"
 #include "ui_events.h"
 #include "ui_manager.h"
 #include "ui_nav.h"
@@ -80,6 +81,8 @@ static void refresh_from_state(void)
         snprintf(buf, sizeof(buf), "%s / %s", cur, total);
         lv_label_set_text(s_time_label, buf);
     }
+
+    vol_slider_widget_update();   // knob follows encoder/WS/Android changes
 }
 
 static void bt_create(lv_obj_t *parent)
@@ -182,6 +185,12 @@ static void bt_create(lv_obj_t *parent)
         controls_overlay_create(parent, CTRL_OVL_MODE_BT);
     }
     touch_hotspots_widget_create(parent, CONTROL_SOURCE_BT, p->bt_touch_hotspots);
+    // Created last so a hotspot rectangle configured over the same area can't
+    // shadow it (topmost clickable object wins the touch).
+    if (p->bt_volslider_show) {
+        vol_slider_widget_create(parent, p->bt_volslider_x, p->bt_volslider_y,
+                                 p->bt_volslider_w, p->bt_volslider_h, true);
+    }
 
     ESP_LOGI(TAG, "Created (bt_volume=%d, theme=%d)",
              app_state_get()->bt_volume, theme_current());
@@ -189,6 +198,7 @@ static void bt_create(lv_obj_t *parent)
 
 static void bt_destroy(void)
 {
+    vol_slider_widget_destroy();
     touch_hotspots_widget_destroy();
     controls_overlay_destroy();
     vol_overlay_hide();
@@ -300,6 +310,7 @@ static void bt_apply_theme(void)
         ui_label_scrim(s_time_label, p->bt_label_bg_opa);
     }
 
+    vol_slider_widget_apply_theme();
     mode_indicator_apply_theme();
     clock_widget_apply_theme();
 
