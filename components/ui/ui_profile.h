@@ -249,6 +249,7 @@ typedef struct {
     bool             radio_show_ctrl_overlay;   // tap-anywhere transport/volume overlay
     bool             radio_volslider_show;      // draggable volume slider
     bool             radio_volslider_vertical;  // explicit orientation (box auto-swapped to match)
+    bool             radio_volslider_knob_only; // hide track/fill — wallpaper draws the artwork
     int16_t          radio_volslider_x;         // top-left + size (LCD px)
     int16_t          radio_volslider_y;
     int16_t          radio_volslider_w;
@@ -349,6 +350,7 @@ typedef struct {
     bool             sd_show_ctrl_overlay;      // tap-anywhere transport/volume overlay
     bool             sd_volslider_show;         // draggable volume slider
     bool             sd_volslider_vertical;     // explicit orientation (box auto-swapped to match)
+    bool             sd_volslider_knob_only;    // hide track/fill — wallpaper draws the artwork
     int16_t          sd_volslider_x;            // top-left + size (LCD px)
     int16_t          sd_volslider_y;
     int16_t          sd_volslider_w;
@@ -414,6 +416,7 @@ typedef struct {
     bool             bt_show_ctrl_overlay;      // tap-anywhere transport/volume overlay
     bool             bt_volslider_show;         // draggable volume slider (BT channel)
     bool             bt_volslider_vertical;     // explicit orientation (box auto-swapped to match)
+    bool             bt_volslider_knob_only;    // hide track/fill — wallpaper draws the artwork
     int16_t          bt_volslider_x;            // top-left + size (LCD px)
     int16_t          bt_volslider_y;
     int16_t          bt_volslider_w;

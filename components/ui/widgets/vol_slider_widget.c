@@ -4,17 +4,20 @@
 #include "audio_engine.h"
 #include "theme.h"
 
-static lv_obj_t *s_slider = NULL;
-static bool      s_bt     = false;
+static lv_obj_t *s_slider    = NULL;
+static bool      s_bt        = false;
+static bool      s_knob_only = false;
 
 static void apply_colors(void)
 {
     if (!s_slider) return;
     const ui_theme_colors_t *th = theme_get();
     uint32_t fill = s_bt ? th->bt_brand : th->accent;
+    lv_opa_t track_opa = s_knob_only ? LV_OPA_TRANSP : LV_OPA_COVER;
     lv_obj_set_style_bg_color(s_slider, lv_color_hex(th->text_muted), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa  (s_slider, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa  (s_slider, track_opa, LV_PART_MAIN);
     lv_obj_set_style_bg_color(s_slider, lv_color_hex(fill), LV_PART_INDICATOR);
+    lv_obj_set_style_bg_opa  (s_slider, track_opa, LV_PART_INDICATOR);
     lv_obj_set_style_bg_color(s_slider, lv_color_hex(fill), LV_PART_KNOB);
 }
 
@@ -34,10 +37,12 @@ static void released_cb(lv_event_t *e)
 }
 
 void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
-                              int16_t w, int16_t h, bool vertical, bool bt)
+                              int16_t w, int16_t h, bool vertical,
+                              bool knob_only, bool bt)
 {
     if (!parent || s_slider) return;
-    s_bt = bt;
+    s_bt        = bt;
+    s_knob_only = knob_only;
 
     /* The box must agree with the chosen orientation: LVGL 9.2 sliders take
        the drag axis from w >= h regardless of lv_bar_set_orientation, so a

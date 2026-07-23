@@ -190,7 +190,8 @@ static void bt_create(lv_obj_t *parent)
     if (p->bt_volslider_show) {
         vol_slider_widget_create(parent, p->bt_volslider_x, p->bt_volslider_y,
                                  p->bt_volslider_w, p->bt_volslider_h,
-                                 p->bt_volslider_vertical, true);
+                                 p->bt_volslider_vertical,
+                                 p->bt_volslider_knob_only, true);
     }
 
     ESP_LOGI(TAG, "Created (bt_volume=%d, theme=%d)",

@@ -15,13 +15,18 @@ extern "C" {
 // from the geometry, so the box must always agree with the orientation.
 // One instance at a time (the active screen owns it).
 //
+// knob_only hides the track and fill, leaving just the draggable knob — for
+// wallpapers that paint their own slider artwork. The (invisible) box still
+// defines the drag range, and its thickness sizes the knob.
+//
 // bt=false drives the main output: the level is applied live while dragging
 // (audio_engine_set_volume) and persisted once on release via
 // settings_set_volume() — no settings write per drag event. bt=true drives
 // the BT channel and applies on release only: every BT volume change is an
 // AT command to the module over UART, so a live drag would flood the link.
 void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
-                              int16_t w, int16_t h, bool vertical, bool bt);
+                              int16_t w, int16_t h, bool vertical,
+                              bool knob_only, bool bt);
 void vol_slider_widget_destroy(void);
 
 // Sync the knob with app_state (encoder / WS / Android changes). Skipped
