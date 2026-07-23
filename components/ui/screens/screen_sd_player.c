@@ -300,7 +300,8 @@ static void sd_player_screen_create(lv_obj_t *parent)
     // shadow it (topmost clickable object wins the touch).
     if (p->sd_volslider_show) {
         vol_slider_widget_create(parent, p->sd_volslider_x, p->sd_volslider_y,
-                                 p->sd_volslider_w, p->sd_volslider_h, false);
+                                 p->sd_volslider_w, p->sd_volslider_h,
+                                 p->sd_volslider_vertical, false);
     }
 
     ESP_LOGI(TAG, "Created");

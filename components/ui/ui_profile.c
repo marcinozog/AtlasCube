@@ -595,6 +595,7 @@ static const ui_profile_t k_defaults = {
     .radio_weather_font        = &lv_font_montserrat_12_pl,
     .radio_show_ctrl_overlay   = true,
     .radio_volslider_show      = false,
+    .radio_volslider_vertical  = false,
     .radio_volslider_x         = 20,
     .radio_volslider_y         = 212,
     .radio_volslider_w         = 200,
@@ -675,12 +676,14 @@ static const ui_profile_t k_defaults = {
     .sd_weather_font           = &lv_font_montserrat_12_pl,
     .sd_show_ctrl_overlay      = true,
     .sd_volslider_show         = false,
+    .sd_volslider_vertical     = false,
     .sd_volslider_x            = 20,
     .sd_volslider_y            = 212,
     .sd_volslider_w            = 200,
     .sd_volslider_h            = 14,
     .bt_show_ctrl_overlay      = true,
     .bt_volslider_show         = false,
+    .bt_volslider_vertical     = false,
     .bt_volslider_x            = 20,
     .bt_volslider_y            = 232,
     .bt_volslider_w            = 200,
@@ -922,6 +925,7 @@ static const ui_profile_t k_defaults = {
     .radio_weather_font        = &lv_font_montserrat_12_pl,
     .radio_show_ctrl_overlay   = true,
     .radio_volslider_show      = false,
+    .radio_volslider_vertical  = false,
     .radio_volslider_x         = 40,
     .radio_volslider_y         = 196,
     .radio_volslider_w         = 240,
@@ -1002,12 +1006,14 @@ static const ui_profile_t k_defaults = {
     .sd_weather_font           = &lv_font_montserrat_12_pl,
     .sd_show_ctrl_overlay      = true,
     .sd_volslider_show         = false,
+    .sd_volslider_vertical     = false,
     .sd_volslider_x            = 40,
     .sd_volslider_y            = 196,
     .sd_volslider_w            = 240,
     .sd_volslider_h            = 14,
     .bt_show_ctrl_overlay      = true,
     .bt_volslider_show         = false,
+    .bt_volslider_vertical     = false,
     .bt_volslider_x            = 40,
     .bt_volslider_y            = 196,
     .bt_volslider_w            = 240,
@@ -1242,6 +1248,7 @@ static const ui_profile_t k_defaults = {
     .radio_weather_font        = &lv_font_montserrat_14_pl,
     .radio_show_ctrl_overlay   = true,
     .radio_volslider_show      = false,
+    .radio_volslider_vertical  = false,
     .radio_volslider_x         = 90,
     .radio_volslider_y         = 252,
     .radio_volslider_w         = 300,
@@ -1322,12 +1329,14 @@ static const ui_profile_t k_defaults = {
     .sd_weather_font           = &lv_font_montserrat_14_pl,
     .sd_show_ctrl_overlay      = true,
     .sd_volslider_show         = false,
+    .sd_volslider_vertical     = false,
     .sd_volslider_x            = 90,
     .sd_volslider_y            = 252,
     .sd_volslider_w            = 300,
     .sd_volslider_h            = 18,
     .bt_show_ctrl_overlay      = true,
     .bt_volslider_show         = false,
+    .bt_volslider_vertical     = false,
     .bt_volslider_x            = 90,
     .bt_volslider_y            = 252,
     .bt_volslider_w            = 300,
@@ -1702,6 +1711,7 @@ static void load_bt(const cJSON *obj, ui_profile_t *p)
     load_str (obj, "bt_wallpaper",           p->bt_wallpaper, sizeof(p->bt_wallpaper));
     load_bool(obj, "bt_show_ctrl_overlay",   &p->bt_show_ctrl_overlay);
     load_bool(obj, "bt_volslider_show",      &p->bt_volslider_show);
+    load_bool(obj, "bt_volslider_vertical",  &p->bt_volslider_vertical);
     load_i16 (obj, "bt_volslider_x",         &p->bt_volslider_x);
     load_i16 (obj, "bt_volslider_y",         &p->bt_volslider_y);
     load_i16 (obj, "bt_volslider_w",         &p->bt_volslider_w);
@@ -1808,6 +1818,7 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_font(obj, "radio_weather_font",         &p->radio_weather_font);
     load_bool(obj, "radio_show_ctrl_overlay",    &p->radio_show_ctrl_overlay);
     load_bool(obj, "radio_volslider_show",       &p->radio_volslider_show);
+    load_bool(obj, "radio_volslider_vertical",   &p->radio_volslider_vertical);
     load_i16 (obj, "radio_volslider_x",          &p->radio_volslider_x);
     load_i16 (obj, "radio_volslider_y",          &p->radio_volslider_y);
     load_i16 (obj, "radio_volslider_w",          &p->radio_volslider_w);
@@ -1912,6 +1923,7 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_font(o, "radio_weather_font",         p->radio_weather_font);
     add_bool(o, "radio_show_ctrl_overlay",    p->radio_show_ctrl_overlay);
     add_bool(o, "radio_volslider_show",       p->radio_volslider_show);
+    add_bool(o, "radio_volslider_vertical",   p->radio_volslider_vertical);
     add_i16 (o, "radio_volslider_x",          p->radio_volslider_x);
     add_i16 (o, "radio_volslider_y",          p->radio_volslider_y);
     add_i16 (o, "radio_volslider_w",          p->radio_volslider_w);
@@ -2011,6 +2023,7 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_font(obj, "sd_weather_font",           &p->sd_weather_font);
     load_bool(obj, "sd_show_ctrl_overlay",      &p->sd_show_ctrl_overlay);
     load_bool(obj, "sd_volslider_show",         &p->sd_volslider_show);
+    load_bool(obj, "sd_volslider_vertical",     &p->sd_volslider_vertical);
     load_i16 (obj, "sd_volslider_x",            &p->sd_volslider_x);
     load_i16 (obj, "sd_volslider_y",            &p->sd_volslider_y);
     load_i16 (obj, "sd_volslider_w",            &p->sd_volslider_w);
@@ -2107,6 +2120,7 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_font(o, "sd_weather_font",           p->sd_weather_font);
     add_bool(o, "sd_show_ctrl_overlay",      p->sd_show_ctrl_overlay);
     add_bool(o, "sd_volslider_show",         p->sd_volslider_show);
+    add_bool(o, "sd_volslider_vertical",     p->sd_volslider_vertical);
     add_i16 (o, "sd_volslider_x",            p->sd_volslider_x);
     add_i16 (o, "sd_volslider_y",            p->sd_volslider_y);
     add_i16 (o, "sd_volslider_w",            p->sd_volslider_w);
@@ -2157,6 +2171,7 @@ static cJSON *dump_bt(const ui_profile_t *p)
     add_str (o, "bt_wallpaper",           p->bt_wallpaper);
     add_bool(o, "bt_show_ctrl_overlay",   p->bt_show_ctrl_overlay);
     add_bool(o, "bt_volslider_show",      p->bt_volslider_show);
+    add_bool(o, "bt_volslider_vertical",  p->bt_volslider_vertical);
     add_i16 (o, "bt_volslider_x",         p->bt_volslider_x);
     add_i16 (o, "bt_volslider_y",         p->bt_volslider_y);
     add_i16 (o, "bt_volslider_w",         p->bt_volslider_w);

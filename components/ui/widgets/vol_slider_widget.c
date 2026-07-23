@@ -34,14 +34,24 @@ static void released_cb(lv_event_t *e)
 }
 
 void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
-                              int16_t w, int16_t h, bool bt)
+                              int16_t w, int16_t h, bool vertical, bool bt)
 {
     if (!parent || s_slider) return;
     s_bt = bt;
 
+    /* The box must agree with the chosen orientation: LVGL 9.2 sliders take
+       the drag axis from w >= h regardless of lv_bar_set_orientation, so a
+       contradicting box is swapped (and a square nudged 1 px). */
+    if (vertical != (h > w)) {
+        int16_t t = w; w = h; h = t;
+    }
+    if (vertical && w >= h) w = h - 1;
+
     s_slider = lv_slider_create(parent);
     lv_obj_set_pos(s_slider, x, y);
     lv_obj_set_size(s_slider, w, h);
+    lv_bar_set_orientation(s_slider, vertical ? LV_BAR_ORIENTATION_VERTICAL
+                                              : LV_BAR_ORIENTATION_HORIZONTAL);
     lv_slider_set_range(s_slider, 0, 100);
     /* Keep press ownership on the slider even if the finger drifts outside
        its bounds during drag — otherwise LV_EVENT_RELEASED is routed to

@@ -9,8 +9,11 @@ extern "C" {
 #endif
 
 // Draggable on-screen volume slider (0-100 %). Geometry is a rectangle in
-// absolute LCD pixels; h > w renders vertical (LVGL picks the orientation
-// from the geometry). One instance at a time (the active screen owns it).
+// absolute LCD pixels; `vertical` picks the orientation explicitly. When the
+// box contradicts the chosen orientation (e.g. vertical with w > h) the two
+// dimensions are swapped at create time — LVGL sliders derive the drag axis
+// from the geometry, so the box must always agree with the orientation.
+// One instance at a time (the active screen owns it).
 //
 // bt=false drives the main output: the level is applied live while dragging
 // (audio_engine_set_volume) and persisted once on release via
@@ -18,7 +21,7 @@ extern "C" {
 // the BT channel and applies on release only: every BT volume change is an
 // AT command to the module over UART, so a live drag would flood the link.
 void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
-                              int16_t w, int16_t h, bool bt);
+                              int16_t w, int16_t h, bool vertical, bool bt);
 void vol_slider_widget_destroy(void);
 
 // Sync the knob with app_state (encoder / WS / Android changes). Skipped

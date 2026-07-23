@@ -248,7 +248,8 @@ typedef struct {
     const lv_font_t *radio_weather_font;
     bool             radio_show_ctrl_overlay;   // tap-anywhere transport/volume overlay
     bool             radio_volslider_show;      // draggable volume slider
-    int16_t          radio_volslider_x;         // top-left + size (LCD px); h > w = vertical
+    bool             radio_volslider_vertical;  // explicit orientation (box auto-swapped to match)
+    int16_t          radio_volslider_x;         // top-left + size (LCD px)
     int16_t          radio_volslider_y;
     int16_t          radio_volslider_w;
     int16_t          radio_volslider_h;
@@ -347,7 +348,8 @@ typedef struct {
     const lv_font_t *sd_weather_font;
     bool             sd_show_ctrl_overlay;      // tap-anywhere transport/volume overlay
     bool             sd_volslider_show;         // draggable volume slider
-    int16_t          sd_volslider_x;            // top-left + size (LCD px); h > w = vertical
+    bool             sd_volslider_vertical;     // explicit orientation (box auto-swapped to match)
+    int16_t          sd_volslider_x;            // top-left + size (LCD px)
     int16_t          sd_volslider_y;
     int16_t          sd_volslider_w;
     int16_t          sd_volslider_h;
@@ -411,7 +413,8 @@ typedef struct {
     const lv_font_t *bt_time_font;
     bool             bt_show_ctrl_overlay;      // tap-anywhere transport/volume overlay
     bool             bt_volslider_show;         // draggable volume slider (BT channel)
-    int16_t          bt_volslider_x;            // top-left + size (LCD px); h > w = vertical
+    bool             bt_volslider_vertical;     // explicit orientation (box auto-swapped to match)
+    int16_t          bt_volslider_x;            // top-left + size (LCD px)
     int16_t          bt_volslider_y;
     int16_t          bt_volslider_w;
     int16_t          bt_volslider_h;

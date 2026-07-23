@@ -209,7 +209,8 @@ static void radio_create(lv_obj_t *parent)
     // shadow it (topmost clickable object wins the touch).
     if (p->radio_volslider_show) {
         vol_slider_widget_create(parent, p->radio_volslider_x, p->radio_volslider_y,
-                                 p->radio_volslider_w, p->radio_volslider_h, false);
+                                 p->radio_volslider_w, p->radio_volslider_h,
+                                 p->radio_volslider_vertical, false);
     }
 
     ESP_LOGI(TAG, "Created (theme=%d)", theme_current());
