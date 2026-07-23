@@ -318,15 +318,15 @@ tabs — it used to be in Settings → Display → Wallpapers, now removed:
   `wallpaper_on` off) to `/api/settings`. The gradient/solid **colours**
   (`bg_primary`, `bg_grad_top`, `bg_grad_bottom`) live in the theme
   palette, so this tab only links out to Settings → Display → Theme for
-  them.
+  them. It also carries the wallpaper **brightness** slider
+  (`wallpaper_dim`) — global, applied to both SD and internet wallpapers.
 - **🌍 Internet** — the internet-fetched wallpaper: a URL preset picker,
   *Fetch now* (`POST /api/wallpaper/fetch`), *Save to SD*
   (`POST /api/wallpaper/save`), a thumbnail of the currently fetched
   image (`GET /api/wallpaper/image`, shown on tab open and refreshed
   after a fetch) and an auto-refresh schedule
-  (`wallpaper_fetch_mode` / `_hour` / `_min`). It also carries the
-  wallpaper **brightness** slider (`wallpaper_dim`, applied to both SD and
-  internet wallpapers). See `net_wallpaper.c` for the fetch/decode path.
+  (`wallpaper_fetch_mode` / `_hour` / `_min`). See `net_wallpaper.c` for
+  the fetch/decode path.
 
 Both tabs read their state from `/api/settings` via `loadBackgroundTab()`
 and write on every change; the device repaints itself. Like *Presets*,

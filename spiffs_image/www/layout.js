@@ -1564,8 +1564,9 @@ function selectSection(name) {
 // ── Background tabs (global) ──────────────────────────────────────────────────
 // The "🎨 General" and "🌍 Internet" section tabs host the global background
 // config that used to live in Settings → Display → Wallpapers: General owns the
-// gradient/solid look; Internet owns the internet-wallpaper fetch/schedule plus
-// the wallpaper brightness (dim). Both tabs share one loader (loadBackgroundTab);
+// gradient/solid look plus the global wallpaper brightness (dim, applies to SD
+// and internet wallpapers alike); Internet owns the internet-wallpaper
+// fetch/schedule. Both tabs share one loader (loadBackgroundTab);
 // every control posts straight to /api/settings and the device repaints itself.
 let netWpTimer = null;
 

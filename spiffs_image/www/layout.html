@@ -479,9 +479,25 @@
                 🎨 <a href="/settings.html#tab=display&sub=theme">Edit gradient / solid colours in Settings ▸ Theme ▸</a>
             </div>
         </div>
+
+        <div class="panel" style="margin-top:12px">
+            <label class="field-label">Wallpaper brightness</label>
+            <div class="slider-row" style="margin-top:6px">
+                <span class="slider-label">🌒 Brightness</span>
+                <span id="wp_dim_value" class="slider-value">100%</span>
+            </div>
+            <!-- UI shows brightness (right = brighter, like the panel Brightness
+                 slider); the firmware setting is the inverse (wallpaper_dim). -->
+            <input type="range" min="20" max="100" step="5" value="100" id="wp_dim_slider"
+                   oninput="document.getElementById('wp_dim_value').textContent = this.value + '%'"
+                   onchange="setWallpaperDim(100 - this.value)" />
+            <div class="field-hint">Applies to every wallpaper — per-screen SD files and the
+                fetched internet one. Lower it to darken the image so on-screen text stays
+                readable; gradient/solid backgrounds are not affected. 100% = original image.</div>
+        </div>
     </div>
 
-    <!-- ── Internet tab: the internet-fetched wallpaper + wallpaper brightness ── -->
+    <!-- ── Internet tab: the internet-fetched wallpaper ── -->
     <div id="internet_card" style="display:none">
         <div class="panel">
             <label class="field-label">Internet wallpaper</label>
@@ -532,22 +548,6 @@
                     The wallpaper lives in RAM only, so both auto modes re-fetch it ~30 s after
                     every boot. A playing radio stream is paused for the few seconds of the download.</div>
             </div>
-        </div>
-
-        <div class="panel" style="margin-top:12px">
-            <label class="field-label">Wallpaper brightness</label>
-            <div class="slider-row" style="margin-top:6px">
-                <span class="slider-label">🌒 Brightness</span>
-                <span id="wp_dim_value" class="slider-value">100%</span>
-            </div>
-            <!-- UI shows brightness (right = brighter, like the panel Brightness
-                 slider); the firmware setting is the inverse (wallpaper_dim). -->
-            <input type="range" min="20" max="100" step="5" value="100" id="wp_dim_slider"
-                   oninput="document.getElementById('wp_dim_value').textContent = this.value + '%'"
-                   onchange="setWallpaperDim(100 - this.value)" />
-            <div class="field-hint">Lower it to darken the wallpaper (both SD and internet) so
-                on-screen text stays readable. Gradient/solid backgrounds are not affected.
-                100% = original image.</div>
         </div>
     </div>
 </main>
