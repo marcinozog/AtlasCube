@@ -9,6 +9,63 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.46.0] - 2026-07-23
+
+### Added
+- **web:** net wallpaper preview in layout editor; move brightness slider to General tab
+- **web:** preview fetched internet wallpaper in layout editor and Internet tab
+- **ui:** reverse rotation option for animated wheels on radio and SD screens
+- **ui:** colour zones (green/orange/red) in stereo bar VU with per-profile toggle
+- **radio:** support MP3 audio in HLS TS segments via PMT codec probe
+- **ui:** swap Internet/General tab
+- **layout:** link General tab to gradient/solid colours in Theme
+- **layout:** move background + internet wallpaper config into layout editor tab
+- **layout:** stereo bar VU widget
+- **layout:** independent metadata elements (station/title, samplerate/channels/bitrate/volume) with free X/Y on radio, SD and BT screens
+- **layout:** per-resolution preset path + preset housekeeping + online wallpaper gallery
+- **ui:** store wallpaper layout presets per display resolution
+- **web:** add Wallpapers subtab to display settings
+- **web-ui:** add online wallpaper gallery with upload renaming
+- **web:** wallpaper upload in layout.html per-screen picker (shared LvBin.uploadImage)
+- **web:** wallpaper upload in layout.html per-screen picker (shared LvBin.uploadImage)
+- **ui:** VU meters rest when another source owns the audio path (owner-gated bars + needles)
+- **ui:** BT screen touch hotspots + ctrl overlay toggle (firmware + web layout editor)
+- **ui:** touch hotspots on BT screen (bt_touch_hotspots + web layout editor)
+- **ui:** per-label width + free X/Y for home strip station/title (replaces shared clock_strip_label_w)
+- **ui:** free X/Y drag for home strip station/title labels (new clock_strip_*_x profile fields)
+- **www:** orphaned layout-preset checker with delete in Theme settings
+- **ws:** broadcast resolved media source in state JSON
+- **media:** add source switch (radio/SD/BT) via WS source= cmd and MQTT cmd/source
+- **ui:** add playlist and SD browser hotspot actions
+- **ui:** move label background opacity to per-screen profiles
+- **ui:** per-screen wallpaper override in ui_profile + section-scoped layout presets
+- **web:** auto-apply wallpaper layout preset checkbox in layout editor
+- **web:** move files/folders between SD directories in sd-editor and manager
+- **ui:** PLAY_PAUSE hotspot action — in-place pause on SD, play/stop on radio/BT
+- **ui:** PLAY_PAUSE hotspot action — in-place pause on SD, play/stop on radio
+- **ui:** needle VU follows volume knob (sqrt scale) + gamma swing tuning
+- **ui:** SD player layout rework — movable title box, independent time row and progress bar
+- **ui:** center-anchored X position for SD player track title (sd_title_x)
+- **ui:** SD player progress bar as independent element (sd_bar_x/y) + works without time row
+- **ui:** independent Y position for SD player time row (sd_time_y) + web editor group
+- **ui:** needle VU dynamics tuning + docs (README, website)
+- **ui:** analog needle VU meter — two independent L/R meters over wallpaper
+
+### Changed
+- **www:** move orphaned layout-preset checker from Theme settings to Layout editor Presets tab
+- **ui:** drop dead clock_panel_* fields (leftover of removed standalone clock screen)
+
+### Fixed
+- **layout:** close online wallpaper gallery on screen tab switch
+- **layout:** internet wallpaper outranks all SD/gradient backgrounds
+- **ui:** stop encoder_task stack overflow from logging on full event queue
+- **ui:** reparent home station/title labels to screen so they aren't clipped to strip bounds
+- **ui:** don't clip station/title labels to home strip bounds
+- **media:** route plain next/prev/play/stop to the active source via shared media_control dispatcher
+- **www:** release input focus when selecting layout placeholders
+- **ui:** grow wallpaper path buffers to 128 chars (long filenames were silently truncated)
+- **sd:** strip file extension from fallback track title on SD player screen
+
 ## [0.45.0] - 2026-07-17
 
 ### Added
@@ -729,7 +786,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.45.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.46.0...HEAD
+[0.46.0]: https://github.com/marcinozog/AtlasCube/compare/v0.45.0...v0.46.0
 [0.45.0]: https://github.com/marcinozog/AtlasCube/compare/v0.44.0...v0.45.0
 [0.44.0]: https://github.com/marcinozog/AtlasCube/compare/v0.43.0...v0.44.0
 [0.43.0]: https://github.com/marcinozog/AtlasCube/compare/v0.42.0...v0.43.0
