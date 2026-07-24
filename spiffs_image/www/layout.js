@@ -1599,7 +1599,8 @@ async function loadOnlineWallpaperGallery() {
     const h = Number(state.meta.screen_h);
     const resolution = `${w}x${h}`;
     const category = state.active === 'clock' ? 'home' :
-        (state.active === 'bt' ? 'wireless' : 'radio-sd-player');
+        state.active === 'bt' ? 'wireless' :
+        state.active === 'eq' ? 'equalizer' : 'radio-sd-player';
     onlineWallpaperMessage(panel, `Loading ${w} × ${h} wallpapers...`);
 
     try {
