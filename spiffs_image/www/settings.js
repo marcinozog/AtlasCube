@@ -151,74 +151,19 @@ function sdDirOf(fullText) {
     return '/';
 }
 
-function browseBin(box, path, onSelect) {
-    fetch('/api/sd/list?path=' + encodeURIComponent(path))
-        .then(r => r.json())
-        .then(d => renderBinBrowser(box, d, onSelect))
-        .catch(() => { box.textContent = 'SD card unavailable'; });
-}
-
-function renderBinBrowser(box, d, onSelect) {
-    box.innerHTML = '';
-    const path = d.path || '/';
-
-    const head = document.createElement('div');
-    head.style.cssText = 'font-family:monospace;font-size:12px;margin-bottom:4px;opacity:.8';
-    head.textContent = path;
-    box.appendChild(head);
-
-    const list = document.createElement('div');
-    list.style.cssText = 'max-height:200px;overflow:auto;border:1px solid var(--border,#333);border-radius:6px';
-    const addRow = (label, fn) => {
-        const r = document.createElement('div');
-        r.textContent = label;
-        r.style.cssText = 'padding:6px 10px;cursor:pointer';
-        r.onmouseenter = () => r.style.background = 'rgba(255,255,255,.06)';
-        r.onmouseleave = () => r.style.background = '';
-        r.onclick = fn;
-        list.appendChild(r);
-    };
-
-    if (path !== '/' && path !== '') {
-        const parent = path.replace(/\/[^/]+\/?$/, '') || '/';
-        addRow('📁 ..', () => browseBin(box, parent, onSelect));
-    }
-    // Directories first, then files, each group alphabetically.
-    const entries = (d.entries || []).slice().sort((a, b) =>
-        (!!b.dir - !!a.dir) ||
-        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-    entries.forEach(e => {
-        const full = (path.endsWith('/') ? path : path + '/') + e.name;
-        if (e.dir) { addRow('📁 ' + e.name, () => browseBin(box, full, onSelect)); return; }
-        if (!e.name.toLowerCase().endsWith('.bin')) return;
-
-        // File row: name picks the file, 👁 opens a preview (lvbin.js).
-        const row = document.createElement('div');
-        row.style.cssText = 'padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:8px';
-        row.onmouseenter = () => row.style.background = 'rgba(255,255,255,.06)';
-        row.onmouseleave = () => row.style.background = '';
-        const name = document.createElement('span');
-        name.textContent = '🖼️ ' + e.name;
-        name.style.flex = '1';
-        name.onclick = () => onSelect(full);
-        const eye = document.createElement('button');
-        eye.type = 'button';
-        eye.className = 'btn-secondary';
-        eye.textContent = '👁';
-        eye.title = 'Preview';
-        eye.style.cssText = 'padding:2px 8px';
-        eye.onclick = (ev) => { ev.stopPropagation(); LvBin.openPreview(full); };
-        row.append(name, eye);
-        list.appendChild(row);
-    });
-    box.appendChild(list);
-}
-
 // ── Splash-logo picker ──────────────────────────────────────────────────────────
 function openLogoBrowser() {
     const box = document.getElementById('logoBrowser');
     box.style.display = '';
-    browseBin(box, sdDirOf(document.getElementById('logoPath').textContent), selectLogo);
+    SdBrowse.open(box, {
+        start: sdDirOf(document.getElementById('logoPath').textContent),
+        filterExt: '.bin',
+        fileIcon: '🖼️ ',
+        onFile: full => selectLogo(full),
+        fileActions: full => [
+            { label: '👁', title: 'Preview', onClick: () => LvBin.openPreview(full) },
+        ],
+    });
 }
 
 function selectLogo(relPath) {

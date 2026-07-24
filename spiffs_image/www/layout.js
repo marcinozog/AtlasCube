@@ -1200,78 +1200,22 @@ async function toggleWallpaperBrowser() {
     await browseWallpaperDirectory(wallpaperDirectory());
 }
 
-async function browseWallpaperDirectory(path) {
+function browseWallpaperDirectory(path) {
     const browser = document.getElementById('layout_wallpaper_browser');
     if (!browser) return;
-    browser.textContent = 'Loading...';
-    try {
-        const response = await fetch('/api/sd/list?path=' + encodeURIComponent(path), {
-            cache: 'no-store',
-        });
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        renderWallpaperDirectory(await response.json());
-    } catch (err) {
-        // Fresh cards may not have a /wallpapers directory yet; keep the
-        // picker usable by falling back to the SD root in that case.
-        if (path === '/wallpapers') {
-            await browseWallpaperDirectory('/');
-            return;
-        }
-        browser.textContent = 'SD folder unavailable: ' + err.message;
-    }
-}
-
-function renderWallpaperDirectory(data) {
-    const browser = document.getElementById('layout_wallpaper_browser');
-    if (!browser) return;
-    browser.innerHTML = '';
-    const path = data.path || '/';
-
-    const heading = document.createElement('div');
-    heading.textContent = path;
-    heading.style.cssText = 'margin-bottom:4px;font-family:monospace;font-size:11px;opacity:.75';
-    const list = document.createElement('div');
-    list.style.cssText =
-        'max-height:190px;overflow:auto;border:1px solid var(--border);' +
-        'border-radius:var(--radius-sm);background:var(--bg-card)';
-
-    const addRow = (label, onClick) => {
-        const row = document.createElement('div');
-        row.textContent = label;
-        row.style.cssText = 'padding:6px 9px;cursor:pointer;font-size:11px';
-        row.onmouseenter = () => { row.style.background = 'var(--bg-input)'; };
-        row.onmouseleave = () => { row.style.background = ''; };
-        row.addEventListener('click', onClick);
-        list.appendChild(row);
-    };
-
-    if (path !== '/') {
-        const parent = path.replace(/\/[^/]+\/?$/, '') || '/';
-        addRow('\u{1F4C1} ..', () => browseWallpaperDirectory(parent));
-    }
-
-    const entries = (data.entries || []).slice().sort((a, b) =>
-        (!!b.dir - !!a.dir) ||
-        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-    let fileCount = 0;
-    for (const entry of entries) {
-        const full = (path.endsWith('/') ? path : path + '/') + entry.name;
-        if (entry.dir) {
-            addRow('\u{1F4C1} ' + entry.name, () => browseWallpaperDirectory(full));
-        } else if (entry.name.toLowerCase().endsWith('.bin')) {
-            fileCount++;
-            const active = currentWallpaperPath === '/sdcard' + full;
-            addRow((active ? '\u2713 ' : '\u{1F5BC}\u{FE0F} ') + entry.name,
-                   () => selectWallpaper(full));
-        }
-    }
-    if (!fileCount && !entries.some(entry => entry.dir)) {
-        const empty = document.createElement('div');
-        empty.textContent = 'No .bin wallpapers in this folder.';
-        empty.style.cssText = 'padding:7px 9px;font-size:11px;color:var(--text-dim)';
-        list.appendChild(empty);
-    }
-    browser.append(heading, list);
+    // Fresh cards may not have a /wallpapers directory yet; fall back to root.
+    SdBrowse.open(browser, {
+        start: path,
+        fallback: '/',
+        filterExt: '.bin',
+        maxHeight: '190px',
+        rowFontSize: '11px',
+        emptyText: 'No .bin wallpapers in this folder.',
+        // Flag the wallpaper currently applied to this screen with a check mark.
+        fileLabel: (full, e) =>
+            (currentWallpaperPath === '/sdcard' + full ? '\u2713 ' : '\u{1F5BC}\u{FE0F} ') + e.name,
+        onFile: full => selectWallpaper(full),
+    });
 }
 
 // Convert the picked image, store it on the SD card under `dir` and hand the
@@ -1390,85 +1334,21 @@ async function uploadGeneralWallpaper() {
     }
 }
 
-// Point the Assets browser at another folder (updates the Folder input so an
-// upload lands where you are browsing) and refresh the listing.
-function navigateAssets(dir) {
-    const input = document.getElementById('asset_dir');
-    if (input) input.value = dir;
-    browseAssets();
-}
-
-async function browseAssets() {
+function browseAssets() {
     const list = document.getElementById('asset_list');
     if (!list) return;
-    const dir = assetDir();
-    list.textContent = 'Loading ' + dir + ' …';
-    try {
-        const r = await fetch('/api/sd/list?path=' + encodeURIComponent(dir), { cache: 'no-store' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const data = await r.json();
-        list.innerHTML = '';
-
-        // Folder navigation: parent link + subdirectories, so you can step up
-        // (e.g. /assets/knobs → /assets) or into any subfolder without typing.
-        const navRow = (label, targetDir) => {
-            const row = document.createElement('div');
-            row.className = 'asset-row';
-            row.style.cssText = 'padding:4px 0;border-bottom:1px solid var(--border);cursor:pointer';
-            const name = document.createElement('span');
-            name.textContent = label;
-            name.style.cssText = 'font-family:monospace;font-size:12px';
-            row.appendChild(name);
-            row.onmouseenter = () => { row.style.background = 'var(--bg-input)'; };
-            row.onmouseleave = () => { row.style.background = ''; };
-            row.onclick = () => navigateAssets(targetDir);
-            list.appendChild(row);
-        };
-        if (dir !== '/') {
-            const parent = dir.replace(/\/[^/]+\/?$/, '') || '/';
-            navRow('📁 ..', parent);
-        }
-        const dirs = (data.entries || []).filter(e => e.dir)
-            .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-        for (const entry of dirs) {
-            const full = (dir.endsWith('/') ? dir : dir + '/') + entry.name;
-            navRow('📁 ' + entry.name, full);
-        }
-
-        const bins = (data.entries || []).filter(e => !e.dir && e.name.toLowerCase().endsWith('.bin'))
-            .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-        if (!bins.length && !dirs.length) {
-            const empty = document.createElement('div');
-            empty.className = 'field-hint';
-            empty.textContent = 'No .bin assets in ' + dir + ' yet.';
-            list.appendChild(empty);
-            return;
-        }
-        for (const entry of bins) {
-            const full = (dir.endsWith('/') ? dir : dir + '/') + entry.name;
-            const row = document.createElement('div');
-            row.className = 'asset-row';
-            row.style.cssText = 'justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)';
-            const name = document.createElement('span');
-            name.textContent = '🖼️ ' + entry.name;
-            name.style.cssText = 'font-family:monospace;font-size:12px';
-            const actions = document.createElement('span');
-            actions.style.cssText = 'display:flex;gap:6px';
-            const prev = document.createElement('button');
-            prev.className = 'btn-secondary';
-            prev.textContent = '👁 Preview';
-            prev.onclick = () => window.LvBin.openPreview(full);
-            const del = document.createElement('button');
-            del.className = 'btn-secondary';
-            del.textContent = '🗑 Delete';
-            del.onclick = () => deleteAsset(full);
-            actions.append(prev, del);
-            row.append(name, actions);
-            list.appendChild(row);
-        }
-    } catch (err) {
-        list.innerHTML = '<div class="field-hint">SD folder unavailable: ' + err.message + '</div>';
-    }
+    SdBrowse.open(list, {
+        start: assetDir(),
+        filterExt: '.bin',
+        fileIcon: '🖼️ ',
+        emptyText: 'No .bin assets in this folder yet.',
+        // Keep the Folder input in sync so an upload lands where you browsed to.
+        onDirChange: dir => { const i = document.getElementById('asset_dir'); if (i) i.value = dir; },
+        fileActions: full => [
+            { label: '👁 Preview', title: 'Preview', onClick: () => window.LvBin.openPreview(full) },
+            { label: '🗑 Delete',  title: 'Delete',  onClick: () => deleteAsset(full) },
+        ],
+    });
 }
 
 async function deleteAsset(path) {
@@ -1490,7 +1370,6 @@ async function deleteAsset(path) {
 // asset without typing the path. Starts in `startDir`, falling back to the SD
 // root if that folder does not exist yet.
 let sdPickerOverlay = null;
-let sdPickerOnPick = null;
 
 function ensureSdPicker() {
     if (sdPickerOverlay) return;
@@ -1524,71 +1403,21 @@ function ensureSdPicker() {
 
 function openSdBinPicker(startDir, onPick) {
     ensureSdPicker();
-    sdPickerOnPick = onPick;
     sdPickerOverlay.style.display = 'flex';
-    renderSdPickerDir(startDir || '/', startDir || '/');
-}
-
-async function renderSdPickerDir(path, fallbackRoot) {
     const body = document.getElementById('sd_picker_body');
-    if (!body) return;
-    body.textContent = 'Loading ' + path + ' …';
-    let data;
-    try {
-        const r = await fetch('/api/sd/list?path=' + encodeURIComponent(path), { cache: 'no-store' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        data = await r.json();
-    } catch (err) {
-        // The default folder may not exist on a fresh card — fall back to root.
-        if (fallbackRoot && path !== '/') { renderSdPickerDir('/', '/'); return; }
-        body.textContent = 'SD folder unavailable: ' + err.message;
-        return;
-    }
-    body.innerHTML = '';
-    const cur = data.path || '/';
-    const heading = document.createElement('div');
-    heading.textContent = cur;
-    heading.style.cssText = 'font-family:monospace;font-size:11px;opacity:.75';
-    const list = document.createElement('div');
-    list.style.cssText =
-        'max-height:50vh;overflow:auto;border:1px solid var(--border);' +
-        'border-radius:var(--radius-sm);background:var(--bg-card)';
-    const addRow = (label, onClick) => {
-        const row = document.createElement('div');
-        row.textContent = label;
-        row.style.cssText = 'padding:7px 10px;cursor:pointer;font-size:12px';
-        row.onmouseenter = () => { row.style.background = 'var(--bg-input)'; };
-        row.onmouseleave = () => { row.style.background = ''; };
-        row.addEventListener('click', onClick);
-        list.appendChild(row);
-    };
-    if (cur !== '/') {
-        const parent = cur.replace(/\/[^/]+\/?$/, '') || '/';
-        addRow('📁 ..', () => renderSdPickerDir(parent, null));
-    }
-    const entries = (data.entries || []).slice().sort((a, b) =>
-        (!!b.dir - !!a.dir) ||
-        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-    let bins = 0;
-    for (const entry of entries) {
-        const full = (cur.endsWith('/') ? cur : cur + '/') + entry.name;
-        if (entry.dir) {
-            addRow('📁 ' + entry.name, () => renderSdPickerDir(full, null));
-        } else if (entry.name.toLowerCase().endsWith('.bin')) {
-            bins++;
-            addRow('🖼️ ' + entry.name, () => {
-                sdPickerOverlay.style.display = 'none';
-                if (sdPickerOnPick) sdPickerOnPick(full);
-            });
-        }
-    }
-    if (!bins && !entries.some(e => e.dir)) {
-        const empty = document.createElement('div');
-        empty.textContent = 'No .bin files in this folder.';
-        empty.style.cssText = 'padding:8px 10px;font-size:11px;color:var(--text-dim)';
-        list.appendChild(empty);
-    }
-    body.append(heading, list);
+    // Default folder may not exist on a fresh card — fall back to root.
+    SdBrowse.open(body, {
+        start: startDir || '/',
+        fallback: '/',
+        filterExt: '.bin',
+        fileIcon: '🖼️ ',
+        maxHeight: '50vh',
+        emptyText: 'No .bin files in this folder.',
+        onFile: full => {
+            sdPickerOverlay.style.display = 'none';
+            if (onPick) onPick(full);
+        },
+    });
 }
 
 function setOnlineWallpaperGalleryOpen(open) {
