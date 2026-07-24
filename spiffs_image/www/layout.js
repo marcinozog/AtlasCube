@@ -385,6 +385,10 @@ const EQ_FIELDS = [
     { key: 'eq_info_x',    label: 'Value X',    type: 'number' },
     { key: 'eq_info_y',    label: 'Value Y',    type: 'number' },
     { key: 'eq_info_font', label: 'Value font', type: 'font'   },
+    { key: 'eq_curve_x',   label: 'Curve X',    type: 'number' },
+    { key: 'eq_curve_y',   label: 'Curve Y',    type: 'number' },
+    { key: 'eq_curve_w',   label: 'Curve W',    type: 'number', min: 0, max: 480 },
+    { key: 'eq_curve_h',   label: 'Curve H',    type: 'number', min: 0, max: 480 },
     { key: 'eq_knob_image', label: 'Knob image (.bin)', type: 'text',
       placeholder: '/sdcard/assets/knobs/... (empty = colour knob)',
       sdPicker: { dir: '/assets/knobs' } },
@@ -486,6 +490,7 @@ const FORM_GROUPS = {
     eq: [
         { heading: 'Text & labels' },
         { title: 'Value label', fields: ['eq_info_x', 'eq_info_y', 'eq_info_font'] },
+        { title: 'Response curve', fields: ['eq_curve_x', 'eq_curve_y', 'eq_curve_w', 'eq_curve_h'] },
         { heading: 'Artwork' },
         { title: 'Knob image', fields: ['eq_knob_image', 'eq_knob_w', 'eq_knob_only'] },
     ],
@@ -2810,9 +2815,28 @@ function renderEq(svg) {
     const hasKnob = !!(e.eq_knob_image && e.eq_knob_image.trim());
 
     // Active-band value — a movable top-left-anchored label (like other screens).
-    // The live curve lives top-right on the device; not drawn in this schematic.
     drawLabel(svg, e.eq_info_x | 0, e.eq_info_y | 0, e.eq_info_font, '125 Hz: +3 dB',
               'value', { x: 'eq_info_x', y: 'eq_info_y' }, false);
+
+    // Response curve — a movable + resizable box with a representative spline.
+    const cvW = e.eq_curve_w | 0, cvH = e.eq_curve_h | 0;
+    if (cvW > 0 && cvH > 0) {
+        const cvX = e.eq_curve_x | 0, cvY = e.eq_curve_y | 0;
+        drawFreeElement(svg, {
+            x: cvX, y: cvY, w: cvW, h: cvH,
+            label: 'curve', cls: 'label-rect',
+            fields: { x: 'eq_curve_x', y: 'eq_curve_y', w: 'eq_curve_w', h: 'eq_curve_h' },
+        });
+        const pts = EQ_PREVIEW_LEVELS.map((lvl, i) =>
+            `${cvX + i / (EQ_PREVIEW_LEVELS.length - 1) * cvW},${cvY + (1 - lvl) * cvH}`).join(' ');
+        const poly = document.createElementNS(SVG_NS, 'polyline');
+        poly.setAttribute('points', pts);
+        poly.setAttribute('fill', 'none');
+        poly.style.stroke = 'var(--accent)';
+        poly.style.strokeWidth = '2px';
+        poly.style.pointerEvents = 'none';   // don't block the box's drag handles
+        svg.appendChild(poly);
+    }
 
     const n = EQ_FREQ_LABELS.length;
     const knobOnly = !!e.eq_knob_only;

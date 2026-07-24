@@ -462,6 +462,10 @@ typedef struct {
     const lv_font_t *eq_info_font;
     const lv_font_t *eq_freq_font;
     const lv_font_t *eq_hint_font;
+    int16_t          eq_curve_x;         // response-curve box (top-left anchor); web-editable
+    int16_t          eq_curve_y;
+    int16_t          eq_curve_w;         // 0 w/h → auto (right ~45% of the header strip)
+    int16_t          eq_curve_h;
     int16_t          eq_knob_w;          // knob image width in px (0 = band column width); height follows aspect
     bool             eq_knob_only;        // hide track/fill — only the knob image draws (over wallpaper)
     char             eq_knob_image[128]; // knob RGB565 .bin on SD ("" = plain colour); one image shared by all bands
@@ -531,6 +535,11 @@ void  ui_profile_patch_sd(const void *obj);
 
 void *ui_profile_dump_eq(void);
 void  ui_profile_patch_eq(const void *obj);
+
+// Effective EQ response-curve box (stored x/y/w/h, or the auto layout when w/h
+// are unset). Shared by the web dump and the screen so both agree.
+void ui_profile_eq_curve_box(const ui_profile_t *p,
+                             int16_t *x, int16_t *y, int16_t *w, int16_t *h);
 
 #ifdef __cplusplus
 }

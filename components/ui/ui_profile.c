@@ -2268,12 +2268,37 @@ static cJSON *dump_clock(const ui_profile_t *p)
 
 // screen_equalizer — geometry stays compile-time (per-profile k_defaults); only
 // the artwork/background paths are user-editable from the web layout editor.
+// Effective response-curve box: the stored x/y/w/h, or an auto layout (right
+// ~45% of the header strip) when w/h are unset. Single source shared by dump_eq
+// (so the web editor always gets a real box to drag) and screen_equalizer.
+void ui_profile_eq_curve_box(const ui_profile_t *p,
+                             int16_t *x, int16_t *y, int16_t *w, int16_t *h)
+{
+    if (p->eq_curve_w > 0 && p->eq_curve_h > 0) {
+        *x = p->eq_curve_x; *y = p->eq_curve_y;
+        *w = p->eq_curve_w; *h = p->eq_curve_h;
+        return;
+    }
+    int16_t aw = DISPLAY_WIDTH * 45 / 100;
+    *w = aw;
+    *x = (int16_t)(DISPLAY_WIDTH - aw - 4);
+    *y = 4;
+    int16_t ah = (int16_t)(p->eq_band_area_y - 8);
+    *h = ah > 0 ? ah : 0;
+}
+
 static void load_eq(const cJSON *obj, ui_profile_t *p)
 {
     if (!cJSON_IsObject(obj)) return;
     load_i16 (obj, "eq_info_x",     &p->eq_info_x);
     load_i16 (obj, "eq_info_y",     &p->eq_info_y);
     load_font(obj, "eq_info_font",  &p->eq_info_font);
+    load_i16 (obj, "eq_curve_x",    &p->eq_curve_x);
+    load_i16 (obj, "eq_curve_y",    &p->eq_curve_y);
+    load_i16 (obj, "eq_curve_w",    &p->eq_curve_w);
+    load_i16 (obj, "eq_curve_h",    &p->eq_curve_h);
+    if (p->eq_curve_w < 0) p->eq_curve_w = 0;
+    if (p->eq_curve_h < 0) p->eq_curve_h = 0;
     load_i16 (obj, "eq_knob_w",     &p->eq_knob_w);
     if (p->eq_knob_w < 0) p->eq_knob_w = 0;
     load_bool(obj, "eq_knob_only",  &p->eq_knob_only);
@@ -2287,6 +2312,14 @@ static cJSON *dump_eq(const ui_profile_t *p)
     add_i16 (o, "eq_info_x",     p->eq_info_x);
     add_i16 (o, "eq_info_y",     p->eq_info_y);
     add_font(o, "eq_info_font",  p->eq_info_font);
+    // Emit the EFFECTIVE box so the editor shows/drags a real rectangle even
+    // before the user has set one (auto layout baked on first save — harmless).
+    int16_t cx, cy, cw, ch;
+    ui_profile_eq_curve_box(p, &cx, &cy, &cw, &ch);
+    add_i16 (o, "eq_curve_x",    cx);
+    add_i16 (o, "eq_curve_y",    cy);
+    add_i16 (o, "eq_curve_w",    cw);
+    add_i16 (o, "eq_curve_h",    ch);
     add_i16 (o, "eq_knob_w",     p->eq_knob_w);
     add_bool(o, "eq_knob_only",  p->eq_knob_only);
     add_str (o, "eq_knob_image", p->eq_knob_image);

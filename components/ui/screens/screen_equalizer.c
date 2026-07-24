@@ -240,11 +240,11 @@ static void eq_create(lv_obj_t *parent)
     lv_obj_set_style_text_color(s_info, lv_color_hex(th->text_primary), LV_PART_MAIN);
     lv_obj_align(s_info, LV_ALIGN_TOP_LEFT, p->eq_info_x, p->eq_info_y);
 
-    /* live curve — right portion of the header, only when there's room for it */
-    s_cw = DISPLAY_WIDTH * 45 / 100;
-    s_cx = DISPLAY_WIDTH - s_cw - 4;
-    s_cy = 4;
-    s_ch = p->eq_band_area_y - s_cy - 4;
+    /* live curve — box from ui_profile (stored, or auto right-of-header), drawn
+       only when there's room for it */
+    int16_t cx, cy, cw, ch;
+    ui_profile_eq_curve_box(p, &cx, &cy, &cw, &ch);
+    s_cx = cx; s_cy = cy; s_cw = cw; s_ch = ch;
     if (s_ch >= 12 && s_cw >= 40) {
         s_curve = lv_line_create(parent);
         lv_obj_set_pos(s_curve, s_cx, s_cy);
