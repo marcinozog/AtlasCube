@@ -1539,6 +1539,13 @@ static void load_bool(const cJSON *obj, const char *key, bool *dst)
     if (cJSON_IsBool(it)) *dst = cJSON_IsTrue(it);
 }
 
+// Colour override stored as a 0xRRGGBB integer; 0 means "inherit theme".
+static void load_u32(const cJSON *obj, const char *key, uint32_t *dst)
+{
+    const cJSON *it = cJSON_GetObjectItem(obj, key);
+    if (cJSON_IsNumber(it)) *dst = (uint32_t)it->valuedouble;
+}
+
 static void load_font(const cJSON *obj, const char *key, const lv_font_t **dst)
 {
     const cJSON *it = cJSON_GetObjectItem(obj, key);
@@ -1563,6 +1570,11 @@ static void add_i16(cJSON *obj, const char *key, int16_t v)
 static void add_bool(cJSON *obj, const char *key, bool v)
 {
     cJSON_AddBoolToObject(obj, key, v);
+}
+
+static void add_u32(cJSON *obj, const char *key, uint32_t v)
+{
+    cJSON_AddNumberToObject(obj, key, (double)v);
 }
 
 static void add_font(cJSON *obj, const char *key, const lv_font_t *f)
@@ -1658,6 +1670,7 @@ static void load_clock(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "clock_time_y",               &p->clock_time_y);
     load_font(obj, "clock_time_font",            &p->clock_time_font);
     load_bool(obj, "clock_show_time",            &p->clock_show_time);
+    load_u32 (obj, "clock_time_color",           &p->clock_time_color);
     load_i16 (obj, "clock_date_x",               &p->clock_date_x);
     load_i16 (obj, "clock_date_y",               &p->clock_date_y);
     load_font(obj, "clock_date_font",            &p->clock_date_font);
@@ -2236,6 +2249,7 @@ static cJSON *dump_clock(const ui_profile_t *p)
     add_i16 (o, "clock_time_y",               p->clock_time_y);
     add_font(o, "clock_time_font",            p->clock_time_font);
     add_bool(o, "clock_show_time",            p->clock_show_time);
+    add_u32 (o, "clock_time_color",           p->clock_time_color);
     add_i16 (o, "clock_date_x",               p->clock_date_x);
     add_i16 (o, "clock_date_y",               p->clock_date_y);
     add_font(o, "clock_date_font",            p->clock_date_font);

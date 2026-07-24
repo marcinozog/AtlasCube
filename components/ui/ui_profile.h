@@ -108,6 +108,7 @@ typedef struct {
     int16_t          clock_time_y;
     const lv_font_t *clock_time_font;
     bool             clock_show_time;
+    uint32_t         clock_time_color;             // time digits colour, 0 = inherit theme text_primary
 
     int16_t          clock_date_x;                 // date label position (Day YYYY-MM-DD)
     int16_t          clock_date_y;

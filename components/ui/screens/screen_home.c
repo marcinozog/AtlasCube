@@ -213,7 +213,8 @@ static void home_create(lv_obj_t *parent)
             p->clock_time_font ? p->clock_time_font : &lv_font_montserrat_18_pl,
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_time_label,
-            lv_color_hex(th->text_primary), LV_PART_MAIN);
+            lv_color_hex(p->clock_time_color ? p->clock_time_color
+                                             : th->text_primary), LV_PART_MAIN);
         home_time_scrim(s_time_label);
 
         // AM/PM suffix lives in its own label: the large clock fonts are
@@ -421,7 +422,8 @@ static void home_apply_theme(void)
 
     if (s_time_label) {
         lv_obj_set_style_text_color(s_time_label,
-            lv_color_hex(th->text_primary), LV_PART_MAIN);
+            lv_color_hex(p->clock_time_color ? p->clock_time_color
+                                             : th->text_primary), LV_PART_MAIN);
         home_time_scrim(s_time_label);
     }
     if (s_ampm_label) {

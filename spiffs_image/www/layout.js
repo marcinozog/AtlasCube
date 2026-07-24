@@ -69,6 +69,7 @@ const CLOCK_FIELDS = [
     { key: 'clock_time_x',    label: 'Time X',        type: 'number' },
     { key: 'clock_time_y',    label: 'Time Y',        type: 'number' },
     { key: 'clock_time_font', label: 'Time font',     type: 'font'   },
+    { key: 'clock_time_color', label: 'Time colour',  type: 'color' },
 
     { key: 'clock_show_date', label: 'Show date',     type: 'bool' },
     { key: 'clock_date_x',    label: 'Date X',        type: 'number' },
@@ -413,7 +414,7 @@ const EQ_FIELDS = [
 const FORM_GROUPS = {
     clock: [
         { heading: 'Text & labels' },
-        { title: 'Time', enabledBy: 'clock_show_time', fields: ['clock_show_time', 'clock_time_x', 'clock_time_y', 'clock_time_font'] },
+        { title: 'Time', enabledBy: 'clock_show_time', fields: ['clock_show_time', 'clock_time_x', 'clock_time_y', 'clock_time_font', 'clock_time_color'] },
         { title: 'Date', enabledBy: 'clock_show_date', fields: ['clock_show_date', 'clock_date_x', 'clock_date_y', 'clock_date_font'] },
         { title: 'Network info', enabledBy: 'clock_show_netinfo', fields: ['clock_show_netinfo', 'clock_netinfo_x', 'clock_netinfo_y', 'clock_netinfo_font'] },
         { title: 'Station / title', fields: ['clock_show_strip', 'clock_strip_x', 'clock_strip_y', 'clock_strip_w', 'clock_strip_h', 'clock_strip_bg_opa', 'clock_strip_station_x', 'clock_strip_station_y', 'clock_strip_station_w', 'clock_strip_title_x', 'clock_strip_title_y', 'clock_strip_title_w', 'clock_strip_station_font', 'clock_strip_title_font'] },
@@ -2039,6 +2040,15 @@ function buildForm() {
     });
 }
 
+// Colour overrides round-trip as 0xRRGGBB integers (0 = inherit theme); the
+// <input type="color"> speaks '#rrggbb'.
+function numToHex(n) {
+    return '#' + (((n | 0) >>> 0) & 0xffffff).toString(16).padStart(6, '0');
+}
+function hexToNum(h) {
+    return parseInt(h.slice(1), 16) | 0;
+}
+
 function buildFormRow(field, data, group, details) {
     const row = document.createElement('div');
     row.className = 'form-row';
@@ -2114,6 +2124,32 @@ function buildFormRow(field, data, group, details) {
             refreshGroup(details, group, data);
             renderSvg();
         });
+    } else if (field.type === 'color') {
+        // 0 = inherit the theme colour. A checkbox gates the picker so "no
+        // override" stays representable (a colour input always holds a value).
+        input = document.createElement('span');
+        input.className = 'color-field';
+        const en = document.createElement('input');
+        en.type = 'checkbox';
+        en.title = 'Override theme colour';
+        const pick = document.createElement('input');
+        pick.type = 'color';
+        pick.style.marginLeft = '6px';
+        const cur = (data[field.key] | 0) >>> 0;
+        en.checked = cur !== 0;
+        pick.value = numToHex(cur || (field.default ?? 0xffffff));
+        pick.disabled = !en.checked;
+        const commit = () => {
+            pick.disabled = !en.checked;
+            // Nudge pure black to 0x000001 so it isn't read back as "inherit".
+            data[field.key] = en.checked ? (hexToNum(pick.value) || 1) : 0;
+            refreshGroup(details, group, data);
+            renderSvg();
+        };
+        en.addEventListener('change', commit);
+        pick.addEventListener('input', commit);
+        input.appendChild(en);
+        input.appendChild(pick);
     }
     input.id = 'fld_' + field.key;
     row.appendChild(input);
@@ -2261,6 +2297,7 @@ function renderClock(svg) {
             label: 'time', cls: 'label-rect',
             fields: { x: 'clock_time_x', y: 'clock_time_y' },
             text: '88:88', textSize: fh,
+            textFill: c.clock_time_color ? numToHex(c.clock_time_color) : null,
         });
     }
     if (c.clock_show_date) {
@@ -2937,11 +2974,13 @@ function drawFreeElement(svg, opts) {
         cr.setAttribute('height', opts.h);
         cp.appendChild(cr);
         svg.appendChild(cp);
-        text(svg, opts.x + opts.w / 2, opts.y + opts.h * 0.78, opts.text, {
+        const tattr = {
             'font-size': Math.min(opts.textSize, opts.h),
             'text-anchor': 'middle',
             'clip-path': 'url(#' + cid + ')',
-        });
+        };
+        if (opts.textFill) tattr.fill = opts.textFill;
+        text(svg, opts.x + opts.w / 2, opts.y + opts.h * 0.78, opts.text, tattr);
     }
 
     // Corner resize whenever a width field exists; without a height field the
