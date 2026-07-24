@@ -158,7 +158,7 @@ const BT_FIELDS = [
     { key: 'bt_volslider_y',          label: 'Slider Y',           type: 'number' },
     { key: 'bt_volslider_w',          label: 'Slider W',           type: 'number', min: 8, max: 480 },
     { key: 'bt_volslider_h',          label: 'Slider H',           type: 'number', min: 8, max: 480 },
-    { key: 'bt_volslider_knob_image', label: 'Knob image (.bin)',  type: 'text', placeholder: '/sdcard/knobs/... (empty = colour knob)', sdPicker: { dir: '/knobs' } },
+    { key: 'bt_volslider_knob_image', label: 'Knob image (.bin)',  type: 'text', placeholder: '/sdcard/assets/knobs/... (empty = colour knob)', sdPicker: { dir: '/assets/knobs' } },
     { key: 'bt_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('bt'),
 ];
@@ -265,7 +265,7 @@ const RADIO_FIELDS = [
     { key: 'radio_volslider_y',          label: 'Slider Y',           type: 'number' },
     { key: 'radio_volslider_w',          label: 'Slider W',           type: 'number', min: 8, max: 480 },
     { key: 'radio_volslider_h',          label: 'Slider H',           type: 'number', min: 8, max: 480 },
-    { key: 'radio_volslider_knob_image', label: 'Knob image (.bin)',  type: 'text', placeholder: '/sdcard/knobs/... (empty = colour knob)', sdPicker: { dir: '/knobs' } },
+    { key: 'radio_volslider_knob_image', label: 'Knob image (.bin)',  type: 'text', placeholder: '/sdcard/assets/knobs/... (empty = colour knob)', sdPicker: { dir: '/assets/knobs' } },
     { key: 'radio_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('radio'),
 ];
@@ -366,7 +366,7 @@ const SD_FIELDS = [
     { key: 'sd_volslider_y',          label: 'Slider Y',           type: 'number' },
     { key: 'sd_volslider_w',          label: 'Slider W',           type: 'number', min: 8, max: 480 },
     { key: 'sd_volslider_h',          label: 'Slider H',           type: 'number', min: 8, max: 480 },
-    { key: 'sd_volslider_knob_image', label: 'Knob image (.bin)',  type: 'text', placeholder: '/sdcard/knobs/... (empty = colour knob)', sdPicker: { dir: '/knobs' } },
+    { key: 'sd_volslider_knob_image', label: 'Knob image (.bin)',  type: 'text', placeholder: '/sdcard/assets/knobs/... (empty = colour knob)', sdPicker: { dir: '/assets/knobs' } },
     { key: 'sd_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('sd'),
 ];
@@ -1249,7 +1249,7 @@ function askWallpaperSaveAs(suggestedFilename) {
 // for a widget field to reference.
 
 function assetDir() {
-    const raw = (document.getElementById('asset_dir').value || '/knobs').trim();
+    const raw = (document.getElementById('asset_dir').value || '/assets/knobs').trim();
     return ('/' + raw).replace(/\/+/g, '/').replace(/\/+$/, '') || '/';
 }
 
