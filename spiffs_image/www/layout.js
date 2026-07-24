@@ -1292,28 +1292,77 @@ function assetFilePicked() {
     if (label) label.textContent = file ? file.name : 'No file selected';
 }
 
+function fittedAssetDimensions(width, height) {
+    const sourceWidth = Math.max(1, Number(width) || 64);
+    const sourceHeight = Math.max(1, Number(height) || 64);
+    const scale = Math.min(1, 480 / sourceWidth, 480 / sourceHeight);
+    return {
+        w: Math.max(4, Math.round(sourceWidth * scale)),
+        h: Math.max(4, Math.round(sourceHeight * scale)),
+    };
+}
+
+function askAssetDimensions(width, height) {
+    const suggested = fittedAssetDimensions(width, height);
+    const dimensions = window.prompt(
+        'Output .bin resolution (WIDTHxHEIGHT, from 4x4 to 480x480):',
+        `${suggested.w}x${suggested.h}`);
+    if (dimensions === null) return null;
+
+    const match = dimensions.trim().match(/^(\d+)\s*[x×]\s*(\d+)$/i);
+    if (!match)
+        throw new Error('Invalid resolution. Use WIDTHxHEIGHT, for example 64x64.');
+    const w = Number(match[1]);
+    const h = Number(match[2]);
+    if (w < 4 || w > 480 || h < 4 || h > 480)
+        throw new Error('Invalid resolution. Width and height must be between 4 and 480 px.');
+    return { w, h };
+}
+
+async function imageFileDimensions(file) {
+    if (typeof createImageBitmap === 'function') {
+        const bitmap = await createImageBitmap(file);
+        const dimensions = { width: bitmap.width, height: bitmap.height };
+        bitmap.close();
+        return dimensions;
+    }
+
+    const url = URL.createObjectURL(file);
+    try {
+        const image = new Image();
+        image.src = url;
+        await image.decode();
+        return { width: image.naturalWidth, height: image.naturalHeight };
+    } finally {
+        URL.revokeObjectURL(url);
+    }
+}
+
 async function uploadAsset() {
     const status = document.getElementById('asset_status');
     const note = msg => { if (status) status.textContent = msg; };
     const input = document.getElementById('asset_file');
     const file = input.files && input.files[0];
     if (!file) { note('Pick an image first.'); return; }
-    const w = Math.max(4, Math.min(480, parseInt(document.getElementById('asset_w').value, 10) | 0));
-    const h = Math.max(4, Math.min(480, parseInt(document.getElementById('asset_h').value, 10) | 0));
     const dir = assetDir();
     try {
         await ensureLvBin();
+        const source = await imageFileDimensions(file);
+        const dimensions = askAssetDimensions(source.width, source.height);
+        if (dimensions === null) { note('Upload cancelled.'); return; }
         const stem = window.prompt(
             'Save asset as (.bin is added automatically; an existing file with the same name is replaced):',
             window.LvBin.fileStem(file.name));
         if (stem === null) { note('Upload cancelled.'); return; }
         const saveAs = window.LvBin.fileStem(stem.trim() || file.name);
-        const relPath = await window.LvBin.uploadImage(file, dir, w, h, note, saveAs);
+        const relPath = await window.LvBin.uploadImage(
+            file, dir, dimensions.w, dimensions.h, note, saveAs);
         input.value = '';
         assetFilePicked();   // reset the "chosen file" label
         // Widgets reference the fopen-ready "/sdcard/..." path (the 📂 SD picker
         // on a knob-image field fills exactly this).
-        note('Saved. Reference as /sdcard' + relPath + '  (' + w + '×' + h + ').');
+        note('Saved. Reference as /sdcard' + relPath +
+             '  (' + dimensions.w + '×' + dimensions.h + ').');
         browseAssets();
     } catch (err) {
         note('Upload failed: ' + err.message);
@@ -1518,39 +1567,16 @@ async function installOnlineAsset(item, button, previewImage) {
 
     try {
         await ensureLvBin();
-        const widthInput = document.getElementById('asset_w');
-        const heightInput = document.getElementById('asset_h');
         if (previewImage && !previewImage.complete) {
             try { await previewImage.decode(); } catch (_) {}
         }
         const sourceWidth = previewImage?.naturalWidth || 0;
         const sourceHeight = previewImage?.naturalHeight || 0;
-        const defaultWidth = sourceWidth >= 4 && sourceWidth <= 480
-            ? sourceWidth
-            : Math.max(4, Math.min(480, parseInt(widthInput.value, 10) | 0));
-        const defaultHeight = sourceHeight >= 4 && sourceHeight <= 480
-            ? sourceHeight
-            : Math.max(4, Math.min(480, parseInt(heightInput.value, 10) | 0));
-        const dimensions = window.prompt(
-            'Output .bin resolution (WIDTHxHEIGHT, from 4x4 to 480x480):',
-            `${defaultWidth}x${defaultHeight}`);
+        const dimensions = askAssetDimensions(sourceWidth, sourceHeight);
         if (dimensions === null) {
             note('Installation cancelled.');
             return;
         }
-        const match = dimensions.trim().match(/^(\d+)\s*[x×]\s*(\d+)$/i);
-        if (!match) {
-            note('Invalid resolution. Use WIDTHxHEIGHT, for example 64x64.');
-            return;
-        }
-        const w = Number(match[1]);
-        const h = Number(match[2]);
-        if (w < 4 || w > 480 || h < 4 || h > 480) {
-            note('Invalid resolution. Width and height must be between 4 and 480 px.');
-            return;
-        }
-        widthInput.value = String(w);
-        heightInput.value = String(h);
 
         const suggested = window.LvBin.fileStem(item.filename || item.id || 'online-asset');
         const entered = window.prompt(
@@ -1578,8 +1604,9 @@ async function installOnlineAsset(item, button, previewImage) {
         const file = new File([blob], filename, { type: blob.type });
         const saveAs = window.LvBin.fileStem(entered.trim() || suggested);
         const relPath = await window.LvBin.uploadImage(
-            file, assetDir(), w, h, note, saveAs);
-        note('Saved. Reference as /sdcard' + relPath + ` (${w}×${h}).`);
+            file, assetDir(), dimensions.w, dimensions.h, note, saveAs);
+        note('Saved. Reference as /sdcard' + relPath +
+             ` (${dimensions.w}×${dimensions.h}).`);
         browseAssets();
     } catch (err) {
         note('Online asset failed: ' + err.message);

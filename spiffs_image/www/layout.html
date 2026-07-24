@@ -635,16 +635,10 @@
             <label class="field-label">Upload image asset</label>
             <div class="field-hint">Convert a PNG/JPG to an LVGL RGB565 <code>.bin</code> and store it on the
                 SD card, then point a widget at it (e.g. a volume-slider <b>Knob image</b>). The image is
-                scaled to the size below — for a knob, that is its on-screen size. No transparency: the image
-                is a solid rectangle.</div>
+                scaled to the size selected during upload — for a knob, that is its on-screen size.
+                No transparency: the image is a solid rectangle.</div>
 
             <div class="asset-row" style="margin-top:10px">
-                <label>Width (px)</label>
-                <input type="number" id="asset_w" value="64" min="4" max="480" />
-                <label>Height (px)</label>
-                <input type="number" id="asset_h" value="64" min="4" max="480" />
-            </div>
-            <div class="asset-row" style="margin-top:8px">
                 <label>Folder</label>
                 <input type="text" id="asset_dir" value="/assets/knobs" style="flex:1" />
             </div>
