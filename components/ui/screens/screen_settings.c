@@ -112,7 +112,7 @@ static bool get_eq(void)         { return app_state_get()->eq_enabled; }
 static void act_restart(void)    { esp_restart(); }
 #if !CONFIG_TOUCH_NONE
 static void act_radio_layout(void) { screen_layout_editor_open(LAYOUT_EDITOR_RADIO); }
-static void act_test_tone(void)    { audio_engine_play_test_tone(); }
+static void act_test_tone(void)    { audio_engine_play_test_tone(1000, AUDIO_TEST_PINK); }
 #endif
 
 /* ── row tables ─────────────────────────────────────────────────────────── */

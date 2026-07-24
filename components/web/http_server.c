@@ -12,6 +12,7 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "radio_service.h"
+#include "audio_engine.h"   // /api/test-tone -> built-in channel-test signal
 #include "ws_server.h"
 #include "settings.h"
 #include "ntp_service.h"
@@ -67,6 +68,7 @@ extern void ws_set_server(httpd_handle_t server);
 
 static esp_err_t api_weather_get_handler(httpd_req_t *req);
 static esp_err_t api_weather_post_handler(httpd_req_t *req);
+static esp_err_t read_body(httpd_req_t *req, char **out_buf, int max_len);
 
 // Compile-time display driver label — lets the setup page warn if the wrong
 // binary was flashed (driver is fixed in the image; pins are not).
@@ -641,6 +643,41 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// POST /api/test-tone  — body: { "ms": <per-channel ms>, "signal": "pink|white|sine" }
+// Plays the built-in stereo channel-test signal. Transient action (nothing is
+// persisted); the on-device Settings→Audio button uses fixed defaults instead.
+static esp_err_t api_test_tone_post_handler(httpd_req_t *req)
+{
+    char *buf = NULL;
+    if (read_body(req, &buf, 256) != ESP_OK) return ESP_FAIL;
+
+    cJSON *json = cJSON_Parse(buf);
+    free(buf);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    cJSON *jms  = cJSON_GetObjectItem(json, "ms");
+    cJSON *jsig = cJSON_GetObjectItem(json, "signal");
+
+    uint32_t ms = cJSON_IsNumber(jms) ? (uint32_t)jms->valueint : 1000;
+
+    audio_test_signal_t sig = AUDIO_TEST_PINK;
+    if (cJSON_IsString(jsig)) {
+        if      (strcmp(jsig->valuestring, "white") == 0) sig = AUDIO_TEST_WHITE;
+        else if (strcmp(jsig->valuestring, "sine")  == 0) sig = AUDIO_TEST_SINE;
+    }
+    cJSON_Delete(json);
+
+    audio_engine_play_test_tone(ms, sig);   // clamps ms itself
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true}");
+    return ESP_OK;
+}
+
+
 // GET /api/state  — current runtime state (app_state), not the file settings
 // Used by the web UI to initialize widgets (e.g. theme toggle)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -3394,6 +3431,13 @@ void http_server_start(void)
         .handler = api_settings_post_handler,
     };
     httpd_register_uri_handler(server, &api_post);
+
+    httpd_uri_t api_test_tone = {
+        .uri     = "/api/test-tone",
+        .method  = HTTP_POST,
+        .handler = api_test_tone_post_handler,
+    };
+    httpd_register_uri_handler(server, &api_test_tone);
 
     httpd_uri_t api_state = {
         .uri     = "/api/state",

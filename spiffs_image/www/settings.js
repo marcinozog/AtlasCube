@@ -493,6 +493,32 @@ function setBtAutoSwitch(on) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Audio — built-in channel-test tone (transient; not persisted)
+// ─────────────────────────────────────────────────────────────────────────────
+function playTestTone() {
+    const btn    = document.getElementById('testtone_play_btn');
+    const status = document.getElementById('testtone_status');
+    const signal = document.getElementById('testtone_signal').value;   // pink|white|sine
+    const ms     = Math.round(parseFloat(document.getElementById('testtone_dur_slider').value) * 1000);
+
+    if (btn) btn.disabled = true;
+    if (status) status.textContent = 'Playing… left, then right.';
+
+    fetch('/api/test-tone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ms: ms, signal: signal })
+    }).then(r => {
+        if (status) status.textContent = r.ok ? 'Sent.' : 'Failed.';
+    }).catch(() => {
+        if (status) status.textContent = 'Failed.';
+    }).finally(() => {
+        // Re-enable after the tone (2×duration + gap) plus a little slack.
+        setTimeout(() => { if (btn) btn.disabled = false; }, 2 * ms + 600);
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Resume playback on boot (playlist)
 // ─────────────────────────────────────────────────────────────────────────────
 function setResumeOnBoot(on) {

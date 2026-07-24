@@ -490,6 +490,28 @@
             </div>
             <div class="field-hint">When on, starting Bluetooth playback stops the radio and starting the radio pauses the phone, switching the audio source automatically.</div>
         </div>
+
+        <div class="panel">
+            <label class="field-label">Test tone (channel check)</label>
+            <div class="field-hint">Plays a signal on the left channel, then the right — a quick way to verify the wiring, amp and speakers without an SD card or stream. Uses the current volume.</div>
+
+            <label class="field-label" style="margin-top:12px">Signal</label>
+            <select id="testtone_signal" class="field-input" style="width:fit-content">
+                <option value="pink">Pink noise</option>
+                <option value="white">White noise</option>
+                <option value="sine">Sine (1 kHz)</option>
+            </select>
+
+            <label class="field-label" style="margin-top:12px">Duration per channel</label>
+            <div class="slider-row">
+                <input type="range" min="0.2" max="5" step="0.1" value="1" id="testtone_dur_slider"
+                       oninput="document.getElementById('testtone_dur_value').textContent = Number(this.value).toFixed(1) + ' s'" />
+                <span id="testtone_dur_value" class="slider-value">1.0 s</span>
+            </div>
+
+            <button id="testtone_play_btn" class="wifi-save-btn" style="margin-top:12px" onclick="playTestTone()">▶️ Play test tone</button>
+            <div id="testtone_status" class="save-status"></div>
+        </div>
     </section>
 
     <!-- ══════════════════════════════════════════
