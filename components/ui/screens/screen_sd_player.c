@@ -302,7 +302,8 @@ static void sd_player_screen_create(lv_obj_t *parent)
         vol_slider_widget_create(parent, p->sd_volslider_x, p->sd_volslider_y,
                                  p->sd_volslider_w, p->sd_volslider_h,
                                  p->sd_volslider_vertical,
-                                 p->sd_volslider_knob_only, false);
+                                 p->sd_volslider_knob_only, false,
+                                 p->sd_volslider_knob_image);
     }
 
     ESP_LOGI(TAG, "Created");

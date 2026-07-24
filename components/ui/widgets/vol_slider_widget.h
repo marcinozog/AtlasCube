@@ -19,6 +19,13 @@ extern "C" {
 // wallpapers that paint their own slider artwork. The (invisible) box still
 // defines the drag range, and its thickness sizes the knob.
 //
+// knob_image is an optional path to an RGB565 .bin on SD (scripts/img2lvgl.py
+// format) drawn on the knob; the knob is resized to the image's native
+// dimensions, so author the .bin at the on-screen knob size you want. NULL or
+// "" keeps the plain themed colour knob. No alpha channel — the image is a
+// solid rectangle. Loaded via lv_bin_image; the SD card must already be
+// mounted.
+//
 // bt=false drives the main output: the level is applied live while dragging
 // (audio_engine_set_volume) and persisted once on release via
 // settings_set_volume() — no settings write per drag event. bt=true drives
@@ -26,7 +33,7 @@ extern "C" {
 // AT command to the module over UART, so a live drag would flood the link.
 void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
                               int16_t w, int16_t h, bool vertical,
-                              bool knob_only, bool bt);
+                              bool knob_only, bool bt, const char *knob_image);
 void vol_slider_widget_destroy(void);
 
 // Sync the knob with app_state (encoder / WS / Android changes). Skipped

@@ -158,6 +158,7 @@ const BT_FIELDS = [
     { key: 'bt_volslider_y',          label: 'Slider Y',           type: 'number' },
     { key: 'bt_volslider_w',          label: 'Slider W',           type: 'number', min: 8, max: 480 },
     { key: 'bt_volslider_h',          label: 'Slider H',           type: 'number', min: 8, max: 480 },
+    { key: 'bt_volslider_knob_image', label: 'Knob image (.bin)',  type: 'text', placeholder: '/sdcard/knobs/... (empty = colour knob)', sdPicker: { dir: '/knobs' } },
     { key: 'bt_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('bt'),
 ];
@@ -264,6 +265,7 @@ const RADIO_FIELDS = [
     { key: 'radio_volslider_y',          label: 'Slider Y',           type: 'number' },
     { key: 'radio_volslider_w',          label: 'Slider W',           type: 'number', min: 8, max: 480 },
     { key: 'radio_volslider_h',          label: 'Slider H',           type: 'number', min: 8, max: 480 },
+    { key: 'radio_volslider_knob_image', label: 'Knob image (.bin)',  type: 'text', placeholder: '/sdcard/knobs/... (empty = colour knob)', sdPicker: { dir: '/knobs' } },
     { key: 'radio_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('radio'),
 ];
@@ -364,6 +366,7 @@ const SD_FIELDS = [
     { key: 'sd_volslider_y',          label: 'Slider Y',           type: 'number' },
     { key: 'sd_volslider_w',          label: 'Slider W',           type: 'number', min: 8, max: 480 },
     { key: 'sd_volslider_h',          label: 'Slider H',           type: 'number', min: 8, max: 480 },
+    { key: 'sd_volslider_knob_image', label: 'Knob image (.bin)',  type: 'text', placeholder: '/sdcard/knobs/... (empty = colour knob)', sdPicker: { dir: '/knobs' } },
     { key: 'sd_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('sd'),
 ];
@@ -388,7 +391,7 @@ const FORM_GROUPS = {
         { title: 'Track title', fields: ['bt_title_x', 'bt_title_y', 'bt_title_w', 'bt_title_font'] },
         { title: 'Artist', fields: ['bt_artist_x', 'bt_artist_y', 'bt_artist_w', 'bt_artist_font'] },
         { title: 'Playback', fields: ['bt_time_x', 'bt_time_y', 'bt_time_font', 'bt_vol_x', 'bt_vol_y', 'bt_vol_label_font'] },
-        { title: 'Volume slider', enabledBy: 'bt_volslider_show', fields: ['bt_volslider_show', 'bt_volslider_vertical', 'bt_volslider_knob_only', 'bt_volslider_x', 'bt_volslider_y', 'bt_volslider_w', 'bt_volslider_h'] },
+        { title: 'Volume slider', enabledBy: 'bt_volslider_show', fields: ['bt_volslider_show', 'bt_volslider_vertical', 'bt_volslider_knob_only', 'bt_volslider_x', 'bt_volslider_y', 'bt_volslider_w', 'bt_volslider_h', 'bt_volslider_knob_image'] },
         { title: 'Mode indicator', enabledBy: 'bt_show_mode_indicator', fields: ['bt_show_mode_indicator', 'bt_mode_indic_x', 'bt_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'bt_show_clock', fields: ['bt_show_clock', 'bt_clock_widget_x', 'bt_clock_widget_y', 'bt_clock_font'] },
         { title: 'Tap controls overlay', enabledBy: 'bt_show_ctrl_overlay', fields: ['bt_show_ctrl_overlay'] },
@@ -412,7 +415,7 @@ const FORM_GROUPS = {
         { title: 'VU meter', enabledBy: 'radio_show_vu', fields: ['radio_show_vu', 'radio_vu_x', 'radio_vu_y', 'radio_vu_w', 'radio_vu_h', 'radio_vu_transparent'] },
         { title: 'Needle VU', fields: ['radio_needle_frame', 'radio_needle_show_l', 'radio_needle_l_x', 'radio_needle_l_y', 'radio_needle_l_w', 'radio_needle_l_h', 'radio_needle_show_r', 'radio_needle_r_x', 'radio_needle_r_y', 'radio_needle_r_w', 'radio_needle_r_h'] },
         { title: 'Stereo bar VU', fields: ['radio_stereo_frame', 'radio_stereo_horizontal', 'radio_stereo_transparent', 'radio_stereo_peak', 'radio_stereo_zones', 'radio_stereo_show_l', 'radio_stereo_l_x', 'radio_stereo_l_y', 'radio_stereo_l_w', 'radio_stereo_l_h', 'radio_stereo_show_r', 'radio_stereo_r_x', 'radio_stereo_r_y', 'radio_stereo_r_w', 'radio_stereo_r_h'] },
-        { title: 'Volume slider', enabledBy: 'radio_volslider_show', fields: ['radio_volslider_show', 'radio_volslider_vertical', 'radio_volslider_knob_only', 'radio_volslider_x', 'radio_volslider_y', 'radio_volslider_w', 'radio_volslider_h'] },
+        { title: 'Volume slider', enabledBy: 'radio_volslider_show', fields: ['radio_volslider_show', 'radio_volslider_vertical', 'radio_volslider_knob_only', 'radio_volslider_x', 'radio_volslider_y', 'radio_volslider_w', 'radio_volslider_h', 'radio_volslider_knob_image'] },
         { title: 'Weather', enabledBy: 'radio_show_weather', fields: ['radio_show_weather', 'radio_weather_x', 'radio_weather_y', 'radio_weather_w', 'radio_weather_font'] },
         { title: 'Tap controls overlay', enabledBy: 'radio_show_ctrl_overlay', fields: ['radio_show_ctrl_overlay'] },
         ...touchHotspotGroups('radio'),
@@ -433,7 +436,7 @@ const FORM_GROUPS = {
         { title: 'VU meter', enabledBy: 'sd_show_vu', fields: ['sd_show_vu', 'sd_vu_x', 'sd_vu_y', 'sd_vu_w', 'sd_vu_h', 'sd_vu_transparent'] },
         { title: 'Needle VU', fields: ['sd_needle_frame', 'sd_needle_show_l', 'sd_needle_l_x', 'sd_needle_l_y', 'sd_needle_l_w', 'sd_needle_l_h', 'sd_needle_show_r', 'sd_needle_r_x', 'sd_needle_r_y', 'sd_needle_r_w', 'sd_needle_r_h'] },
         { title: 'Stereo bar VU', fields: ['sd_stereo_frame', 'sd_stereo_horizontal', 'sd_stereo_transparent', 'sd_stereo_peak', 'sd_stereo_zones', 'sd_stereo_show_l', 'sd_stereo_l_x', 'sd_stereo_l_y', 'sd_stereo_l_w', 'sd_stereo_l_h', 'sd_stereo_show_r', 'sd_stereo_r_x', 'sd_stereo_r_y', 'sd_stereo_r_w', 'sd_stereo_r_h'] },
-        { title: 'Volume slider', enabledBy: 'sd_volslider_show', fields: ['sd_volslider_show', 'sd_volslider_vertical', 'sd_volslider_knob_only', 'sd_volslider_x', 'sd_volslider_y', 'sd_volslider_w', 'sd_volslider_h'] },
+        { title: 'Volume slider', enabledBy: 'sd_volslider_show', fields: ['sd_volslider_show', 'sd_volslider_vertical', 'sd_volslider_knob_only', 'sd_volslider_x', 'sd_volslider_y', 'sd_volslider_w', 'sd_volslider_h', 'sd_volslider_knob_image'] },
         { title: 'Weather', enabledBy: 'sd_show_weather', fields: ['sd_show_weather', 'sd_weather_x', 'sd_weather_y', 'sd_weather_w', 'sd_weather_font'] },
         { title: 'Tap controls overlay', enabledBy: 'sd_show_ctrl_overlay', fields: ['sd_show_ctrl_overlay'] },
         ...touchHotspotGroups('sd'),
@@ -1239,6 +1242,207 @@ function askWallpaperSaveAs(suggestedFilename) {
     return window.LvBin.fileStem(trimmed || suggested);
 }
 
+// ── Assets tab ────────────────────────────────────────────────────────────────
+// Generic image → RGB565 .bin uploader for small UI artwork (knob images, …).
+// Unlike the wallpaper uploader it takes an explicit size and folder and does
+// not touch any screen's background — the resulting .bin is just parked on SD
+// for a widget field to reference.
+
+function assetDir() {
+    const raw = (document.getElementById('asset_dir').value || '/knobs').trim();
+    return ('/' + raw).replace(/\/+/g, '/').replace(/\/+$/, '') || '/';
+}
+
+async function uploadAsset() {
+    const status = document.getElementById('asset_status');
+    const note = msg => { if (status) status.textContent = msg; };
+    const input = document.getElementById('asset_file');
+    const file = input.files && input.files[0];
+    if (!file) { note('Pick an image first.'); return; }
+    const w = Math.max(4, Math.min(480, parseInt(document.getElementById('asset_w').value, 10) | 0));
+    const h = Math.max(4, Math.min(480, parseInt(document.getElementById('asset_h').value, 10) | 0));
+    const dir = assetDir();
+    try {
+        await ensureLvBin();
+        const stem = window.prompt(
+            'Save asset as (.bin is added automatically; an existing file with the same name is replaced):',
+            window.LvBin.fileStem(file.name));
+        if (stem === null) { note('Upload cancelled.'); return; }
+        const saveAs = window.LvBin.fileStem(stem.trim() || file.name);
+        const relPath = await window.LvBin.uploadImage(file, dir, w, h, note, saveAs);
+        input.value = '';
+        // Widgets reference the fopen-ready "/sdcard/..." path (the 📂 SD picker
+        // on a knob-image field fills exactly this).
+        note('Saved. Reference as /sdcard' + relPath + '  (' + w + '×' + h + ').');
+        browseAssets();
+    } catch (err) {
+        note('Upload failed: ' + err.message);
+    }
+}
+
+async function browseAssets() {
+    const list = document.getElementById('asset_list');
+    if (!list) return;
+    const dir = assetDir();
+    list.textContent = 'Loading ' + dir + ' …';
+    try {
+        const r = await fetch('/api/sd/list?path=' + encodeURIComponent(dir), { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const data = await r.json();
+        list.innerHTML = '';
+        const bins = (data.entries || []).filter(e => !e.dir && e.name.toLowerCase().endsWith('.bin'))
+            .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+        if (!bins.length) {
+            list.innerHTML = '<div class="field-hint">No .bin assets in ' + dir + ' yet.</div>';
+            return;
+        }
+        for (const entry of bins) {
+            const full = (dir.endsWith('/') ? dir : dir + '/') + entry.name;
+            const row = document.createElement('div');
+            row.className = 'asset-row';
+            row.style.cssText = 'justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border)';
+            const name = document.createElement('span');
+            name.textContent = '🖼️ ' + entry.name;
+            name.style.cssText = 'font-family:monospace;font-size:12px';
+            const actions = document.createElement('span');
+            actions.style.cssText = 'display:flex;gap:6px';
+            const prev = document.createElement('button');
+            prev.className = 'btn-secondary';
+            prev.textContent = '👁 Preview';
+            prev.onclick = () => window.LvBin.openPreview(full);
+            const del = document.createElement('button');
+            del.className = 'btn-secondary';
+            del.textContent = '🗑 Delete';
+            del.onclick = () => deleteAsset(full);
+            actions.append(prev, del);
+            row.append(name, actions);
+            list.appendChild(row);
+        }
+    } catch (err) {
+        list.innerHTML = '<div class="field-hint">SD folder unavailable: ' + err.message + '</div>';
+    }
+}
+
+async function deleteAsset(path) {
+    if (!window.confirm('Delete ' + path + '?')) return;
+    const status = document.getElementById('asset_status');
+    try {
+        const r = await fetch('/api/sd/file?path=' + encodeURIComponent(path), { method: 'DELETE' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        if (status) status.textContent = 'Deleted ' + path + '.';
+        browseAssets();
+    } catch (err) {
+        if (status) status.textContent = 'Delete failed: ' + err.message;
+    }
+}
+
+// ── Generic SD .bin picker (modal) ──────────────────────────────────────────
+// A self-contained folder browser that resolves to a picked .bin path via
+// `onPick`. Used by widget fields (e.g. the knob image) to point at an existing
+// asset without typing the path. Starts in `startDir`, falling back to the SD
+// root if that folder does not exist yet.
+let sdPickerOverlay = null;
+let sdPickerOnPick = null;
+
+function ensureSdPicker() {
+    if (sdPickerOverlay) return;
+    const overlay = document.createElement('div');
+    overlay.style.cssText =
+        'position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;' +
+        'align-items:center;justify-content:center;z-index:2100;padding:20px';
+    const box = document.createElement('div');
+    box.style.cssText =
+        'background:var(--bg-panel,#1b1b1b);border:1px solid var(--border,#333);' +
+        'border-radius:10px;padding:14px;width:min(420px,94vw);max-height:90vh;' +
+        'display:flex;flex-direction:column;gap:10px';
+    const head = document.createElement('div');
+    head.style.cssText = 'display:flex;justify-content:space-between;align-items:center';
+    const title = document.createElement('span');
+    title.textContent = 'Choose a .bin from SD';
+    title.style.cssText = 'font-weight:600;font-size:13px';
+    const close = document.createElement('button');
+    close.className = 'btn-secondary';
+    close.textContent = '✕';
+    close.onclick = () => { overlay.style.display = 'none'; };
+    head.append(title, close);
+    const body = document.createElement('div');
+    body.id = 'sd_picker_body';
+    box.append(head, body);
+    overlay.appendChild(box);
+    overlay.addEventListener('click', e => { if (e.target === overlay) overlay.style.display = 'none'; });
+    document.body.appendChild(overlay);
+    sdPickerOverlay = overlay;
+}
+
+function openSdBinPicker(startDir, onPick) {
+    ensureSdPicker();
+    sdPickerOnPick = onPick;
+    sdPickerOverlay.style.display = 'flex';
+    renderSdPickerDir(startDir || '/', startDir || '/');
+}
+
+async function renderSdPickerDir(path, fallbackRoot) {
+    const body = document.getElementById('sd_picker_body');
+    if (!body) return;
+    body.textContent = 'Loading ' + path + ' …';
+    let data;
+    try {
+        const r = await fetch('/api/sd/list?path=' + encodeURIComponent(path), { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        data = await r.json();
+    } catch (err) {
+        // The default folder may not exist on a fresh card — fall back to root.
+        if (fallbackRoot && path !== '/') { renderSdPickerDir('/', '/'); return; }
+        body.textContent = 'SD folder unavailable: ' + err.message;
+        return;
+    }
+    body.innerHTML = '';
+    const cur = data.path || '/';
+    const heading = document.createElement('div');
+    heading.textContent = cur;
+    heading.style.cssText = 'font-family:monospace;font-size:11px;opacity:.75';
+    const list = document.createElement('div');
+    list.style.cssText =
+        'max-height:50vh;overflow:auto;border:1px solid var(--border);' +
+        'border-radius:var(--radius-sm);background:var(--bg-card)';
+    const addRow = (label, onClick) => {
+        const row = document.createElement('div');
+        row.textContent = label;
+        row.style.cssText = 'padding:7px 10px;cursor:pointer;font-size:12px';
+        row.onmouseenter = () => { row.style.background = 'var(--bg-input)'; };
+        row.onmouseleave = () => { row.style.background = ''; };
+        row.addEventListener('click', onClick);
+        list.appendChild(row);
+    };
+    if (cur !== '/') {
+        const parent = cur.replace(/\/[^/]+\/?$/, '') || '/';
+        addRow('📁 ..', () => renderSdPickerDir(parent, null));
+    }
+    const entries = (data.entries || []).slice().sort((a, b) =>
+        (!!b.dir - !!a.dir) ||
+        a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+    let bins = 0;
+    for (const entry of entries) {
+        const full = (cur.endsWith('/') ? cur : cur + '/') + entry.name;
+        if (entry.dir) {
+            addRow('📁 ' + entry.name, () => renderSdPickerDir(full, null));
+        } else if (entry.name.toLowerCase().endsWith('.bin')) {
+            bins++;
+            addRow('🖼️ ' + entry.name, () => {
+                sdPickerOverlay.style.display = 'none';
+                if (sdPickerOnPick) sdPickerOnPick(full);
+            });
+        }
+    }
+    if (!bins && !entries.some(e => e.dir)) {
+        const empty = document.createElement('div');
+        empty.textContent = 'No .bin files in this folder.';
+        empty.style.cssText = 'padding:8px 10px;font-size:11px;color:var(--text-dim)';
+        list.appendChild(empty);
+    }
+    body.append(heading, list);
+}
+
 function setOnlineWallpaperGalleryOpen(open) {
     const panel = document.getElementById('layout_online_wallpaper_gallery');
     const button = document.getElementById('layout_wp_btn_online');
@@ -1550,7 +1754,8 @@ function selectSection(name) {
     const isPresets  = name === 'presets';
     const isGeneral  = name === 'general';
     const isInternet = name === 'internet';
-    const isSpecial  = isPresets || isGeneral || isInternet;
+    const isAssets   = name === 'assets';
+    const isSpecial  = isPresets || isGeneral || isInternet || isAssets;
     if (!isSpecial && !SECTIONS[name]) return;
 
     for (const tab of document.querySelectorAll('.section-tab')) {
@@ -1560,6 +1765,8 @@ function selectSection(name) {
     document.getElementById('presets_card').style.display  = isPresets  ? '' : 'none';
     document.getElementById('general_card').style.display  = isGeneral  ? '' : 'none';
     document.getElementById('internet_card').style.display = isInternet ? '' : 'none';
+    document.getElementById('assets_card').style.display   = isAssets   ? '' : 'none';
+    if (isAssets)               { browseAssets(); return; }
     if (isPresets)              { checkOrphanPresets(); return; }
     if (isGeneral || isInternet) {
         loadBackgroundTab();
@@ -1883,6 +2090,16 @@ function buildFormRow(field, data, group, details) {
             refreshGroup(details, group, data);
             renderSvg();
         });
+    } else if (field.type === 'text') {
+        input = document.createElement('input');
+        input.type = 'text';
+        input.value = data[field.key] ?? field.default ?? '';
+        if (field.placeholder) input.placeholder = field.placeholder;
+        input.addEventListener('input', () => {
+            data[field.key] = input.value;
+            refreshGroup(details, group, data);
+            renderSvg();
+        });
     } else if (field.type === 'choice') {
         input = document.createElement('select');
         for (const option of field.options) {
@@ -1900,6 +2117,28 @@ function buildFormRow(field, data, group, details) {
     }
     input.id = 'fld_' + field.key;
     row.appendChild(input);
+
+    // Optional "pick a .bin from SD" button that fills a text path field.
+    if (field.type === 'text' && field.sdPicker) {
+        const pick = document.createElement('button');
+        pick.type = 'button';
+        pick.className = 'btn-secondary';
+        pick.textContent = '📂 SD';
+        pick.title = 'Choose a .bin from the SD card';
+        pick.style.marginLeft = '6px';
+        pick.addEventListener('click', () => {
+            openSdBinPicker(field.sdPicker.dir || '/', full => {
+                // /api/sd/list paths are mount-relative; the firmware fopen()s
+                // the "/sdcard/..." path, so store that in the profile field.
+                const stored = '/sdcard' + full;
+                input.value = stored;
+                data[field.key] = stored;
+                refreshGroup(details, group, data);
+                renderSvg();
+            });
+        });
+        row.appendChild(pick);
+    }
     return row;
 }
 

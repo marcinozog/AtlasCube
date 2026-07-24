@@ -211,7 +211,8 @@ static void radio_create(lv_obj_t *parent)
         vol_slider_widget_create(parent, p->radio_volslider_x, p->radio_volslider_y,
                                  p->radio_volslider_w, p->radio_volslider_h,
                                  p->radio_volslider_vertical,
-                                 p->radio_volslider_knob_only, false);
+                                 p->radio_volslider_knob_only, false,
+                                 p->radio_volslider_knob_image);
     }
 
     ESP_LOGI(TAG, "Created (theme=%d)", theme_current());

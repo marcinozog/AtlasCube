@@ -3,10 +3,12 @@
 #include "settings.h"
 #include "audio_engine.h"
 #include "theme.h"
+#include "lv_bin_image.h"
 
-static lv_obj_t *s_slider    = NULL;
-static bool      s_bt        = false;
-static bool      s_knob_only = false;
+static lv_obj_t       *s_slider    = NULL;
+static bool            s_bt        = false;
+static bool            s_knob_only = false;
+static lv_image_dsc_t *s_knob_dsc  = NULL;   // knob artwork, freed on destroy
 
 static void apply_colors(void)
 {
@@ -38,7 +40,7 @@ static void released_cb(lv_event_t *e)
 
 void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
                               int16_t w, int16_t h, bool vertical,
-                              bool knob_only, bool bt)
+                              bool knob_only, bool bt, const char *knob_image)
 {
     if (!parent || s_slider) return;
     s_bt        = bt;
@@ -67,6 +69,18 @@ void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
     lv_obj_add_event_cb(s_slider, released_cb, LV_EVENT_RELEASED, NULL);
 
     apply_colors();
+
+    // Optional knob artwork: size the knob to the image and draw it there.
+    // The image is opaque (RGB565), so it fully hides the themed colour knob.
+    if (knob_image && knob_image[0]) {
+        s_knob_dsc = lv_bin_image_load(knob_image, 0, 0);
+        if (s_knob_dsc) {
+            lv_obj_set_style_width (s_slider, s_knob_dsc->header.w, LV_PART_KNOB);
+            lv_obj_set_style_height(s_slider, s_knob_dsc->header.h, LV_PART_KNOB);
+            lv_obj_set_style_bg_image_src(s_slider, s_knob_dsc, LV_PART_KNOB);
+        }
+    }
+
     vol_slider_widget_update();
 }
 
@@ -75,6 +89,10 @@ void vol_slider_widget_destroy(void)
     if (s_slider) {
         lv_obj_del(s_slider);
         s_slider = NULL;
+    }
+    if (s_knob_dsc) {
+        lv_bin_image_free(s_knob_dsc);   // must run after the slider is deleted
+        s_knob_dsc = NULL;
     }
 }
 

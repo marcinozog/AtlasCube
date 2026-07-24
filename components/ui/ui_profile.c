@@ -1726,6 +1726,7 @@ static void load_bt(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "bt_volslider_y",         &p->bt_volslider_y);
     load_i16 (obj, "bt_volslider_w",         &p->bt_volslider_w);
     load_i16 (obj, "bt_volslider_h",         &p->bt_volslider_h);
+    load_str (obj, "bt_volslider_knob_image", p->bt_volslider_knob_image, sizeof(p->bt_volslider_knob_image));
     load_hotspots(obj, "bt", p->bt_touch_hotspots);
 }
 
@@ -1834,6 +1835,7 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_volslider_y",          &p->radio_volslider_y);
     load_i16 (obj, "radio_volslider_w",          &p->radio_volslider_w);
     load_i16 (obj, "radio_volslider_h",          &p->radio_volslider_h);
+    load_str (obj, "radio_volslider_knob_image", p->radio_volslider_knob_image, sizeof(p->radio_volslider_knob_image));
     load_i16 (obj, "radio_label_bg_opa",         &p->radio_label_bg_opa);
     p->radio_label_bg_opa = LV_CLAMP(0, p->radio_label_bg_opa, 100);
     load_str (obj, "radio_wallpaper",            p->radio_wallpaper, sizeof(p->radio_wallpaper));
@@ -1940,6 +1942,7 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_volslider_y",          p->radio_volslider_y);
     add_i16 (o, "radio_volslider_w",          p->radio_volslider_w);
     add_i16 (o, "radio_volslider_h",          p->radio_volslider_h);
+    add_str (o, "radio_volslider_knob_image", p->radio_volslider_knob_image);
     add_i16 (o, "radio_label_bg_opa",         p->radio_label_bg_opa);
     add_str (o, "radio_wallpaper",            p->radio_wallpaper);
     dump_hotspots(o, "radio", p->radio_touch_hotspots);
@@ -2041,6 +2044,7 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "sd_volslider_y",            &p->sd_volslider_y);
     load_i16 (obj, "sd_volslider_w",            &p->sd_volslider_w);
     load_i16 (obj, "sd_volslider_h",            &p->sd_volslider_h);
+    load_str (obj, "sd_volslider_knob_image",   p->sd_volslider_knob_image, sizeof(p->sd_volslider_knob_image));
     load_i16 (obj, "sd_label_bg_opa",           &p->sd_label_bg_opa);
     p->sd_label_bg_opa = LV_CLAMP(0, p->sd_label_bg_opa, 100);
     load_str (obj, "sd_wallpaper",              p->sd_wallpaper, sizeof(p->sd_wallpaper));
@@ -2139,6 +2143,7 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_volslider_y",            p->sd_volslider_y);
     add_i16 (o, "sd_volslider_w",            p->sd_volslider_w);
     add_i16 (o, "sd_volslider_h",            p->sd_volslider_h);
+    add_str (o, "sd_volslider_knob_image",   p->sd_volslider_knob_image);
     add_i16 (o, "sd_label_bg_opa",           p->sd_label_bg_opa);
     add_str (o, "sd_wallpaper",              p->sd_wallpaper);
     dump_hotspots(o, "sd", p->sd_touch_hotspots);
@@ -2191,6 +2196,7 @@ static cJSON *dump_bt(const ui_profile_t *p)
     add_i16 (o, "bt_volslider_y",         p->bt_volslider_y);
     add_i16 (o, "bt_volslider_w",         p->bt_volslider_w);
     add_i16 (o, "bt_volslider_h",         p->bt_volslider_h);
+    add_str (o, "bt_volslider_knob_image", p->bt_volslider_knob_image);
     dump_hotspots(o, "bt", p->bt_touch_hotspots);
     return o;
 }

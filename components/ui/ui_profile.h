@@ -254,6 +254,7 @@ typedef struct {
     int16_t          radio_volslider_y;
     int16_t          radio_volslider_w;
     int16_t          radio_volslider_h;
+    char             radio_volslider_knob_image[128]; // knob RGB565 .bin on SD ("" = plain colour); knob sized to the image
     ui_touch_hotspot_t radio_touch_hotspots[UI_TOUCH_HOTSPOT_COUNT];
     int16_t          radio_label_bg_opa;        // floating label plate opacity, 0..100
     char             radio_wallpaper[128];      // see clock_wallpaper
@@ -355,6 +356,7 @@ typedef struct {
     int16_t          sd_volslider_y;
     int16_t          sd_volslider_w;
     int16_t          sd_volslider_h;
+    char             sd_volslider_knob_image[128]; // knob RGB565 .bin on SD ("" = plain colour); knob sized to the image
     ui_touch_hotspot_t sd_touch_hotspots[UI_TOUCH_HOTSPOT_COUNT];
     int16_t          sd_label_bg_opa;           // floating label plate opacity, 0..100
     char             sd_wallpaper[128];         // see clock_wallpaper
@@ -421,6 +423,7 @@ typedef struct {
     int16_t          bt_volslider_y;
     int16_t          bt_volslider_w;
     int16_t          bt_volslider_h;
+    char             bt_volslider_knob_image[128]; // knob RGB565 .bin on SD ("" = plain colour); knob sized to the image
     ui_touch_hotspot_t bt_touch_hotspots[UI_TOUCH_HOTSPOT_COUNT];
     int16_t          bt_label_bg_opa;           // floating label plate opacity, 0..100
     char             bt_wallpaper[128];         // see clock_wallpaper

@@ -276,6 +276,14 @@
             transition: all .15s;
         }
         .section-tab:hover { color: var(--text); }
+        .asset-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .asset-row label { font-size: 12px; color: var(--text-dim); }
+        .asset-row input[type="number"] { width: 72px; }
         .section-tab.active {
             background: var(--accent);
             color: #001019;
@@ -420,6 +428,7 @@
         <button class="section-tab"        data-section="internet" onclick="selectSection('internet')"
             style="margin-left:auto" >🌍 Internet</button>
         <button class="section-tab"        data-section="general" onclick="selectSection('general')">🎨 General</button>
+        <button class="section-tab"        data-section="assets" onclick="selectSection('assets')">📦 Assets</button>
         <button class="section-tab"        data-section="presets" onclick="selectSection('presets')">🧹 Presets</button>
     </div>
 
@@ -494,6 +503,35 @@
             <div class="field-hint">Applies to every wallpaper — per-screen SD files and the
                 fetched internet one. Lower it to darken the image so on-screen text stays
                 readable; gradient/solid backgrounds are not affected. 100% = original image.</div>
+        </div>
+    </div>
+
+    <!-- ── Assets tab: upload small UI images (knob artwork, …) to the SD card ── -->
+    <div id="assets_card" style="display:none">
+        <div class="panel">
+            <label class="field-label">Upload image asset</label>
+            <div class="field-hint">Convert a PNG/JPG to an LVGL RGB565 <code>.bin</code> and store it on the
+                SD card, then point a widget at it (e.g. a volume-slider <b>Knob image</b>). The image is
+                scaled to the size below — for a knob, that is its on-screen size. No transparency: the image
+                is a solid rectangle.</div>
+
+            <div class="asset-row" style="margin-top:10px">
+                <label>Width (px)</label>
+                <input type="number" id="asset_w" value="64" min="4" max="480" />
+                <label>Height (px)</label>
+                <input type="number" id="asset_h" value="64" min="4" max="480" />
+            </div>
+            <div class="asset-row" style="margin-top:8px">
+                <label>Folder</label>
+                <input type="text" id="asset_dir" value="/knobs" style="flex:1" />
+            </div>
+            <div class="asset-row" style="margin-top:8px">
+                <input type="file" id="asset_file" accept="image/png,image/jpeg,image/webp" />
+                <button class="btn-apply" onclick="uploadAsset()">⬆ Upload</button>
+                <button class="btn-secondary" onclick="browseAssets()">🔄 Refresh list</button>
+            </div>
+            <div id="asset_status" class="field-hint" style="margin-top:8px"></div>
+            <div id="asset_list" style="margin-top:8px"></div>
         </div>
     </div>
 
