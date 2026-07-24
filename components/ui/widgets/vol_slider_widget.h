@@ -20,10 +20,11 @@ extern "C" {
 // defines the drag range, and its thickness sizes the knob.
 //
 // knob_image is an optional path to an RGB565 .bin on SD (scripts/img2lvgl.py
-// format) drawn on the knob; the knob is resized to the image's native
-// dimensions, so author the .bin at the on-screen knob size you want. NULL or
-// "" keeps the plain themed colour knob. No alpha channel — the image is a
-// solid rectangle. Loaded via lv_bin_image; the SD card must already be
+// format) drawn on the knob. The knob is a square whose side is the slider's
+// thickness (the cross axis: h for horizontal, w for vertical), and the image
+// is bilinearly scaled to it — so resizing the slider box resizes the knob.
+// NULL or "" keeps the plain themed colour knob. No alpha channel — the image
+// is a solid rectangle. Loaded via lv_bin_image; the SD card must already be
 // mounted.
 //
 // bt=false drives the main output: the level is applied live while dragging

@@ -70,13 +70,17 @@ void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
 
     apply_colors();
 
-    // Optional knob artwork: size the knob to the image and draw it there.
-    // The image is opaque (RGB565), so it fully hides the themed colour knob.
+    // Optional knob artwork, scaled to the slider so resizing the box resizes
+    // the knob. The knob is a square whose side is the slider's thickness (the
+    // cross axis after the orientation normalisation above: h for horizontal,
+    // w for vertical). The image is opaque (RGB565), so it fully hides the
+    // themed colour knob.
     if (knob_image && knob_image[0]) {
-        s_knob_dsc = lv_bin_image_load(knob_image, 0, 0);
+        const int side = vertical ? w : h;
+        s_knob_dsc = lv_bin_image_load_scaled(knob_image, side, side);
         if (s_knob_dsc) {
-            lv_obj_set_style_width (s_slider, s_knob_dsc->header.w, LV_PART_KNOB);
-            lv_obj_set_style_height(s_slider, s_knob_dsc->header.h, LV_PART_KNOB);
+            lv_obj_set_style_width (s_slider, side, LV_PART_KNOB);
+            lv_obj_set_style_height(s_slider, side, LV_PART_KNOB);
             lv_obj_set_style_bg_image_src(s_slider, s_knob_dsc, LV_PART_KNOB);
         }
     }
