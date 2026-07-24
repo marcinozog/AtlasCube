@@ -1354,6 +1354,42 @@ async function uploadAsset() {
     }
 }
 
+// ── General tab: park a panel-sized wallpaper on SD ─────────────────────────
+// Like the per-screen uploader (uploadWallpaperTo) but WITHOUT the selectWallpaper
+// step — it scales the image to the panel resolution and stores it under
+// /wallpapers so it can be assigned per screen later, leaving every screen's
+// current background untouched.
+const GENERAL_WALLPAPER_DIR = '/wallpapers';
+
+function generalWallpaperFilePicked() {
+    const input = document.getElementById('general_wp_file');
+    const label = document.getElementById('general_wp_file_name');
+    const file = input.files && input.files[0];
+    if (label) label.textContent = file ? file.name : 'No file selected';
+}
+
+async function uploadGeneralWallpaper() {
+    const status = document.getElementById('general_wp_status');
+    const note = msg => { if (status) status.textContent = msg; };
+    const input = document.getElementById('general_wp_file');
+    const file = input.files && input.files[0];
+    if (!file) { note('Pick an image first.'); return; }
+    const w = state.meta.screen_w, h = state.meta.screen_h;
+    try {
+        await ensureLvBin();
+        const saveAs = askWallpaperSaveAs(file.name);
+        if (saveAs === null) { note('Upload cancelled.'); return; }
+        const relPath = await window.LvBin.uploadImage(
+            file, GENERAL_WALLPAPER_DIR, w, h, note, saveAs);
+        input.value = '';
+        generalWallpaperFilePicked();   // reset the "chosen file" label
+        note('Saved to /sdcard' + relPath + ' (' + w + '×' + h +
+             '). Assign it per screen with the 🗂 picker when ready.');
+    } catch (err) {
+        note('Upload failed: ' + err.message);
+    }
+}
+
 async function browseAssets() {
     const list = document.getElementById('asset_list');
     if (!list) return;

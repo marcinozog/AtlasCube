@@ -568,6 +568,24 @@
                 fetched internet one. Lower it to darken the image so on-screen text stays
                 readable; gradient/solid backgrounds are not affected. 100% = original image.</div>
         </div>
+
+        <div class="panel" style="margin-top:12px">
+            <label class="field-label">Upload wallpaper (no assign)</label>
+            <div class="field-hint">Convert a PNG/JPG to an LVGL RGB565 <code>.bin</code> scaled to the
+                current panel resolution and store it under <code>/wallpapers</code> on the SD card —
+                <b>without</b> changing what any screen shows. Assign it later per screen with the 🗂 picker
+                under the live preview.</div>
+            <div class="asset-row" style="margin-top:10px">
+                <input type="file" id="general_wp_file" accept="image/png,image/jpeg,image/webp" hidden
+                       onchange="generalWallpaperFilePicked()" />
+                <button class="btn-secondary" onclick="document.getElementById('general_wp_file').click()">📁 Choose image…</button>
+                <span id="general_wp_file_name" class="field-hint" style="flex:1;margin-top:0">No file selected</span>
+            </div>
+            <div class="asset-row" style="margin-top:8px">
+                <button class="btn-apply" onclick="uploadGeneralWallpaper()">⬆ Upload</button>
+            </div>
+            <div id="general_wp_status" class="field-hint" style="margin-top:8px"></div>
+        </div>
     </div>
 
     <!-- ── Assets tab: upload small UI images (knob artwork, …) to the SD card ── -->
