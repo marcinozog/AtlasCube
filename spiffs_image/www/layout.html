@@ -72,6 +72,25 @@
             letter-spacing: .08em;
             text-transform: uppercase;
         }
+        /* Non-collapsible category separator between top-level groups. */
+        .form-category {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 12px 2px 6px;
+            color: var(--text-dim);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+        }
+        .form-category::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+        .form-category:first-child { margin-top: 0; }
         .form-group {
             background: color-mix(in srgb, var(--bg-panel) 48%, transparent);
             border: 1px solid var(--border);

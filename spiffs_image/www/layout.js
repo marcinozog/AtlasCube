@@ -377,72 +377,93 @@ const SD_FIELDS = [
 // Form-only grouping. Field schemas above remain the API/source-of-truth; these
 // groups only decide how the editor presents them. `enabledBy` keeps the Show
 // switch visible while hiding the controls that have no effect when it is off.
+// Groups are shown in this order. A `{ heading }` entry is a non-collapsible
+// category separator (rendered by buildForm as a divider, not a <details>);
+// it still occupies an array index, so dataset.groupIndex stays aligned.
 const FORM_GROUPS = {
     clock: [
+        { heading: 'Text & labels' },
         { title: 'Time', enabledBy: 'clock_show_time', fields: ['clock_show_time', 'clock_time_x', 'clock_time_y', 'clock_time_font'] },
         { title: 'Date', enabledBy: 'clock_show_date', fields: ['clock_show_date', 'clock_date_x', 'clock_date_y', 'clock_date_font'] },
         { title: 'Network info', enabledBy: 'clock_show_netinfo', fields: ['clock_show_netinfo', 'clock_netinfo_x', 'clock_netinfo_y', 'clock_netinfo_font'] },
         { title: 'Station / title', fields: ['clock_show_strip', 'clock_strip_x', 'clock_strip_y', 'clock_strip_w', 'clock_strip_h', 'clock_strip_bg_opa', 'clock_strip_station_x', 'clock_strip_station_y', 'clock_strip_station_w', 'clock_strip_title_x', 'clock_strip_title_y', 'clock_strip_title_w', 'clock_strip_station_font', 'clock_strip_title_font'] },
-        { title: 'Mode indicator', enabledBy: 'clock_show_mode_indicator', fields: ['clock_show_mode_indicator', 'clock_mode_indic_x', 'clock_mode_indic_y'] },
-        { title: 'Event indicator', enabledBy: 'clock_show_event_indicator', fields: ['clock_show_event_indicator', 'clock_event_indic_x', 'clock_event_indic_y'] },
         { title: 'Calendar', enabledBy: 'clock_show_calendar', fields: ['clock_show_calendar', 'clock_calendar_x', 'clock_calendar_y', 'clock_calendar_w', 'clock_calendar_font'] },
         { title: 'Weather', enabledBy: 'clock_show_weather', fields: ['clock_show_weather', 'clock_weather_x', 'clock_weather_y', 'clock_weather_w', 'clock_weather_font'] },
+        { heading: 'Indicators' },
+        { title: 'Mode indicator', enabledBy: 'clock_show_mode_indicator', fields: ['clock_show_mode_indicator', 'clock_mode_indic_x', 'clock_mode_indic_y'] },
+        { title: 'Event indicator', enabledBy: 'clock_show_event_indicator', fields: ['clock_show_event_indicator', 'clock_event_indic_x', 'clock_event_indic_y'] },
     ],
     bt: [
-        { title: 'Bluetooth mark', enabledBy: 'bt_show_circle', fields: ['bt_show_circle', 'bt_circle_x', 'bt_circle_y', 'bt_circle_w', 'bt_circle_h', 'bt_icon_font'] },
+        { heading: 'Text & labels' },
         { title: 'Device status', fields: ['bt_brand_x', 'bt_brand_y', 'bt_brand_font', 'bt_status_x', 'bt_status_y', 'bt_status_font'] },
         { title: 'Track title', fields: ['bt_title_x', 'bt_title_y', 'bt_title_w', 'bt_title_font'] },
         { title: 'Artist', fields: ['bt_artist_x', 'bt_artist_y', 'bt_artist_w', 'bt_artist_font'] },
         { title: 'Playback', fields: ['bt_time_x', 'bt_time_y', 'bt_time_font', 'bt_vol_x', 'bt_vol_y', 'bt_vol_label_font'] },
-        { title: 'Volume slider', enabledBy: 'bt_volslider_show', fields: ['bt_volslider_show', 'bt_volslider_vertical', 'bt_volslider_knob_only', 'bt_volslider_x', 'bt_volslider_y', 'bt_volslider_w', 'bt_volslider_h', 'bt_volslider_knob_image', 'bt_volslider_vol_max'] },
+        { heading: 'Indicators & clock' },
+        { title: 'Bluetooth mark', enabledBy: 'bt_show_circle', fields: ['bt_show_circle', 'bt_circle_x', 'bt_circle_y', 'bt_circle_w', 'bt_circle_h', 'bt_icon_font'] },
         { title: 'Mode indicator', enabledBy: 'bt_show_mode_indicator', fields: ['bt_show_mode_indicator', 'bt_mode_indic_x', 'bt_mode_indic_y'] },
         { title: 'Clock', enabledBy: 'bt_show_clock', fields: ['bt_show_clock', 'bt_clock_widget_x', 'bt_clock_widget_y', 'bt_clock_font'] },
+        { heading: 'Controls' },
+        { title: 'Volume slider', enabledBy: 'bt_volslider_show', fields: ['bt_volslider_show', 'bt_volslider_vertical', 'bt_volslider_knob_only', 'bt_volslider_x', 'bt_volslider_y', 'bt_volslider_w', 'bt_volslider_h', 'bt_volslider_knob_image', 'bt_volslider_vol_max'] },
         { title: 'Tap controls overlay', enabledBy: 'bt_show_ctrl_overlay', fields: ['bt_show_ctrl_overlay'] },
         ...touchHotspotGroups('bt'),
     ],
     radio: [
+        { heading: 'Text & labels' },
         { title: 'Station name', enabledBy: 'radio_show_np', fields: ['radio_show_np', 'radio_np_x', 'radio_np_y', 'radio_np_w', 'radio_np_station_font'] },
         { title: 'Track title', enabledBy: 'radio_show_np_title', fields: ['radio_show_np_title', 'radio_title_x', 'radio_title_y', 'radio_title_w', 'radio_np_title_font'] },
-        { title: 'Station icon', enabledBy: 'radio_show_station_icon', fields: ['radio_show_station_icon', 'radio_station_icon_x', 'radio_station_icon_y', 'radio_station_icon_size'] },
         { title: 'Playback status', enabledBy: 'radio_show_playback_status', fields: ['radio_show_playback_status', 'radio_state_x', 'radio_state_y', 'radio_state_font'] },
+        { title: 'Weather', enabledBy: 'radio_show_weather', fields: ['radio_show_weather', 'radio_weather_x', 'radio_weather_y', 'radio_weather_w', 'radio_weather_font'] },
         { title: 'Audio info', fields: ['radio_audio_info_font'], subgroups: [
             { title: 'Sample rate', enabledBy: 'radio_samplerate_show', fields: ['radio_samplerate_show', 'radio_samplerate_x', 'radio_samplerate_y'] },
             { title: 'Channels (stereo/mono)', enabledBy: 'radio_channels_show', fields: ['radio_channels_show', 'radio_channels_x', 'radio_channels_y'] },
             { title: 'Bitrate', enabledBy: 'radio_bitrate_show', fields: ['radio_bitrate_show', 'radio_bitrate_x', 'radio_bitrate_y'] },
             { title: 'Volume', enabledBy: 'radio_volume_show', fields: ['radio_volume_show', 'radio_volume_x', 'radio_volume_y'] },
         ] },
+        { title: 'VU meters', fields: [], subgroups: [
+            { title: 'Bar VU', enabledBy: 'radio_show_vu', fields: ['radio_show_vu', 'radio_vu_x', 'radio_vu_y', 'radio_vu_w', 'radio_vu_h', 'radio_vu_transparent'] },
+            { title: 'Needle VU', fields: ['radio_needle_frame', 'radio_needle_show_l', 'radio_needle_l_x', 'radio_needle_l_y', 'radio_needle_l_w', 'radio_needle_l_h', 'radio_needle_show_r', 'radio_needle_r_x', 'radio_needle_r_y', 'radio_needle_r_w', 'radio_needle_r_h'] },
+            { title: 'Stereo bar VU', fields: ['radio_stereo_frame', 'radio_stereo_horizontal', 'radio_stereo_transparent', 'radio_stereo_peak', 'radio_stereo_zones', 'radio_stereo_show_l', 'radio_stereo_l_x', 'radio_stereo_l_y', 'radio_stereo_l_w', 'radio_stereo_l_h', 'radio_stereo_show_r', 'radio_stereo_r_x', 'radio_stereo_r_y', 'radio_stereo_r_w', 'radio_stereo_r_h'] },
+        ] },
+        { heading: 'Indicators & clock' },
+        { title: 'Station icon', enabledBy: 'radio_show_station_icon', fields: ['radio_show_station_icon', 'radio_station_icon_x', 'radio_station_icon_y', 'radio_station_icon_size'] },
         { title: 'Mode indicator', enabledBy: 'radio_show_mode_indicator', fields: ['radio_show_mode_indicator', 'radio_mode_indic_x', 'radio_mode_indic_y'] },
-        { title: 'Clock', enabledBy: 'radio_show_clock', fields: ['radio_show_clock', 'radio_clock_widget_x', 'radio_clock_widget_y', 'radio_clock_font'] },
         { title: 'Event indicator', enabledBy: 'radio_show_event_indicator', fields: ['radio_show_event_indicator', 'radio_event_indic_x', 'radio_event_indic_y'] },
-        { title: 'Animated wheels', enabledBy: 'radio_show_cassette', fields: ['radio_show_cassette', 'radio_animation_style', 'radio_wheels_reverse', 'radio_show_wheel_left', 'radio_cassette_l_x', 'radio_cassette_l_y', 'radio_cassette_l_size', 'radio_show_wheel_right', 'radio_cassette_r_x', 'radio_cassette_r_y', 'radio_cassette_r_size'] },
-        { title: 'VU meter', enabledBy: 'radio_show_vu', fields: ['radio_show_vu', 'radio_vu_x', 'radio_vu_y', 'radio_vu_w', 'radio_vu_h', 'radio_vu_transparent'] },
-        { title: 'Needle VU', fields: ['radio_needle_frame', 'radio_needle_show_l', 'radio_needle_l_x', 'radio_needle_l_y', 'radio_needle_l_w', 'radio_needle_l_h', 'radio_needle_show_r', 'radio_needle_r_x', 'radio_needle_r_y', 'radio_needle_r_w', 'radio_needle_r_h'] },
-        { title: 'Stereo bar VU', fields: ['radio_stereo_frame', 'radio_stereo_horizontal', 'radio_stereo_transparent', 'radio_stereo_peak', 'radio_stereo_zones', 'radio_stereo_show_l', 'radio_stereo_l_x', 'radio_stereo_l_y', 'radio_stereo_l_w', 'radio_stereo_l_h', 'radio_stereo_show_r', 'radio_stereo_r_x', 'radio_stereo_r_y', 'radio_stereo_r_w', 'radio_stereo_r_h'] },
+        { title: 'Clock', enabledBy: 'radio_show_clock', fields: ['radio_show_clock', 'radio_clock_widget_x', 'radio_clock_widget_y', 'radio_clock_font'] },
+        { heading: 'Controls' },
         { title: 'Volume slider', enabledBy: 'radio_volslider_show', fields: ['radio_volslider_show', 'radio_volslider_vertical', 'radio_volslider_knob_only', 'radio_volslider_x', 'radio_volslider_y', 'radio_volslider_w', 'radio_volslider_h', 'radio_volslider_knob_image', 'radio_volslider_vol_max'] },
-        { title: 'Weather', enabledBy: 'radio_show_weather', fields: ['radio_show_weather', 'radio_weather_x', 'radio_weather_y', 'radio_weather_w', 'radio_weather_font'] },
         { title: 'Tap controls overlay', enabledBy: 'radio_show_ctrl_overlay', fields: ['radio_show_ctrl_overlay'] },
         ...touchHotspotGroups('radio'),
+        { heading: 'Decoration' },
+        { title: 'Animated wheels', enabledBy: 'radio_show_cassette', fields: ['radio_show_cassette', 'radio_animation_style', 'radio_wheels_reverse', 'radio_show_wheel_left', 'radio_cassette_l_x', 'radio_cassette_l_y', 'radio_cassette_l_size', 'radio_show_wheel_right', 'radio_cassette_r_x', 'radio_cassette_r_y', 'radio_cassette_r_size'] },
     ],
     sd: [
+        { heading: 'Text & labels' },
         { title: 'Track title', fields: ['sd_title_x', 'sd_title_y', 'sd_title_w', 'sd_title_font'] },
         { title: 'Folder', enabledBy: 'sd_show_folder', fields: ['sd_show_folder', 'sd_folder_x', 'sd_folder_y', 'sd_folder_font'] },
+        { title: 'Weather', enabledBy: 'sd_show_weather', fields: ['sd_show_weather', 'sd_weather_x', 'sd_weather_y', 'sd_weather_w', 'sd_weather_font'] },
         { title: 'Playback info', fields: ['sd_info_font'], subgroups: [
             { title: 'Volume', enabledBy: 'sd_volume_show', fields: ['sd_volume_show', 'sd_volume_x', 'sd_volume_y'] },
             { title: 'Status flags', enabledBy: 'sd_status_show', fields: ['sd_status_show', 'sd_status_x', 'sd_status_y'] },
         ] },
+        { heading: 'Playback' },
         { title: 'Playback time', enabledBy: 'sd_show_time', fields: ['sd_show_time', 'sd_time_x', 'sd_time_y'] },
         { title: 'Progress bar', enabledBy: 'sd_show_bar', fields: ['sd_show_bar', 'sd_bar_x', 'sd_bar_y', 'sd_bar_w', 'sd_bar_h'] },
+        { title: 'VU meters', fields: [], subgroups: [
+            { title: 'Bar VU', enabledBy: 'sd_show_vu', fields: ['sd_show_vu', 'sd_vu_x', 'sd_vu_y', 'sd_vu_w', 'sd_vu_h', 'sd_vu_transparent'] },
+            { title: 'Needle VU', fields: ['sd_needle_frame', 'sd_needle_show_l', 'sd_needle_l_x', 'sd_needle_l_y', 'sd_needle_l_w', 'sd_needle_l_h', 'sd_needle_show_r', 'sd_needle_r_x', 'sd_needle_r_y', 'sd_needle_r_w', 'sd_needle_r_h'] },
+            { title: 'Stereo bar VU', fields: ['sd_stereo_frame', 'sd_stereo_horizontal', 'sd_stereo_transparent', 'sd_stereo_peak', 'sd_stereo_zones', 'sd_stereo_show_l', 'sd_stereo_l_x', 'sd_stereo_l_y', 'sd_stereo_l_w', 'sd_stereo_l_h', 'sd_stereo_show_r', 'sd_stereo_r_x', 'sd_stereo_r_y', 'sd_stereo_r_w', 'sd_stereo_r_h'] },
+        ] },
+        { heading: 'Indicators & clock' },
         { title: 'Mode indicator', enabledBy: 'sd_show_mode_indicator', fields: ['sd_show_mode_indicator', 'sd_mode_indic_x', 'sd_mode_indic_y'] },
-        { title: 'Clock', enabledBy: 'sd_show_clock', fields: ['sd_show_clock', 'sd_clock_widget_x', 'sd_clock_widget_y', 'sd_clock_font'] },
         { title: 'Event indicator', enabledBy: 'sd_show_event_indicator', fields: ['sd_show_event_indicator', 'sd_event_indic_x', 'sd_event_indic_y'] },
-        { title: 'Animated wheels', enabledBy: 'sd_show_cassette', fields: ['sd_show_cassette', 'sd_animation_style', 'sd_wheels_reverse', 'sd_show_wheel_left', 'sd_cassette_l_x', 'sd_cassette_l_y', 'sd_cassette_l_size', 'sd_show_wheel_right', 'sd_cassette_r_x', 'sd_cassette_r_y', 'sd_cassette_r_size'] },
-        { title: 'VU meter', enabledBy: 'sd_show_vu', fields: ['sd_show_vu', 'sd_vu_x', 'sd_vu_y', 'sd_vu_w', 'sd_vu_h', 'sd_vu_transparent'] },
-        { title: 'Needle VU', fields: ['sd_needle_frame', 'sd_needle_show_l', 'sd_needle_l_x', 'sd_needle_l_y', 'sd_needle_l_w', 'sd_needle_l_h', 'sd_needle_show_r', 'sd_needle_r_x', 'sd_needle_r_y', 'sd_needle_r_w', 'sd_needle_r_h'] },
-        { title: 'Stereo bar VU', fields: ['sd_stereo_frame', 'sd_stereo_horizontal', 'sd_stereo_transparent', 'sd_stereo_peak', 'sd_stereo_zones', 'sd_stereo_show_l', 'sd_stereo_l_x', 'sd_stereo_l_y', 'sd_stereo_l_w', 'sd_stereo_l_h', 'sd_stereo_show_r', 'sd_stereo_r_x', 'sd_stereo_r_y', 'sd_stereo_r_w', 'sd_stereo_r_h'] },
+        { title: 'Clock', enabledBy: 'sd_show_clock', fields: ['sd_show_clock', 'sd_clock_widget_x', 'sd_clock_widget_y', 'sd_clock_font'] },
+        { heading: 'Controls' },
         { title: 'Volume slider', enabledBy: 'sd_volslider_show', fields: ['sd_volslider_show', 'sd_volslider_vertical', 'sd_volslider_knob_only', 'sd_volslider_x', 'sd_volslider_y', 'sd_volslider_w', 'sd_volslider_h', 'sd_volslider_knob_image', 'sd_volslider_vol_max'] },
-        { title: 'Weather', enabledBy: 'sd_show_weather', fields: ['sd_show_weather', 'sd_weather_x', 'sd_weather_y', 'sd_weather_w', 'sd_weather_font'] },
         { title: 'Tap controls overlay', enabledBy: 'sd_show_ctrl_overlay', fields: ['sd_show_ctrl_overlay'] },
         ...touchHotspotGroups('sd'),
+        { heading: 'Decoration' },
+        { title: 'Animated wheels', enabledBy: 'sd_show_cassette', fields: ['sd_show_cassette', 'sd_animation_style', 'sd_wheels_reverse', 'sd_show_wheel_left', 'sd_cassette_l_x', 'sd_cassette_l_y', 'sd_cassette_l_size', 'sd_show_wheel_right', 'sd_cassette_r_x', 'sd_cassette_r_y', 'sd_cassette_r_size'] },
     ],
 };
 
@@ -1983,11 +2004,22 @@ function buildForm() {
     const fields = SECTIONS[state.active].fields;
     const fieldByKey = new Map(fields.map(f => [f.key, f]));
     const groups = FORM_GROUPS[state.active];
-    root.querySelectorAll('.form-group').forEach(n => n.remove());
+    root.querySelectorAll('.form-group, .form-category').forEach(n => n.remove());
 
-    if (!openFormGroups[state.active]) openFormGroups[state.active] = new Set([0]);
+    if (!openFormGroups[state.active]) {
+        // Open the first real group by default (skip any leading heading marker).
+        const firstGroup = groups.findIndex(g => !g.heading);
+        openFormGroups[state.active] = new Set(firstGroup < 0 ? [] : [firstGroup]);
+    }
 
     groups.forEach((group, groupIndex) => {
+        if (group.heading) {
+            const cat = document.createElement('div');
+            cat.className = 'form-category';
+            cat.textContent = group.heading;
+            root.appendChild(cat);
+            return;
+        }
         const details = document.createElement('details');
         details.className = 'form-group';
         details.dataset.groupIndex = groupIndex;
@@ -2178,7 +2210,9 @@ function refreshGroup(details, group, data) {
 function groupSummary(group, data) {
     if (group.enabledBy && !data[group.enabledBy]) return 'Off';
     if (group.subgroups) {
-        const enabled = group.subgroups.filter(s => !!data[s.enabledBy]).length;
+        // A subgroup without an enabledBy toggle is always-on (like a top-level
+        // group without one), so count it as enabled rather than undercounting.
+        const enabled = group.subgroups.filter(s => !s.enabledBy || !!data[s.enabledBy]).length;
         return `${enabled}/${group.subgroups.length} enabled`;
     }
 
