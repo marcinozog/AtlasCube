@@ -219,7 +219,23 @@
             transition: filter .15s;
         }
         .actions button:hover:not(:disabled) { filter: brightness(1.15); }
-        .btn-apply { background: var(--accent); color: #001019; }
+        /* Standalone button look (used outside the action bar, e.g. Assets).
+           Inside `.actions`, the higher-specificity `.actions button` rule wins
+           and restores the full-width bar sizing — so this is safe there too. */
+        .btn-apply {
+            background: var(--accent);
+            color: #001019;
+            padding: 8px 14px;
+            border: 1px solid var(--accent);
+            border-radius: var(--radius-sm);
+            font-family: 'Chakra Petch', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: filter .15s;
+        }
+        .btn-apply:hover { filter: brightness(1.12); }
         .btn-reset { background: var(--bg-panel); color: var(--text); border: 1px solid var(--border) !important; }
         #status_msg {
             font-size: 11px;
@@ -554,7 +570,12 @@
                 <input type="text" id="asset_dir" value="/knobs" style="flex:1" />
             </div>
             <div class="asset-row" style="margin-top:8px">
-                <input type="file" id="asset_file" accept="image/png,image/jpeg,image/webp" />
+                <input type="file" id="asset_file" accept="image/png,image/jpeg,image/webp" hidden
+                       onchange="assetFilePicked()" />
+                <button class="btn-secondary" onclick="document.getElementById('asset_file').click()">📁 Choose image…</button>
+                <span id="asset_file_name" class="field-hint" style="flex:1;margin-top:0">No file selected</span>
+            </div>
+            <div class="asset-row" style="margin-top:8px">
                 <button class="btn-apply" onclick="uploadAsset()">⬆ Upload</button>
                 <button class="btn-secondary" onclick="browseAssets()">🔄 Refresh list</button>
             </div>

@@ -1253,6 +1253,13 @@ function assetDir() {
     return ('/' + raw).replace(/\/+/g, '/').replace(/\/+$/, '') || '/';
 }
 
+function assetFilePicked() {
+    const input = document.getElementById('asset_file');
+    const label = document.getElementById('asset_file_name');
+    const file = input.files && input.files[0];
+    if (label) label.textContent = file ? file.name : 'No file selected';
+}
+
 async function uploadAsset() {
     const status = document.getElementById('asset_status');
     const note = msg => { if (status) status.textContent = msg; };
@@ -1271,6 +1278,7 @@ async function uploadAsset() {
         const saveAs = window.LvBin.fileStem(stem.trim() || file.name);
         const relPath = await window.LvBin.uploadImage(file, dir, w, h, note, saveAs);
         input.value = '';
+        assetFilePicked();   // reset the "chosen file" label
         // Widgets reference the fopen-ready "/sdcard/..." path (the 📂 SD picker
         // on a knob-image field fills exactly this).
         note('Saved. Reference as /sdcard' + relPath + '  (' + w + '×' + h + ').');
