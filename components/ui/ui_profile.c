@@ -2271,6 +2271,9 @@ static cJSON *dump_clock(const ui_profile_t *p)
 static void load_eq(const cJSON *obj, ui_profile_t *p)
 {
     if (!cJSON_IsObject(obj)) return;
+    load_i16 (obj, "eq_knob_w",     &p->eq_knob_w);
+    if (p->eq_knob_w < 0) p->eq_knob_w = 0;
+    load_bool(obj, "eq_knob_only",  &p->eq_knob_only);
     load_str (obj, "eq_knob_image", p->eq_knob_image, sizeof(p->eq_knob_image));
     load_str (obj, "eq_wallpaper",  p->eq_wallpaper,  sizeof(p->eq_wallpaper));
 }
@@ -2278,6 +2281,8 @@ static void load_eq(const cJSON *obj, ui_profile_t *p)
 static cJSON *dump_eq(const ui_profile_t *p)
 {
     cJSON *o = cJSON_CreateObject();
+    add_i16 (o, "eq_knob_w",     p->eq_knob_w);
+    add_bool(o, "eq_knob_only",  p->eq_knob_only);
     add_str (o, "eq_knob_image", p->eq_knob_image);
     add_str (o, "eq_wallpaper",  p->eq_wallpaper);
     return o;

@@ -461,6 +461,8 @@ typedef struct {
     const lv_font_t *eq_info_font;
     const lv_font_t *eq_freq_font;
     const lv_font_t *eq_hint_font;
+    int16_t          eq_knob_w;          // knob image width in px (0 = band column width); height follows aspect
+    bool             eq_knob_only;        // hide track/fill — only the knob image draws (over wallpaper)
     char             eq_knob_image[128]; // knob RGB565 .bin on SD ("" = plain colour); one image shared by all bands
     char             eq_wallpaper[128];  // see clock_wallpaper — per-screen EQ background override
 

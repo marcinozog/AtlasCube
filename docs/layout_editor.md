@@ -134,7 +134,7 @@ it simply doesn't exist.
 | `/api/ui/profile/bt` | GET / POST | BT section, same semantics as clock |
 | `/api/ui/profile/radio` | GET / POST | Radio section, same semantics as clock |
 | `/api/ui/profile/sd` | GET / POST | SD Player section, same semantics as clock |
-| `/api/ui/profile/eq` | GET / POST | Equalizer section (shared knob image + wallpaper), same semantics as clock |
+| `/api/ui/profile/eq` | GET / POST | Equalizer section (shared knob image / width / knob-only + wallpaper), same semantics as clock |
 | `/api/ui/profile/reset` | POST | Reset full runtime to compile-time defaults, save file, rebuild |
 
 Implementation in [components/web/http_server.c](../components/web/http_server.c).

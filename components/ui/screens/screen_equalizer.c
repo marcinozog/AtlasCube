@@ -125,10 +125,11 @@ static void update_focus_visuals(void)
     }
 }
 
-// Load ui_profile.eq_knob_image once (cross axis = slider width; the other axis
-// follows the image's aspect ratio), then overlay one lv_image per band on
-// s_band_cont and hide the sliders' native knobs. All bands share the single
-// scaled descriptor. On any failure the plain themed knobs stay.
+// Load ui_profile.eq_knob_image once (cap width = band column so it reads as a
+// fader cap, not the thin track; height follows the image aspect), then overlay
+// one lv_image per band on s_band_cont and hide the sliders' native knobs. All
+// bands share the single scaled descriptor. On any failure the plain themed
+// knobs stay.
 static void build_eq_knobs(void)
 {
     const ui_profile_t *p = ui_profile_get();
@@ -138,8 +139,15 @@ static void build_eq_knobs(void)
     if (!s_knob_dsc) return;
 
     const int iw = s_knob_dsc->header.w, ih = s_knob_dsc->header.h;
-    s_kw = p->eq_slider_w;                        // cross axis of a vertical slider
+    // User-defined cap width (eq_knob_w); 0 falls back to the whole band column
+    // (the bare track eq_slider_w is only a few px → nearly invisible). Height
+    // follows the image aspect, capped to the slider length so it can travel.
+    s_kw = (p->eq_knob_w > 0) ? p->eq_knob_w : p->eq_band_w;
     s_kh = (iw > 0) ? ih * s_kw / iw : s_kw;
+    if (s_kh > p->eq_slider_h) {                  // very tall art — cap, keep aspect
+        s_kh = p->eq_slider_h;
+        s_kw = (ih > 0) ? iw * s_kh / ih : s_kw;
+    }
     if (s_kw < 1) s_kw = 1;
     if (s_kh < 1) s_kh = 1;
 
@@ -224,6 +232,13 @@ static void eq_create(lv_obj_t *parent)
         lv_obj_set_style_bg_color(sl, lv_color_hex(th->accent), LV_PART_INDICATOR);
         lv_obj_set_style_bg_opa(sl, LV_OPA_COVER, LV_PART_INDICATOR);
         lv_obj_set_style_bg_color(sl, lv_color_hex(th->accent), LV_PART_KNOB);
+        /* knob-only: hide track + fill so just the knob artwork shows over the
+           wallpaper (update_focus_visuals only recolours the indicator, never
+           re-opaques it, so this sticks) */
+        if (p->eq_knob_only) {
+            lv_obj_set_style_bg_opa(sl, LV_OPA_TRANSP, LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(sl, LV_OPA_TRANSP, LV_PART_INDICATOR);
+        }
         /* touch: keep the slider interactive; PRESS_LOCK keeps the drag bound
            to this slider even if the finger drifts off its (narrow) bounds */
         lv_obj_add_flag(sl, LV_OBJ_FLAG_PRESS_LOCK);

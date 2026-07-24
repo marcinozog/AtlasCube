@@ -385,6 +385,8 @@ const EQ_FIELDS = [
     { key: 'eq_knob_image', label: 'Knob image (.bin)', type: 'text',
       placeholder: '/sdcard/assets/knobs/... (empty = colour knob)',
       sdPicker: { dir: '/assets/knobs' } },
+    { key: 'eq_knob_w', label: 'Knob width (px, 0 = band)', type: 'number', min: 0, max: 200 },
+    { key: 'eq_knob_only', label: 'Knob only (no track)', type: 'bool' },
 ];
 
 // Form-only grouping. Field schemas above remain the API/source-of-truth; these
@@ -480,7 +482,7 @@ const FORM_GROUPS = {
     ],
     eq: [
         { heading: 'Artwork' },
-        { title: 'Knob image', fields: ['eq_knob_image'] },
+        { title: 'Knob image', fields: ['eq_knob_image', 'eq_knob_w', 'eq_knob_only'] },
     ],
 };
 
@@ -2809,12 +2811,15 @@ function renderEq(svg) {
     });
 
     const n = EQ_FREQ_LABELS.length;
+    const knobOnly = !!e.eq_knob_only;
     const areaTop = Math.round(H * 0.26);
     const areaH   = Math.round(H * 0.48);
     const bandW   = Math.floor(W * 0.88 / n);
     const startX  = Math.round((W - bandW * n) / 2);
     const trackW  = Math.max(2, Math.round(bandW * 0.16));
-    const knobW   = Math.max(6, Math.round(bandW * 0.62));
+    // User width (eq_knob_w, real px) or the band column as fallback (firmware).
+    const knobW   = e.eq_knob_w > 0 ? Math.max(2, e.eq_knob_w | 0)
+                                    : Math.max(6, Math.round(bandW * 0.9));
     const knobH   = Math.max(6, Math.round(areaH * 0.10));
     const labelFh = Math.max(8, Math.min(14, Math.round(bandW * 0.7)));
 
@@ -2824,18 +2829,20 @@ function renderEq(svg) {
         const level = EQ_PREVIEW_LEVELS[i];                 // 0 (bottom) .. 1 (top)
         const knobY = areaTop + (areaH - knobH) * (1 - level);
 
-        // Track.
-        rect(svg, {
-            x: cx - trackW / 2, y: areaTop, width: trackW, height: areaH,
-            rx: trackW / 2, fill: '#8a97a3', 'fill-opacity': 0.35,
-        });
-        // Indicator fill from the knob down.
-        const fill = rect(svg, {
-            x: cx - trackW / 2, y: knobY + knobH / 2,
-            width: trackW, height: areaTop + areaH - (knobY + knobH / 2),
-            rx: trackW / 2, 'fill-opacity': 0.75,
-        });
-        fill.style.fill = 'var(--accent)';
+        if (!knobOnly) {
+            // Track.
+            rect(svg, {
+                x: cx - trackW / 2, y: areaTop, width: trackW, height: areaH,
+                rx: trackW / 2, fill: '#8a97a3', 'fill-opacity': 0.35,
+            });
+            // Indicator fill from the knob down.
+            const fill = rect(svg, {
+                x: cx - trackW / 2, y: knobY + knobH / 2,
+                width: trackW, height: areaTop + areaH - (knobY + knobH / 2),
+                rx: trackW / 2, 'fill-opacity': 0.75,
+            });
+            fill.style.fill = 'var(--accent)';
+        }
         // Knob — the image (when set) is centred here on the real screen.
         const knob = rect(svg, {
             x: cx - knobW / 2, y: knobY, width: knobW, height: knobH,
