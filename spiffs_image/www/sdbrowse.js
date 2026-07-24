@@ -24,6 +24,9 @@
 //   fileActions  (fullPath, entry) => [{label, title?, className?, onClick(ev)}]
 //                extra buttons rendered on the right of a file row.
 //   onDirChange  (dir) => void: after each successful navigation.
+//   allowMkdir   show a "New folder" button that creates a subfolder here.
+//   allowMove    add a "Move" button to every file row (type a destination
+//                folder; missing levels are created, then the file is moved).
 //   emptyText    message shown when a folder has no visible entries.
 //   rowFontSize  CSS font-size for rows (default '12px').
 //   maxHeight    CSS max-height for the scroll area (default '200px').
@@ -53,6 +56,45 @@
 
         let current = opts.start || '/';
         let usedFallback = false;
+        const refresh = () => load(current, false);
+
+        // Create a subfolder in the current directory.
+        async function mkdirHere() {
+            const name = window.prompt('New folder name:');
+            if (name === null) return;
+            const t = name.trim();
+            if (!t || t.includes('/') || t.includes('..')) { window.alert('Invalid folder name.'); return; }
+            try {
+                const r = await fetch('/api/sd/mkdir?path=' + encodeURIComponent(joinDir(current, t)),
+                                      { method: 'POST' });
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                refresh();
+            } catch (err) { window.alert('Create folder failed: ' + err.message); }
+        }
+
+        // Move a file to another folder; missing destination levels are created
+        // one at a time, then a full-path rename performs the move.
+        async function moveFile(full, entry) {
+            const input = window.prompt('Move "' + entry.name + '" to folder:', current);
+            if (input === null) return;
+            let dir = input.trim();
+            if (!dir.startsWith('/')) dir = '/' + dir;
+            dir = dir.replace(/\/+$/, '') || '/';
+            if (dir.includes('..')) { window.alert('Invalid path.'); return; }
+            if (dir === current) return;   // same folder — nothing to do
+            try {
+                let acc = '';
+                for (const part of dir.split('/').filter(Boolean)) {
+                    acc += '/' + part;
+                    const m = await fetch('/api/sd/mkdir?path=' + encodeURIComponent(acc), { method: 'POST' });
+                    if (!m.ok) throw new Error('cannot create ' + acc + ' (' + m.status + ')');
+                }
+                const r = await fetch('/api/sd/rename?path=' + encodeURIComponent(full) +
+                                      '&to=' + encodeURIComponent(joinDir(dir, entry.name)), { method: 'POST' });
+                if (!r.ok) throw new Error('HTTP ' + r.status + ' — target may already exist');
+                refresh();
+            } catch (err) { window.alert('Move failed: ' + err.message); }
+        }
 
         async function load(dir, allowFallback) {
             container.textContent = 'Loading ' + dir + ' …';
@@ -80,6 +122,18 @@
 
         function render(data) {
             container.innerHTML = '';
+
+            if (opts.allowMkdir) {
+                const bar = document.createElement('div');
+                bar.style.cssText = 'display:flex;gap:6px;margin-bottom:6px';
+                const b = document.createElement('button');
+                b.type = 'button';
+                b.className = 'btn-secondary';
+                b.textContent = '📁+ New folder';
+                b.onclick = mkdirHere;
+                bar.appendChild(b);
+                container.appendChild(bar);
+            }
 
             const heading = document.createElement('div');
             heading.textContent = current;
@@ -125,7 +179,11 @@
 
         function fileRow(full, entry) {
             const row = document.createElement('div');
-            const actions = opts.fileActions ? opts.fileActions(full, entry) : null;
+            const actions = [];
+            if (opts.allowMove)
+                actions.push({ label: '↪', title: 'Move', onClick: () => moveFile(full, entry) });
+            if (opts.fileActions)
+                actions.push(...(opts.fileActions(full, entry) || []));
             row.style.cssText =
                 'padding:6px 10px;font-size:' + rowFont + ';display:flex;align-items:center;gap:8px' +
                 (opts.onFile ? ';cursor:pointer' : '');
@@ -158,7 +216,7 @@
         load(current, true);
 
         return {
-            refresh: () => load(current, false),
+            refresh,
             go:      dir => load(dir || '/', false),
             current: () => current,
         };

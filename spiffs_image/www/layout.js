@@ -1342,6 +1342,8 @@ function browseAssets() {
         filterExt: '.bin',
         fileIcon: '🖼️ ',
         emptyText: 'No .bin assets in this folder yet.',
+        allowMkdir: true,
+        allowMove: true,
         // Keep the Folder input in sync so an upload lands where you browsed to.
         onDirChange: dir => { const i = document.getElementById('asset_dir'); if (i) i.value = dir; },
         fileActions: full => [
