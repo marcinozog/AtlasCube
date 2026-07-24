@@ -1415,6 +1415,10 @@ function openSdBinPicker(startDir, onPick) {
         fileIcon: '🖼️ ',
         maxHeight: '50vh',
         emptyText: 'No .bin files in this folder.',
+        fileActions: full => [
+            { label: '👁', title: 'Preview',
+              onClick: () => ensureLvBin().then(() => window.LvBin.openPreview(full)) },
+        ],
         onFile: full => {
             sdPickerOverlay.style.display = 'none';
             if (onPick) onPick(full);
