@@ -2804,10 +2804,9 @@ function renderEq(svg) {
     const W = state.meta.screen_w, H = state.meta.screen_h;
     const hasKnob = !!(e.eq_knob_image && e.eq_knob_image.trim());
 
-    // Title.
-    text(svg, W / 2, Math.max(14, Math.round(H * 0.11)), 'Equalizer', {
-        'font-size': Math.max(11, Math.round(H / 14)),
-        'text-anchor': 'middle', opacity: 0.85,
+    // Header hint: value left, live curve right (matches the device — no title).
+    text(svg, 4, Math.max(12, Math.round(H * 0.1)), '125 Hz: +3 dB', {
+        'font-size': Math.max(9, Math.round(H / 18)), opacity: 0.7,
     });
 
     const n = EQ_FREQ_LABELS.length;

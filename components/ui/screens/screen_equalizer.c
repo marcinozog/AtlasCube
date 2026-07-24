@@ -46,6 +46,15 @@ static lv_image_dsc_t *s_knob_dsc = NULL;  // scaled artwork, freed on destroy
 static lv_obj_t       *s_knob_imgs[EQ_BANDS] = {0};
 static int             s_kw, s_kh;         // scaled knob size (px)
 
+// Live response curve drawn in the top-right header: a Catmull-Rom spline through
+// the 10 band gains. lv_line keeps a POINTER to the points array (no copy), so it
+// must be static. Redrawn only when a gain changes (not per frame).
+#define EQ_CURVE_SEG_SAMPLES  8
+#define EQ_CURVE_PTS          ((EQ_BANDS - 1) * EQ_CURVE_SEG_SAMPLES + 1)
+static lv_obj_t          *s_curve = NULL;
+static lv_point_precise_t s_curve_pts[EQ_CURVE_PTS];
+static int                s_cx, s_cy, s_cw, s_ch;   // curve box (px, on the screen)
+
 /* ── helpers ────────────────────────────────────────────────────────────── */
 
 static void update_info_label(void)
@@ -55,6 +64,44 @@ static void update_info_label(void)
     int g = s_gains[s_focus];
     snprintf(buf, sizeof(buf), "%s Hz: %+d dB", FREQ_LABELS[s_focus], g);
     lv_label_set_text(s_info, buf);
+}
+
+// Recompute the response-curve polyline from the current gains. Catmull-Rom
+// through the 10 band points (x evenly spread over the curve box, y = gain), so
+// the line reads as a smooth EQ shape. No-op when the curve isn't shown.
+static void update_eq_curve(void)
+{
+    if (!s_curve) return;
+    const int span = EQ_GAIN_MAX - EQ_GAIN_MIN;
+
+    float gy[EQ_BANDS];                               // band y: gain=max → 0 (top)
+    for (int i = 0; i < EQ_BANDS; i++)
+        gy[i] = (float)(EQ_GAIN_MAX - s_gains[i]) / span * s_ch;
+
+    int idx = 0;
+    for (int seg = 0; seg < EQ_BANDS - 1; seg++) {
+        float p0 = gy[seg > 0 ? seg - 1 : 0];
+        float p1 = gy[seg];
+        float p2 = gy[seg + 1];
+        float p3 = gy[seg < EQ_BANDS - 2 ? seg + 2 : EQ_BANDS - 1];
+        for (int s = 0; s < EQ_CURVE_SEG_SAMPLES; s++) {
+            float t  = (float)s / EQ_CURVE_SEG_SAMPLES;
+            float t2 = t * t, t3 = t2 * t;
+            float y  = 0.5f * ((2.0f * p1) + (-p0 + p2) * t
+                             + (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * t2
+                             + (-p0 + 3.0f * p1 - 3.0f * p2 + p3) * t3);
+            float x  = (seg + t) / (EQ_BANDS - 1) * s_cw;
+            if (y < 0) y = 0; else if (y > s_ch) y = s_ch;
+            s_curve_pts[idx].x = (lv_value_precise_t)(x + 0.5f);
+            s_curve_pts[idx].y = (lv_value_precise_t)(y + 0.5f);
+            idx++;
+        }
+    }
+    s_curve_pts[idx].x = (lv_value_precise_t)s_cw;      // final endpoint
+    s_curve_pts[idx].y = (lv_value_precise_t)(gy[EQ_BANDS - 1] + 0.5f);
+    idx++;
+
+    lv_line_set_points(s_curve, s_curve_pts, idx);
 }
 
 // Move band `idx`'s knob image to match its gain. No-op unless artwork loaded.
@@ -186,21 +233,26 @@ static void eq_create(lv_obj_t *parent)
     memcpy(s_gains, app_state_get()->eq, sizeof(s_gains));
     s_focus = 0;
 
-    /* title */
-    int title_h = lv_font_get_line_height(p->eq_title_font);
-    if (title_h > 0 && DISPLAY_HEIGHT > 80) {
-        s_title = lv_label_create(parent);
-        lv_label_set_text(s_title, "Equalizer");
-        lv_obj_set_style_text_font(s_title, p->eq_title_font, LV_PART_MAIN);
-        lv_obj_set_style_text_color(s_title, lv_color_hex(th->accent), LV_PART_MAIN);
-        lv_obj_align(s_title, LV_ALIGN_TOP_MID, 0, p->eq_title_y);
-    }
-
-    /* info — active band + dB */
+    /* header strip (above the bands) = active-band value on the left, live
+       response curve on the right. The old centered "Equalizer" title is gone. */
     s_info = lv_label_create(parent);
     lv_obj_set_style_text_font(s_info, p->eq_info_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_info, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_align(s_info, LV_ALIGN_TOP_MID, 0, p->eq_info_y);
+    lv_obj_align(s_info, LV_ALIGN_TOP_LEFT, 4, p->eq_info_y);
+
+    /* live curve — right portion of the header, only when there's room for it */
+    s_cw = DISPLAY_WIDTH * 45 / 100;
+    s_cx = DISPLAY_WIDTH - s_cw - 4;
+    s_cy = 4;
+    s_ch = p->eq_band_area_y - s_cy - 4;
+    if (s_ch >= 12 && s_cw >= 40) {
+        s_curve = lv_line_create(parent);
+        lv_obj_set_pos(s_curve, s_cx, s_cy);
+        lv_obj_set_size(s_curve, s_cw, s_ch);
+        lv_obj_set_style_line_width(s_curve, 2, LV_PART_MAIN);
+        lv_obj_set_style_line_color(s_curve, lv_color_hex(th->accent), LV_PART_MAIN);
+        lv_obj_set_style_line_rounded(s_curve, true, LV_PART_MAIN);
+    }
 
     /* bands container — centered horizontally */
     int total_w = p->eq_band_w * EQ_BANDS;
@@ -279,6 +331,7 @@ static void eq_create(lv_obj_t *parent)
     lv_obj_align(s_hint, LV_ALIGN_BOTTOM_MID, 0, p->eq_hint_y);
 
     update_info_label();
+    update_eq_curve();
     update_focus_visuals();
 
     ESP_LOGI(TAG, "Created (focus=%d)", s_focus);
@@ -293,7 +346,7 @@ static void eq_destroy(void)
     }
     if (s_knob_dsc) { lv_bin_image_free(s_knob_dsc); s_knob_dsc = NULL; }
 
-    s_root = s_title = s_info = s_hint = s_band_cont = NULL;
+    s_root = s_title = s_info = s_hint = s_band_cont = s_curve = NULL;
     for (int i = 0; i < EQ_BANDS; i++) {
         s_sliders[i] = NULL;
         s_freq_labels[i] = NULL;
@@ -310,6 +363,7 @@ static void eq_on_event(const ui_event_t *ev)
         memcpy(s_gains, app_state_get()->eq, sizeof(s_gains));
         for (int i = 0; i < EQ_BANDS; i++) update_slider_visual(i);
         update_info_label();
+        update_eq_curve();
     }
 }
 
@@ -328,6 +382,7 @@ static void slider_touch_cb(lv_event_t *e)
         update_focus_visuals();
     }
     update_info_label();
+    update_eq_curve();
 
     /* settings_set_eq_10() writes flash — only on release, not every frame */
     if (lv_event_get_code(e) == LV_EVENT_RELEASED) {
@@ -350,6 +405,7 @@ static void eq_on_input(ui_input_t input)
             s_gains[s_focus] = g;
             update_slider_visual(s_focus);
             update_info_label();
+            update_eq_curve();
             settings_set_eq_10(s_gains);
             break;
         }
@@ -383,6 +439,7 @@ static void eq_apply_theme(void)
     if (s_title) lv_obj_set_style_text_color(s_title, lv_color_hex(th->accent), LV_PART_MAIN);
     if (s_info)  lv_obj_set_style_text_color(s_info,  lv_color_hex(th->text_primary), LV_PART_MAIN);
     if (s_hint)  lv_obj_set_style_text_color(s_hint,  lv_color_hex(th->text_muted),   LV_PART_MAIN);
+    if (s_curve) lv_obj_set_style_line_color(s_curve, lv_color_hex(th->accent),       LV_PART_MAIN);
 
     for (int i = 0; i < EQ_BANDS; i++) {
         if (s_sliders[i]) {
