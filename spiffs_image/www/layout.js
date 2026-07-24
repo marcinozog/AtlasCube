@@ -1390,6 +1390,14 @@ async function uploadGeneralWallpaper() {
     }
 }
 
+// Point the Assets browser at another folder (updates the Folder input so an
+// upload lands where you are browsing) and refresh the listing.
+function navigateAssets(dir) {
+    const input = document.getElementById('asset_dir');
+    if (input) input.value = dir;
+    browseAssets();
+}
+
 async function browseAssets() {
     const list = document.getElementById('asset_list');
     if (!list) return;
@@ -1400,10 +1408,40 @@ async function browseAssets() {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const data = await r.json();
         list.innerHTML = '';
+
+        // Folder navigation: parent link + subdirectories, so you can step up
+        // (e.g. /assets/knobs → /assets) or into any subfolder without typing.
+        const navRow = (label, targetDir) => {
+            const row = document.createElement('div');
+            row.className = 'asset-row';
+            row.style.cssText = 'padding:4px 0;border-bottom:1px solid var(--border);cursor:pointer';
+            const name = document.createElement('span');
+            name.textContent = label;
+            name.style.cssText = 'font-family:monospace;font-size:12px';
+            row.appendChild(name);
+            row.onmouseenter = () => { row.style.background = 'var(--bg-input)'; };
+            row.onmouseleave = () => { row.style.background = ''; };
+            row.onclick = () => navigateAssets(targetDir);
+            list.appendChild(row);
+        };
+        if (dir !== '/') {
+            const parent = dir.replace(/\/[^/]+\/?$/, '') || '/';
+            navRow('📁 ..', parent);
+        }
+        const dirs = (data.entries || []).filter(e => e.dir)
+            .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+        for (const entry of dirs) {
+            const full = (dir.endsWith('/') ? dir : dir + '/') + entry.name;
+            navRow('📁 ' + entry.name, full);
+        }
+
         const bins = (data.entries || []).filter(e => !e.dir && e.name.toLowerCase().endsWith('.bin'))
             .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-        if (!bins.length) {
-            list.innerHTML = '<div class="field-hint">No .bin assets in ' + dir + ' yet.</div>';
+        if (!bins.length && !dirs.length) {
+            const empty = document.createElement('div');
+            empty.className = 'field-hint';
+            empty.textContent = 'No .bin assets in ' + dir + ' yet.';
+            list.appendChild(empty);
             return;
         }
         for (const entry of bins) {
