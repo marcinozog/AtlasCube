@@ -87,6 +87,7 @@ static const char *screen_wp_override(ui_screen_id_t screen)
         case SCREEN_RADIO: return p->radio_wallpaper;
         case SCREEN_SD:    return p->sd_wallpaper;
         case SCREEN_BT:    return p->bt_wallpaper;
+        case SCREEN_EQ:    return p->eq_wallpaper;
         default:           return NULL;
     }
 }

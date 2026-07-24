@@ -1482,7 +1482,7 @@ static void ensure_hotspot_defaults(ui_touch_hotspot_t *hotspots)
         } else {
             hotspots[i].radius = LV_CLAMP(0, hotspots[i].radius, 100);
             hotspots[i].action = LV_CLAMP(0, hotspots[i].action,
-                                          CONTROL_ACTION_OPEN_SD_BROWSER);
+                                          CONTROL_ACTION_OPEN_EQUALIZER);
         }
     }
 }
@@ -2266,6 +2266,23 @@ static cJSON *dump_clock(const ui_profile_t *p)
     return o;
 }
 
+// screen_equalizer — geometry stays compile-time (per-profile k_defaults); only
+// the artwork/background paths are user-editable from the web layout editor.
+static void load_eq(const cJSON *obj, ui_profile_t *p)
+{
+    if (!cJSON_IsObject(obj)) return;
+    load_str (obj, "eq_knob_image", p->eq_knob_image, sizeof(p->eq_knob_image));
+    load_str (obj, "eq_wallpaper",  p->eq_wallpaper,  sizeof(p->eq_wallpaper));
+}
+
+static cJSON *dump_eq(const ui_profile_t *p)
+{
+    cJSON *o = cJSON_CreateObject();
+    add_str (o, "eq_knob_image", p->eq_knob_image);
+    add_str (o, "eq_wallpaper",  p->eq_wallpaper);
+    return o;
+}
+
 // ── I/O ─────────────────────────────────────────────────────────────────────
 
 esp_err_t ui_profile_load_from_file(void)
@@ -2323,6 +2340,7 @@ esp_err_t ui_profile_load_from_file(void)
     load_bt   (cJSON_GetObjectItem(json, "bt"),    &s_runtime);
     load_radio(cJSON_GetObjectItem(json, "radio"), &s_runtime);
     load_sd   (cJSON_GetObjectItem(json, "sd"),    &s_runtime);
+    load_eq   (cJSON_GetObjectItem(json, "eq"),    &s_runtime);
     // (other sections will land here when exposed in the UI: playlist, ...)
 
     cJSON_Delete(json);
@@ -2380,6 +2398,18 @@ void ui_profile_patch_sd(const void *obj)
     load_sd((const cJSON *)obj, &s_runtime);
 }
 
+void *ui_profile_dump_eq(void)
+{
+    ensure_initialized();
+    return dump_eq(&s_runtime);
+}
+
+void ui_profile_patch_eq(const void *obj)
+{
+    ensure_initialized();
+    load_eq((const cJSON *)obj, &s_runtime);
+}
+
 esp_err_t ui_profile_save_to_file(void)
 {
     ensure_initialized();
@@ -2393,6 +2423,7 @@ esp_err_t ui_profile_save_to_file(void)
     cJSON_AddItemToObject(json, "bt",    dump_bt   (&s_runtime));
     cJSON_AddItemToObject(json, "radio", dump_radio(&s_runtime));
     cJSON_AddItemToObject(json, "sd",    dump_sd   (&s_runtime));
+    cJSON_AddItemToObject(json, "eq",    dump_eq   (&s_runtime));
 
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);

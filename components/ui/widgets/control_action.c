@@ -54,5 +54,11 @@ void control_action_execute(control_source_t source, control_action_t action)
         return;
     }
 
+    if (action == CONTROL_ACTION_OPEN_EQUALIZER) {
+        // EQ has no per-caller return; it exits to Settings like the menu entry.
+        ui_navigate(SCREEN_EQ);
+        return;
+    }
+
     media_control_execute(to_media_source(source), to_media_action(action));
 }

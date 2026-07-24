@@ -14,6 +14,7 @@ typedef enum {
     CONTROL_ACTION_PLAY_PAUSE,
     CONTROL_ACTION_OPEN_PLAYLIST,
     CONTROL_ACTION_OPEN_SD_BROWSER,
+    CONTROL_ACTION_OPEN_EQUALIZER,
 } control_action_t;
 
 typedef enum {

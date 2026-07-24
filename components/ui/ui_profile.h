@@ -71,7 +71,7 @@
 extern "C" {
 #endif
 
-#define UI_TOUCH_HOTSPOT_COUNT 6
+#define UI_TOUCH_HOTSPOT_COUNT 8
 
 typedef struct {
     bool    enabled;
@@ -461,6 +461,8 @@ typedef struct {
     const lv_font_t *eq_info_font;
     const lv_font_t *eq_freq_font;
     const lv_font_t *eq_hint_font;
+    char             eq_knob_image[128]; // knob RGB565 .bin on SD ("" = plain colour); one image shared by all bands
+    char             eq_wallpaper[128];  // see clock_wallpaper — per-screen EQ background override
 
     // screen_events
     int16_t          events_header_h;
@@ -523,6 +525,9 @@ void  ui_profile_patch_radio(const void *obj);
 
 void *ui_profile_dump_sd(void);
 void  ui_profile_patch_sd(const void *obj);
+
+void *ui_profile_dump_eq(void);
+void  ui_profile_patch_eq(const void *obj);
 
 #ifdef __cplusplus
 }

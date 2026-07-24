@@ -7,6 +7,7 @@
 #include "ui_screen.h"
 #include "ui_events.h"
 #include "ui_manager.h"
+#include "lv_bin_image.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include <stdio.h>
@@ -33,6 +34,15 @@ static lv_obj_t *s_freq_labels[EQ_BANDS] = {0};
 static int s_focus = 0;                   // index of the active band
 static int s_gains[EQ_BANDS] = {0};       // local copy — kept in sync continuously
 
+// Optional knob artwork (ui_profile.eq_knob_image): one .bin decoded and scaled
+// ONCE, then shown as a separate lv_image per band tracking that band's value —
+// the same overlay trick as the volume slider. All 10 images share the single
+// scaled descriptor; the inactive bands are dimmed so the focused one stands out.
+#define EQ_KNOB_DIM_OPA   LV_OPA_40        // inactive band knobs
+static lv_image_dsc_t *s_knob_dsc = NULL;  // scaled artwork, freed on destroy
+static lv_obj_t       *s_knob_imgs[EQ_BANDS] = {0};
+static int             s_kw, s_kh;         // scaled knob size (px)
+
 /* ── helpers ────────────────────────────────────────────────────────────── */
 
 static void update_info_label(void)
@@ -44,10 +54,25 @@ static void update_info_label(void)
     lv_label_set_text(s_info, buf);
 }
 
+// Move band `idx`'s knob image to match its gain. No-op unless artwork loaded.
+// Coordinates are relative to s_band_cont (the images are its children).
+static void position_eq_knob(int idx)
+{
+    if (!s_knob_imgs[idx]) return;
+    const ui_profile_t *p = ui_profile_get();
+    int col_x    = idx * p->eq_band_w;
+    int travel_y = p->eq_slider_h - s_kh; if (travel_y < 0) travel_y = 0;
+    int span     = EQ_GAIN_MAX - EQ_GAIN_MIN;                 // 19
+    int ky       = travel_y * (EQ_GAIN_MAX - s_gains[idx]) / span;   // gain=max → top
+    int kx       = col_x + (p->eq_band_w - s_kw) / 2;
+    lv_obj_set_pos(s_knob_imgs[idx], kx, ky);
+}
+
 static void update_slider_visual(int idx)
 {
     if (idx < 0 || idx >= EQ_BANDS || !s_sliders[idx]) return;
     lv_slider_set_value(s_sliders[idx], s_gains[idx], LV_ANIM_OFF);
+    position_eq_knob(idx);
 }
 
 static void slider_touch_cb(lv_event_t *e); /* fwd */
@@ -78,13 +103,60 @@ static void update_focus_visuals(void)
         if (!s_sliders[i]) continue;
         uint32_t c = (i == s_focus) ? th->accent : th->text_muted;
         lv_obj_set_style_bg_color(s_sliders[i], lv_color_hex(c), LV_PART_INDICATOR);
-        lv_obj_set_style_border_width(s_sliders[i], (i == s_focus) ? 2 : 0, LV_PART_KNOB);
+        // The native-knob outline highlight would draw over the artwork (the knob
+        // is hidden but its border still paints) — with images, dim instead.
+        int knob_border = (s_knob_imgs[i]) ? 0 : ((i == s_focus) ? 2 : 0);
+        lv_obj_set_style_border_width(s_sliders[i], knob_border, LV_PART_KNOB);
         lv_obj_set_style_border_color(s_sliders[i], lv_color_hex(th->accent), LV_PART_KNOB);
+
+        // With knob artwork the native knob is hidden, so highlight focus by
+        // dimming every inactive band's image instead of an outline.
+        if (s_knob_imgs[i])
+            lv_obj_set_style_image_opa(s_knob_imgs[i],
+                (i == s_focus) ? LV_OPA_COVER : EQ_KNOB_DIM_OPA, LV_PART_MAIN);
 
         if (s_freq_labels[i]) {
             uint32_t tc = (i == s_focus) ? th->accent : th->text_muted;
             lv_obj_set_style_text_color(s_freq_labels[i], lv_color_hex(tc), LV_PART_MAIN);
         }
+    }
+}
+
+// Load ui_profile.eq_knob_image once (cross axis = slider width; the other axis
+// follows the image's aspect ratio), then overlay one lv_image per band on
+// s_band_cont and hide the sliders' native knobs. All bands share the single
+// scaled descriptor. On any failure the plain themed knobs stay.
+static void build_eq_knobs(void)
+{
+    const ui_profile_t *p = ui_profile_get();
+    if (!p->eq_knob_image[0] || !s_band_cont) return;
+
+    s_knob_dsc = lv_bin_image_load(p->eq_knob_image, 0, 0);
+    if (!s_knob_dsc) return;
+
+    const int iw = s_knob_dsc->header.w, ih = s_knob_dsc->header.h;
+    s_kw = p->eq_slider_w;                        // cross axis of a vertical slider
+    s_kh = (iw > 0) ? ih * s_kw / iw : s_kw;
+    if (s_kw < 1) s_kw = 1;
+    if (s_kh < 1) s_kh = 1;
+
+    s_knob_dsc = lv_bin_image_scale(s_knob_dsc, s_kw, s_kh);   // consumes native dsc
+    if (!s_knob_dsc) return;
+
+    for (int i = 0; i < EQ_BANDS; i++) {
+        if (!s_sliders[i]) continue;
+        // Hide the slider's own knob — the image is the knob now.
+        lv_obj_set_style_bg_opa      (s_sliders[i], LV_OPA_TRANSP, LV_PART_KNOB);
+        lv_obj_set_style_border_width(s_sliders[i], 0, LV_PART_KNOB);
+
+        // Sibling above the sliders; not clickable so touches fall through to the
+        // slider underneath (which still owns the drag).
+        lv_obj_t *img = lv_image_create(s_band_cont);
+        lv_image_set_src(img, s_knob_dsc);
+        lv_obj_remove_flag(img, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_set_size(img, s_kw, s_kh);
+        s_knob_imgs[i] = img;
+        position_eq_knob(i);
     }
 }
 
@@ -172,6 +244,9 @@ static void eq_create(lv_obj_t *parent)
        (the ext_draw cb reads the knob padding off s_sliders[0]) */
     lv_obj_refresh_ext_draw_size(s_band_cont);
 
+    /* optional shared knob artwork overlaid on the bands */
+    build_eq_knobs();
+
     /* hint */
     s_hint = lv_label_create(parent);
     lv_label_set_text(s_hint, p->settings_show_slider ? "swipe = back"
@@ -188,6 +263,13 @@ static void eq_create(lv_obj_t *parent)
 
 static void eq_destroy(void)
 {
+    // Delete the knob images before freeing the pixels they point at (the
+    // container/sliders are torn down by ui_manager's screen clean afterwards).
+    for (int i = 0; i < EQ_BANDS; i++) {
+        if (s_knob_imgs[i]) { lv_obj_del(s_knob_imgs[i]); s_knob_imgs[i] = NULL; }
+    }
+    if (s_knob_dsc) { lv_bin_image_free(s_knob_dsc); s_knob_dsc = NULL; }
+
     s_root = s_title = s_info = s_hint = s_band_cont = NULL;
     for (int i = 0; i < EQ_BANDS; i++) {
         s_sliders[i] = NULL;
@@ -216,6 +298,7 @@ static void slider_touch_cb(lv_event_t *e)
 
     lv_obj_t *sl = lv_event_get_target(e);
     s_gains[idx] = (int)lv_slider_get_value(sl);
+    position_eq_knob(idx);   // keep the artwork on the knob during the drag
 
     if (s_focus != idx) {
         s_focus = idx;

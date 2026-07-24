@@ -6,8 +6,10 @@ persisted to a JSON file on SPIFFS and loaded on every boot. After
 saving, the active screen is rebuilt on the fly — no device restart
 needed.
 
-Currently covered sections: **clock**, **bt**, **radio**. Other screens
-(playlist, eq, settings, events, wifi) follow the same pattern described
+Currently covered sections: **clock**, **bt**, **radio**, **sd**, **eq**
+(eq exposes only its shared knob image + wallpaper — the 10-band geometry is
+compile-time). Other screens
+(playlist, settings, events, wifi) follow the same pattern described
 below in *Adding a new section*. Sections are exposed as tabs at the
 top of the layout page.
 
@@ -131,6 +133,8 @@ it simply doesn't exist.
 | `/api/ui/profile/clock` | GET / POST | Clock section runtime / patch. Missing fields → unchanged. Saves file + triggers active-screen rebuild on POST |
 | `/api/ui/profile/bt` | GET / POST | BT section, same semantics as clock |
 | `/api/ui/profile/radio` | GET / POST | Radio section, same semantics as clock |
+| `/api/ui/profile/sd` | GET / POST | SD Player section, same semantics as clock |
+| `/api/ui/profile/eq` | GET / POST | Equalizer section (shared knob image + wallpaper), same semantics as clock |
 | `/api/ui/profile/reset` | POST | Reset full runtime to compile-time defaults, save file, rebuild |
 
 Implementation in [components/web/http_server.c](../components/web/http_server.c).

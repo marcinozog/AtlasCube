@@ -24,11 +24,15 @@ const HOTSPOT_ACTIONS = [
     { value: 5, label: 'Stop' },
     { value: 7, label: 'Open playlist' },
     { value: 8, label: 'Open SD browser' },
+    { value: 9, label: 'Open equalizer' },
 ];
+
+// Must match UI_TOUCH_HOTSPOT_COUNT in ui_profile.h.
+const HOTSPOT_COUNT = 8;
 
 function touchHotspotFields(prefix) {
     const fields = [];
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 1; i <= HOTSPOT_COUNT; i++) {
         const key = `${prefix}_hotspot_${i}`;
         fields.push(
             { key: `${key}_enabled`, label: 'Enabled', type: 'bool' },
@@ -46,7 +50,7 @@ function touchHotspotFields(prefix) {
 
 function touchHotspotGroups(prefix) {
     const subgroups = [];
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 1; i <= HOTSPOT_COUNT; i++) {
         const key = `${prefix}_hotspot_${i}`;
         subgroups.push({
             title: `Hotspot ${i}`,
@@ -374,6 +378,15 @@ const SD_FIELDS = [
     ...touchHotspotFields('sd'),
 ];
 
+// Equalizer — the 10-band layout is compile-time per panel; only the artwork is
+// editable here. One knob image is shared by every band; the screen background
+// uses the generic per-screen wallpaper picker (eq_wallpaper).
+const EQ_FIELDS = [
+    { key: 'eq_knob_image', label: 'Knob image (.bin)', type: 'text',
+      placeholder: '/sdcard/assets/knobs/... (empty = colour knob)',
+      sdPicker: { dir: '/assets/knobs' } },
+];
+
 // Form-only grouping. Field schemas above remain the API/source-of-truth; these
 // groups only decide how the editor presents them. `enabledBy` keeps the Show
 // switch visible while hiding the controls that have no effect when it is off.
@@ -465,6 +478,10 @@ const FORM_GROUPS = {
         { heading: 'Decoration' },
         { title: 'Animated wheels', enabledBy: 'sd_show_cassette', fields: ['sd_show_cassette', 'sd_animation_style', 'sd_wheels_reverse', 'sd_show_wheel_left', 'sd_cassette_l_x', 'sd_cassette_l_y', 'sd_cassette_l_size', 'sd_show_wheel_right', 'sd_cassette_r_x', 'sd_cassette_r_y', 'sd_cassette_r_size'] },
     ],
+    eq: [
+        { heading: 'Artwork' },
+        { title: 'Knob image', fields: ['eq_knob_image'] },
+    ],
 };
 
 // Remember expanded groups while switching screen tabs or rebuilding the form.
@@ -478,6 +495,7 @@ const SECTIONS = {
     bt:    { title: 'Bluetooth', fields: BT_FIELDS,    renderer: renderBt    },
     radio: { title: 'Radio',     fields: RADIO_FIELDS, renderer: renderRadio },
     sd:    { title: 'SD Player', fields: SD_FIELDS,    renderer: renderSd    },
+    eq:    { title: 'Equalizer', fields: EQ_FIELDS,    renderer: renderEq    },
 };
 
 const state = {
@@ -487,6 +505,7 @@ const state = {
     bt:     {},
     radio:  {},
     sd:     {},
+    eq:     {},
 };
 
 // The layout preview can use the active screen's SD wallpaper as its
@@ -2770,6 +2789,77 @@ function renderSd(svg) {
     drawTouchHotspots(svg, 'sd', s);
 }
 
+// ── EQUALIZER renderer ──────────────────────────────────────────────────────
+// The 10-band geometry is fixed per panel in firmware, so this is a static
+// schematic (not draggable): it shows how a shared knob image sits on the
+// bands, plus the current knob/wallpaper choice. The bars use a representative
+// curve purely so the preview reads as an equaliser.
+const EQ_FREQ_LABELS = ['31', '62', '125', '250', '500', '1k', '2k', '4k', '8k', '16k'];
+const EQ_PREVIEW_LEVELS = [0.68, 0.55, 0.62, 0.40, 0.50, 0.70, 0.46, 0.60, 0.74, 0.52];
+
+function renderEq(svg) {
+    const e = state.eq;
+    const W = state.meta.screen_w, H = state.meta.screen_h;
+    const hasKnob = !!(e.eq_knob_image && e.eq_knob_image.trim());
+
+    // Title.
+    text(svg, W / 2, Math.max(14, Math.round(H * 0.11)), 'Equalizer', {
+        'font-size': Math.max(11, Math.round(H / 14)),
+        'text-anchor': 'middle', opacity: 0.85,
+    });
+
+    const n = EQ_FREQ_LABELS.length;
+    const areaTop = Math.round(H * 0.26);
+    const areaH   = Math.round(H * 0.48);
+    const bandW   = Math.floor(W * 0.88 / n);
+    const startX  = Math.round((W - bandW * n) / 2);
+    const trackW  = Math.max(2, Math.round(bandW * 0.16));
+    const knobW   = Math.max(6, Math.round(bandW * 0.62));
+    const knobH   = Math.max(6, Math.round(areaH * 0.10));
+    const labelFh = Math.max(8, Math.min(14, Math.round(bandW * 0.7)));
+
+    for (let i = 0; i < n; i++) {
+        const colX  = startX + i * bandW;
+        const cx    = colX + bandW / 2;
+        const level = EQ_PREVIEW_LEVELS[i];                 // 0 (bottom) .. 1 (top)
+        const knobY = areaTop + (areaH - knobH) * (1 - level);
+
+        // Track.
+        rect(svg, {
+            x: cx - trackW / 2, y: areaTop, width: trackW, height: areaH,
+            rx: trackW / 2, fill: '#8a97a3', 'fill-opacity': 0.35,
+        });
+        // Indicator fill from the knob down.
+        const fill = rect(svg, {
+            x: cx - trackW / 2, y: knobY + knobH / 2,
+            width: trackW, height: areaTop + areaH - (knobY + knobH / 2),
+            rx: trackW / 2, 'fill-opacity': 0.75,
+        });
+        fill.style.fill = 'var(--accent)';
+        // Knob — the image (when set) is centred here on the real screen.
+        const knob = rect(svg, {
+            x: cx - knobW / 2, y: knobY, width: knobW, height: knobH,
+            rx: hasKnob ? 3 : Math.min(knobW, knobH) / 2,
+            class: 'label-rect',
+        });
+        if (hasKnob) {
+            knob.style.stroke = 'var(--accent)';
+            knob.style.strokeWidth = '1.5px';
+        }
+        // Frequency label.
+        text(svg, cx, areaTop + areaH + labelFh + 2, EQ_FREQ_LABELS[i], {
+            'font-size': labelFh, 'text-anchor': 'middle', opacity: 0.6,
+        });
+    }
+
+    // Footnote: what the knob field currently points at.
+    text(svg, W / 2, H - 6,
+         hasKnob ? ('knob: ' + e.eq_knob_image.split('/').pop()) : 'knob: colour (no image)', {
+        'font-size': Math.max(9, Math.round(H / 22)),
+        'text-anchor': 'middle', opacity: 0.5,
+    });
+}
+
 function drawVolSlider(svg, prefix, data) {
     if (!data[`${prefix}_volslider_show`]) return;
     let w = data[`${prefix}_volslider_w`] | 0, h = data[`${prefix}_volslider_h`] | 0;
@@ -2791,7 +2881,7 @@ function drawVolSlider(svg, prefix, data) {
 }
 
 function drawTouchHotspots(svg, prefix, data) {
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 1; i <= HOTSPOT_COUNT; i++) {
         const key = `${prefix}_hotspot_${i}`;
         if (!data[`${key}_enabled`]) continue;
         const action = HOTSPOT_ACTIONS.find(a => a.value === (data[`${key}_action`] | 0));

@@ -1753,7 +1753,8 @@ static esp_err_t api_ui_profile_bt_get_handler(httpd_req_t *req)
 static esp_err_t api_ui_profile_bt_post_handler(httpd_req_t *req)
 {
     char *buf = NULL;
-    if (read_body(req, &buf, 4096) != ESP_OK) return ESP_FAIL;
+    // Fields + 8 touch hotspots (7 keys each) can exceed 4 KB.
+    if (read_body(req, &buf, 8192) != ESP_OK) return ESP_FAIL;
 
     cJSON *json = cJSON_Parse(buf);
     free(buf);
@@ -1789,7 +1790,8 @@ static esp_err_t api_ui_profile_radio_get_handler(httpd_req_t *req)
 static esp_err_t api_ui_profile_radio_post_handler(httpd_req_t *req)
 {
     char *buf = NULL;
-    if (read_body(req, &buf, 4096) != ESP_OK) return ESP_FAIL;
+    // Largest section: ~90 fields + 8 touch hotspots (7 keys each) → >4 KB.
+    if (read_body(req, &buf, 8192) != ESP_OK) return ESP_FAIL;
 
     cJSON *json = cJSON_Parse(buf);
     free(buf);
@@ -1825,7 +1827,8 @@ static esp_err_t api_ui_profile_sd_get_handler(httpd_req_t *req)
 static esp_err_t api_ui_profile_sd_post_handler(httpd_req_t *req)
 {
     char *buf = NULL;
-    if (read_body(req, &buf, 4096) != ESP_OK) return ESP_FAIL;
+    // Many fields + 8 touch hotspots (7 keys each) can exceed 4 KB.
+    if (read_body(req, &buf, 8192) != ESP_OK) return ESP_FAIL;
 
     cJSON *json = cJSON_Parse(buf);
     free(buf);
@@ -1835,6 +1838,42 @@ static esp_err_t api_ui_profile_sd_post_handler(httpd_req_t *req)
     }
 
     ui_profile_patch_sd(json);
+    cJSON_Delete(json);
+
+    ui_profile_save_to_file();
+
+    ui_event_t ev = { .type = UI_EVT_PROFILE_CHANGED };
+    ui_event_send(&ev);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true}");
+    return ESP_OK;
+}
+
+static esp_err_t api_ui_profile_eq_get_handler(httpd_req_t *req)
+{
+    cJSON *eq = (cJSON *)ui_profile_dump_eq();
+
+    char *str = cJSON_PrintUnformatted(eq);
+    cJSON_Delete(eq);
+
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    return send_json_or_500(req, str);
+}
+
+static esp_err_t api_ui_profile_eq_post_handler(httpd_req_t *req)
+{
+    char *buf = NULL;
+    if (read_body(req, &buf, 4096) != ESP_OK) return ESP_FAIL;
+
+    cJSON *json = cJSON_Parse(buf);
+    free(buf);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    ui_profile_patch_eq(json);
     cJSON_Delete(json);
 
     ui_profile_save_to_file();
@@ -3689,6 +3728,20 @@ void http_server_start(void)
         .handler = api_ui_profile_sd_post_handler,
     };
     httpd_register_uri_handler(server, &api_ui_sd_post);
+
+    httpd_uri_t api_ui_eq_get = {
+        .uri = "/api/ui/profile/eq",
+        .method = HTTP_GET,
+        .handler = api_ui_profile_eq_get_handler,
+    };
+    httpd_register_uri_handler(server, &api_ui_eq_get);
+
+    httpd_uri_t api_ui_eq_post = {
+        .uri = "/api/ui/profile/eq",
+        .method = HTTP_POST,
+        .handler = api_ui_profile_eq_post_handler,
+    };
+    httpd_register_uri_handler(server, &api_ui_eq_post);
 
     httpd_uri_t api_ui_reset = {
         .uri = "/api/ui/profile/reset",
