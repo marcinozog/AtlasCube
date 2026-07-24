@@ -3,6 +3,7 @@
 #include "ui_manager.h"
 #include "screen_playlist.h"
 #include "screen_sd_browser.h"
+#include "screen_equalizer.h"
 
 static ui_screen_id_t screen_for_source(control_source_t source)
 {
@@ -55,7 +56,8 @@ void control_action_execute(control_source_t source, control_action_t action)
     }
 
     if (action == CONTROL_ACTION_OPEN_EQUALIZER) {
-        // EQ has no per-caller return; it exits to Settings like the menu entry.
+        // Exit the EQ back to the screen the hotspot was on, not Settings.
+        screen_equalizer_set_return(screen_for_source(source));
         ui_navigate(SCREEN_EQ);
         return;
     }

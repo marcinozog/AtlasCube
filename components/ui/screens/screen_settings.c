@@ -9,6 +9,7 @@
 #include "ui_events.h"
 #include "ui_manager.h"
 #include "screen_layout_editor.h"
+#include "screen_equalizer.h"
 #include "audio_engine.h"   // built-in channel-test tone
 #include "lvgl.h"
 #include "esp_log.h"
@@ -365,6 +366,9 @@ static void row_activate(int i)
             enter_section(d->section);
             break;
         case RK_SCREEN:
+            // Opening EQ from the menu returns to Settings — clear any return a
+            // touch hotspot may have left pointing at a source screen.
+            if (d->screen == SCREEN_EQ) screen_equalizer_set_return(SCREEN_SETTINGS);
             ui_navigate(d->screen);
             break;
         case RK_TOGGLE:

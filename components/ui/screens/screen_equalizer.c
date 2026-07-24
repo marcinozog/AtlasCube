@@ -33,6 +33,9 @@ static lv_obj_t *s_freq_labels[EQ_BANDS] = {0};
 
 static int s_focus = 0;                   // index of the active band
 static int s_gains[EQ_BANDS] = {0};       // local copy — kept in sync continuously
+static ui_screen_id_t s_return = SCREEN_SETTINGS;   // where exit goes (see header)
+
+void screen_equalizer_set_return(ui_screen_id_t scr) { s_return = scr; }
 
 // Optional knob artwork (ui_profile.eq_knob_image): one .bin decoded and scaled
 // ONCE, then shown as a separate lv_image per band tracking that band's value —
@@ -341,7 +344,7 @@ static void eq_on_input(ui_input_t input)
         case UI_INPUT_SWIPE_LEFT:
         case UI_INPUT_SWIPE_RIGHT:
             /* horizontal only — vertical drags belong to the band sliders */
-            ui_navigate(SCREEN_SETTINGS);
+            ui_navigate(s_return);
             break;
 
         default:
