@@ -382,6 +382,9 @@ const SD_FIELDS = [
 // editable here. One knob image is shared by every band; the screen background
 // uses the generic per-screen wallpaper picker (eq_wallpaper).
 const EQ_FIELDS = [
+    { key: 'eq_info_x',    label: 'Value X',    type: 'number' },
+    { key: 'eq_info_y',    label: 'Value Y',    type: 'number' },
+    { key: 'eq_info_font', label: 'Value font', type: 'font'   },
     { key: 'eq_knob_image', label: 'Knob image (.bin)', type: 'text',
       placeholder: '/sdcard/assets/knobs/... (empty = colour knob)',
       sdPicker: { dir: '/assets/knobs' } },
@@ -481,6 +484,8 @@ const FORM_GROUPS = {
         { title: 'Animated wheels', enabledBy: 'sd_show_cassette', fields: ['sd_show_cassette', 'sd_animation_style', 'sd_wheels_reverse', 'sd_show_wheel_left', 'sd_cassette_l_x', 'sd_cassette_l_y', 'sd_cassette_l_size', 'sd_show_wheel_right', 'sd_cassette_r_x', 'sd_cassette_r_y', 'sd_cassette_r_size'] },
     ],
     eq: [
+        { heading: 'Text & labels' },
+        { title: 'Value label', fields: ['eq_info_x', 'eq_info_y', 'eq_info_font'] },
         { heading: 'Artwork' },
         { title: 'Knob image', fields: ['eq_knob_image', 'eq_knob_w', 'eq_knob_only'] },
     ],
@@ -2804,10 +2809,10 @@ function renderEq(svg) {
     const W = state.meta.screen_w, H = state.meta.screen_h;
     const hasKnob = !!(e.eq_knob_image && e.eq_knob_image.trim());
 
-    // Header hint: value left, live curve right (matches the device — no title).
-    text(svg, 4, Math.max(12, Math.round(H * 0.1)), '125 Hz: +3 dB', {
-        'font-size': Math.max(9, Math.round(H / 18)), opacity: 0.7,
-    });
+    // Active-band value — a movable top-left-anchored label (like other screens).
+    // The live curve lives top-right on the device; not drawn in this schematic.
+    drawLabel(svg, e.eq_info_x | 0, e.eq_info_y | 0, e.eq_info_font, '125 Hz: +3 dB',
+              'value', { x: 'eq_info_x', y: 'eq_info_y' }, false);
 
     const n = EQ_FREQ_LABELS.length;
     const knobOnly = !!e.eq_knob_only;

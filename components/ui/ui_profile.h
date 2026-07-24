@@ -451,6 +451,7 @@ typedef struct {
 
     // screen_equalizer
     int16_t          eq_title_y;
+    int16_t          eq_info_x;        // active-band value label — top-left anchor (web-editable)
     int16_t          eq_info_y;        // "1kHz: +6dB" — active band info
     int16_t          eq_band_area_y;   // top of sliders (their upper edge)
     int16_t          eq_slider_h;      // vertical slider height

@@ -238,7 +238,7 @@ static void eq_create(lv_obj_t *parent)
     s_info = lv_label_create(parent);
     lv_obj_set_style_text_font(s_info, p->eq_info_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_info, lv_color_hex(th->text_primary), LV_PART_MAIN);
-    lv_obj_align(s_info, LV_ALIGN_TOP_LEFT, 4, p->eq_info_y);
+    lv_obj_align(s_info, LV_ALIGN_TOP_LEFT, p->eq_info_x, p->eq_info_y);
 
     /* live curve — right portion of the header, only when there's room for it */
     s_cw = DISPLAY_WIDTH * 45 / 100;
