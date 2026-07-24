@@ -20,12 +20,13 @@ extern "C" {
 // defines the drag range, and its thickness sizes the knob.
 //
 // knob_image is an optional path to an RGB565 .bin on SD (scripts/img2lvgl.py
-// format) drawn on the knob. The knob is a square whose side is the slider's
-// thickness (the cross axis: h for horizontal, w for vertical), and the image
-// is bilinearly scaled to it — so resizing the slider box resizes the knob.
-// NULL or "" keeps the plain themed colour knob. No alpha channel — the image
-// is a solid rectangle. Loaded via lv_bin_image; the SD card must already be
-// mounted.
+// format) drawn on the knob. The slider's thickness (cross axis: h for
+// horizontal, w for vertical) sets the knob size up to a 64 px cap; the other
+// axis follows the image's aspect ratio (also capped), so non-square art keeps
+// its proportions. Resizing the slider box resizes the knob up to that cap (see
+// KNOB_IMAGE_MAX_SIDE for the LVGL layer reason). NULL or "" keeps the plain
+// themed colour knob. No alpha channel — the image is a solid rectangle. Loaded
+// via lv_bin_image; the SD card must already be mounted.
 //
 // bt=false drives the main output: the level is applied live while dragging
 // (audio_engine_set_volume) and persisted once on release via

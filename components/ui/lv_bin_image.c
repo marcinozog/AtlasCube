@@ -74,9 +74,13 @@ lv_image_dsc_t *lv_bin_image_load(const char *path, int require_w, int require_h
 lv_image_dsc_t *lv_bin_image_load_scaled(const char *path, int dst_w, int dst_h)
 {
     if (dst_w <= 0 || dst_h <= 0) return NULL;
+    return lv_bin_image_scale(lv_bin_image_load(path, 0, 0), dst_w, dst_h);
+}
 
-    lv_image_dsc_t *src = lv_bin_image_load(path, 0, 0);
+lv_image_dsc_t *lv_bin_image_scale(lv_image_dsc_t *src, int dst_w, int dst_h)
+{
     if (!src) return NULL;
+    if (dst_w <= 0 || dst_h <= 0) { lv_bin_image_free(src); return NULL; }
 
     const int sw = src->header.w, sh = src->header.h;
     if (sw == dst_w && sh == dst_h) return src;   // no resampling needed
@@ -85,7 +89,7 @@ lv_image_dsc_t *lv_bin_image_load_scaled(const char *path, int dst_w, int dst_h)
     uint16_t *dbuf = heap_caps_malloc(dpx, MALLOC_CAP_SPIRAM);
     lv_image_dsc_t *dsc = dbuf ? calloc(1, sizeof(*dsc)) : NULL;
     if (!dbuf || !dsc) {
-        ESP_LOGE(TAG, "%s: scale alloc failed (%u B)", path, (unsigned)dpx);
+        ESP_LOGE(TAG, "scale alloc failed (%u B)", (unsigned)dpx);
         free(dbuf);
         lv_bin_image_free(src);
         return NULL;
@@ -128,7 +132,7 @@ lv_image_dsc_t *lv_bin_image_load_scaled(const char *path, int dst_w, int dst_h)
     dsc->data_size     = (uint32_t)dpx;
     dsc->data          = (const uint8_t *)dbuf;
     lv_bin_image_free(src);   // native pixels no longer needed
-    ESP_LOGI(TAG, "scaled %s to %dx%d", path, dst_w, dst_h);
+    ESP_LOGI(TAG, "scaled knob image to %dx%d", dst_w, dst_h);
     return dsc;
 }
 

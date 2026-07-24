@@ -21,6 +21,14 @@ lv_image_dsc_t *lv_bin_image_load(const char *path, int require_w, int require_h
 // lv_bin_image_free(). dst_w/dst_h must be > 0.
 lv_image_dsc_t *lv_bin_image_load_scaled(const char *path, int dst_w, int dst_h);
 
+// Bilinearly resample an already-loaded descriptor to dst_w x dst_h. Consumes
+// `src` (frees it, or returns it unchanged when it is already the target size),
+// so the caller keeps only the returned descriptor and frees it with
+// lv_bin_image_free(). Returns NULL on error (src is freed in that case too).
+// Use it when the target size depends on the image's own aspect ratio, which is
+// only known after loading. dst_w/dst_h must be > 0.
+lv_image_dsc_t *lv_bin_image_scale(lv_image_dsc_t *src, int dst_w, int dst_h);
+
 // Free a descriptor from lv_bin_image_load() and its pixel buffer, dropping the
 // LVGL image cache for it first. Call only from the LVGL task.
 void lv_bin_image_free(lv_image_dsc_t *dsc);

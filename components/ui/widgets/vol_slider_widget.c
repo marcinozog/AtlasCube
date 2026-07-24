@@ -8,7 +8,17 @@
 static lv_obj_t       *s_slider    = NULL;
 static bool            s_bt        = false;
 static bool            s_knob_only = false;
-static lv_image_dsc_t *s_knob_dsc  = NULL;   // knob artwork, freed on destroy
+
+// Knob artwork is drawn by a SEPARATE lv_image overlaid on the slider, not as
+// the slider knob's bg_image. A plain lv_image blits directly (like the
+// wallpaper) and scales to any size cleanly, while a bg_image on the knob part
+// is tied to the slider's own draw path. The slider's own knob is made
+// invisible; this image is positioned to track the value.
+static lv_obj_t       *s_knob_img  = NULL;
+static lv_image_dsc_t *s_knob_dsc  = NULL;   // scaled artwork, freed on destroy
+static int             s_x, s_y, s_w, s_h;   // slider box (final, post-normalise)
+static int             s_kw, s_kh;           // knob image size
+static bool            s_vertical  = false;
 
 static void apply_colors(void)
 {
@@ -23,8 +33,27 @@ static void apply_colors(void)
     lv_obj_set_style_bg_color(s_slider, lv_color_hex(fill), LV_PART_KNOB);
 }
 
+// Move the knob image to match the current slider value. No-op without an image.
+static void position_knob(void)
+{
+    if (!s_knob_img || !s_slider) return;
+    int v = (int)lv_slider_get_value(s_slider);   // 0..100
+    int travel_x = s_w - s_kw; if (travel_x < 0) travel_x = 0;
+    int travel_y = s_h - s_kh; if (travel_y < 0) travel_y = 0;
+    int kx, ky;
+    if (s_vertical) {
+        kx = s_x + (s_w - s_kw) / 2;
+        ky = s_y + travel_y * (100 - v) / 100;   // v=100 → top
+    } else {
+        kx = s_x + travel_x * v / 100;           // v=0 → left
+        ky = s_y + (s_h - s_kh) / 2;
+    }
+    lv_obj_set_pos(s_knob_img, kx, ky);
+}
+
 static void value_changed_cb(lv_event_t *e)
 {
+    position_knob();    // follow the knob live, on the main and BT channels alike
     if (s_bt) return;   // BT applies on release only — see header
     lv_obj_t *sl = lv_event_get_target(e);
     audio_engine_set_volume((int)lv_slider_get_value(sl));
@@ -36,6 +65,46 @@ static void released_cb(lv_event_t *e)
     int vol = (int)lv_slider_get_value(sl);
     if (s_bt) settings_set_bt_volume(vol);   // → bt_set_volume + app_state + save
     else      settings_set_volume(vol);      // → audio_engine + app_state + save
+}
+
+// Load the knob .bin and build the tracking image. The slider's thickness (cross
+// axis after normalisation: h for horizontal, w for vertical) sets the knob size;
+// the other axis follows the image's aspect ratio. On any failure the slider
+// keeps its plain themed knob.
+static void build_knob_image(lv_obj_t *parent, const char *knob_image, int w, int h)
+{
+    if (!knob_image || !knob_image[0]) return;
+
+    s_knob_dsc = lv_bin_image_load(knob_image, 0, 0);
+    if (!s_knob_dsc) return;
+
+    const int iw = s_knob_dsc->header.w, ih = s_knob_dsc->header.h;
+    if (s_vertical) {                 // cross axis = width
+        s_kw = w;
+        s_kh = ih * s_kw / iw;
+    } else {                          // cross axis = height
+        s_kh = h;
+        s_kw = iw * s_kh / ih;
+    }
+    if (s_kw < 1) s_kw = 1;
+    if (s_kh < 1) s_kh = 1;
+
+    s_knob_dsc = lv_bin_image_scale(s_knob_dsc, s_kw, s_kh);   // consumes the native dsc
+    if (!s_knob_dsc) return;
+
+    // Hide the slider's own knob — the image is the knob now.
+    lv_obj_set_style_bg_opa      (s_slider, LV_OPA_TRANSP, LV_PART_KNOB);
+    lv_obj_set_style_border_width(s_slider, 0, LV_PART_KNOB);
+    lv_obj_set_style_shadow_width(s_slider, 0, LV_PART_KNOB);
+    lv_obj_set_style_outline_width(s_slider, 0, LV_PART_KNOB);
+
+    // Sibling above the slider; not clickable so touches fall through to the
+    // slider underneath (which still owns the drag).
+    s_knob_img = lv_image_create(parent);
+    lv_image_set_src(s_knob_img, s_knob_dsc);
+    lv_obj_remove_flag(s_knob_img, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_size(s_knob_img, s_kw, s_kh);
+    position_knob();
 }
 
 void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
@@ -74,43 +143,34 @@ void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
 
     apply_colors();
 
-    // Optional knob artwork, scaled to the slider so resizing the box resizes
-    // the knob. The knob is a square whose side is the slider's thickness (the
-    // cross axis after the orientation normalisation above: h for horizontal,
-    // w for vertical). The image is opaque (RGB565), so it fully hides the
-    // themed colour knob.
-    if (knob_image && knob_image[0]) {
-        const int side = vertical ? w : h;
-        s_knob_dsc = lv_bin_image_load_scaled(knob_image, side, side);
-        if (s_knob_dsc) {
-            lv_obj_set_style_width (s_slider, side, LV_PART_KNOB);
-            lv_obj_set_style_height(s_slider, side, LV_PART_KNOB);
-            lv_obj_set_style_pad_all(s_slider, 0, LV_PART_KNOB);
-            lv_obj_set_style_bg_image_src(s_slider, s_knob_dsc, LV_PART_KNOB);
-            // The image IS the knob — suppress the themed knob's own drawing so
-            // no colour fill / border / shadow / outline peeks out around it.
-            lv_obj_set_style_bg_opa     (s_slider, LV_OPA_TRANSP, LV_PART_KNOB);
-            lv_obj_set_style_border_opa (s_slider, LV_OPA_TRANSP, LV_PART_KNOB);
-            lv_obj_set_style_shadow_opa (s_slider, LV_OPA_TRANSP, LV_PART_KNOB);
-            lv_obj_set_style_outline_opa(s_slider, LV_OPA_TRANSP, LV_PART_KNOB);
-            // Shadow/outline extend past the image, so also clear them while
-            // pressed (the theme re-adds a pressed halo otherwise).
-            lv_obj_set_style_shadow_opa (s_slider, LV_OPA_TRANSP, LV_PART_KNOB | LV_STATE_PRESSED);
-            lv_obj_set_style_outline_opa(s_slider, LV_OPA_TRANSP, LV_PART_KNOB | LV_STATE_PRESSED);
-        }
-    }
+    // The default theme gives the slider CIRCLE-radius parts. On a large slider
+    // the knob's radius (up to thickness/2) becomes a big anti-aliased circle
+    // mask that hangs the SW renderer here — the render freeze was size-
+    // thresholded while memory stayed healthy, and squaring the corners fixed it
+    // (verified: 251x261 renders fine, LVGL task load normal). Keep radius 0.
+    lv_obj_set_style_radius (s_slider, 0, LV_PART_MAIN);
+    lv_obj_set_style_radius (s_slider, 0, LV_PART_INDICATOR);
+    lv_obj_set_style_radius (s_slider, 0, LV_PART_KNOB);
+    lv_obj_set_style_pad_all(s_slider, 0, LV_PART_KNOB);
+
+    s_x = x; s_y = y; s_w = w; s_h = h; s_vertical = vertical;
+    build_knob_image(parent, knob_image, w, h);
 
     vol_slider_widget_update();
 }
 
 void vol_slider_widget_destroy(void)
 {
+    if (s_knob_img) {                    // delete before freeing the pixels it points at
+        lv_obj_del(s_knob_img);
+        s_knob_img = NULL;
+    }
     if (s_slider) {
         lv_obj_del(s_slider);
         s_slider = NULL;
     }
     if (s_knob_dsc) {
-        lv_bin_image_free(s_knob_dsc);   // must run after the slider is deleted
+        lv_bin_image_free(s_knob_dsc);
         s_knob_dsc = NULL;
     }
 }
@@ -121,6 +181,7 @@ void vol_slider_widget_update(void)
     if (lv_obj_has_state(s_slider, LV_STATE_PRESSED)) return;   // mid-drag
     app_state_t *s = app_state_get();
     lv_slider_set_value(s_slider, s_bt ? s->bt_volume : s->volume, LV_ANIM_OFF);
+    position_knob();   // keep the artwork in sync with encoder/WS/Android changes
 }
 
 void vol_slider_widget_apply_theme(void)
