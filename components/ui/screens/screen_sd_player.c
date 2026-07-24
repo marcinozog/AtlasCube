@@ -211,12 +211,14 @@ static void sd_player_screen_create(lv_obj_t *parent)
     }
     // Info row split: volume and status flags are independent elements.
     if (p->sd_volume_show) {
-        s_volume = make_centered_label(parent, p->sd_info_font, th->text_muted,
+        s_volume = make_centered_label(parent, p->sd_info_font,
+                                       p->sd_info_color ? p->sd_info_color : th->text_muted,
                                        p->sd_volume_x, p->sd_volume_y,
                                        DISPLAY_WIDTH - 20);
     }
     if (p->sd_status_show) {
-        s_status = make_centered_label(parent, p->sd_info_font, th->text_muted,
+        s_status = make_centered_label(parent, p->sd_info_font,
+                                       p->sd_info_color ? p->sd_info_color : th->text_muted,
                                        p->sd_status_x, p->sd_status_y,
                                        DISPLAY_WIDTH - 20);
     }
@@ -224,7 +226,8 @@ static void sd_player_screen_create(lv_obj_t *parent)
     // Playback counter at its own profile-driven position. Skipped on panels
     // with no spare line (mono).
     if (p->sd_show_time) {
-        s_time = make_centered_label(parent, p->sd_info_font, th->text_muted,
+        s_time = make_centered_label(parent, p->sd_info_font,
+                                     p->sd_info_color ? p->sd_info_color : th->text_muted,
                                      p->sd_time_x, p->sd_time_y,
                                      DISPLAY_WIDTH - 20);
     }
@@ -399,9 +402,10 @@ static void sd_player_apply_theme(void)
     lv_obj_set_style_bg_color(s_root, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     if (s_title)  { lv_obj_set_style_text_color(s_title,  lv_color_hex(p->sd_title_color  ? p->sd_title_color  : th->text_primary), LV_PART_MAIN); ui_label_scrim(s_title, p->sd_label_bg_opa); }
     if (s_folder) { lv_obj_set_style_text_color(s_folder, lv_color_hex(p->sd_folder_color ? p->sd_folder_color : th->accent),       LV_PART_MAIN); ui_label_scrim(s_folder, p->sd_label_bg_opa); }
-    if (s_volume) { lv_obj_set_style_text_color(s_volume, lv_color_hex(th->text_muted),   LV_PART_MAIN); ui_label_scrim(s_volume, p->sd_label_bg_opa); }
-    if (s_status) { lv_obj_set_style_text_color(s_status, lv_color_hex(th->text_muted),   LV_PART_MAIN); ui_label_scrim(s_status, p->sd_label_bg_opa); }
-    if (s_time)   ui_label_scrim(s_time, p->sd_label_bg_opa);
+    uint32_t info_col = p->sd_info_color ? p->sd_info_color : th->text_muted;
+    if (s_volume) { lv_obj_set_style_text_color(s_volume, lv_color_hex(info_col), LV_PART_MAIN); ui_label_scrim(s_volume, p->sd_label_bg_opa); }
+    if (s_status) { lv_obj_set_style_text_color(s_status, lv_color_hex(info_col), LV_PART_MAIN); ui_label_scrim(s_status, p->sd_label_bg_opa); }
+    if (s_time)   { lv_obj_set_style_text_color(s_time,   lv_color_hex(info_col), LV_PART_MAIN); ui_label_scrim(s_time,   p->sd_label_bg_opa); }
     if (s_bar) {
         lv_obj_set_style_bg_color(s_bar, lv_color_hex(th->text_muted), LV_PART_MAIN);
         lv_obj_set_style_bg_color(s_bar, lv_color_hex(th->accent),     LV_PART_INDICATOR);

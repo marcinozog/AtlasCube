@@ -1721,6 +1721,7 @@ static void load_bt(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "bt_vol_x",               &p->bt_vol_x);
     load_i16 (obj, "bt_vol_y",               &p->bt_vol_y);
     load_font(obj, "bt_vol_label_font",      &p->bt_vol_label_font);
+    load_u32 (obj, "bt_vol_color",           &p->bt_vol_color);
     load_bool(obj, "bt_show_mode_indicator", &p->bt_show_mode_indicator);
     load_bool(obj, "bt_show_clock",          &p->bt_show_clock);
     load_i16 (obj, "bt_mode_indic_x",        &p->bt_mode_indic_x);
@@ -1732,13 +1733,16 @@ static void load_bt(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "bt_title_y",             &p->bt_title_y);
     load_i16 (obj, "bt_title_w",             &p->bt_title_w);
     load_font(obj, "bt_title_font",          &p->bt_title_font);
+    load_u32 (obj, "bt_title_color",         &p->bt_title_color);
     load_i16 (obj, "bt_artist_x",            &p->bt_artist_x);
     load_i16 (obj, "bt_artist_y",            &p->bt_artist_y);
     load_i16 (obj, "bt_artist_w",            &p->bt_artist_w);
     load_font(obj, "bt_artist_font",         &p->bt_artist_font);
+    load_u32 (obj, "bt_artist_color",        &p->bt_artist_color);
     load_i16 (obj, "bt_time_x",              &p->bt_time_x);
     load_i16 (obj, "bt_time_y",              &p->bt_time_y);
     load_font(obj, "bt_time_font",           &p->bt_time_font);
+    load_u32 (obj, "bt_time_color",          &p->bt_time_color);
     load_i16 (obj, "bt_label_bg_opa",        &p->bt_label_bg_opa);
     p->bt_label_bg_opa = LV_CLAMP(0, p->bt_label_bg_opa, 100);
     load_str (obj, "bt_wallpaper",           p->bt_wallpaper, sizeof(p->bt_wallpaper));
@@ -1794,6 +1798,7 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_volume_x",            &p->radio_volume_x);
     load_i16 (obj, "radio_volume_y",            &p->radio_volume_y);
     load_font(obj, "radio_audio_info_font",     &p->radio_audio_info_font);
+    load_u32 (obj, "radio_info_color",          &p->radio_info_color);
     load_bool(obj, "radio_show_mode_indicator",  &p->radio_show_mode_indicator);
     load_bool(obj, "radio_show_clock",           &p->radio_show_clock);
     load_bool(obj, "radio_show_event_indicator", &p->radio_show_event_indicator);
@@ -1908,6 +1913,7 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_volume_x",            p->radio_volume_x);
     add_i16 (o, "radio_volume_y",            p->radio_volume_y);
     add_font(o, "radio_audio_info_font",     p->radio_audio_info_font);
+    add_u32 (o, "radio_info_color",          p->radio_info_color);
     add_bool(o, "radio_show_mode_indicator",  p->radio_show_mode_indicator);
     add_bool(o, "radio_show_clock",           p->radio_show_clock);
     add_bool(o, "radio_show_event_indicator", p->radio_show_event_indicator);
@@ -2001,6 +2007,7 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "sd_status_x",               &p->sd_status_x);
     load_i16 (obj, "sd_status_y",               &p->sd_status_y);
     load_font(obj, "sd_info_font",              &p->sd_info_font);
+    load_u32 (obj, "sd_info_color",             &p->sd_info_color);
     load_bool(obj, "sd_show_folder",            &p->sd_show_folder);
     load_bool(obj, "sd_show_time",              &p->sd_show_time);
     load_i16 (obj, "sd_time_x",                 &p->sd_time_x);
@@ -2106,6 +2113,7 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_status_x",               p->sd_status_x);
     add_i16 (o, "sd_status_y",               p->sd_status_y);
     add_font(o, "sd_info_font",              p->sd_info_font);
+    add_u32 (o, "sd_info_color",             p->sd_info_color);
     add_bool(o, "sd_show_folder",            p->sd_show_folder);
     add_bool(o, "sd_show_time",              p->sd_show_time);
     add_i16 (o, "sd_time_x",                 p->sd_time_x);
@@ -2209,6 +2217,7 @@ static cJSON *dump_bt(const ui_profile_t *p)
     add_i16 (o, "bt_vol_x",               p->bt_vol_x);
     add_i16 (o, "bt_vol_y",               p->bt_vol_y);
     add_font(o, "bt_vol_label_font",      p->bt_vol_label_font);
+    add_u32 (o, "bt_vol_color",           p->bt_vol_color);
     add_bool(o, "bt_show_mode_indicator", p->bt_show_mode_indicator);
     add_bool(o, "bt_show_clock",          p->bt_show_clock);
     add_i16 (o, "bt_mode_indic_x",        p->bt_mode_indic_x);
@@ -2220,13 +2229,16 @@ static cJSON *dump_bt(const ui_profile_t *p)
     add_i16 (o, "bt_title_y",             p->bt_title_y);
     add_i16 (o, "bt_title_w",             p->bt_title_w);
     add_font(o, "bt_title_font",          p->bt_title_font);
+    add_u32 (o, "bt_title_color",         p->bt_title_color);
     add_i16 (o, "bt_artist_x",            p->bt_artist_x);
     add_i16 (o, "bt_artist_y",            p->bt_artist_y);
     add_i16 (o, "bt_artist_w",            p->bt_artist_w);
     add_font(o, "bt_artist_font",         p->bt_artist_font);
+    add_u32 (o, "bt_artist_color",        p->bt_artist_color);
     add_i16 (o, "bt_time_x",              p->bt_time_x);
     add_i16 (o, "bt_time_y",              p->bt_time_y);
     add_font(o, "bt_time_font",           p->bt_time_font);
+    add_u32 (o, "bt_time_color",          p->bt_time_color);
     add_i16 (o, "bt_label_bg_opa",        p->bt_label_bg_opa);
     add_str (o, "bt_wallpaper",           p->bt_wallpaper);
     add_bool(o, "bt_show_ctrl_overlay",   p->bt_show_ctrl_overlay);

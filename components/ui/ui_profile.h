@@ -191,6 +191,7 @@ typedef struct {
     int16_t          radio_volume_x;
     int16_t          radio_volume_y;
     const lv_font_t *radio_audio_info_font;
+    uint32_t         radio_info_color;         // audio-info rows colour, 0 = inherit theme text_muted
 
     bool             radio_show_mode_indicator;
     bool             radio_show_clock;
@@ -288,6 +289,7 @@ typedef struct {
     int16_t          sd_status_x;
     int16_t          sd_status_y;
     const lv_font_t *sd_info_font;
+    uint32_t         sd_info_color;            // volume/status/time rows colour, 0 = inherit theme text_muted
     bool             sd_show_time;             // "elapsed / total" row (needs a spare line; off on mono)
     int16_t          sd_time_x;                // "elapsed / total" row (center-anchored)
     int16_t          sd_time_y;
@@ -405,6 +407,7 @@ typedef struct {
     int16_t          bt_vol_x;                 // "VOL: NN%" label (center-anchored)
     int16_t          bt_vol_y;
     const lv_font_t *bt_vol_label_font;
+    uint32_t         bt_vol_color;             // "VOL: NN%" colour, 0 = inherit theme text_muted
 
     bool             bt_show_mode_indicator;
     bool             bt_show_clock;
@@ -419,13 +422,16 @@ typedef struct {
     int16_t          bt_title_y;
     int16_t          bt_title_w;               // width for scroll
     const lv_font_t *bt_title_font;
+    uint32_t         bt_title_color;           // track title colour, 0 = inherit theme text_primary
     int16_t          bt_artist_x;
     int16_t          bt_artist_y;
     int16_t          bt_artist_w;
     const lv_font_t *bt_artist_font;
+    uint32_t         bt_artist_color;          // artist colour, 0 = inherit theme text_secondary
     int16_t          bt_time_x;
     int16_t          bt_time_y;
     const lv_font_t *bt_time_font;
+    uint32_t         bt_time_color;            // "m:ss / m:ss" colour, 0 = inherit theme text_secondary
     bool             bt_show_ctrl_overlay;      // tap-anywhere transport/volume overlay
     bool             bt_volslider_show;         // draggable volume slider (BT channel)
     bool             bt_volslider_vertical;     // explicit orientation (box auto-swapped to match)

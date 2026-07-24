@@ -137,19 +137,23 @@ const BT_FIELDS = [
     { key: 'bt_title_y',     label: 'Title Y',         type: 'number' },
     { key: 'bt_title_w',     label: 'Title W',         type: 'number' },
     { key: 'bt_title_font',  label: 'Title font',      type: 'font'   },
+    { key: 'bt_title_color', label: 'Title colour',    type: 'color'  },
 
     { key: 'bt_artist_x',    label: 'Artist X',        type: 'number' },
     { key: 'bt_artist_y',    label: 'Artist Y',        type: 'number' },
     { key: 'bt_artist_w',    label: 'Artist W',        type: 'number' },
     { key: 'bt_artist_font', label: 'Artist font',     type: 'font'   },
+    { key: 'bt_artist_color', label: 'Artist colour',  type: 'color'  },
 
     { key: 'bt_time_x',      label: 'Time X',          type: 'number' },
     { key: 'bt_time_y',      label: 'Time Y',          type: 'number' },
     { key: 'bt_time_font',   label: 'Time font',       type: 'font'   },
+    { key: 'bt_time_color',  label: 'Time colour',     type: 'color'  },
 
     { key: 'bt_vol_x',           label: 'Vol X',          type: 'number' },
     { key: 'bt_vol_y',           label: 'Vol Y',          type: 'number' },
     { key: 'bt_vol_label_font',  label: 'Vol label font', type: 'font'   },
+    { key: 'bt_vol_color',       label: 'Vol colour',     type: 'color'  },
 
     { key: 'bt_show_mode_indicator', label: 'Show mode indic.', type: 'bool' },
     { key: 'bt_mode_indic_x',        label: 'Mode indic. X',    type: 'number' },
@@ -196,6 +200,7 @@ const RADIO_FIELDS = [
     { key: 'radio_state_color',       label: 'State colour',     type: 'color'  },
 
     { key: 'radio_audio_info_font',   label: 'Audio info font',  type: 'font'   },
+    { key: 'radio_info_color',        label: 'Audio info colour', type: 'color' },
     { key: 'radio_samplerate_show',   label: 'Show sample rate', type: 'bool' },
     { key: 'radio_samplerate_x',      label: 'Sample rate X',    type: 'number' },
     { key: 'radio_samplerate_y',      label: 'Sample rate Y',    type: 'number' },
@@ -296,6 +301,7 @@ const SD_FIELDS = [
     { key: 'sd_folder_color', label: 'Folder colour',  type: 'color'  },
 
     { key: 'sd_info_font',    label: 'Info font',      type: 'font'   },
+    { key: 'sd_info_color',   label: 'Info colour',    type: 'color'  },
     { key: 'sd_volume_show',  label: 'Show volume',    type: 'bool'   },
     { key: 'sd_volume_x',     label: 'Volume X',       type: 'number' },
     { key: 'sd_volume_y',     label: 'Volume Y',       type: 'number' },
@@ -434,9 +440,9 @@ const FORM_GROUPS = {
     bt: [
         { heading: 'Text & labels' },
         { title: 'Device status', fields: ['bt_brand_x', 'bt_brand_y', 'bt_brand_font', 'bt_brand_color', 'bt_status_x', 'bt_status_y', 'bt_status_font', 'bt_status_color'] },
-        { title: 'Track title', fields: ['bt_title_x', 'bt_title_y', 'bt_title_w', 'bt_title_font'] },
-        { title: 'Artist', fields: ['bt_artist_x', 'bt_artist_y', 'bt_artist_w', 'bt_artist_font'] },
-        { title: 'Playback', fields: ['bt_time_x', 'bt_time_y', 'bt_time_font', 'bt_vol_x', 'bt_vol_y', 'bt_vol_label_font'] },
+        { title: 'Track title', fields: ['bt_title_x', 'bt_title_y', 'bt_title_w', 'bt_title_font', 'bt_title_color'] },
+        { title: 'Artist', fields: ['bt_artist_x', 'bt_artist_y', 'bt_artist_w', 'bt_artist_font', 'bt_artist_color'] },
+        { title: 'Playback', fields: ['bt_time_x', 'bt_time_y', 'bt_time_font', 'bt_time_color', 'bt_vol_x', 'bt_vol_y', 'bt_vol_label_font', 'bt_vol_color'] },
         { heading: 'Indicators & clock' },
         { title: 'Bluetooth mark', enabledBy: 'bt_show_circle', fields: ['bt_show_circle', 'bt_circle_x', 'bt_circle_y', 'bt_circle_w', 'bt_circle_h', 'bt_icon_font'] },
         { title: 'Mode indicator', enabledBy: 'bt_show_mode_indicator', fields: ['bt_show_mode_indicator', 'bt_mode_indic_x', 'bt_mode_indic_y'] },
@@ -452,7 +458,7 @@ const FORM_GROUPS = {
         { title: 'Track title', enabledBy: 'radio_show_np_title', fields: ['radio_show_np_title', 'radio_title_x', 'radio_title_y', 'radio_title_w', 'radio_np_title_font', 'radio_title_color'] },
         { title: 'Playback status', enabledBy: 'radio_show_playback_status', fields: ['radio_show_playback_status', 'radio_state_x', 'radio_state_y', 'radio_state_font', 'radio_state_color'] },
         { title: 'Weather', enabledBy: 'radio_show_weather', fields: ['radio_show_weather', 'radio_weather_x', 'radio_weather_y', 'radio_weather_w', 'radio_weather_font'] },
-        { title: 'Audio info', fields: ['radio_audio_info_font'], subgroups: [
+        { title: 'Audio info', fields: ['radio_audio_info_font', 'radio_info_color'], subgroups: [
             { title: 'Sample rate', enabledBy: 'radio_samplerate_show', fields: ['radio_samplerate_show', 'radio_samplerate_x', 'radio_samplerate_y'] },
             { title: 'Channels (stereo/mono)', enabledBy: 'radio_channels_show', fields: ['radio_channels_show', 'radio_channels_x', 'radio_channels_y'] },
             { title: 'Bitrate', enabledBy: 'radio_bitrate_show', fields: ['radio_bitrate_show', 'radio_bitrate_x', 'radio_bitrate_y'] },
@@ -480,7 +486,7 @@ const FORM_GROUPS = {
         { title: 'Track title', fields: ['sd_title_x', 'sd_title_y', 'sd_title_w', 'sd_title_font', 'sd_title_color'] },
         { title: 'Folder', enabledBy: 'sd_show_folder', fields: ['sd_show_folder', 'sd_folder_x', 'sd_folder_y', 'sd_folder_font', 'sd_folder_color'] },
         { title: 'Weather', enabledBy: 'sd_show_weather', fields: ['sd_show_weather', 'sd_weather_x', 'sd_weather_y', 'sd_weather_w', 'sd_weather_font'] },
-        { title: 'Playback info', fields: ['sd_info_font'], subgroups: [
+        { title: 'Playback info', fields: ['sd_info_font', 'sd_info_color'], subgroups: [
             { title: 'Volume', enabledBy: 'sd_volume_show', fields: ['sd_volume_show', 'sd_volume_x', 'sd_volume_y'] },
             { title: 'Status flags', enabledBy: 'sd_status_show', fields: ['sd_status_show', 'sd_status_x', 'sd_status_y'] },
         ] },
@@ -2451,6 +2457,7 @@ function renderBt(svg) {
         label: 'title', cls: 'label-rect',
         fields: { x: 'bt_title_x', y: 'bt_title_y', w: 'bt_title_w' },
         text: 'Track title', textSize: titleFh,
+        textFill: b.bt_title_color ? numToHex(b.bt_title_color) : null,
     });
 
     // Artist — scrolling label, fixed width
@@ -2460,15 +2467,18 @@ function renderBt(svg) {
         label: 'artist', cls: 'label-rect',
         fields: { x: 'bt_artist_x', y: 'bt_artist_y', w: 'bt_artist_w' },
         text: 'Artist', textSize: artistFh,
+        textFill: b.bt_artist_color ? numToHex(b.bt_artist_color) : null,
     });
 
     // Time "0:00 / 0:00"
     drawLabel(svg, b.bt_time_x, b.bt_time_y, b.bt_time_font, '0:00 / 0:00',
-              'time', { x: 'bt_time_x', y: 'bt_time_y' }, true);
+              'time', { x: 'bt_time_x', y: 'bt_time_y' }, true,
+              b.bt_time_color ? numToHex(b.bt_time_color) : null);
 
     // Vol label — independently positioned center-anchored element.
     drawLabel(svg, b.bt_vol_x, b.bt_vol_y, b.bt_vol_label_font, 'VOL: 50%',
-              'vol', { x: 'bt_vol_x', y: 'bt_vol_y' }, true);
+              'vol', { x: 'bt_vol_x', y: 'bt_vol_y' }, true,
+              b.bt_vol_color ? numToHex(b.bt_vol_color) : null);
 
     if (b.bt_show_mode_indicator) {
         drawFreeElement(svg, {
@@ -2546,26 +2556,28 @@ function renderRadio(svg) {
                   'state', { x: 'radio_state_x', y: 'radio_state_y' }, true,
                   r.radio_state_color ? numToHex(r.radio_state_color) : null);
     }
-    // Audio-info split — independent center-anchored labels, one shared font.
+    // Audio-info split — independent center-anchored labels, one shared font
+    // and one shared colour override.
+    const rInfoFill = r.radio_info_color ? numToHex(r.radio_info_color) : null;
     if (r.radio_samplerate_show) {
         drawLabel(svg, r.radio_samplerate_x, r.radio_samplerate_y, r.radio_audio_info_font,
                   '44100 Hz', 'rate',
-                  { x: 'radio_samplerate_x', y: 'radio_samplerate_y' }, true);
+                  { x: 'radio_samplerate_x', y: 'radio_samplerate_y' }, true, rInfoFill);
     }
     if (r.radio_channels_show) {
         drawLabel(svg, r.radio_channels_x, r.radio_channels_y, r.radio_audio_info_font,
                   'STEREO', 'ch',
-                  { x: 'radio_channels_x', y: 'radio_channels_y' }, true);
+                  { x: 'radio_channels_x', y: 'radio_channels_y' }, true, rInfoFill);
     }
     if (r.radio_bitrate_show) {
         drawLabel(svg, r.radio_bitrate_x, r.radio_bitrate_y, r.radio_audio_info_font,
                   '128 kbps', 'kbps',
-                  { x: 'radio_bitrate_x', y: 'radio_bitrate_y' }, true);
+                  { x: 'radio_bitrate_x', y: 'radio_bitrate_y' }, true, rInfoFill);
     }
     if (r.radio_volume_show) {
         drawLabel(svg, r.radio_volume_x, r.radio_volume_y, r.radio_audio_info_font,
                   'VOL: 42%', 'vol',
-                  { x: 'radio_volume_x', y: 'radio_volume_y' }, true);
+                  { x: 'radio_volume_x', y: 'radio_volume_y' }, true, rInfoFill);
     }
 
     if (r.radio_show_mode_indicator) {
@@ -2677,20 +2689,22 @@ function renderSd(svg) {
                   'folder', { x: 'sd_folder_x', y: 'sd_folder_y' }, true,
                   s.sd_folder_color ? numToHex(s.sd_folder_color) : null);
     }
-    // Info row split — volume and status flags are independent labels.
+    // Info row split — volume, status flags and the counter are independent
+    // labels sharing one font and one colour override.
+    const sdInfoFill = s.sd_info_color ? numToHex(s.sd_info_color) : null;
     if (s.sd_volume_show) {
         drawLabel(svg, s.sd_volume_x, s.sd_volume_y, s.sd_info_font, 'VOL: 42%',
-                  'vol', { x: 'sd_volume_x', y: 'sd_volume_y' }, true);
+                  'vol', { x: 'sd_volume_x', y: 'sd_volume_y' }, true, sdInfoFill);
     }
     if (s.sd_status_show) {
         drawLabel(svg, s.sd_status_x, s.sd_status_y, s.sd_info_font,
                   'SHUFFLE   REPEAT ALL',
-                  'status', { x: 'sd_status_x', y: 'sd_status_y' }, true);
+                  'status', { x: 'sd_status_x', y: 'sd_status_y' }, true, sdInfoFill);
     }
 
     if (s.sd_show_time) {
         drawLabel(svg, s.sd_time_x, s.sd_time_y, s.sd_info_font, '1:23 / 4:56',
-                  'time', { x: 'sd_time_x', y: 'sd_time_y' }, true);
+                  'time', { x: 'sd_time_x', y: 'sd_time_y' }, true, sdInfoFill);
     }
 
     if (s.sd_show_bar && s.sd_bar_w > 0) {

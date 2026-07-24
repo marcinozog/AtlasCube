@@ -94,7 +94,9 @@ static lv_obj_t *make_info_label(lv_obj_t *parent, const ui_profile_t *p,
     lv_obj_t *lbl = ui_anchored_label(parent, x, y, UI_ALIGN_CENTER);
     lv_label_set_text(lbl, "");
     lv_obj_set_style_text_font(lbl, p->radio_audio_info_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(lbl, lv_color_hex(theme_get()->text_muted), LV_PART_MAIN);
+    lv_obj_set_style_text_color(lbl,
+        lv_color_hex(p->radio_info_color ? p->radio_info_color
+                                         : theme_get()->text_muted), LV_PART_MAIN);
     ui_label_scrim(lbl, p->radio_label_bg_opa);
     return lbl;
 }
@@ -330,7 +332,8 @@ static void radio_apply_theme(void)
     for (size_t i = 0; i < sizeof(info_labels) / sizeof(info_labels[0]); ++i) {
         if (!info_labels[i]) continue;
         lv_obj_set_style_text_color(info_labels[i],
-            lv_color_hex(th->text_muted), LV_PART_MAIN);
+            lv_color_hex(p->radio_info_color ? p->radio_info_color
+                                             : th->text_muted), LV_PART_MAIN);
         ui_label_scrim(info_labels[i], p->radio_label_bg_opa);
     }
 
