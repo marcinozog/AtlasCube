@@ -227,6 +227,11 @@ static void eq_create(lv_obj_t *parent)
         /* touch: keep the slider interactive; PRESS_LOCK keeps the drag bound
            to this slider even if the finger drifts off its (narrow) bounds */
         lv_obj_add_flag(sl, LV_OBJ_FLAG_PRESS_LOCK);
+        /* A vertical drag adjusts the band — it must NOT bubble as a screen
+           gesture, or ui_manager's gesture handler calls lv_indev_wait_release()
+           mid-drag and the slider stops updating (drag appears frozen; taps
+           still work). Stop the gesture at the slider, like vol_slider does. */
+        lv_obj_remove_flag(sl, LV_OBJ_FLAG_GESTURE_BUBBLE);
         lv_obj_add_event_cb(sl, slider_touch_cb, LV_EVENT_VALUE_CHANGED,
                             (void *)(uintptr_t)i);
         lv_obj_add_event_cb(sl, slider_touch_cb, LV_EVENT_RELEASED,
