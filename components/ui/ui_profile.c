@@ -601,6 +601,7 @@ static const ui_profile_t k_defaults = {
     .radio_volslider_y         = 212,
     .radio_volslider_w         = 200,
     .radio_volslider_h         = 14,
+    .radio_volslider_vol_max   = 100,
 
     .sd_title_x                = 10,    // full width minus margins
     .sd_title_y                = 60,
@@ -683,6 +684,7 @@ static const ui_profile_t k_defaults = {
     .sd_volslider_y            = 212,
     .sd_volslider_w            = 200,
     .sd_volslider_h            = 14,
+    .sd_volslider_vol_max      = 100,
     .bt_show_ctrl_overlay      = true,
     .bt_volslider_show         = false,
     .bt_volslider_vertical     = false,
@@ -691,6 +693,7 @@ static const ui_profile_t k_defaults = {
     .bt_volslider_y            = 232,
     .bt_volslider_w            = 200,
     .bt_volslider_h            = 14,
+    .bt_volslider_vol_max      = 100,
 
     // Playlist: We use the screen height for more list items
     .playlist_header_h         = 45,
@@ -934,6 +937,7 @@ static const ui_profile_t k_defaults = {
     .radio_volslider_y         = 196,
     .radio_volslider_w         = 240,
     .radio_volslider_h         = 14,
+    .radio_volslider_vol_max   = 100,
 
     .sd_title_x                = 10,    // full width minus margins
     .sd_title_y                = 64,
@@ -1016,6 +1020,7 @@ static const ui_profile_t k_defaults = {
     .sd_volslider_y            = 196,
     .sd_volslider_w            = 240,
     .sd_volslider_h            = 14,
+    .sd_volslider_vol_max      = 100,
     .bt_show_ctrl_overlay      = true,
     .bt_volslider_show         = false,
     .bt_volslider_vertical     = false,
@@ -1024,6 +1029,7 @@ static const ui_profile_t k_defaults = {
     .bt_volslider_y            = 196,
     .bt_volslider_w            = 240,
     .bt_volslider_h            = 14,
+    .bt_volslider_vol_max      = 100,
 
     .playlist_header_h         = 26,
     .playlist_item_h           = 28,
@@ -1260,6 +1266,7 @@ static const ui_profile_t k_defaults = {
     .radio_volslider_y         = 252,
     .radio_volslider_w         = 300,
     .radio_volslider_h         = 18,
+    .radio_volslider_vol_max   = 100,
 
     .sd_title_x                = 10,    // full width minus margins
     .sd_title_y                = 85,
@@ -1342,6 +1349,7 @@ static const ui_profile_t k_defaults = {
     .sd_volslider_y            = 252,
     .sd_volslider_w            = 300,
     .sd_volslider_h            = 18,
+    .sd_volslider_vol_max      = 100,
     .bt_show_ctrl_overlay      = true,
     .bt_volslider_show         = false,
     .bt_volslider_vertical     = false,
@@ -1350,6 +1358,7 @@ static const ui_profile_t k_defaults = {
     .bt_volslider_y            = 252,
     .bt_volslider_w            = 300,
     .bt_volslider_h            = 18,
+    .bt_volslider_vol_max      = 100,
 
     .playlist_header_h         = 34,
     .playlist_item_h           = 38,
@@ -1727,6 +1736,7 @@ static void load_bt(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "bt_volslider_w",         &p->bt_volslider_w);
     load_i16 (obj, "bt_volslider_h",         &p->bt_volslider_h);
     load_str (obj, "bt_volslider_knob_image", p->bt_volslider_knob_image, sizeof(p->bt_volslider_knob_image));
+    load_i16 (obj, "bt_volslider_vol_max",    &p->bt_volslider_vol_max);
     load_hotspots(obj, "bt", p->bt_touch_hotspots);
 }
 
@@ -1836,6 +1846,7 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "radio_volslider_w",          &p->radio_volslider_w);
     load_i16 (obj, "radio_volslider_h",          &p->radio_volslider_h);
     load_str (obj, "radio_volslider_knob_image", p->radio_volslider_knob_image, sizeof(p->radio_volslider_knob_image));
+    load_i16 (obj, "radio_volslider_vol_max",    &p->radio_volslider_vol_max);
     load_i16 (obj, "radio_label_bg_opa",         &p->radio_label_bg_opa);
     p->radio_label_bg_opa = LV_CLAMP(0, p->radio_label_bg_opa, 100);
     load_str (obj, "radio_wallpaper",            p->radio_wallpaper, sizeof(p->radio_wallpaper));
@@ -1943,6 +1954,7 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_i16 (o, "radio_volslider_w",          p->radio_volslider_w);
     add_i16 (o, "radio_volslider_h",          p->radio_volslider_h);
     add_str (o, "radio_volslider_knob_image", p->radio_volslider_knob_image);
+    add_i16 (o, "radio_volslider_vol_max",    p->radio_volslider_vol_max);
     add_i16 (o, "radio_label_bg_opa",         p->radio_label_bg_opa);
     add_str (o, "radio_wallpaper",            p->radio_wallpaper);
     dump_hotspots(o, "radio", p->radio_touch_hotspots);
@@ -2045,6 +2057,7 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "sd_volslider_w",            &p->sd_volslider_w);
     load_i16 (obj, "sd_volslider_h",            &p->sd_volslider_h);
     load_str (obj, "sd_volslider_knob_image",   p->sd_volslider_knob_image, sizeof(p->sd_volslider_knob_image));
+    load_i16 (obj, "sd_volslider_vol_max",      &p->sd_volslider_vol_max);
     load_i16 (obj, "sd_label_bg_opa",           &p->sd_label_bg_opa);
     p->sd_label_bg_opa = LV_CLAMP(0, p->sd_label_bg_opa, 100);
     load_str (obj, "sd_wallpaper",              p->sd_wallpaper, sizeof(p->sd_wallpaper));
@@ -2144,6 +2157,7 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_volslider_w",            p->sd_volslider_w);
     add_i16 (o, "sd_volslider_h",            p->sd_volslider_h);
     add_str (o, "sd_volslider_knob_image",   p->sd_volslider_knob_image);
+    add_i16 (o, "sd_volslider_vol_max",      p->sd_volslider_vol_max);
     add_i16 (o, "sd_label_bg_opa",           p->sd_label_bg_opa);
     add_str (o, "sd_wallpaper",              p->sd_wallpaper);
     dump_hotspots(o, "sd", p->sd_touch_hotspots);
@@ -2197,6 +2211,7 @@ static cJSON *dump_bt(const ui_profile_t *p)
     add_i16 (o, "bt_volslider_w",         p->bt_volslider_w);
     add_i16 (o, "bt_volslider_h",         p->bt_volslider_h);
     add_str (o, "bt_volslider_knob_image", p->bt_volslider_knob_image);
+    add_i16 (o, "bt_volslider_vol_max",    p->bt_volslider_vol_max);
     dump_hotspots(o, "bt", p->bt_touch_hotspots);
     return o;
 }

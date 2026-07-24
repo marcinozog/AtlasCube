@@ -192,7 +192,8 @@ static void bt_create(lv_obj_t *parent)
                                  p->bt_volslider_w, p->bt_volslider_h,
                                  p->bt_volslider_vertical,
                                  p->bt_volslider_knob_only, true,
-                                 p->bt_volslider_knob_image);
+                                 p->bt_volslider_knob_image,
+                                 p->bt_volslider_vol_max);
     }
 
     ESP_LOGI(TAG, "Created (bt_volume=%d, theme=%d)",

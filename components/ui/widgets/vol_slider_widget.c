@@ -8,6 +8,17 @@
 static lv_obj_t       *s_slider    = NULL;
 static bool            s_bt        = false;
 static bool            s_knob_only = false;
+static int             s_vol_max   = 100;   // slider full travel maps to 0..s_vol_max %
+
+// Map slider travel (0..100) to the effective output volume, and back. The
+// slider's LVGL range stays 0..100 (so the knob geometry is unchanged); only
+// the value written to / read from the audio path is scaled by s_vol_max.
+static inline int travel_to_vol(int pos) { return (pos * s_vol_max + 50) / 100; }
+static inline int vol_to_travel(int vol)
+{
+    int pos = (vol * 100 + s_vol_max / 2) / s_vol_max;
+    return pos < 0 ? 0 : (pos > 100 ? 100 : pos);
+}
 
 // Knob artwork is drawn by a SEPARATE lv_image overlaid on the slider, not as
 // the slider knob's bg_image. A plain lv_image blits directly (like the
@@ -56,13 +67,13 @@ static void value_changed_cb(lv_event_t *e)
     position_knob();    // follow the knob live, on the main and BT channels alike
     if (s_bt) return;   // BT applies on release only — see header
     lv_obj_t *sl = lv_event_get_target(e);
-    audio_engine_set_volume((int)lv_slider_get_value(sl));
+    audio_engine_set_volume(travel_to_vol((int)lv_slider_get_value(sl)));
 }
 
 static void released_cb(lv_event_t *e)
 {
     lv_obj_t *sl = lv_event_get_target(e);
-    int vol = (int)lv_slider_get_value(sl);
+    int vol = travel_to_vol((int)lv_slider_get_value(sl));
     if (s_bt) settings_set_bt_volume(vol);   // → bt_set_volume + app_state + save
     else      settings_set_volume(vol);      // → audio_engine + app_state + save
 }
@@ -109,11 +120,13 @@ static void build_knob_image(lv_obj_t *parent, const char *knob_image, int w, in
 
 void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
                               int16_t w, int16_t h, bool vertical,
-                              bool knob_only, bool bt, const char *knob_image)
+                              bool knob_only, bool bt, const char *knob_image,
+                              int vol_max)
 {
     if (!parent || s_slider) return;
     s_bt        = bt;
     s_knob_only = knob_only;
+    s_vol_max   = (vol_max < 1 || vol_max > 100) ? 100 : vol_max;   // 0/unset → no scaling
 
     /* The box must agree with the chosen orientation: LVGL 9.2 sliders take
        the drag axis from w >= h regardless of lv_bar_set_orientation, so a
@@ -180,7 +193,7 @@ void vol_slider_widget_update(void)
     if (!s_slider) return;
     if (lv_obj_has_state(s_slider, LV_STATE_PRESSED)) return;   // mid-drag
     app_state_t *s = app_state_get();
-    lv_slider_set_value(s_slider, s_bt ? s->bt_volume : s->volume, LV_ANIM_OFF);
+    lv_slider_set_value(s_slider, vol_to_travel(s_bt ? s->bt_volume : s->volume), LV_ANIM_OFF);
     position_knob();   // keep the artwork in sync with encoder/WS/Android changes
 }
 

@@ -33,9 +33,17 @@ extern "C" {
 // settings_set_volume() — no settings write per drag event. bt=true drives
 // the BT channel and applies on release only: every BT volume change is an
 // AT command to the module over UART, so a live drag would flood the link.
+//
+// vol_max (1..100) remaps the slider's full travel onto the effective output
+// range: full deflection = vol_max %, so a room-loud panel can use the whole
+// slider for fine control instead of the bottom third. The value stored in
+// app_state / persisted stays the true 0-100 %, so other sliders, web and
+// Android remain honest — only this control's mapping is compressed. 100 (or
+// any out-of-range value) means no scaling — the legacy 1:1 behaviour.
 void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
                               int16_t w, int16_t h, bool vertical,
-                              bool knob_only, bool bt, const char *knob_image);
+                              bool knob_only, bool bt, const char *knob_image,
+                              int vol_max);
 void vol_slider_widget_destroy(void);
 
 // Sync the knob with app_state (encoder / WS / Android changes). Skipped
