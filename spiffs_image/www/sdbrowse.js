@@ -58,17 +58,25 @@
         let usedFallback = false;
         const refresh = () => load(current, false);
 
-        // Create a subfolder in the current directory.
+        // Create a folder. The prompt is prefilled with the current path so you
+        // just append a name; any missing parent levels are created too, then
+        // the browser navigates into the new folder.
         async function mkdirHere() {
-            const name = window.prompt('New folder name:');
-            if (name === null) return;
-            const t = name.trim();
-            if (!t || t.includes('/') || t.includes('..')) { window.alert('Invalid folder name.'); return; }
+            const input = window.prompt('Create folder (full path):',
+                                        current === '/' ? '/' : current + '/');
+            if (input === null) return;
+            let dir = input.trim();
+            if (!dir.startsWith('/')) dir = '/' + dir;
+            dir = dir.replace(/\/+$/, '') || '/';
+            if (dir === '/' || dir.includes('..')) { window.alert('Invalid folder name.'); return; }
             try {
-                const r = await fetch('/api/sd/mkdir?path=' + encodeURIComponent(joinDir(current, t)),
-                                      { method: 'POST' });
-                if (!r.ok) throw new Error('HTTP ' + r.status);
-                refresh();
+                let acc = '';
+                for (const part of dir.split('/').filter(Boolean)) {
+                    acc += '/' + part;
+                    const m = await fetch('/api/sd/mkdir?path=' + encodeURIComponent(acc), { method: 'POST' });
+                    if (!m.ok) throw new Error('HTTP ' + m.status);
+                }
+                load(dir, false);
             } catch (err) { window.alert('Create folder failed: ' + err.message); }
         }
 
