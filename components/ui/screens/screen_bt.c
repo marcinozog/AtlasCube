@@ -55,7 +55,9 @@ static void refresh_from_state(void)
 
     // Connection status
     const ui_theme_colors_t *th = theme_get();
-    lv_obj_set_style_text_color(s_status_label, lv_color_hex(th->status_ok), LV_PART_MAIN);
+    const ui_profile_t      *p  = ui_profile_get();
+    lv_obj_set_style_text_color(s_status_label,
+        lv_color_hex(p->bt_status_color ? p->bt_status_color : th->status_ok), LV_PART_MAIN);
     if(s->bt_state == BT_CONNECTED) {
         lv_label_set_text(s_status_label, "Connected");
     }
@@ -120,7 +122,8 @@ static void bt_create(lv_obj_t *parent)
     s_brand_label = ui_anchored_label(parent, p->bt_brand_x, p->bt_brand_y, UI_ALIGN_CENTER);
     lv_label_set_text(s_brand_label, "Bluetooth Audio");
     lv_obj_set_style_text_font(s_brand_label, p->bt_brand_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_brand_label, lv_color_hex(th->bt_brand), LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_brand_label,
+        lv_color_hex(p->bt_brand_color ? p->bt_brand_color : th->bt_brand), LV_PART_MAIN);
     ui_label_scrim(s_brand_label, p->bt_label_bg_opa);
 
     s_status_label = ui_anchored_label(parent, p->bt_status_x, p->bt_status_y, UI_ALIGN_CENTER);
@@ -129,7 +132,8 @@ static void bt_create(lv_obj_t *parent)
 
     bt_state_t btState = app_state_get()->bt_state;
 
-    lv_obj_set_style_text_color(s_status_label, lv_color_hex(th->status_ok), LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_status_label,
+        lv_color_hex(p->bt_status_color ? p->bt_status_color : th->status_ok), LV_PART_MAIN);
     if(btState == BT_CONNECTED) {
         lv_label_set_text(s_status_label, "Connected");
     }
@@ -286,12 +290,12 @@ static void bt_apply_theme(void)
 
     // napis "Bluetooth Audio"
     lv_obj_set_style_text_color(s_brand_label,
-        lv_color_hex(th->bt_brand), LV_PART_MAIN);
+        lv_color_hex(p->bt_brand_color ? p->bt_brand_color : th->bt_brand), LV_PART_MAIN);
     ui_label_scrim(s_brand_label, p->bt_label_bg_opa);
 
     // status (Connected / Not connected / Discoverable)
     lv_obj_set_style_text_color(s_status_label,
-        lv_color_hex(th->status_ok), LV_PART_MAIN);
+        lv_color_hex(p->bt_status_color ? p->bt_status_color : th->status_ok), LV_PART_MAIN);
     ui_label_scrim(s_status_label, p->bt_label_bg_opa);
 
     lv_obj_set_style_text_color(s_vol_label,

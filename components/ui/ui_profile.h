@@ -167,11 +167,14 @@ typedef struct {
     int16_t          radio_station_icon_size;  // displayed station artwork size, 16..64 px
     const lv_font_t *radio_np_station_font;    // now-playing station-name line
     const lv_font_t *radio_np_title_font;      // now-playing ICY-title line
+    uint32_t         radio_np_color;           // station-name colour, 0 = inherit theme accent
+    uint32_t         radio_title_color;        // ICY-title colour, 0 = inherit theme text_secondary
 
     bool             radio_show_playback_status;
     int16_t          radio_state_x;            // "PLAYING / STOPPED / ..." label (center-anchored)
     int16_t          radio_state_y;
     const lv_font_t *radio_state_font;
+    uint32_t         radio_state_color;        // playback-status colour, 0 = inherit theme status_ok
 
     // Audio-info split into independent center-anchored labels ("44100 Hz",
     // "STEREO"/"MONO", "128 kbps", "VOL: 42%"), all sharing one font.
@@ -270,9 +273,11 @@ typedef struct {
     int16_t          sd_title_y;
     int16_t          sd_title_w;               // box width
     const lv_font_t *sd_title_font;
+    uint32_t         sd_title_color;           // track-title colour, 0 = inherit theme text_primary
     int16_t          sd_folder_x;              // "<folder>   idx/count" (center-anchored)
     int16_t          sd_folder_y;
     const lv_font_t *sd_folder_font;
+    uint32_t         sd_folder_color;          // folder/index colour, 0 = inherit theme accent
     bool             sd_show_folder;           // folder/index row
     // Info row split into independent center-anchored labels sharing sd_info_font
     // (which the time row uses too).
@@ -390,10 +395,12 @@ typedef struct {
     int16_t          bt_brand_x;               // "Bluetooth Audio" label
     int16_t          bt_brand_y;
     const lv_font_t *bt_brand_font;
+    uint32_t         bt_brand_color;           // "Bluetooth Audio" colour, 0 = inherit theme bt_brand
 
     int16_t          bt_status_x;              // "Connected / Discoverable / ..."
     int16_t          bt_status_y;
     const lv_font_t *bt_status_font;
+    uint32_t         bt_status_color;          // connection-status colour, 0 = inherit theme status_ok
 
     int16_t          bt_vol_x;                 // "VOL: NN%" label (center-anchored)
     int16_t          bt_vol_y;

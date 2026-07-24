@@ -16,6 +16,8 @@ static lv_obj_t *s_label_title   = NULL;
 static int       s_station_w     = 8;
 static int       s_title_w       = 8;
 static int       s_label_bg_opa  = 0;
+static uint32_t  s_station_color = 0;   // 0 = inherit theme accent
+static uint32_t  s_title_color   = 0;   // 0 = inherit theme text_secondary
 
 static lv_obj_t *make_line(lv_obj_t *parent, int x, int y, int w,
                            const lv_font_t *font, uint32_t color)
@@ -35,10 +37,13 @@ void now_playing_widget_create(lv_obj_t *parent,
                                bool show_title,
                                int title_x, int title_y, int title_w,
                                const lv_font_t *title_font,
-                               int label_bg_opa)
+                               int label_bg_opa,
+                               uint32_t station_color, uint32_t title_color)
 {
     const ui_theme_colors_t *th = theme_get();
-    s_label_bg_opa = label_bg_opa;
+    s_label_bg_opa  = label_bg_opa;
+    s_station_color = station_color;
+    s_title_color   = title_color;
 
     if (!station_font) station_font = &lv_font_montserrat_18_pl;
     if (!title_font)   title_font   = &lv_font_montserrat_14_pl;
@@ -46,10 +51,10 @@ void now_playing_widget_create(lv_obj_t *parent,
     s_title_w   = title_w   < 8 ? 8 : title_w;
 
     s_label_station = make_line(parent, station_x, station_y, s_station_w,
-                                station_font, th->accent);
+                                station_font, s_station_color ? s_station_color : th->accent);
     if (show_title) {
         s_label_title = make_line(parent, title_x, title_y, s_title_w,
-                                  title_font, th->text_secondary);
+                                  title_font, s_title_color ? s_title_color : th->text_secondary);
     }
 
     now_playing_widget_update();
@@ -63,6 +68,8 @@ void now_playing_widget_destroy(void)
     s_station_w     = 8;
     s_title_w       = 8;
     s_label_bg_opa  = 0;
+    s_station_color = 0;
+    s_title_color   = 0;
     ESP_LOGI(TAG, "Destroyed");
 }
 
@@ -105,11 +112,11 @@ void now_playing_widget_apply_theme(void)
     const ui_theme_colors_t *th = theme_get();
 
     lv_obj_set_style_text_color(s_label_station,
-        lv_color_hex(th->accent), LV_PART_MAIN);
+        lv_color_hex(s_station_color ? s_station_color : th->accent), LV_PART_MAIN);
     ui_label_scrim(s_label_station, s_label_bg_opa);
     if (s_label_title) {
         lv_obj_set_style_text_color(s_label_title,
-            lv_color_hex(th->text_secondary), LV_PART_MAIN);
+            lv_color_hex(s_title_color ? s_title_color : th->text_secondary), LV_PART_MAIN);
         ui_label_scrim(s_label_title, s_label_bg_opa);
     }
 }

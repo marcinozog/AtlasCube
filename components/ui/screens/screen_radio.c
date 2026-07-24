@@ -125,7 +125,8 @@ static void radio_create(lv_obj_t *parent)
                                   p->radio_show_np_title,
                                   p->radio_title_x, p->radio_title_y, p->radio_title_w,
                                   p->radio_np_title_font,
-                                  p->radio_label_bg_opa);
+                                  p->radio_label_bg_opa,
+                                  p->radio_np_color, p->radio_title_color);
     }
     if (p->radio_show_station_icon) {
         station_icon_widget_create(parent,
@@ -181,7 +182,8 @@ static void radio_create(lv_obj_t *parent)
                                           UI_ALIGN_CENTER);
         lv_label_set_text(s_label_state, "");
         lv_obj_set_style_text_font(s_label_state, p->radio_state_font, LV_PART_MAIN);
-        lv_obj_set_style_text_color(s_label_state, lv_color_hex(th->status_ok), LV_PART_MAIN);
+        lv_obj_set_style_text_color(s_label_state,
+            lv_color_hex(p->radio_state_color ? p->radio_state_color : th->status_ok), LV_PART_MAIN);
         ui_label_scrim(s_label_state, p->radio_label_bg_opa);
     }
 
@@ -320,7 +322,7 @@ static void radio_apply_theme(void)
 
     if (s_label_state) {
         lv_obj_set_style_text_color(s_label_state,
-            lv_color_hex(th->status_ok), LV_PART_MAIN);
+            lv_color_hex(p->radio_state_color ? p->radio_state_color : th->status_ok), LV_PART_MAIN);
         ui_label_scrim(s_label_state, p->radio_label_bg_opa);
     }
     lv_obj_t *info_labels[] = { s_label_samplerate, s_label_channels,

@@ -198,12 +198,14 @@ static void sd_player_screen_create(lv_obj_t *parent)
 
     // Title is a fixed-width box (like bt_title): text centered on the box
     // centre and capped at the box width, so it never spills off the box.
-    s_title = make_centered_label(parent, p->sd_title_font, th->text_primary,
+    s_title = make_centered_label(parent, p->sd_title_font,
+                                  p->sd_title_color ? p->sd_title_color : th->text_primary,
                                   p->sd_title_x + p->sd_title_w / 2, p->sd_title_y,
                                   p->sd_title_w);
 
     if (p->sd_show_folder) {
-        s_folder = make_centered_label(parent, p->sd_folder_font, th->accent,
+        s_folder = make_centered_label(parent, p->sd_folder_font,
+                                       p->sd_folder_color ? p->sd_folder_color : th->accent,
                                        p->sd_folder_x, p->sd_folder_y,
                                        DISPLAY_WIDTH - 20);
     }
@@ -395,8 +397,8 @@ static void sd_player_apply_theme(void)
     const ui_profile_t      *p  = ui_profile_get();
 
     lv_obj_set_style_bg_color(s_root, lv_color_hex(th->bg_primary), LV_PART_MAIN);
-    if (s_title)  { lv_obj_set_style_text_color(s_title,  lv_color_hex(th->text_primary), LV_PART_MAIN); ui_label_scrim(s_title, p->sd_label_bg_opa); }
-    if (s_folder) { lv_obj_set_style_text_color(s_folder, lv_color_hex(th->accent),       LV_PART_MAIN); ui_label_scrim(s_folder, p->sd_label_bg_opa); }
+    if (s_title)  { lv_obj_set_style_text_color(s_title,  lv_color_hex(p->sd_title_color  ? p->sd_title_color  : th->text_primary), LV_PART_MAIN); ui_label_scrim(s_title, p->sd_label_bg_opa); }
+    if (s_folder) { lv_obj_set_style_text_color(s_folder, lv_color_hex(p->sd_folder_color ? p->sd_folder_color : th->accent),       LV_PART_MAIN); ui_label_scrim(s_folder, p->sd_label_bg_opa); }
     if (s_volume) { lv_obj_set_style_text_color(s_volume, lv_color_hex(th->text_muted),   LV_PART_MAIN); ui_label_scrim(s_volume, p->sd_label_bg_opa); }
     if (s_status) { lv_obj_set_style_text_color(s_status, lv_color_hex(th->text_muted),   LV_PART_MAIN); ui_label_scrim(s_status, p->sd_label_bg_opa); }
     if (s_time)   ui_label_scrim(s_time, p->sd_label_bg_opa);
