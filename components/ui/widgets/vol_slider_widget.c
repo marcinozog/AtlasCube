@@ -81,7 +81,18 @@ void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
         if (s_knob_dsc) {
             lv_obj_set_style_width (s_slider, side, LV_PART_KNOB);
             lv_obj_set_style_height(s_slider, side, LV_PART_KNOB);
+            lv_obj_set_style_pad_all(s_slider, 0, LV_PART_KNOB);
             lv_obj_set_style_bg_image_src(s_slider, s_knob_dsc, LV_PART_KNOB);
+            // The image IS the knob — suppress the themed knob's own drawing so
+            // no colour fill / border / shadow / outline peeks out around it.
+            lv_obj_set_style_bg_opa     (s_slider, LV_OPA_TRANSP, LV_PART_KNOB);
+            lv_obj_set_style_border_opa (s_slider, LV_OPA_TRANSP, LV_PART_KNOB);
+            lv_obj_set_style_shadow_opa (s_slider, LV_OPA_TRANSP, LV_PART_KNOB);
+            lv_obj_set_style_outline_opa(s_slider, LV_OPA_TRANSP, LV_PART_KNOB);
+            // Shadow/outline extend past the image, so also clear them while
+            // pressed (the theme re-adds a pressed halo otherwise).
+            lv_obj_set_style_shadow_opa (s_slider, LV_OPA_TRANSP, LV_PART_KNOB | LV_STATE_PRESSED);
+            lv_obj_set_style_outline_opa(s_slider, LV_OPA_TRANSP, LV_PART_KNOB | LV_STATE_PRESSED);
         }
     }
 
