@@ -72,6 +72,7 @@ extern "C" {
 #endif
 
 #define UI_TOUCH_HOTSPOT_COUNT 8
+#define UI_EQ_BANDS            10   // must match EQ_BANDS in screen_equalizer.c
 
 typedef struct {
     bool    enabled;
@@ -456,8 +457,15 @@ typedef struct {
     int16_t          eq_band_area_y;   // top of sliders (their upper edge)
     int16_t          eq_slider_h;      // vertical slider height
     int16_t          eq_slider_w;      // slider width/thickness (horizontal)
-    int16_t          eq_band_w;        // band column width (slider + gap)
+    int16_t          eq_band_w;        // band column width (slider + gap) — legacy/auto fallback
+    int16_t          eq_hint_x;        // legend horizontal offset from bottom-centre (web-editable)
     int16_t          eq_hint_y;        // from bottom (negative)
+    bool             eq_hint_hide;     // hide the bottom legend/hint line
+    bool             eq_freq_hide;     // hide the per-band frequency labels
+    int16_t          eq_group_x;       // sliders+labels group box (top-left anchor); web-editable
+    int16_t          eq_group_y;
+    int16_t          eq_group_w;       // 0 w/h → auto (centred, from eq_band_w/eq_slider_h/eq_band_area_y)
+    int16_t          eq_group_h;
     const lv_font_t *eq_title_font;
     const lv_font_t *eq_info_font;
     const lv_font_t *eq_freq_font;
@@ -539,6 +547,11 @@ void  ui_profile_patch_eq(const void *obj);
 // Effective EQ response-curve box (stored x/y/w/h, or the auto layout when w/h
 // are unset). Shared by the web dump and the screen so both agree.
 void ui_profile_eq_curve_box(const ui_profile_t *p,
+                             int16_t *x, int16_t *y, int16_t *w, int16_t *h);
+
+// Effective EQ sliders+labels group box (stored x/y/w/h, or the auto centred
+// layout derived from eq_band_w/eq_slider_h/eq_band_area_y when w/h are unset).
+void ui_profile_eq_group_box(const ui_profile_t *p,
                              int16_t *x, int16_t *y, int16_t *w, int16_t *h);
 
 #ifdef __cplusplus

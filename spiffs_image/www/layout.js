@@ -385,6 +385,14 @@ const EQ_FIELDS = [
     { key: 'eq_info_x',    label: 'Value X',    type: 'number' },
     { key: 'eq_info_y',    label: 'Value Y',    type: 'number' },
     { key: 'eq_info_font', label: 'Value font', type: 'font'   },
+    { key: 'eq_group_x',   label: 'Group X',    type: 'number' },
+    { key: 'eq_group_y',   label: 'Group Y',    type: 'number' },
+    { key: 'eq_group_w',   label: 'Group W',    type: 'number', min: 0, max: 480 },
+    { key: 'eq_group_h',   label: 'Group H',    type: 'number', min: 0, max: 480 },
+    { key: 'eq_freq_hide', label: 'Hide frequency labels', type: 'bool' },
+    { key: 'eq_hint_hide', label: 'Hide legend', type: 'bool' },
+    { key: 'eq_hint_x',    label: 'Legend X (from centre)', type: 'number' },
+    { key: 'eq_hint_y',    label: 'Legend Y (from bottom)', type: 'number' },
     { key: 'eq_curve_x',   label: 'Curve X',    type: 'number' },
     { key: 'eq_curve_y',   label: 'Curve Y',    type: 'number' },
     { key: 'eq_curve_w',   label: 'Curve W',    type: 'number', min: 0, max: 480 },
@@ -490,6 +498,9 @@ const FORM_GROUPS = {
     eq: [
         { heading: 'Text & labels' },
         { title: 'Value label', fields: ['eq_info_x', 'eq_info_y', 'eq_info_font'] },
+        { title: 'Legend', fields: ['eq_hint_hide', 'eq_hint_x', 'eq_hint_y'] },
+        { heading: 'Bands' },
+        { title: 'Sliders group', fields: ['eq_group_x', 'eq_group_y', 'eq_group_w', 'eq_group_h', 'eq_freq_hide'] },
         { title: 'Response curve', fields: ['eq_curve_x', 'eq_curve_y', 'eq_curve_w', 'eq_curve_h'] },
         { heading: 'Artwork' },
         { title: 'Knob image', fields: ['eq_knob_image', 'eq_knob_w', 'eq_knob_only'] },
@@ -2802,10 +2813,10 @@ function renderSd(svg) {
 }
 
 // ── EQUALIZER renderer ──────────────────────────────────────────────────────
-// The 10-band geometry is fixed per panel in firmware, so this is a static
-// schematic (not draggable): it shows how a shared knob image sits on the
-// bands, plus the current knob/wallpaper choice. The bars use a representative
-// curve purely so the preview reads as an equaliser.
+// Movable pieces: value label, sliders group box (drag + resize — firmware
+// derives band spacing/height to fill it), response-curve box, and legend. The
+// bands schematic inside the group uses a representative curve so the preview
+// reads as an equaliser.
 const EQ_FREQ_LABELS = ['31', '62', '125', '250', '500', '1k', '2k', '4k', '8k', '16k'];
 const EQ_PREVIEW_LEVELS = [0.68, 0.55, 0.62, 0.40, 0.50, 0.70, 0.46, 0.60, 0.74, 0.52];
 
@@ -2838,61 +2849,77 @@ function renderEq(svg) {
         svg.appendChild(poly);
     }
 
+    // Sliders group — a movable + resizable box; the bands schematic is drawn
+    // inside (decorations are pointer-transparent so the box stays draggable),
+    // frequency labels below unless hidden. Matches the device group model.
     const n = EQ_FREQ_LABELS.length;
-    const knobOnly = !!e.eq_knob_only;
-    const areaTop = Math.round(H * 0.26);
-    const areaH   = Math.round(H * 0.48);
-    const bandW   = Math.floor(W * 0.88 / n);
-    const startX  = Math.round((W - bandW * n) / 2);
-    const trackW  = Math.max(2, Math.round(bandW * 0.16));
-    // User width (eq_knob_w, real px) or the band column as fallback (firmware).
-    const knobW   = e.eq_knob_w > 0 ? Math.max(2, e.eq_knob_w | 0)
-                                    : Math.max(6, Math.round(bandW * 0.9));
-    const knobH   = Math.max(6, Math.round(areaH * 0.10));
-    const labelFh = Math.max(8, Math.min(14, Math.round(bandW * 0.7)));
-
-    for (let i = 0; i < n; i++) {
-        const colX  = startX + i * bandW;
-        const cx    = colX + bandW / 2;
-        const level = EQ_PREVIEW_LEVELS[i];                 // 0 (bottom) .. 1 (top)
-        const knobY = areaTop + (areaH - knobH) * (1 - level);
-
-        if (!knobOnly) {
-            // Track.
-            rect(svg, {
-                x: cx - trackW / 2, y: areaTop, width: trackW, height: areaH,
-                rx: trackW / 2, fill: '#8a97a3', 'fill-opacity': 0.35,
-            });
-            // Indicator fill from the knob down.
-            const fill = rect(svg, {
-                x: cx - trackW / 2, y: knobY + knobH / 2,
-                width: trackW, height: areaTop + areaH - (knobY + knobH / 2),
-                rx: trackW / 2, 'fill-opacity': 0.75,
-            });
-            fill.style.fill = 'var(--accent)';
-        }
-        // Knob — the image (when set) is centred here on the real screen.
-        const knob = rect(svg, {
-            x: cx - knobW / 2, y: knobY, width: knobW, height: knobH,
-            rx: hasKnob ? 3 : Math.min(knobW, knobH) / 2,
-            class: 'label-rect',
+    const gw = e.eq_group_w | 0, gh = e.eq_group_h | 0;
+    if (gw > 0 && gh > 0) {
+        const gx = e.eq_group_x | 0, gy = e.eq_group_y | 0;
+        drawFreeElement(svg, {
+            x: gx, y: gy, w: gw, h: gh,
+            label: 'sliders', cls: 'label-rect',
+            fields: { x: 'eq_group_x', y: 'eq_group_y', w: 'eq_group_w', h: 'eq_group_h' },
         });
-        if (hasKnob) {
-            knob.style.stroke = 'var(--accent)';
-            knob.style.strokeWidth = '1.5px';
+        const inert = el => { el.style.pointerEvents = 'none'; return el; };
+        const knobOnly  = !!e.eq_knob_only;
+        const freqShown = !e.eq_freq_hide;
+        const bandCol   = gw / n;
+        const labelFh   = freqShown ? Math.max(7, Math.min(14, Math.round(bandCol * 0.7))) : 0;
+        const freqArea  = freqShown ? labelFh + 4 : 0;
+        const sliderH   = Math.max(4, gh - freqArea);
+        const trackW    = Math.max(2, Math.round(bandCol * 0.16));
+        // User knob width (eq_knob_w, real px) or the band column as fallback.
+        const knobW     = e.eq_knob_w > 0 ? Math.max(2, e.eq_knob_w | 0)
+                                          : Math.max(4, Math.round(bandCol * 0.9));
+        const knobH     = Math.max(4, Math.round(sliderH * 0.1));
+
+        for (let i = 0; i < n; i++) {
+            const cx    = gx + i * bandCol + bandCol / 2;
+            const level = EQ_PREVIEW_LEVELS[i];              // 0 (bottom) .. 1 (top)
+            const knobY = gy + (sliderH - knobH) * (1 - level);
+
+            if (!knobOnly) {
+                inert(rect(svg, {
+                    x: cx - trackW / 2, y: gy, width: trackW, height: sliderH,
+                    rx: trackW / 2, fill: '#8a97a3', 'fill-opacity': 0.35,
+                }));
+                const fill = inert(rect(svg, {
+                    x: cx - trackW / 2, y: knobY + knobH / 2,
+                    width: trackW, height: gy + sliderH - (knobY + knobH / 2),
+                    rx: trackW / 2, 'fill-opacity': 0.75,
+                }));
+                fill.style.fill = 'var(--accent)';
+            }
+            const knob = inert(rect(svg, {
+                x: cx - knobW / 2, y: knobY, width: knobW, height: knobH,
+                rx: hasKnob ? 3 : Math.min(knobW, knobH) / 2, class: 'label-rect',
+            }));
+            if (hasKnob) {
+                knob.style.stroke = 'var(--accent)';
+                knob.style.strokeWidth = '1.5px';
+            }
+            if (freqShown) {
+                inert(text(svg, cx, gy + sliderH + labelFh, EQ_FREQ_LABELS[i], {
+                    'font-size': labelFh, 'text-anchor': 'middle', opacity: 0.6,
+                }));
+            }
         }
-        // Frequency label.
-        text(svg, cx, areaTop + areaH + labelFh + 2, EQ_FREQ_LABELS[i], {
-            'font-size': labelFh, 'text-anchor': 'middle', opacity: 0.6,
-        });
     }
 
-    // Footnote: what the knob field currently points at.
-    text(svg, W / 2, H - 6,
-         hasKnob ? ('knob: ' + e.eq_knob_image.split('/').pop()) : 'knob: colour (no image)', {
-        'font-size': Math.max(9, Math.round(H / 22)),
-        'text-anchor': 'middle', opacity: 0.5,
-    });
+    // Legend/hint — movable, offset-anchored (X from centre, Y from bottom).
+    if (!e.eq_hint_hide) {
+        const fh = Math.max(9, Math.round(H / 20));
+        const txt = 'swipe = back';
+        const tw = Math.round(fh * 0.55) * txt.length;
+        drawFreeElement(svg, {
+            x: Math.round(W / 2 - tw / 2 + (e.eq_hint_x | 0)),
+            y: Math.round(H + (e.eq_hint_y | 0) - fh),
+            w: tw, h: fh, label: 'legend', cls: 'label-rect',
+            fields: { x: 'eq_hint_x', y: 'eq_hint_y' },
+            text: txt, textSize: fh,
+        });
+    }
 }
 
 function drawVolSlider(svg, prefix, data) {

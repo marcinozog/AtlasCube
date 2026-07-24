@@ -2287,12 +2287,41 @@ void ui_profile_eq_curve_box(const ui_profile_t *p,
     *h = ah > 0 ? ah : 0;
 }
 
+void ui_profile_eq_group_box(const ui_profile_t *p,
+                             int16_t *x, int16_t *y, int16_t *w, int16_t *h)
+{
+    if (p->eq_group_w > 0 && p->eq_group_h > 0) {
+        *x = p->eq_group_x; *y = p->eq_group_y;
+        *w = p->eq_group_w; *h = p->eq_group_h;
+        return;
+    }
+    // Auto = the legacy centred layout: total width = band column × bands, top at
+    // eq_band_area_y, height = slider + (freq-label strip unless hidden).
+    int fh = p->eq_freq_font ? lv_font_get_line_height(p->eq_freq_font) : 0;
+    int freq_area = p->eq_freq_hide ? 0 : (fh + 6);
+    int16_t gw = (int16_t)(p->eq_band_w * UI_EQ_BANDS);
+    *w = gw;
+    *x = (int16_t)((DISPLAY_WIDTH - gw) / 2);
+    *y = p->eq_band_area_y;
+    *h = (int16_t)(p->eq_slider_h + freq_area);
+}
+
 static void load_eq(const cJSON *obj, ui_profile_t *p)
 {
     if (!cJSON_IsObject(obj)) return;
     load_i16 (obj, "eq_info_x",     &p->eq_info_x);
     load_i16 (obj, "eq_info_y",     &p->eq_info_y);
     load_font(obj, "eq_info_font",  &p->eq_info_font);
+    load_i16 (obj, "eq_hint_x",     &p->eq_hint_x);
+    load_i16 (obj, "eq_hint_y",     &p->eq_hint_y);
+    load_bool(obj, "eq_hint_hide",  &p->eq_hint_hide);
+    load_bool(obj, "eq_freq_hide",  &p->eq_freq_hide);
+    load_i16 (obj, "eq_group_x",    &p->eq_group_x);
+    load_i16 (obj, "eq_group_y",    &p->eq_group_y);
+    load_i16 (obj, "eq_group_w",    &p->eq_group_w);
+    load_i16 (obj, "eq_group_h",    &p->eq_group_h);
+    if (p->eq_group_w < 0) p->eq_group_w = 0;
+    if (p->eq_group_h < 0) p->eq_group_h = 0;
     load_i16 (obj, "eq_curve_x",    &p->eq_curve_x);
     load_i16 (obj, "eq_curve_y",    &p->eq_curve_y);
     load_i16 (obj, "eq_curve_w",    &p->eq_curve_w);
@@ -2312,8 +2341,18 @@ static cJSON *dump_eq(const ui_profile_t *p)
     add_i16 (o, "eq_info_x",     p->eq_info_x);
     add_i16 (o, "eq_info_y",     p->eq_info_y);
     add_font(o, "eq_info_font",  p->eq_info_font);
-    // Emit the EFFECTIVE box so the editor shows/drags a real rectangle even
+    add_i16 (o, "eq_hint_x",     p->eq_hint_x);
+    add_i16 (o, "eq_hint_y",     p->eq_hint_y);
+    add_bool(o, "eq_hint_hide",  p->eq_hint_hide);
+    add_bool(o, "eq_freq_hide",  p->eq_freq_hide);
+    // Emit the EFFECTIVE boxes so the editor shows/drags a real rectangle even
     // before the user has set one (auto layout baked on first save — harmless).
+    int16_t gx, gy, gw, gh;
+    ui_profile_eq_group_box(p, &gx, &gy, &gw, &gh);
+    add_i16 (o, "eq_group_x",    gx);
+    add_i16 (o, "eq_group_y",    gy);
+    add_i16 (o, "eq_group_w",    gw);
+    add_i16 (o, "eq_group_h",    gh);
     int16_t cx, cy, cw, ch;
     ui_profile_eq_curve_box(p, &cx, &cy, &cw, &ch);
     add_i16 (o, "eq_curve_x",    cx);
