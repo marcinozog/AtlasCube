@@ -1398,8 +1398,8 @@ function setOnlineAssetGalleryOpen(open) {
     const button = document.getElementById('asset_btn_online');
     if (panel) panel.hidden = !open;
     if (button) {
-        button.style.background = open ? 'var(--accent)' : '';
-        button.style.color = open ? '#001019' : '';
+        button.style.background = open ? '#e5484d' : '';
+        button.style.color = open ? '#fff' : '#ff6b6f';
     }
 }
 
@@ -1423,7 +1423,11 @@ async function loadOnlineAssetGallery() {
             cache: 'no-store',
             mode: 'cors',
         });
-        if (!response.ok) throw new Error('catalog HTTP ' + response.status);
+        if (!response.ok) {
+            if (response.status === 400)
+                throw new Error('the server catalog does not support assets yet');
+            throw new Error('catalog HTTP ' + response.status);
+        }
         const catalog = await response.json();
         if (catalog.type !== 'assets' || !Array.isArray(catalog.assets))
             throw new Error('invalid catalog response');
@@ -1478,7 +1482,13 @@ function renderOnlineAssetGallery(catalog) {
         cardTitle.title = cardTitle.textContent;
         const meta = document.createElement('div');
         meta.className = 'online-wallpaper-meta';
-        meta.textContent = 'Uses width, height and folder above';
+        meta.textContent = 'Loading source size...';
+        image.addEventListener('load', () => {
+            meta.textContent = `${image.naturalWidth}×${image.naturalHeight} source`;
+        });
+        image.addEventListener('error', () => {
+            meta.textContent = 'Source size unavailable';
+        });
 
         const actions = document.createElement('div');
         actions.className = 'online-wallpaper-actions';
@@ -1490,7 +1500,7 @@ function renderOnlineAssetGallery(catalog) {
         const install = document.createElement('button');
         install.type = 'button';
         install.textContent = 'Install';
-        install.addEventListener('click', () => installOnlineAsset(item, install));
+        install.addEventListener('click', () => installOnlineAsset(item, install, image));
         actions.append(preview, install);
         body.append(cardTitle, meta, actions);
         card.append(image, body);
@@ -1499,7 +1509,7 @@ function renderOnlineAssetGallery(catalog) {
     panel.appendChild(grid);
 }
 
-async function installOnlineAsset(item, button) {
+async function installOnlineAsset(item, button, previewImage) {
     const status = document.getElementById('asset_status');
     const note = message => { if (status) status.textContent = message; };
     const oldLabel = button.textContent;
@@ -1508,6 +1518,40 @@ async function installOnlineAsset(item, button) {
 
     try {
         await ensureLvBin();
+        const widthInput = document.getElementById('asset_w');
+        const heightInput = document.getElementById('asset_h');
+        if (previewImage && !previewImage.complete) {
+            try { await previewImage.decode(); } catch (_) {}
+        }
+        const sourceWidth = previewImage?.naturalWidth || 0;
+        const sourceHeight = previewImage?.naturalHeight || 0;
+        const defaultWidth = sourceWidth >= 4 && sourceWidth <= 480
+            ? sourceWidth
+            : Math.max(4, Math.min(480, parseInt(widthInput.value, 10) | 0));
+        const defaultHeight = sourceHeight >= 4 && sourceHeight <= 480
+            ? sourceHeight
+            : Math.max(4, Math.min(480, parseInt(heightInput.value, 10) | 0));
+        const dimensions = window.prompt(
+            'Output .bin resolution (WIDTHxHEIGHT, from 4x4 to 480x480):',
+            `${defaultWidth}x${defaultHeight}`);
+        if (dimensions === null) {
+            note('Installation cancelled.');
+            return;
+        }
+        const match = dimensions.trim().match(/^(\d+)\s*[x×]\s*(\d+)$/i);
+        if (!match) {
+            note('Invalid resolution. Use WIDTHxHEIGHT, for example 64x64.');
+            return;
+        }
+        const w = Number(match[1]);
+        const h = Number(match[2]);
+        if (w < 4 || w > 480 || h < 4 || h > 480) {
+            note('Invalid resolution. Width and height must be between 4 and 480 px.');
+            return;
+        }
+        widthInput.value = String(w);
+        heightInput.value = String(h);
+
         const suggested = window.LvBin.fileStem(item.filename || item.id || 'online-asset');
         const entered = window.prompt(
             'Save asset as (.bin is added automatically; an existing file with the same name is replaced):',
@@ -1532,10 +1576,6 @@ async function installOnlineAsset(item, button) {
 
         const filename = String(item.filename || 'online-asset.png').split(/[\\/]/).pop();
         const file = new File([blob], filename, { type: blob.type });
-        const w = Math.max(4, Math.min(480,
-            parseInt(document.getElementById('asset_w').value, 10) | 0));
-        const h = Math.max(4, Math.min(480,
-            parseInt(document.getElementById('asset_h').value, 10) | 0));
         const saveAs = window.LvBin.fileStem(entered.trim() || suggested);
         const relPath = await window.LvBin.uploadImage(
             file, assetDir(), w, h, note, saveAs);
