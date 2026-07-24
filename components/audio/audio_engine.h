@@ -32,6 +32,15 @@ void audio_engine_init(void);
 void audio_engine_play(audio_src_t src, audio_codec_t codec,
                        const char *uri, uint32_t file_duration_ms);
 
+// Play a short built-in stereo channel-test signal (pink noise): ~1 s on the
+// left channel, a brief gap, then ~1 s on the right. Needs no SD card or
+// network — it lets a user verify the I2S wiring / amp / speakers "just work",
+// especially handy after a runtime pin-map change. Async: relinks to a raw PCM
+// source, runs on its own task, and tears down to silence when finished (the
+// previous playback is stopped, not resumed). Runs through the DSP, so the
+// current volume applies. No-op if a test is already in progress.
+void audio_engine_play_test_tone(void);
+
 // Set the byte offset for the NEXT HTTP play, sent as a Range header to resume a
 // podcast mid-file. Call before audio_engine_play; 0 = play from the start. Only
 // affects AUDIO_SRC_HTTP. Persists across an internal codec-relink of that play.

@@ -9,6 +9,7 @@
 #include "ui_events.h"
 #include "ui_manager.h"
 #include "screen_layout_editor.h"
+#include "audio_engine.h"   // built-in channel-test tone
 #include "lvgl.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
@@ -111,6 +112,7 @@ static bool get_eq(void)         { return app_state_get()->eq_enabled; }
 static void act_restart(void)    { esp_restart(); }
 #if !CONFIG_TOUCH_NONE
 static void act_radio_layout(void) { screen_layout_editor_open(LAYOUT_EDITOR_RADIO); }
+static void act_test_tone(void)    { audio_engine_play_test_tone(); }
 #endif
 
 /* ── row tables ─────────────────────────────────────────────────────────── */
@@ -140,6 +142,7 @@ static const row_desc_t SEC_AUDIO[] = {
     { .title = "DSP", .kind = RK_TOGGLE, .tget = get_eq, .tset = settings_set_eq_enabled,
       .on_txt = "<    On    >", .off_txt = "<    Off    >" },
     { .title = "Equalizer", .kind = RK_SCREEN, .screen = SCREEN_EQ },
+    { .title = "Test tone", .kind = RK_ACTION, .action = act_test_tone, .on_txt = "Play >" },
 };
 
 static const row_desc_t SEC_SCREENS[] = {
