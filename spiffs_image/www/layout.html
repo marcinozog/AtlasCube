@@ -478,6 +478,18 @@
             line-height: 1.5;
             text-align: center;
         }
+        .online-asset-gallery .online-wallpaper-card img {
+            object-fit: contain;
+            padding: 10px;
+            background-color: #09090c;
+            background-image:
+                linear-gradient(45deg, #18181d 25%, transparent 25%),
+                linear-gradient(-45deg, #18181d 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #18181d 75%),
+                linear-gradient(-45deg, transparent 75%, #18181d 75%);
+            background-position: 0 0, 0 6px, 6px -6px, -6px 0;
+            background-size: 12px 12px;
+        }
     </style>
 </head>
 <body>
@@ -644,9 +656,13 @@
             </div>
             <div class="asset-row" style="margin-top:8px">
                 <button class="btn-apply" onclick="uploadAsset()">⬆ Upload</button>
+                <button id="asset_btn_online" class="btn-secondary"
+                        onclick="toggleOnlineAssetGallery()">🌐 Online gallery</button>
                 <button class="btn-secondary" onclick="browseAssets()">🔄 Refresh list</button>
             </div>
             <div id="asset_status" class="field-hint" style="margin-top:8px"></div>
+            <div id="online_asset_gallery"
+                 class="online-wallpaper-gallery online-asset-gallery" hidden></div>
             <div id="asset_list" style="margin-top:8px"></div>
         </div>
     </div>

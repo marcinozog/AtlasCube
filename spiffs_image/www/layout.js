@@ -1393,6 +1393,162 @@ async function deleteAsset(path) {
 // `onPick`. Used by widget fields (e.g. the knob image) to point at an existing
 // asset without typing the path. Starts in `startDir`, falling back to the SD
 // root if that folder does not exist yet.
+function setOnlineAssetGalleryOpen(open) {
+    const panel = document.getElementById('online_asset_gallery');
+    const button = document.getElementById('asset_btn_online');
+    if (panel) panel.hidden = !open;
+    if (button) {
+        button.style.background = open ? 'var(--accent)' : '';
+        button.style.color = open ? '#001019' : '';
+    }
+}
+
+async function toggleOnlineAssetGallery() {
+    const panel = document.getElementById('online_asset_gallery');
+    if (!panel) return;
+    const open = panel.hidden;
+    setOnlineAssetGalleryOpen(open);
+    if (open) await loadOnlineAssetGallery();
+}
+
+async function loadOnlineAssetGallery() {
+    const panel = document.getElementById('online_asset_gallery');
+    if (!panel) return;
+    onlineWallpaperMessage(panel, 'Loading assets...');
+
+    try {
+        const endpoint = new URL(ONLINE_WALLPAPER_CATALOG);
+        endpoint.searchParams.set('type', 'assets');
+        const response = await fetch(endpoint.toString(), {
+            cache: 'no-store',
+            mode: 'cors',
+        });
+        if (!response.ok) throw new Error('catalog HTTP ' + response.status);
+        const catalog = await response.json();
+        if (catalog.type !== 'assets' || !Array.isArray(catalog.assets))
+            throw new Error('invalid catalog response');
+        renderOnlineAssetGallery(catalog);
+    } catch (err) {
+        onlineWallpaperMessage(panel,
+            'Online gallery unavailable: ' + err.message +
+            '. Check that this browser has internet access.');
+    }
+}
+
+function renderOnlineAssetGallery(catalog) {
+    const panel = document.getElementById('online_asset_gallery');
+    if (!panel) return;
+    panel.replaceChildren();
+
+    const heading = document.createElement('div');
+    heading.className = 'online-wallpaper-heading';
+    const title = document.createElement('span');
+    title.textContent = 'AtlasCube assets';
+    const count = document.createElement('span');
+    count.textContent = `${catalog.assets.length} available`;
+    heading.append(title, count);
+    panel.appendChild(heading);
+
+    if (!catalog.assets.length) {
+        onlineWallpaperMessage(panel, 'No assets published yet.');
+        return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'online-wallpaper-grid';
+    grid.style.setProperty('--online-wallpaper-ratio', '1 / 1');
+
+    for (const item of catalog.assets) {
+        let imageUrl;
+        try { imageUrl = trustedOnlineWallpaperUrl(item.image); }
+        catch { continue; }
+
+        const card = document.createElement('article');
+        card.className = 'online-wallpaper-card';
+        const image = document.createElement('img');
+        image.src = imageUrl;
+        image.alt = String(item.title || 'Online asset');
+        image.loading = 'lazy';
+
+        const body = document.createElement('div');
+        body.className = 'online-wallpaper-body';
+        const cardTitle = document.createElement('div');
+        cardTitle.className = 'online-wallpaper-title';
+        cardTitle.textContent = String(item.title || item.filename || 'Asset');
+        cardTitle.title = cardTitle.textContent;
+        const meta = document.createElement('div');
+        meta.className = 'online-wallpaper-meta';
+        meta.textContent = 'Uses width, height and folder above';
+
+        const actions = document.createElement('div');
+        actions.className = 'online-wallpaper-actions';
+        const preview = document.createElement('a');
+        preview.href = imageUrl;
+        preview.target = '_blank';
+        preview.rel = 'noopener';
+        preview.textContent = 'Preview';
+        const install = document.createElement('button');
+        install.type = 'button';
+        install.textContent = 'Install';
+        install.addEventListener('click', () => installOnlineAsset(item, install));
+        actions.append(preview, install);
+        body.append(cardTitle, meta, actions);
+        card.append(image, body);
+        grid.appendChild(card);
+    }
+    panel.appendChild(grid);
+}
+
+async function installOnlineAsset(item, button) {
+    const status = document.getElementById('asset_status');
+    const note = message => { if (status) status.textContent = message; };
+    const oldLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Working...';
+
+    try {
+        await ensureLvBin();
+        const suggested = window.LvBin.fileStem(item.filename || item.id || 'online-asset');
+        const entered = window.prompt(
+            'Save asset as (.bin is added automatically; an existing file with the same name is replaced):',
+            suggested);
+        if (entered === null) {
+            note('Installation cancelled.');
+            return;
+        }
+
+        const imageUrl = trustedOnlineWallpaperUrl(item.image);
+        note('Downloading online asset...');
+        const response = await fetch(imageUrl, { cache: 'no-store', mode: 'cors' });
+        if (!response.ok) throw new Error('image HTTP ' + response.status);
+        const declaredSize = Number(response.headers.get('content-length') || 0);
+        if (declaredSize > ONLINE_WALLPAPER_MAX_BYTES)
+            throw new Error('image is too large');
+        const blob = await response.blob();
+        if (blob.size > ONLINE_WALLPAPER_MAX_BYTES)
+            throw new Error('image is too large');
+        if (!/^image\/(png|jpeg|webp)$/i.test(blob.type))
+            throw new Error('unsupported image format');
+
+        const filename = String(item.filename || 'online-asset.png').split(/[\\/]/).pop();
+        const file = new File([blob], filename, { type: blob.type });
+        const w = Math.max(4, Math.min(480,
+            parseInt(document.getElementById('asset_w').value, 10) | 0));
+        const h = Math.max(4, Math.min(480,
+            parseInt(document.getElementById('asset_h').value, 10) | 0));
+        const saveAs = window.LvBin.fileStem(entered.trim() || suggested);
+        const relPath = await window.LvBin.uploadImage(
+            file, assetDir(), w, h, note, saveAs);
+        note('Saved. Reference as /sdcard' + relPath + ` (${w}×${h}).`);
+        browseAssets();
+    } catch (err) {
+        note('Online asset failed: ' + err.message);
+    } finally {
+        button.disabled = false;
+        button.textContent = oldLabel;
+    }
+}
+
 let sdPickerOverlay = null;
 
 function ensureSdPicker() {
