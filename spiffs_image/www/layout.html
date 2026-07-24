@@ -306,8 +306,28 @@
 
         .section-tabs {
             display: flex;
-            gap: 6px;
+            flex-wrap: wrap;
+            gap: 12px 22px;
             margin-bottom: 12px;
+        }
+        .section-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .section-group-label {
+            font-family: 'Chakra Petch', sans-serif;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            opacity: .65;
+        }
+        .section-group-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
         }
         .section-tab {
             padding: 8px 16px;
@@ -484,16 +504,25 @@
     </div>
 
     <div class="section-tabs">
-        <button class="section-tab active" data-section="clock" onclick="selectSection('clock')">🏠 Home</button>
-        <button class="section-tab"        data-section="sd"    onclick="selectSection('sd')">💾 SD Player</button>
-        <button class="section-tab"        data-section="radio" onclick="selectSection('radio')">📻 Radio</button>
-        <button class="section-tab"        data-section="bt"    onclick="selectSection('bt')">🔵 Bluetooth</button>
-        <button class="section-tab"        data-section="eq"    onclick="selectSection('eq')">🎚 Equalizer</button>
-        <button class="section-tab"        data-section="internet" onclick="selectSection('internet')"
-            style="margin-left:auto" >🌍 Internet</button>
-        <button class="section-tab"        data-section="general" onclick="selectSection('general')">🎨 General</button>
-        <button class="section-tab"        data-section="assets" onclick="selectSection('assets')">📦 Assets</button>
-        <button class="section-tab"        data-section="presets" onclick="selectSection('presets')">🧹 Presets</button>
+        <div class="section-group">
+            <span class="section-group-label">Screens</span>
+            <div class="section-group-tabs">
+                <button class="section-tab active" data-section="clock" onclick="selectSection('clock')">🏠 Home</button>
+                <button class="section-tab"        data-section="sd"    onclick="selectSection('sd')">💾 SD Player</button>
+                <button class="section-tab"        data-section="radio" onclick="selectSection('radio')">📻 Radio</button>
+                <button class="section-tab"        data-section="bt"    onclick="selectSection('bt')">🔵 Bluetooth</button>
+                <button class="section-tab"        data-section="eq"    onclick="selectSection('eq')">🎚 Equalizer</button>
+            </div>
+        </div>
+        <div class="section-group">
+            <span class="section-group-label">Tools</span>
+            <div class="section-group-tabs">
+                <button class="section-tab" data-section="internet" onclick="selectSection('internet')">🌍 Internet</button>
+                <button class="section-tab" data-section="general" onclick="selectSection('general')">🎨 General</button>
+                <button class="section-tab" data-section="assets" onclick="selectSection('assets')">📦 Assets</button>
+                <button class="section-tab" data-section="presets" onclick="selectSection('presets')">🧹 Presets</button>
+            </div>
+        </div>
     </div>
 
     <div class="layout-grid">

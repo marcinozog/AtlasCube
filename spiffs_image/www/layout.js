@@ -2086,9 +2086,8 @@ function buildForm() {
     root.querySelectorAll('.form-group, .form-category').forEach(n => n.remove());
 
     if (!openFormGroups[state.active]) {
-        // Open the first real group by default (skip any leading heading marker).
-        const firstGroup = groups.findIndex(g => !g.heading);
-        openFormGroups[state.active] = new Set(firstGroup < 0 ? [] : [firstGroup]);
+        // Start with every group collapsed.
+        openFormGroups[state.active] = new Set();
     }
 
     groups.forEach((group, groupIndex) => {
