@@ -64,6 +64,10 @@ void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
        its bounds during drag — otherwise LV_EVENT_RELEASED is routed to
        whichever widget happens to be under the finger on release. */
     lv_obj_add_flag(s_slider, LV_OBJ_FLAG_PRESS_LOCK);
+    // A drag on the slider must not double as a screen swipe: gestures bubble to
+    // the screen-level handler (ui_manager) by default, so a vertical drag would
+    // also fire swipe up/down navigation. Stop the bubble at the slider.
+    lv_obj_remove_flag(s_slider, LV_OBJ_FLAG_GESTURE_BUBBLE);
     lv_obj_set_ext_click_area(s_slider, 8);   // thin tracks stay grabbable
     lv_obj_add_event_cb(s_slider, value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
     lv_obj_add_event_cb(s_slider, released_cb, LV_EVENT_RELEASED, NULL);
