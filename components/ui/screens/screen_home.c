@@ -183,7 +183,8 @@ static void netinfo_update(void)
             p->clock_netinfo_font ? p->clock_netinfo_font : &lv_font_montserrat_12_pl,
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_netinfo_label,
-            lv_color_hex(th->text_muted), LV_PART_MAIN);
+            lv_color_hex(p->clock_netinfo_color ? p->clock_netinfo_color
+                                                : th->text_muted), LV_PART_MAIN);
         ui_label_scrim(s_netinfo_label, p->clock_label_bg_opa);
     }
 
@@ -244,7 +245,8 @@ static void home_create(lv_obj_t *parent)
             p->clock_date_font ? p->clock_date_font : &lv_font_montserrat_18_pl,
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_date_label,
-            lv_color_hex(th->text_secondary), LV_PART_MAIN);
+            lv_color_hex(p->clock_date_color ? p->clock_date_color
+                                             : th->text_secondary), LV_PART_MAIN);
         ui_label_scrim(s_date_label, p->clock_label_bg_opa);
     }
 
@@ -289,7 +291,8 @@ static void home_create(lv_obj_t *parent)
     lv_label_set_long_mode(s_strip_station, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_font(s_strip_station, p->clock_strip_station_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_strip_station,
-        lv_color_hex(th->text_secondary), LV_PART_MAIN);
+        lv_color_hex(p->clock_strip_station_color ? p->clock_strip_station_color
+                                                  : th->text_secondary), LV_PART_MAIN);
     ui_label_scrim(s_strip_station, p->clock_label_bg_opa);
     lv_obj_set_width(s_strip_station, p->clock_strip_station_w
         + lv_obj_get_style_pad_left(s_strip_station, LV_PART_MAIN)
@@ -301,7 +304,8 @@ static void home_create(lv_obj_t *parent)
     lv_label_set_long_mode(s_strip_title, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_font(s_strip_title, p->clock_strip_title_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_strip_title,
-        lv_color_hex(th->text_muted), LV_PART_MAIN);
+        lv_color_hex(p->clock_strip_title_color ? p->clock_strip_title_color
+                                                : th->text_muted), LV_PART_MAIN);
     ui_label_scrim(s_strip_title, p->clock_label_bg_opa);
     lv_obj_set_width(s_strip_title, p->clock_strip_title_w
         + lv_obj_get_style_pad_left(s_strip_title, LV_PART_MAIN)
@@ -433,21 +437,25 @@ static void home_apply_theme(void)
     }
     if (s_date_label) {
         lv_obj_set_style_text_color(s_date_label,
-            lv_color_hex(th->text_secondary), LV_PART_MAIN);
+            lv_color_hex(p->clock_date_color ? p->clock_date_color
+                                             : th->text_secondary), LV_PART_MAIN);
         ui_label_scrim(s_date_label, p->clock_label_bg_opa);
     }
     if (s_netinfo_label) {
         lv_obj_set_style_text_color(s_netinfo_label,
-            lv_color_hex(th->text_muted), LV_PART_MAIN);
+            lv_color_hex(p->clock_netinfo_color ? p->clock_netinfo_color
+                                                : th->text_muted), LV_PART_MAIN);
         ui_label_scrim(s_netinfo_label, p->clock_label_bg_opa);
     }
 
     if (s_strip) {
         lv_obj_set_style_bg_color(s_strip, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
         lv_obj_set_style_text_color(s_strip_station,
-            lv_color_hex(th->text_secondary), LV_PART_MAIN);
+            lv_color_hex(p->clock_strip_station_color ? p->clock_strip_station_color
+                                                      : th->text_secondary), LV_PART_MAIN);
         lv_obj_set_style_text_color(s_strip_title,
-            lv_color_hex(th->text_muted), LV_PART_MAIN);
+            lv_color_hex(p->clock_strip_title_color ? p->clock_strip_title_color
+                                                    : th->text_muted), LV_PART_MAIN);
         ui_label_scrim(s_strip_station, p->clock_label_bg_opa);
         ui_label_scrim(s_strip_title, p->clock_label_bg_opa);
     }

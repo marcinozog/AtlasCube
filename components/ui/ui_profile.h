@@ -103,6 +103,8 @@ typedef struct {
     int16_t          clock_strip_title_y;
     const lv_font_t *clock_strip_station_font;
     const lv_font_t *clock_strip_title_font;
+    uint32_t         clock_strip_station_color;    // station colour, 0 = inherit theme text_secondary
+    uint32_t         clock_strip_title_color;      // title colour, 0 = inherit theme text_muted
 
     int16_t          clock_time_x;                 // time digit label position (HH:MM)
     int16_t          clock_time_y;
@@ -114,6 +116,7 @@ typedef struct {
     int16_t          clock_date_y;
     const lv_font_t *clock_date_font;
     bool             clock_show_date;
+    uint32_t         clock_date_color;              // date colour, 0 = inherit theme text_secondary
 
 
     // Network info (IP + "<hostname>.local") — a clock screen element, toggled
@@ -122,6 +125,7 @@ typedef struct {
     int16_t          clock_netinfo_x;
     int16_t          clock_netinfo_y;
     const lv_font_t *clock_netinfo_font;
+    uint32_t         clock_netinfo_color;           // IP/host colour, 0 = inherit theme text_muted
 
     bool             clock_show_strip;
     bool             clock_show_mode_indicator;

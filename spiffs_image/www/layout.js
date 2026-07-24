@@ -75,11 +75,13 @@ const CLOCK_FIELDS = [
     { key: 'clock_date_x',    label: 'Date X',        type: 'number' },
     { key: 'clock_date_y',    label: 'Date Y',        type: 'number' },
     { key: 'clock_date_font', label: 'Date font',     type: 'font'   },
+    { key: 'clock_date_color', label: 'Date colour',  type: 'color'  },
 
     { key: 'clock_show_netinfo', label: 'Show IP/host', type: 'bool'   },
     { key: 'clock_netinfo_x',    label: 'IP/host X',    type: 'number' },
     { key: 'clock_netinfo_y',    label: 'IP/host Y',    type: 'number' },
     { key: 'clock_netinfo_font', label: 'IP/host font', type: 'font'   },
+    { key: 'clock_netinfo_color', label: 'IP/host colour', type: 'color' },
 
     { key: 'clock_show_strip', label: 'Show strip background', type: 'bool' },
     { key: 'clock_strip_x',    label: 'Strip X',      type: 'number' },
@@ -95,6 +97,8 @@ const CLOCK_FIELDS = [
     { key: 'clock_strip_title_w',         label: 'Title W',        type: 'number' },
     { key: 'clock_strip_station_font',    label: 'Station font',   type: 'font'   },
     { key: 'clock_strip_title_font',      label: 'Title font',     type: 'font'   },
+    { key: 'clock_strip_station_color',   label: 'Station colour', type: 'color'  },
+    { key: 'clock_strip_title_color',     label: 'Title colour',   type: 'color'  },
 
     { key: 'clock_show_mode_indicator',  label: 'Show mode indic.',  type: 'bool' },
     { key: 'clock_mode_indic_x',         label: 'Mode indic. X',     type: 'number' },
@@ -428,9 +432,9 @@ const FORM_GROUPS = {
     clock: [
         { heading: 'Text & labels' },
         { title: 'Time', enabledBy: 'clock_show_time', fields: ['clock_show_time', 'clock_time_x', 'clock_time_y', 'clock_time_font', 'clock_time_color'] },
-        { title: 'Date', enabledBy: 'clock_show_date', fields: ['clock_show_date', 'clock_date_x', 'clock_date_y', 'clock_date_font'] },
-        { title: 'Network info', enabledBy: 'clock_show_netinfo', fields: ['clock_show_netinfo', 'clock_netinfo_x', 'clock_netinfo_y', 'clock_netinfo_font'] },
-        { title: 'Station / title', fields: ['clock_show_strip', 'clock_strip_x', 'clock_strip_y', 'clock_strip_w', 'clock_strip_h', 'clock_strip_bg_opa', 'clock_strip_station_x', 'clock_strip_station_y', 'clock_strip_station_w', 'clock_strip_title_x', 'clock_strip_title_y', 'clock_strip_title_w', 'clock_strip_station_font', 'clock_strip_title_font'] },
+        { title: 'Date', enabledBy: 'clock_show_date', fields: ['clock_show_date', 'clock_date_x', 'clock_date_y', 'clock_date_font', 'clock_date_color'] },
+        { title: 'Network info', enabledBy: 'clock_show_netinfo', fields: ['clock_show_netinfo', 'clock_netinfo_x', 'clock_netinfo_y', 'clock_netinfo_font', 'clock_netinfo_color'] },
+        { title: 'Station / title', fields: ['clock_show_strip', 'clock_strip_x', 'clock_strip_y', 'clock_strip_w', 'clock_strip_h', 'clock_strip_bg_opa', 'clock_strip_station_x', 'clock_strip_station_y', 'clock_strip_station_w', 'clock_strip_title_x', 'clock_strip_title_y', 'clock_strip_title_w', 'clock_strip_station_font', 'clock_strip_title_font', 'clock_strip_station_color', 'clock_strip_title_color'] },
         { title: 'Calendar', enabledBy: 'clock_show_calendar', fields: ['clock_show_calendar', 'clock_calendar_x', 'clock_calendar_y', 'clock_calendar_w', 'clock_calendar_font'] },
         { title: 'Weather', enabledBy: 'clock_show_weather', fields: ['clock_show_weather', 'clock_weather_x', 'clock_weather_y', 'clock_weather_w', 'clock_weather_font'] },
         { heading: 'Indicators' },
@@ -2322,6 +2326,7 @@ function renderClock(svg) {
             label: 'date', cls: 'label-rect',
             fields: { x: 'clock_date_x', y: 'clock_date_y' },
             text: 'Mon  2026-05-01', textSize: fh,
+            textFill: c.clock_date_color ? numToHex(c.clock_date_color) : null,
         });
     }
     if (c.clock_show_netinfo) {
@@ -2333,6 +2338,7 @@ function renderClock(svg) {
             label: 'ip', cls: 'label-rect',
             fields: { x: 'clock_netinfo_x', y: 'clock_netinfo_y' },
             text: '192.168.1.50  host.local', textSize: fh,
+            textFill: c.clock_netinfo_color ? numToHex(c.clock_netinfo_color) : null,
         });
     }
 
@@ -2400,6 +2406,7 @@ function renderClock(svg) {
         fields: { x: 'clock_strip_station_x', y: 'clock_strip_station_y',
                   w: 'clock_strip_station_w' },
         text: 'Atlas Radio', textSize: stFh,
+        textFill: c.clock_strip_station_color ? numToHex(c.clock_strip_station_color) : null,
     });
     const tiFh = fontHeight(c.clock_strip_title_font);
     const tiW  = c.clock_strip_title_w ?? c.clock_strip_label_w ?? sw;
@@ -2410,6 +2417,7 @@ function renderClock(svg) {
         fields: { x: 'clock_strip_title_x', y: 'clock_strip_title_y',
                   w: 'clock_strip_title_w' },
         text: 'Song title', textSize: tiFh,
+        textFill: c.clock_strip_title_color ? numToHex(c.clock_strip_title_color) : null,
     });
 }
 

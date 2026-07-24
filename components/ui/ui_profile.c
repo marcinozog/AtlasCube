@@ -1666,6 +1666,8 @@ static void load_clock(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "clock_strip_title_y",        &p->clock_strip_title_y);
     load_font(obj, "clock_strip_station_font",   &p->clock_strip_station_font);
     load_font(obj, "clock_strip_title_font",     &p->clock_strip_title_font);
+    load_u32 (obj, "clock_strip_station_color",  &p->clock_strip_station_color);
+    load_u32 (obj, "clock_strip_title_color",    &p->clock_strip_title_color);
     load_i16 (obj, "clock_time_x",               &p->clock_time_x);
     load_i16 (obj, "clock_time_y",               &p->clock_time_y);
     load_font(obj, "clock_time_font",            &p->clock_time_font);
@@ -1675,10 +1677,12 @@ static void load_clock(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "clock_date_y",               &p->clock_date_y);
     load_font(obj, "clock_date_font",            &p->clock_date_font);
     load_bool(obj, "clock_show_date",            &p->clock_show_date);
+    load_u32 (obj, "clock_date_color",           &p->clock_date_color);
     load_bool(obj, "clock_show_netinfo",         &p->clock_show_netinfo);
     load_i16 (obj, "clock_netinfo_x",            &p->clock_netinfo_x);
     load_i16 (obj, "clock_netinfo_y",            &p->clock_netinfo_y);
     load_font(obj, "clock_netinfo_font",         &p->clock_netinfo_font);
+    load_u32 (obj, "clock_netinfo_color",        &p->clock_netinfo_color);
     load_bool(obj, "clock_show_strip",           &p->clock_show_strip);
     load_bool(obj, "clock_show_mode_indicator",  &p->clock_show_mode_indicator);
     load_bool(obj, "clock_show_event_indicator", &p->clock_show_event_indicator);
@@ -2271,6 +2275,8 @@ static cJSON *dump_clock(const ui_profile_t *p)
     add_i16 (o, "clock_strip_title_y",        p->clock_strip_title_y);
     add_font(o, "clock_strip_station_font",   p->clock_strip_station_font);
     add_font(o, "clock_strip_title_font",     p->clock_strip_title_font);
+    add_u32 (o, "clock_strip_station_color",  p->clock_strip_station_color);
+    add_u32 (o, "clock_strip_title_color",    p->clock_strip_title_color);
     add_i16 (o, "clock_time_x",               p->clock_time_x);
     add_i16 (o, "clock_time_y",               p->clock_time_y);
     add_font(o, "clock_time_font",            p->clock_time_font);
@@ -2280,10 +2286,12 @@ static cJSON *dump_clock(const ui_profile_t *p)
     add_i16 (o, "clock_date_y",               p->clock_date_y);
     add_font(o, "clock_date_font",            p->clock_date_font);
     add_bool(o, "clock_show_date",            p->clock_show_date);
+    add_u32 (o, "clock_date_color",           p->clock_date_color);
     add_bool(o, "clock_show_netinfo",         p->clock_show_netinfo);
     add_i16 (o, "clock_netinfo_x",            p->clock_netinfo_x);
     add_i16 (o, "clock_netinfo_y",            p->clock_netinfo_y);
     add_font(o, "clock_netinfo_font",         p->clock_netinfo_font);
+    add_u32 (o, "clock_netinfo_color",        p->clock_netinfo_color);
     add_bool(o, "clock_show_strip",           p->clock_show_strip);
     add_bool(o, "clock_show_mode_indicator",  p->clock_show_mode_indicator);
     add_bool(o, "clock_show_event_indicator", p->clock_show_event_indicator);
