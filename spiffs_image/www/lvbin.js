@@ -151,8 +151,8 @@
         overlay = document.createElement("div");
         overlay.style.cssText =
             "position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;" +
-            // Above the SD picker modal (z-index 2100) so previews launched from
-            // it are visible on top rather than hidden behind it.
+            // Sits above the SD picker modal (z-index 1900) so previews launched
+            // from a file row show on top rather than hidden behind it.
             "align-items:center;justify-content:center;z-index:2200;padding:20px";
         const box = document.createElement("div");
         box.style.cssText =

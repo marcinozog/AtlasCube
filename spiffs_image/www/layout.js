@@ -1214,6 +1214,10 @@ function browseWallpaperDirectory(path) {
         // Flag the wallpaper currently applied to this screen with a check mark.
         fileLabel: (full, e) =>
             (currentWallpaperPath === '/sdcard' + full ? '\u2713 ' : '\u{1F5BC}\u{FE0F} ') + e.name,
+        fileActions: full => [
+            { label: '\ud83d\udc41', title: 'Preview',
+              onClick: () => ensureLvBin().then(() => window.LvBin.openPreview(full)) },
+        ],
         onFile: full => selectWallpaper(full),
     });
 }
@@ -1378,7 +1382,9 @@ function ensureSdPicker() {
     const overlay = document.createElement('div');
     overlay.style.cssText =
         'position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;' +
-        'align-items:center;justify-content:center;z-index:2100;padding:20px';
+        // Deliberately below the preview overlay (lvbin.js) so a preview opened
+        // from a file row surfaces on top of this modal, not behind it.
+        'align-items:center;justify-content:center;z-index:1900;padding:20px';
     const box = document.createElement('div');
     box.style.cssText =
         'background:var(--bg-panel,#1b1b1b);border:1px solid var(--border,#333);' +
