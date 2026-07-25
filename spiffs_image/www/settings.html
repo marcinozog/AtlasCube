@@ -496,6 +496,9 @@
                 <button class="theme-btn" id="settingsBtnMono"   onclick="setDeviceMono(true)">🔊 Mono</button>
             </div>
             <div class="field-hint">Mono sums left and right into both channels — for single-speaker builds.
+                This affects the output only, not the stream itself: the CHANNELS readout on the device
+                and in the web player keeps showing the source format (so a stereo stream still reads
+                STEREO), and the VU meters keep their stereo image.
                 Bluetooth playback is unaffected (it bypasses the DSP).</div>
         </div>
 
