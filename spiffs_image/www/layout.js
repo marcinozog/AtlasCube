@@ -2637,6 +2637,7 @@ function renderClock(svg) {
             x: c.clock_time_x - Math.round(tw / 2), y: c.clock_time_y, w: tw, h: fh,
             label: 'time', cls: 'label-rect',
             fields: { x: 'clock_time_x', y: 'clock_time_y' },
+            font: c.clock_time_font, hugsText: true,
             text: '88:88', textSize: fh,
             textFill: c.clock_time_color ? numToHex(c.clock_time_color) : null,
         });
@@ -2649,6 +2650,7 @@ function renderClock(svg) {
             x: c.clock_date_x - Math.round(tw / 2), y: c.clock_date_y, w: tw, h: fh,
             label: 'date', cls: 'label-rect',
             fields: { x: 'clock_date_x', y: 'clock_date_y' },
+            font: c.clock_date_font, hugsText: true,
             text: 'Mon  2026-05-01', textSize: fh,
             textFill: c.clock_date_color ? numToHex(c.clock_date_color) : null,
         });
@@ -2661,6 +2663,7 @@ function renderClock(svg) {
             x: c.clock_netinfo_x - Math.round(tw / 2), y: c.clock_netinfo_y, w: tw, h: fh,
             label: 'ip', cls: 'label-rect',
             fields: { x: 'clock_netinfo_x', y: 'clock_netinfo_y' },
+            font: c.clock_netinfo_font, hugsText: true,
             text: '192.168.1.50  host.local', textSize: fh,
             textFill: c.clock_netinfo_color ? numToHex(c.clock_netinfo_color) : null,
         });
@@ -2689,6 +2692,7 @@ function renderClock(svg) {
             x: c.clock_calendar_x, y: c.clock_calendar_y, w: cw, h: fh,
             label: 'calendar', cls: 'label-rect',
             fields: { x: 'clock_calendar_x', y: 'clock_calendar_y', w: 'clock_calendar_w' },
+            font: c.clock_calendar_font,
             text: '18:30  Dentist appt.', textSize: fh,
         });
     }
@@ -2698,9 +2702,10 @@ function renderClock(svg) {
         const fh = fontHeight(c.clock_weather_font);
         const ww = c.clock_weather_w > 0 ? c.clock_weather_w : W;
         drawWeatherElement(svg, {
-            x: c.clock_weather_x, y: c.clock_weather_y, w: ww, h: Math.max(fh, 20),
+            x: c.clock_weather_x, y: c.clock_weather_y, w: ww, h: fh,
             label: 'weather',
             fields: { x: 'clock_weather_x', y: 'clock_weather_y', w: 'clock_weather_w' },
+            font: c.clock_weather_font,
             text: '+21 C  Partly cloudy  54%', textSize: fh,
         });
     }
@@ -2729,6 +2734,7 @@ function renderClock(svg) {
         label: 'station', cls: 'label-rect',
         fields: { x: 'clock_strip_station_x', y: 'clock_strip_station_y',
                   w: 'clock_strip_station_w' },
+        font: c.clock_strip_station_font,
         text: 'Atlas Radio', textSize: stFh,
         textFill: c.clock_strip_station_color ? numToHex(c.clock_strip_station_color) : null,
     });
@@ -2740,6 +2746,7 @@ function renderClock(svg) {
         label: 'title', cls: 'label-rect',
         fields: { x: 'clock_strip_title_x', y: 'clock_strip_title_y',
                   w: 'clock_strip_title_w' },
+        font: c.clock_strip_title_font,
         text: 'Song title', textSize: tiFh,
         textFill: c.clock_strip_title_color ? numToHex(c.clock_strip_title_color) : null,
     });
@@ -2788,6 +2795,7 @@ function renderBt(svg) {
         x: b.bt_title_x, y: b.bt_title_y, w: b.bt_title_w, h: titleFh,
         label: 'title', cls: 'label-rect',
         fields: { x: 'bt_title_x', y: 'bt_title_y', w: 'bt_title_w' },
+        font: b.bt_title_font,
         text: 'Track title', textSize: titleFh,
         textFill: b.bt_title_color ? numToHex(b.bt_title_color) : null,
     });
@@ -2798,6 +2806,7 @@ function renderBt(svg) {
         x: b.bt_artist_x, y: b.bt_artist_y, w: b.bt_artist_w, h: artistFh,
         label: 'artist', cls: 'label-rect',
         fields: { x: 'bt_artist_x', y: 'bt_artist_y', w: 'bt_artist_w' },
+        font: b.bt_artist_font,
         text: 'Artist', textSize: artistFh,
         textFill: b.bt_artist_color ? numToHex(b.bt_artist_color) : null,
     });
@@ -2857,6 +2866,7 @@ function renderRadio(svg) {
             w: Math.max(r.radio_np_w | 0, 8), h: stationFh,
             label: 'np_station', cls: 'label-rect',
             fields: { x: 'radio_np_x', y: 'radio_np_y', w: 'radio_np_w' },
+            font: r.radio_np_station_font,
             text: 'Atlas Radio', textSize: stationFh,
             textFill: r.radio_np_color ? numToHex(r.radio_np_color) : null,
         });
@@ -2867,6 +2877,7 @@ function renderRadio(svg) {
                 w: Math.max(r.radio_title_w | 0, 8), h: titleFh,
                 label: 'np_title', cls: 'label-rect',
                 fields: { x: 'radio_title_x', y: 'radio_title_y', w: 'radio_title_w' },
+                font: r.radio_np_title_font,
                 text: 'Title — Artist', textSize: titleFh,
                 textFill: r.radio_title_color ? numToHex(r.radio_title_color) : null,
             });
@@ -2980,9 +2991,10 @@ function renderRadio(svg) {
         const fh = fontHeight(r.radio_weather_font);
         const ww = r.radio_weather_w > 0 ? r.radio_weather_w : W;
         drawWeatherElement(svg, {
-            x: r.radio_weather_x, y: r.radio_weather_y, w: ww, h: Math.max(fh, 20),
+            x: r.radio_weather_x, y: r.radio_weather_y, w: ww, h: fh,
             label: 'weather',
             fields: { x: 'radio_weather_x', y: 'radio_weather_y', w: 'radio_weather_w' },
+            font: r.radio_weather_font,
             text: '+21 C  Partly cloudy  54%', textSize: fh,
         });
     }
@@ -3013,6 +3025,7 @@ function renderSd(svg) {
         x: s.sd_title_x, y: s.sd_title_y, w: s.sd_title_w, h: sdTitleFh,
         label: 'title', cls: 'label-rect',
         fields: { x: 'sd_title_x', y: 'sd_title_y', w: 'sd_title_w' },
+        font: s.sd_title_font,
         text: 'Artist - Title', textSize: sdTitleFh,
         textFill: s.sd_title_color ? numToHex(s.sd_title_color) : null,
     });
@@ -3115,9 +3128,10 @@ function renderSd(svg) {
         const fh = fontHeight(s.sd_weather_font);
         const ww = s.sd_weather_w > 0 ? s.sd_weather_w : state.meta.screen_w;
         drawWeatherElement(svg, {
-            x: s.sd_weather_x, y: s.sd_weather_y, w: ww, h: Math.max(fh, 20),
+            x: s.sd_weather_x, y: s.sd_weather_y, w: ww, h: fh,
             label: 'weather',
             fields: { x: 'sd_weather_x', y: 'sd_weather_y', w: 'sd_weather_w' },
+            font: s.sd_weather_font,
             text: '+21 C  Partly cloudy  54%', textSize: fh,
         });
     }
@@ -3331,6 +3345,7 @@ function drawLabel(svg, x, y, fontId, text_str, name, fields, anchorCenter, fill
         x, y, w: tw, h: fh,
         label: name, cls: 'label-rect',
         fields,
+        font: fontId, hugsText: true,
         text: text_str, textSize: fh,
         textFill: fill || null,
     });
@@ -3347,9 +3362,27 @@ function drawAnimatedWheel(svg, x, y, size, label, xField, yField, sizeField) {
 
 // ── Free element (move + 4 corner resize) ──────────────────────────────────
 
+// opts.font — the label's font id. Given one, the box is sized and the sample
+// text baselined from real LVGL metrics instead of the nominal font size, which
+// is what makes the preview line up with the panel.
+// opts.hugsText — the box width is a character-count estimate of the text (as
+// opposed to a configurable fixed-width box), so the plate's horizontal padding
+// widens it on the device too.
 function drawFreeElement(svg, opts) {
+    // ui_label_scrim() pads a plated label by 1px vertically and 6px each side,
+    // and that padding counts into the object — so it is part of the rectangle
+    // the user lines up against the wallpaper.
+    const plateOpa = opts.text
+        ? clamp(state[state.active][sectionLabelBgKey()] ?? 50, 0, 100) : 0;
+    const padV = plateOpa > 0 ? 1 : 0;
+    const padH = plateOpa > 0 && opts.hugsText ? 6 : 0;
+    const x = opts.x - padH;
+    const y = opts.y;
+    const w = opts.w + padH * 2;
+    const h = opts.font ? fontLineHeight(opts.font) + padV * 2 : opts.h;
+
     const r = rect(svg, {
-        x: opts.x, y: opts.y, width: opts.w, height: opts.h,
+        x, y, width: w, height: h,
         class: `${opts.cls} ${placeholderClass(opts.label)}`,
     });
     if (opts.fillOpacity !== undefined) {
@@ -3358,8 +3391,7 @@ function drawFreeElement(svg, opts) {
         // Floating labels use the active screen's configurable background plate.
         // Keep the editor's placeholder colour, but scale it so the opacity
         // slider has an immediate and truthful effect in Live preview.
-        r.style.fillOpacity = clamp(
-            state[state.active][sectionLabelBgKey()] ?? 50, 0, 100) / 100;
+        r.style.fillOpacity = plateOpa / 100;
     }
     if (opts.radius !== undefined) {
         r.setAttribute('rx', opts.radius);
@@ -3367,7 +3399,7 @@ function drawFreeElement(svg, opts) {
     }
     setupMove(r, svg, opts.fields);
 
-    tag(svg, opts.x + 2, opts.y + 7, opts.label);
+    tag(svg, x + 2, y + 7, opts.label);
 
     if (opts.text) {
         // Clip the sample text to the box — the firmware clips widget content
@@ -3376,25 +3408,26 @@ function drawFreeElement(svg, opts) {
         const cp = document.createElementNS(SVG_NS, 'clipPath');
         cp.setAttribute('id', cid);
         const cr = document.createElementNS(SVG_NS, 'rect');
-        cr.setAttribute('x', opts.x);
-        cr.setAttribute('y', opts.y);
-        cr.setAttribute('width', opts.w);
-        cr.setAttribute('height', opts.h);
+        cr.setAttribute('x', x);
+        cr.setAttribute('y', y);
+        cr.setAttribute('width', w);
+        cr.setAttribute('height', h);
         cp.appendChild(cr);
         svg.appendChild(cp);
         const tattr = {
-            'font-size': Math.min(opts.textSize, opts.h),
+            'font-size': Math.min(opts.textSize, h),
             'text-anchor': 'middle',
             'clip-path': 'url(#' + cid + ')',
         };
         if (opts.textFill) tattr.fill = opts.textFill;
-        text(svg, opts.x + opts.w / 2, opts.y + opts.h * 0.78, opts.text, tattr);
+        const base = opts.font ? padV + fontBaseline(opts.font) : h * 0.78;
+        text(svg, x + w / 2, y + base, opts.text, tattr);
     }
 
     // Corner resize whenever a width field exists; without a height field the
     // corners resize width only (height follows the font).
     if (opts.fields.w) {
-        addCornerHandles(svg, opts.x, opts.y, opts.w, opts.h, opts.fields);
+        addCornerHandles(svg, x, y, w, h, opts.fields);
     }
 }
 
@@ -3403,28 +3436,31 @@ function drawFreeElement(svg, opts) {
 // draw the span as a dashed guide (movable, W-editable in the form) and a
 // filled pill sized to the rendered content, centered within the span.
 function drawWeatherElement(svg, opts) {
+    // The row is as tall as the widget's font, but never below the icon font.
+    const h = Math.max(opts.font ? fontLineHeight(opts.font) : opts.h, 20);
     rect(svg, {
-        x: opts.x, y: opts.y, width: opts.w, height: opts.h,
+        x: opts.x, y: opts.y, width: opts.w, height: h,
         class: `label-frame ${placeholderClass('weather')}`,
     });
     // The span's visible stroke is too thin to grab and its interior stays
     // click-through, so drags on the border go through a fat invisible edge.
     const grip = rect(svg, {
-        x: opts.x, y: opts.y, width: opts.w, height: opts.h,
+        x: opts.x, y: opts.y, width: opts.w, height: h,
         class: 'label-frame-grip',
     });
     setupMove(grip, svg, opts.fields, false);
     tag(svg, opts.x + 2, opts.y + 7, opts.label);
 
     const cx = opts.x + opts.w / 2;
-    const t = text(svg, cx, opts.y + opts.h * 0.78, opts.text, {
-        'font-size': Math.min(opts.textSize, opts.h),
+    const base = opts.font ? fontBaseline(opts.font) : h * 0.78;
+    const t = text(svg, cx, opts.y + base, opts.text, {
+        'font-size': Math.min(opts.textSize, h),
         'text-anchor': 'middle',
     });
     // Size the pill to the rendered text (+ horizontal padding), centered.
     const pw = t.getBBox().width + 12;
     const pill = rect(svg, {
-        x: cx - pw / 2, y: opts.y, width: pw, height: opts.h,
+        x: cx - pw / 2, y: opts.y, width: pw, height: h,
         class: `label-rect ${placeholderClass('weather')}`,
     });
     // The pill is the visible plate, so it is also the primary drag handle and
@@ -3434,7 +3470,7 @@ function drawWeatherElement(svg, opts) {
 
     // Corners resize the span's width only — weather has no height field, the
     // font drives its height. Drawn last so they sit above pill and grip.
-    addCornerHandles(svg, opts.x, opts.y, opts.w, opts.h, opts.fields);
+    addCornerHandles(svg, opts.x, opts.y, opts.w, h, opts.fields);
 }
 
 function addCornerHandles(svg, x, y, w, h, fields) {
@@ -3608,10 +3644,34 @@ async function resetProfile() {
 
 // ── helpers ─────────────────────────────────────────────────────────────────
 
+// Nominal glyph size, parsed from the font id. Good enough for the SVG
+// font-size and the character-count width estimates, but NOT for vertical
+// placement — use the metrics below for that.
 function fontHeight(id) {
     if (!id) return 14;
     const m = id.match(/_(\d+)(_pl)?$/);
     return m ? parseInt(m[1], 10) : 14;
+}
+
+// The device serves the real LVGL metrics of every registered font
+// (/api/ui/profile/meta → font_metrics). They decide where a label lands: its
+// box is line_height tall — not the nominal size, which runs ~10% short for the
+// text fonts and is wildly off for the digit-only ones — and its baseline sits
+// base_line above the box bottom. The fallbacks are the ratios those metrics
+// average out to, for firmware that predates the field.
+function fontMetrics(id) {
+    return (state.meta.font_metrics || {})[id] || null;
+}
+
+function fontLineHeight(id) {
+    const m = fontMetrics(id);
+    return m ? m.h : Math.round(fontHeight(id) * 1.09);
+}
+
+// Baseline offset, measured from the top of the box.
+function fontBaseline(id) {
+    const m = fontMetrics(id);
+    return m ? m.h - m.b : Math.round(fontLineHeight(id) * 0.82);
 }
 
 // Keep the preview readable when elements overlap: the colour communicates the

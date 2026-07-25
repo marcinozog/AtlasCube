@@ -1716,6 +1716,22 @@ static esp_err_t api_ui_profile_meta_get_handler(httpd_req_t *req)
     }
     cJSON_AddItemToObject(json, "fonts", fonts);
 
+    // Real LVGL metrics per font, so the layout editor can draw a label box
+    // where the device actually puts it: the height is line_height (NOT the
+    // nominal size in the id — they differ by ~10%, and the digit-only fonts
+    // differ a lot more) and the text baseline sits base_line above its bottom.
+    cJSON *metrics = cJSON_CreateObject();
+    for (int i = 0; i < n; ++i) {
+        const char *id = ui_font_list_id(i);
+        const lv_font_t *f = id ? ui_font_by_id(id) : NULL;
+        if (!f) continue;
+        cJSON *m = cJSON_CreateObject();
+        cJSON_AddNumberToObject(m, "h", f->line_height);
+        cJSON_AddNumberToObject(m, "b", f->base_line);
+        cJSON_AddItemToObject(metrics, id, m);
+    }
+    cJSON_AddItemToObject(json, "font_metrics", metrics);
+
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
 
