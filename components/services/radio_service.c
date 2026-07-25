@@ -236,9 +236,11 @@ void radio_play_file(const char *path)
 
 
 /*
-void radio_play_url(const char *url, bool finite, const char *title, uint32_t offset_bytes)
+void radio_play_url(const char *url, bool finite, const char *station,
+                    const char *title, uint32_t offset_bytes)
 */
-void radio_play_url(const char *url, bool finite, const char *title, uint32_t offset_bytes)
+void radio_play_url(const char *url, bool finite, const char *station,
+                    const char *title, uint32_t offset_bytes)
 {
     if (!url) {
         ESP_LOGE(TAG, "URL is NULL");
@@ -251,11 +253,15 @@ void radio_play_url(const char *url, bool finite, const char *title, uint32_t of
 
     ESP_LOGI(TAG, "Play: %s%s", url, finite ? " (finite)" : "");
 
+    // Always (re)write both label lines: a caller that names neither source
+    // clears them rather than leaving the previous station's name on screen.
     app_state_update(&(app_state_patch_t){
         .has_url = true,
         .url = url,
         .has_radio = true,
         .radio_state = RADIO_STATE_BUFFERING,
+        .has_station_name = true,
+        .station_name = (station && station[0]) ? station : "",
         .has_title = true,
         .title = (title && title[0]) ? title : ""
     });
@@ -293,15 +299,11 @@ void radio_play_index(int index)
         return;
     }
 
-    // Set station name and clear old ICY title before playback starts
-    app_state_update(&(app_state_patch_t){
-        .has_station_name = true,  .station_name = entry->name,
-        .has_title        = true,  .title        = "",
-        .has_url          = true,  .url          = entry->url,
-    });
-
     settings_set_curr_index(index);   // save + update curr_index in state
-    radio_play_url(entry->url, false, NULL, 0);   // endless radio, name set above
+
+    // Endless radio; the station name goes on screen and the old ICY title is
+    // cleared by radio_play_url before playback starts.
+    radio_play_url(entry->url, false, entry->name, NULL, 0);
 }
 
 

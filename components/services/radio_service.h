@@ -21,12 +21,15 @@ void radio_service_init(void);
  * Plays an arbitrary HTTP(S) stream URL. For endless internet radio pass
  * finite=false: an end-of-stream is treated as a loss and retried. For a
  * finite podcast episode pass finite=true: EOF is a clean finish (state →
- * RADIO_STATE_FINISHED, no retry). `title`, when non-NULL, is shown on the
- * device screen (podcasts carry no ICY metadata); NULL clears the title.
+ * RADIO_STATE_FINISHED, no retry). `station` (top line: station / podcast show)
+ * and `title` (bottom line, podcasts carry no ICY metadata) are shown on the
+ * device screen; NULL or empty clears them, so a caller that names neither can
+ * never leave the previous source's name on screen.
  * offset_bytes>0 resumes a finite stream mid-file via a Range request
  * (0 = from the start; ignored for radio).
  */
-void radio_play_url(const char *url, bool finite, const char *title, uint32_t offset_bytes);
+void radio_play_url(const char *url, bool finite, const char *station,
+                    const char *title, uint32_t offset_bytes);
 void radio_play_index(int index);
 void radio_stop(void);
 

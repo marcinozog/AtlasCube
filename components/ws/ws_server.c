@@ -217,15 +217,18 @@ static esp_err_t ws_handler(httpd_req_t *req)
             cJSON *url = cJSON_GetObjectItem(json, "url");
             if (url && cJSON_IsString(url)) {
                 // finite=true → podcast episode (EOF is a clean end, no retry);
-                // title → shown on screen (podcasts carry no ICY metadata);
+                // station/title → the two screen lines (podcast show + episode;
+                // podcasts carry no ICY metadata), both cleared when omitted;
                 // offset_bytes → resume mid-file via a Range request.
-                cJSON *finite = cJSON_GetObjectItem(json, "finite");
-                cJSON *title  = cJSON_GetObjectItem(json, "title");
-                cJSON *offset = cJSON_GetObjectItem(json, "offset_bytes");
+                cJSON *finite  = cJSON_GetObjectItem(json, "finite");
+                cJSON *station = cJSON_GetObjectItem(json, "station");
+                cJSON *title   = cJSON_GetObjectItem(json, "title");
+                cJSON *offset  = cJSON_GetObjectItem(json, "offset_bytes");
                 uint32_t off = (offset && cJSON_IsNumber(offset) && offset->valuedouble > 0)
                              ? (uint32_t)offset->valuedouble : 0;
                 radio_play_url(url->valuestring,
                                cJSON_IsTrue(finite),
+                               (station && cJSON_IsString(station)) ? station->valuestring : NULL,
                                (title && cJSON_IsString(title)) ? title->valuestring : NULL,
                                off);
             }
