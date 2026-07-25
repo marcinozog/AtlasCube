@@ -466,8 +466,8 @@ typedef struct __attribute__((packed)) {
 } sd_bin_header_t;
 
 // A saved wallpaper is panel-sized, so it is filed per resolution the same way
-// the web layout editor files its uploads and layout presets:
-// /sdcard/wallpapers/<width>x<height>/saved/.
+// the web layout editor files its uploads and layout presets, in a subfolder
+// naming its origin: /sdcard/wallpapers/<width>x<height>/internet/.
 #define WALLPAPER_ROOT "/sdcard/wallpapers"
 
 bool net_wallpaper_save_to_sd(char *out_path, size_t out_cap, const char **err)
@@ -495,7 +495,7 @@ bool net_wallpaper_save_to_sd(char *out_path, size_t out_cap, const char **err)
 
     char res_dir[48], save_dir[64];
     snprintf(res_dir, sizeof(res_dir), WALLPAPER_ROOT "/%dx%d", w, h);
-    snprintf(save_dir, sizeof(save_dir), "%s/saved", res_dir);
+    snprintf(save_dir, sizeof(save_dir), "%s/internet", res_dir);
     mkdir(WALLPAPER_ROOT, 0775);   // EEXIST is fine for every level
     mkdir(res_dir, 0775);
     mkdir(save_dir, 0775);

@@ -1118,14 +1118,14 @@ async function checkOrphanPresets() {
             }
             // If no full wallpaper paths were stored, look for <stem>.bin in the
             // standard wallpaper locations — this panel's resolution folder and
-            // its "saved" subfolder (where the device drops fetched internet
+            // its "internet" subfolder (where the device drops fetched internet
             // wallpapers), plus the flat pre-resolution layout.
             if (!refs.length) {
                 const stem = e.name.replace(/\.json$/i, '');
                 refs = ['/wallpapers/' + e.resolution,
-                        '/wallpapers/' + e.resolution + '/saved',
+                        '/wallpapers/' + e.resolution + '/internet',
                         '/wallpapers',
-                        '/wallpapers/saved',
+                        '/wallpapers/saved',   // pre-resolution internet saves
                        ].map(dir => SD_MOUNT + dir + '/' + stem + '.bin');
             }
             const found = await Promise.all(
