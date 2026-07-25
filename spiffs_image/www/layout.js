@@ -3550,7 +3550,7 @@ function setupResize(el, svg, fields, dir, baseW, baseH) {
             data[fields.w] = nw;
             if (fields.h && fields.h !== fields.w) data[fields.h] = hVal;
             setFormValue(fields.x, nx); setFormValue(fields.y, ny);
-            setFormValue(fields.w, wVal);
+            setFormValue(fields.w, nw);
             if (fields.h && fields.h !== fields.w) setFormValue(fields.h, hVal);
             renderSvg();
         };
