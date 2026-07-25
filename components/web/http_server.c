@@ -148,6 +148,9 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddStringToObject(display, "theme",
         s->display.theme == THEME_LIGHT ? "light" : "dark");
     cJSON_AddBoolToObject(display, "flip", s->display.flip);
+    cJSON_AddBoolToObject(display, "touch_swap_xy",  s->display.touch_swap_xy);
+    cJSON_AddBoolToObject(display, "touch_invert_x", s->display.touch_invert_x);
+    cJSON_AddBoolToObject(display, "touch_invert_y", s->display.touch_invert_y);
     cJSON_AddBoolToObject(display, "invert", s->display.invert);
     cJSON_AddBoolToObject(display, "time_ampm", s->display.time_ampm);
     cJSON_AddBoolToObject(display, "date_mdy", s->display.date_mdy);
@@ -368,6 +371,19 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             // gets flushed (and the screen visibly re-orients) right away.
             ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
             ui_event_send(&ev);
+        }
+        // Touch orientation — any subset of the three may be sent; the rest keep
+        // their current value (one setter, so a single save per request).
+        cJSON *tsx = cJSON_GetObjectItem(display, "touch_swap_xy");
+        cJSON *tix = cJSON_GetObjectItem(display, "touch_invert_x");
+        cJSON *tiy = cJSON_GetObjectItem(display, "touch_invert_y");
+        if (cJSON_IsBool(tsx) || cJSON_IsBool(tix) || cJSON_IsBool(tiy)) {
+            const display_settings_t *d = &settings_get()->display;
+            bool sx = cJSON_IsBool(tsx) ? cJSON_IsTrue(tsx) : d->touch_swap_xy;
+            bool ix = cJSON_IsBool(tix) ? cJSON_IsTrue(tix) : d->touch_invert_x;
+            bool iy = cJSON_IsBool(tiy) ? cJSON_IsTrue(tiy) : d->touch_invert_y;
+            ESP_LOGI("HTTP", "POST touch orient: swap=%d inv_x=%d inv_y=%d", sx, ix, iy);
+            settings_set_touch_orient(sx, ix, iy);
         }
         cJSON *iv = cJSON_GetObjectItem(display, "invert");
         if (cJSON_IsBool(iv)) {

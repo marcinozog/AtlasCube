@@ -83,6 +83,22 @@
                 </div>
             </div>
             <div class="field-group">
+                <label class="field-label">Touch orientation</label>
+                <div class="field-hint">Fixes a touch layer mounted differently than the panel — taps landing mirrored or on the wrong axis. Independent of the display flip above, so rotating the image no longer rotates the touch. Change one at a time and tap to check; all three off = panel default.</div>
+                <div class="theme-toggle uniform" id="touchSwapToggle" style="width:fit-content">
+                    <button class="theme-btn" id="settingsBtnTouchSwapOn"  onclick="setTouchOrient('touch_swap_xy', true)">🔀 Swap X/Y</button>
+                    <button class="theme-btn" id="settingsBtnTouchSwapOff" onclick="setTouchOrient('touch_swap_xy', false)">➡️ Normal</button>
+                </div>
+                <div class="theme-toggle uniform" id="touchInvXToggle" style="width:fit-content;margin-top:6px">
+                    <button class="theme-btn" id="settingsBtnTouchInvXOn"  onclick="setTouchOrient('touch_invert_x', true)">↔️ Invert X</button>
+                    <button class="theme-btn" id="settingsBtnTouchInvXOff" onclick="setTouchOrient('touch_invert_x', false)">➡️ Normal</button>
+                </div>
+                <div class="theme-toggle uniform" id="touchInvYToggle" style="width:fit-content;margin-top:6px">
+                    <button class="theme-btn" id="settingsBtnTouchInvYOn"  onclick="setTouchOrient('touch_invert_y', true)">↕️ Invert Y</button>
+                    <button class="theme-btn" id="settingsBtnTouchInvYOff" onclick="setTouchOrient('touch_invert_y', false)">⬆️ Normal</button>
+                </div>
+            </div>
+            <div class="field-group">
                 <label class="field-label">Invert colours</label>
                 <div class="field-hint">Fixes panels that show inverted colours (e.g. yellow appears blue). Applies instantly — flip this if the colours look wrong.</div>
                 <div class="theme-toggle uniform" id="invertToggle" style="width:fit-content">

@@ -79,32 +79,38 @@ static void touch_lvgl_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
 
     uint16_t x = 0, y = 0;
     if (touch_driver_read(&x, &y)) {
+        // Orientation = per-profile baseline (ui_profile.h) XOR the runtime
+        // overrides from settings, so a user whose digitizer is mounted
+        // differently can fix it from the web UI without a rebuild. Deliberately
+        // NOT tied to display.flip: rotating the image does not rotate the
+        // touch layer glued to the panel.
+        const display_settings_t *d = &settings_get()->display;
+        const bool swap_xy  = (bool)TOUCH_SWAP_XY ^ d->touch_swap_xy;
 #if CONFIG_TOUCH_XPT2046
-        // Resistive controller returns raw ADC. Swap physical channels first
-        // (still in raw space), then scale each to its screen axis.
-#if TOUCH_SWAP_XY
-        { uint16_t t = x; x = y; y = t; }
+        // Resistive: axis direction is baked into the calibration ranges (MIN >
+        // MAX mirrors an axis), so TOUCH_MIRROR_* stays out of this baseline.
+        const bool invert_x = d->touch_invert_x;
+        const bool invert_y = d->touch_invert_y;
+#else
+        const bool invert_x = (bool)TOUCH_MIRROR_X ^ d->touch_invert_x;
+        const bool invert_y = (bool)TOUCH_MIRROR_Y ^ d->touch_invert_y;
 #endif
+
+        // Swap first, while the reading is still in the controller's own space:
+        // for the resistive path TOUCH_RAW_X_* bounds whichever raw channel
+        // ends up feeding screen X.
+        if (swap_xy) { uint16_t t = x; x = y; y = t; }
+
+#if CONFIG_TOUCH_XPT2046
+        // Resistive controller returns raw ADC — scale each axis to the screen.
         x = raw_to_px(x, TOUCH_RAW_X_MIN, TOUCH_RAW_X_MAX, DISPLAY_WIDTH);
         y = raw_to_px(y, TOUCH_RAW_Y_MIN, TOUCH_RAW_Y_MAX, DISPLAY_HEIGHT);
-#else
-        // Capacitive controllers already report pixels.
-#if TOUCH_SWAP_XY
-        { uint16_t t = x; x = y; y = t; }
 #endif
-#if TOUCH_MIRROR_X
-        x = DISPLAY_WIDTH  - 1 - x;
-#endif
-#if TOUCH_MIRROR_Y
-        y = DISPLAY_HEIGHT - 1 - y;
-#endif
-#endif
-        // Runtime 180° flip (settings.display.flip). Mirroring both axes matches
-        // the panel's MADCTL flip regardless of the per-profile baseline above.
-        if (settings_get()->display.flip) {
-            x = DISPLAY_WIDTH  - 1 - x;
-            y = DISPLAY_HEIGHT - 1 - y;
-        }
+        // Both paths are in pixel space by now (capacitive controllers report
+        // pixels straight away), so the mirrors are the same either way.
+        if (invert_x) x = DISPLAY_WIDTH  - 1 - x;
+        if (invert_y) y = DISPLAY_HEIGHT - 1 - y;
+
         data->point.x = x;
         data->point.y = y;
         data->state = LV_INDEV_STATE_PRESSED;

@@ -59,6 +59,9 @@ esp_err_t settings_init(void)
         s_settings.display.screen           = SCREEN_HOME;
         s_settings.display.theme            = THEME_DARK;
         s_settings.display.flip             = false;
+        s_settings.display.touch_swap_xy    = false;
+        s_settings.display.touch_invert_x   = false;
+        s_settings.display.touch_invert_y   = false;
         s_settings.display.invert           = false;
         s_settings.display.time_ampm        = false;
         s_settings.display.date_mdy         = false;
@@ -247,6 +250,17 @@ static esp_err_t load_from_file(void)
         }
         cJSON *fl = cJSON_GetObjectItem(display, "flip");
         s_settings.display.flip = cJSON_IsBool(fl) ? cJSON_IsTrue(fl) : false;
+        // Touch orientation. Older firmware mirrored touch from `flip` itself,
+        // so a config written back then carries no touch_* keys at all — inherit
+        // that coupling once, then the two settings stay independent.
+        cJSON *tsx = cJSON_GetObjectItem(display, "touch_swap_xy");
+        cJSON *tix = cJSON_GetObjectItem(display, "touch_invert_x");
+        cJSON *tiy = cJSON_GetObjectItem(display, "touch_invert_y");
+        bool legacy_touch = !cJSON_IsBool(tsx) && !cJSON_IsBool(tix) && !cJSON_IsBool(tiy);
+        bool inherited    = legacy_touch && s_settings.display.flip;
+        s_settings.display.touch_swap_xy  = cJSON_IsBool(tsx) ? cJSON_IsTrue(tsx) : false;
+        s_settings.display.touch_invert_x = cJSON_IsBool(tix) ? cJSON_IsTrue(tix) : inherited;
+        s_settings.display.touch_invert_y = cJSON_IsBool(tiy) ? cJSON_IsTrue(tiy) : inherited;
         cJSON *iv = cJSON_GetObjectItem(display, "invert");
         s_settings.display.invert = cJSON_IsBool(iv) ? cJSON_IsTrue(iv) : false;
         cJSON *ta = cJSON_GetObjectItem(display, "time_ampm");
@@ -573,6 +587,9 @@ static esp_err_t save_to_file_locked(void)
     cJSON_AddStringToObject(display, "theme",
         s_settings.display.theme == THEME_LIGHT ? "light" : "dark");
     cJSON_AddBoolToObject(display, "flip", s_settings.display.flip);
+    cJSON_AddBoolToObject(display, "touch_swap_xy",  s_settings.display.touch_swap_xy);
+    cJSON_AddBoolToObject(display, "touch_invert_x", s_settings.display.touch_invert_x);
+    cJSON_AddBoolToObject(display, "touch_invert_y", s_settings.display.touch_invert_y);
     cJSON_AddBoolToObject(display, "invert", s_settings.display.invert);
     cJSON_AddBoolToObject(display, "time_ampm", s_settings.display.time_ampm);
     cJSON_AddBoolToObject(display, "date_mdy", s_settings.display.date_mdy);
@@ -973,10 +990,24 @@ void settings_set_theme(ui_theme_t t)
 void settings_set_flip(bool enabled)
 {
     // Re-sends MADCTL / column-remap live (driver latches it, applies on the
-    // next flush); touch already follows this flag at runtime. No restart.
+    // next flush). Touch is NOT rotated along — see display.touch_* — because
+    // the digitizer's orientation is a property of the panel, not of this flag.
     if (s_settings.display.flip == enabled) return;
     s_settings.display.flip = enabled;
     display_set_flip(enabled);
+    save_to_file();
+}
+
+void settings_set_touch_orient(bool swap_xy, bool invert_x, bool invert_y)
+{
+    // touch.c re-reads these on every LVGL poll, so there is nothing to re-init:
+    // the very next tap already lands with the new orientation.
+    if (s_settings.display.touch_swap_xy  == swap_xy  &&
+        s_settings.display.touch_invert_x == invert_x &&
+        s_settings.display.touch_invert_y == invert_y) return;
+    s_settings.display.touch_swap_xy  = swap_xy;
+    s_settings.display.touch_invert_x = invert_x;
+    s_settings.display.touch_invert_y = invert_y;
     save_to_file();
 }
 

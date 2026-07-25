@@ -236,15 +236,48 @@ toggles these mirror bits:
 
 Because the controller remaps the entire GRAM uniformly, the flip is
 transparent to the partial flush logic — no CASET/RASET changes are needed.
-Touch is mirrored to match at runtime in `touch_lvgl_read_cb` (both axes,
-which equals a 180° rotation regardless of the per-profile baseline), so no
-reboot is needed on the touch side either.
+Touch is **not** rotated along — see §6a. The touch layer is glued to the panel
+in its own orientation, which does not necessarily follow the image.
 
 > On panels whose visible window is offset inside a larger GRAM, a flip can
 > shift the image by a few pixels; if that shows up on hardware, add a
 > per-orientation column/row start offset in the affected driver. The live
 > switch may also flash one stale (already-reoriented) frame before the forced
 > repaint covers it — cosmetic.
+
+### 6a. Touch orientation (`display.touch_*`)
+
+How the digitizer is mounted relative to the matrix is a property of the panel,
+not of the image, so it gets its own three settings — exposed in the web UI
+(Display → *Touch orientation*) and stored as `display.touch_swap_xy`,
+`display.touch_invert_x`, `display.touch_invert_y`.
+
+Each is **XORed over the per-profile baseline** (`TOUCH_SWAP_XY` /
+`TOUCH_MIRROR_X` / `TOUCH_MIRROR_Y` in `ui_profile.h`), so all three `false`
+leaves every currently-working panel exactly as it was. The eight combinations
+cover every way a touch layer can be rotated or mirrored against the panel.
+
+Order in `touch_lvgl_read_cb()` — the swap must come first, while the reading is
+still in the controller's own space:
+
+1. **swap X/Y** — on the resistive path this happens *before* scaling, because
+   `TOUCH_RAW_X_*` bounds whichever raw channel ends up feeding screen X
+2. **raw → pixels** (XPT2046 only), per-axis via the `TOUCH_RAW_*` calibration
+3. **invert X / invert Y**, in pixel space
+
+For XPT2046 the baseline mirrors are *not* applied: axis direction is already
+baked into the calibration ranges (`MIN > MAX` mirrors an axis), so only the
+runtime overrides act there.
+
+The settings apply live — `settings_set_touch_orient()` only persists, since the
+read callback re-reads them on every poll and the next tap already lands
+corrected.
+
+> Until v0.46 touch was mirrored from `display.flip` instead. A config written
+> by that firmware carries no `touch_*` keys, so `settings_init()` inherits the
+> old coupling once (`flip:true` → both inverts on) and the two stay independent
+> from then on. A user who was flipping the image *and* getting inverted taps
+> turns both off after the update.
 
 ## 7. Colour inversion (`display.invert`)
 

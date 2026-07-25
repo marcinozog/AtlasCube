@@ -37,6 +37,13 @@ typedef struct {
     int             brightness;
     ui_theme_t      theme;
     bool            flip;            // rotate the whole screen 180° (applied live via display_set_flip)
+    // Touch orientation, XOR'd over the per-profile TOUCH_* baseline (ui_profile.h).
+    // All false = profile default. Independent of `flip`: the digitizer is not
+    // always mounted in the panel's own orientation, so rotating the image must
+    // not drag the touch layer with it.
+    bool            touch_swap_xy;   // exchange the two touch axes
+    bool            touch_invert_x;  // mirror touch left↔right
+    bool            touch_invert_y;  // mirror touch top↔bottom
     bool            invert;          // invert panel colours (INVON/INVOFF); XOR over the driver baseline — applied live
     bool            time_ampm;       // clock in 12-hour AM/PM format (false = 24-hour)
     bool            date_mdy;        // date as MM/DD/YYYY (false = YYYY-MM-DD)
@@ -170,6 +177,7 @@ void settings_set_bt_vol_sync(bool on);
 void settings_set_ntp(const char *server1, const char *server2, const char *tz);
 void settings_set_theme(ui_theme_t theme);
 void settings_set_flip(bool enabled);
+void settings_set_touch_orient(bool swap_xy, bool invert_x, bool invert_y);
 void settings_set_invert(bool enabled);
 void settings_set_time_ampm(bool enabled);
 void settings_set_date_mdy(bool enabled);

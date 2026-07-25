@@ -219,6 +219,26 @@ function setFlip(on) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Touch orientation (applied live — the next tap already lands corrected)
+// ─────────────────────────────────────────────────────────────────────────────
+const TOUCH_ORIENT_BTNS = {
+    touch_swap_xy:  ['settingsBtnTouchSwapOn', 'settingsBtnTouchSwapOff'],
+    touch_invert_x: ['settingsBtnTouchInvXOn', 'settingsBtnTouchInvXOff'],
+    touch_invert_y: ['settingsBtnTouchInvYOn', 'settingsBtnTouchInvYOff'],
+};
+
+function setTouchOrient(key, on) {
+    const [onId, offId] = TOUCH_ORIENT_BTNS[key];
+    document.getElementById(onId) ?.classList.toggle('active', on);
+    document.getElementById(offId)?.classList.toggle('active', !on);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { [key]: on } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Invert panel colours (applied live — no restart)
 // ─────────────────────────────────────────────────────────────────────────────
 function setInvert(on) {
@@ -784,6 +804,12 @@ function populateForm(s) {
         const flip = s.display.flip === true;
         document.getElementById('settingsBtnFlipOn') ?.classList.toggle('active', flip);
         document.getElementById('settingsBtnFlipOff')?.classList.toggle('active', !flip);
+
+        for (const [key, [onId, offId]] of Object.entries(TOUCH_ORIENT_BTNS)) {
+            const on = s.display[key] === true;
+            document.getElementById(onId) ?.classList.toggle('active', on);
+            document.getElementById(offId)?.classList.toggle('active', !on);
+        }
 
         const invert = s.display.invert === true;
         document.getElementById('settingsBtnInvertOn') ?.classList.toggle('active', invert);

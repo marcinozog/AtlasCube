@@ -50,7 +50,7 @@ void display_set_backlight(uint8_t brightness);
 void display_set_flip(bool flip);
 
 // 180° flip state — re-sends the 0xA0 re-map on the next (full) flush, from the
-// LVGL task. Touch follows settings.display.flip at runtime.
+// LVGL task. Touch has its own settings.display.touch_* (SSD1322 is TOUCH_NONE).
 static bool          s_flip_on    = false;
 static volatile bool s_flip_dirty = false;
 

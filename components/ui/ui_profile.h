@@ -8,6 +8,8 @@
 
 // Display dimensions and touch orientation derived from UI_PROFILE_* (defines.h).
 // TOUCH_* are applied in this order: swap_xy → mirror_x → mirror_y (in display frame).
+// They are only the BASELINE: touch.c XORs settings.display.touch_* over them, so a
+// panel whose digitizer is mounted differently is fixed from the web UI, not here.
 #if defined(UI_PROFILE_240X296)
     #define DISPLAY_WIDTH   240
     #define DISPLAY_HEIGHT  296

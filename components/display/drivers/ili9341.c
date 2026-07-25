@@ -36,7 +36,7 @@ static bool          s_invert_on    = false;
 static volatile bool s_invert_dirty = false;
 
 // 180° flip state — same live mechanism as colour inversion. Baseline MADCTL is
-// 0xE8; flip toggles MY+MX → 0x28. Touch follows settings.display.flip at runtime.
+// 0xE8; flip toggles MY+MX → 0x28. Touch has its own settings.display.touch_*.
 static bool          s_flip_on      = false;
 static volatile bool s_flip_dirty   = false;
 
