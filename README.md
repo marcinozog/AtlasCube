@@ -460,7 +460,7 @@ Available at the device IP or `<hostname>.local` (STA mode), or `192.168.4.1` (A
 
 WebSocket endpoint: `ws://<device-ip>/ws` — pushes state changes (volume, track, radio state) in real time.
 
-In **Layout editor → Wallpaper**, use **Online gallery** to browse wallpapers matching the active display resolution. **Preview** opens the source image, while **Install** downloads it through the browser, converts it to the panel-sized RGB565 `.bin` format and uploads it to `/wallpapers` on the SD card. Before upload you can change the destination filename; `.bin` is added automatically. An internet connection is required only while browsing and installing from the gallery.
+In **Layout editor → Wallpaper**, use **Online gallery** to browse wallpapers matching the active display resolution. **Preview** opens the source image, while **Install** downloads it through the browser, converts it to the panel-sized RGB565 `.bin` format and uploads it to `/wallpapers/<width>x<height>` on the SD card (wallpapers are filed by panel resolution, like layout presets). Before upload you can change the destination filename; `.bin` is added automatically. An internet connection is required only while browsing and installing from the gallery.
 
 The running firmware version (from `git describe`) is shown in the web UI header, on the Wi-Fi setup page, and — together with the device IP — on the **boot splash** for a few seconds in STA mode (toggleable in Settings → Display). A quick way to confirm what was flashed and how to reach the device.
 

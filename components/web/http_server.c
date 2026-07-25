@@ -3315,7 +3315,8 @@ static esp_err_t api_wallpaper_image_handler(httpd_req_t *req)
 }
 
 // POST /api/wallpaper/save — persist the fetched image as an LVGL .bin under
-// /sdcard/wallpapers/saved/, without touching the background settings.
+// /sdcard/wallpapers/<width>x<height>/saved/, without touching the background
+// settings.
 static esp_err_t api_wallpaper_save_handler(httpd_req_t *req)
 {
     char path[96];

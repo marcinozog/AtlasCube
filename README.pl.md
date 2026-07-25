@@ -455,7 +455,7 @@ Dostępne pod IP urządzenia lub `<nazwa>.local` (tryb STA), albo pod `192.168.4
 
 Endpoint WebSocket: `ws://<ip-urzadzenia>/ws` — wypycha zmiany stanu (głośność, utwór, stan radia) na żywo.
 
-W sekcji **Edytor layoutu → Tapeta** przycisk **Online gallery** otwiera tapety pasujące do aktywnej rozdzielczości ekranu. **Preview** pokazuje obraz źródłowy, a **Install** pobiera go przez przeglądarkę, konwertuje do panelowego formatu RGB565 `.bin` i zapisuje w katalogu `/wallpapers` na karcie SD. Przed wysłaniem można zmienić nazwę pliku; rozszerzenie `.bin` jest dodawane automatycznie. Internet jest potrzebny tylko podczas przeglądania i instalowania tapet z galerii.
+W sekcji **Edytor layoutu → Tapeta** przycisk **Online gallery** otwiera tapety pasujące do aktywnej rozdzielczości ekranu. **Preview** pokazuje obraz źródłowy, a **Install** pobiera go przez przeglądarkę, konwertuje do panelowego formatu RGB565 `.bin` i zapisuje w katalogu `/wallpapers/<szerokość>x<wysokość>` na karcie SD (tapety są układane wg rozdzielczości panelu, tak jak presety layoutu). Przed wysłaniem można zmienić nazwę pliku; rozszerzenie `.bin` jest dodawane automatycznie. Internet jest potrzebny tylko podczas przeglądania i instalowania tapet z galerii.
 
 Wersja działającego firmware (z `git describe`) jest pokazywana w nagłówku web UI, na stronie konfiguracji Wi-Fi oraz — razem z adresem IP urządzenia — na **ekranie powitalnym (splash)** przez kilka sekund w trybie STA (przełączane w Ustawienia → Display). Szybki sposób na potwierdzenie, co się wgrało i jak dostać się do urządzenia.
 

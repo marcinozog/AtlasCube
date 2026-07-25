@@ -32,8 +32,9 @@ const lv_image_dsc_t *net_wallpaper_image(void);
 void net_wallpaper_commit(void);
 
 // Write the currently fetched wallpaper as an LVGL RGB565 .bin under
-// /sdcard/wallpapers/saved/ (timestamped name), ready for the SD-wallpaper
-// picker. Synchronous (~1 s of SD I/O) — call from the httpd task, not LVGL.
+// /sdcard/wallpapers/<width>x<height>/saved/ (timestamped name), ready for the
+// SD-wallpaper picker. Synchronous (~1 s of SD I/O) — call from the httpd task,
+// not LVGL.
 // Returns true and fills out_path; on failure sets *err to a short reason
 // ("no SD card", "no wallpaper fetched", "fetch in progress", …).
 bool net_wallpaper_save_to_sd(char *out_path, size_t out_cap, const char **err);

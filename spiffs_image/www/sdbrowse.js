@@ -11,8 +11,10 @@
 //
 // options:
 //   start        initial mount-relative directory (default '/').
-//   fallback     directory to retry once if `start` fails to load — fresh
-//                cards may lack /wallpapers etc. (default: no fallback).
+//   fallback     directory (or ordered list of directories) to retry if
+//                `start` fails to load — fresh cards may lack
+//                /wallpapers/<w>x<h> etc. Each entry is tried once, in order
+//                (default: no fallback).
 //   filter       (entry) => boolean: which *files* to show. `entry` is a
 //                {name, dir, …} record from /api/sd/list. Folders always show.
 //   filterExt    convenience: only files whose name ends with this suffix,
@@ -55,7 +57,11 @@
                 : () => true);
 
         let current = opts.start || '/';
-        let usedFallback = false;
+        // One directory or an ordered list; each is consumed at most once, so a
+        // chain like ['/wallpapers', '/'] narrows down to a folder that exists.
+        const fallbacks = Array.isArray(opts.fallback) ? opts.fallback.slice()
+                        : opts.fallback ? [opts.fallback] : [];
+        let fallbackAt = 0;
         const refresh = () => load(current, false);
 
         // Create a folder. The prompt is prefilled with the current path so you
@@ -112,9 +118,9 @@
                 if (!r.ok) throw new Error('HTTP ' + r.status);
                 data = await r.json();
             } catch (err) {
-                if (allowFallback && opts.fallback && dir !== opts.fallback && !usedFallback) {
-                    usedFallback = true;
-                    return load(opts.fallback, false);
+                while (allowFallback && fallbackAt < fallbacks.length) {
+                    const next = fallbacks[fallbackAt++];
+                    if (next && next !== dir) return load(next, true);
                 }
                 container.innerHTML = '';
                 const msg = document.createElement('div');

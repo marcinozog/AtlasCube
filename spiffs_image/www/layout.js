@@ -750,8 +750,9 @@ function buildWallpaperPicker() {
         return b;
     };
     // Hidden file input backing the Upload button: converts a browser image to
-    // the panel-sized .bin, stores it next to the current wallpaper on SD and
-    // assigns it to the active screen — without touching the global wallpaper.
+    // the panel-sized .bin, stores it on SD next to the current wallpaper (or in
+    // this panel's wallpaper folder when the screen has none yet) and assigns it
+    // to the active screen — without touching the global wallpaper.
     const uploadInput = document.createElement('input');
     uploadInput.type = 'file';
     uploadInput.accept = 'image/*';
@@ -1115,12 +1116,17 @@ async function checkOrphanPresets() {
                 problems.push({ name: e.rel, rel: e.rel, detail: invalid });
                 continue;
             }
-            // If no full wallpaper paths were stored, use the two standard
-            // wallpaper locations for <stem>.bin.
+            // If no full wallpaper paths were stored, look for <stem>.bin in the
+            // standard wallpaper locations — this panel's resolution folder and
+            // its "saved" subfolder (where the device drops fetched internet
+            // wallpapers), plus the flat pre-resolution layout.
             if (!refs.length) {
                 const stem = e.name.replace(/\.json$/i, '');
-                refs = [SD_MOUNT + '/wallpapers/' + stem + '.bin',
-                        SD_MOUNT + '/wallpapers/saved/' + stem + '.bin'];
+                refs = ['/wallpapers/' + e.resolution,
+                        '/wallpapers/' + e.resolution + '/saved',
+                        '/wallpapers',
+                        '/wallpapers/saved',
+                       ].map(dir => SD_MOUNT + dir + '/' + stem + '.bin');
             }
             const found = await Promise.all(
                 refs.map(p => sdFileExists(p.slice(SD_MOUNT.length), cache)));
@@ -1200,8 +1206,21 @@ async function deleteOrphanPreset(o) {
     }
 }
 
+// A wallpaper .bin is scaled to the panel, so — exactly like a layout preset —
+// it only makes sense on one resolution and is filed under
+// /wallpapers/<width>x<height>. Wallpapers left in the old flat /wallpapers by
+// earlier firmware keep working: screens store the full path they were assigned
+// and the browser falls back to the flat folder.
+const WALLPAPERS_DIR = '/wallpapers';
+
+function panelWallpaperDir() {
+    return WALLPAPERS_DIR + '/' + state.meta.screen_w + 'x' + state.meta.screen_h;
+}
+
+// Where the "Upload" button and the SD browser start: the folder of the
+// wallpaper this screen already uses, otherwise this panel's folder.
 function wallpaperDirectory() {
-    if (!currentWallpaperPath.startsWith('/sdcard/')) return '/wallpapers';
+    if (!currentWallpaperPath.startsWith('/sdcard/')) return panelWallpaperDir();
     const rel = currentWallpaperPath.slice('/sdcard'.length);
     return rel.replace(/\/[^/]+$/, '') || '/';
 }
@@ -1221,13 +1240,16 @@ async function toggleWallpaperBrowser() {
 function browseWallpaperDirectory(path) {
     const browser = document.getElementById('layout_wallpaper_browser');
     if (!browser) return;
-    // Fresh cards may not have a /wallpapers directory yet; fall back to root.
+    // A card may have neither the resolution folder nor /wallpapers yet; step
+    // down to whichever exists. Move is offered so wallpapers uploaded by an
+    // older firmware can be filed into the resolution folder from here.
     SdBrowse.open(browser, {
         start: path,
-        fallback: '/',
+        fallback: [WALLPAPERS_DIR, '/'],
         filterExt: '.bin',
         maxHeight: '190px',
         rowFontSize: '11px',
+        allowMove: true,
         emptyText: 'No .bin wallpapers in this folder.',
         // Flag the wallpaper currently applied to this screen with a check mark.
         fileLabel: (full, e) =>
@@ -1371,10 +1393,9 @@ async function uploadAsset() {
 
 // ── General tab: park a panel-sized wallpaper on SD ─────────────────────────
 // Like the per-screen uploader (uploadWallpaperTo) but WITHOUT the selectWallpaper
-// step — it scales the image to the panel resolution and stores it under
-// /wallpapers so it can be assigned per screen later, leaving every screen's
-// current background untouched.
-const GENERAL_WALLPAPER_DIR = '/wallpapers';
+// step — it scales the image to the panel resolution and stores it in this
+// panel's wallpaper folder so it can be assigned per screen later, leaving
+// every screen's current background untouched.
 
 function generalWallpaperFilePicked() {
     const input = document.getElementById('general_wp_file');
@@ -1395,7 +1416,7 @@ async function uploadGeneralWallpaper() {
         const saveAs = askWallpaperSaveAs(file.name);
         if (saveAs === null) { note('Upload cancelled.'); return; }
         const relPath = await window.LvBin.uploadImage(
-            file, GENERAL_WALLPAPER_DIR, w, h, note, saveAs);
+            file, panelWallpaperDir(), w, h, note, saveAs);
         input.value = '';
         generalWallpaperFilePicked();   // reset the "chosen file" label
         note('Saved to /sdcard' + relPath + ' (' + w + '×' + h +
@@ -1840,7 +1861,8 @@ async function installOnlineWallpaper(item, button) {
         const filename = String(item.filename || fallbackName).split(/[\\/]/).pop();
         const file = new File([blob], filename, { type: blob.type });
         const relPath = await window.LvBin.uploadImage(
-            file, '/wallpapers', state.meta.screen_w, state.meta.screen_h, note, saveAs);
+            file, panelWallpaperDir(), state.meta.screen_w, state.meta.screen_h,
+            note, saveAs);
         await selectWallpaper(relPath);
         setOnlineWallpaperGalleryOpen(false);
     } catch (err) {

@@ -465,7 +465,10 @@ typedef struct __attribute__((packed)) {
     uint16_t reserved;
 } sd_bin_header_t;
 
-#define SAVE_DIR "/sdcard/wallpapers/saved"
+// A saved wallpaper is panel-sized, so it is filed per resolution the same way
+// the web layout editor files its uploads and layout presets:
+// /sdcard/wallpapers/<width>x<height>/saved/.
+#define WALLPAPER_ROOT "/sdcard/wallpapers"
 
 bool net_wallpaper_save_to_sd(char *out_path, size_t out_cap, const char **err)
 {
@@ -490,18 +493,22 @@ bool net_wallpaper_save_to_sd(char *out_path, size_t out_cap, const char **err)
     xSemaphoreGive(s_buf_lock);
     if (!copy) { *err = "no PSRAM"; return false; }
 
-    mkdir("/sdcard/wallpapers", 0775);   // EEXIST is fine for both levels
-    mkdir(SAVE_DIR, 0775);
+    char res_dir[48], save_dir[64];
+    snprintf(res_dir, sizeof(res_dir), WALLPAPER_ROOT "/%dx%d", w, h);
+    snprintf(save_dir, sizeof(save_dir), "%s/saved", res_dir);
+    mkdir(WALLPAPER_ROOT, 0775);   // EEXIST is fine for every level
+    mkdir(res_dir, 0775);
+    mkdir(save_dir, 0775);
 
     time_t now = time(NULL);
     struct tm lt;
     localtime_r(&now, &lt);
     if (lt.tm_year + 1900 >= 2020) {
-        snprintf(out_path, out_cap, SAVE_DIR "/net_%04d%02d%02d_%02d%02d%02d.bin",
+        snprintf(out_path, out_cap, "%s/net_%04d%02d%02d_%02d%02d%02d.bin", save_dir,
                  lt.tm_year + 1900, lt.tm_mon + 1, lt.tm_mday,
                  lt.tm_hour, lt.tm_min, lt.tm_sec);
     } else {   // clock not NTP-synced yet — fall back to a boot-unique stamp
-        snprintf(out_path, out_cap, SAVE_DIR "/net_%08lx.bin",
+        snprintf(out_path, out_cap, "%s/net_%08lx.bin", save_dir,
                  (unsigned long)(esp_timer_get_time() / 1000));
     }
 

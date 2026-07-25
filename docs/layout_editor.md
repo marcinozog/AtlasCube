@@ -302,6 +302,23 @@ Typical use: the BT screen has no audio signal inside the ESP (external
 BT module), so a wallpaper designed around VU meters can be replaced or
 disabled there.
 
+Because a wallpaper `.bin` is scaled to the panel, uploads are filed by
+panel resolution just like layout presets:
+
+```
+/wallpapers/<width>x<height>/<name>.bin
+```
+
+This covers all three upload paths — the per-screen *Upload…* button (which
+otherwise stays in the folder of the wallpaper the screen already uses),
+*Upload wallpaper (no assign)* on the General tab and *Install* in the online
+gallery — plus the device-side *Save to SD*, which writes to
+`/wallpapers/<width>x<height>/saved/`. Wallpapers left in the old flat
+`/wallpapers` by earlier firmware keep working: screens store the full path
+they were assigned, and the SD browser falls back from the resolution folder
+to `/wallpapers` and then to the card root. Its *Move* button files old ones
+into the resolution folder without leaving the editor.
+
 In the editor, the wallpaper picker above the canvas edits the **active
 tab's** screen: *Choose from SD…* assigns an SD file, *Internet* shows
 the fetched wallpaper, *General* is the gradient/solid (or internet)
