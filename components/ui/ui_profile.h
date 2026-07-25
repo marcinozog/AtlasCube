@@ -477,7 +477,11 @@ typedef struct {
     int16_t          eq_band_area_y;   // header height: where the bands start (curve auto-box)
     int16_t          eq_slider_h;      // vertical slider height (web-editable)
     int16_t          eq_slider_w;      // slider width/thickness (web-editable)
-    int16_t          eq_band_gap;      // free space between two neighbouring bands (web-editable)
+    int16_t          eq_group_w;       // group SPAN: first band's left edge → last band's right
+                                       // edge (web-editable). Bands are spread evenly across it,
+                                       // so both outer edges land on an exact pixel and the gaps
+                                       // may differ by 1 px. A uniform integer gap instead would
+                                       // quantise the span to 9-px steps — see screen_equalizer.
     int16_t          eq_hint_x;        // legend horizontal offset from bottom-centre (web-editable)
     int16_t          eq_hint_y;        // from bottom (negative)
     bool             eq_hint_hide;     // hide the bottom legend/hint line
@@ -567,15 +571,11 @@ void  ui_profile_patch_eq(const void *obj);
 void ui_profile_eq_curve_box(const ui_profile_t *p,
                              int16_t *x, int16_t *y, int16_t *w, int16_t *h);
 
-// One band's element width and the free space to its neighbour (px). The band
-// PITCH is elem + gap, so `gap` is what the eye reads as the space between two
-// bands. With knob artwork the knob is the widest thing in a band; an artwork
-// width of 0 means "fill the whole band column", which folds the gap into elem.
-void ui_profile_eq_band_metrics(const ui_profile_t *p, int16_t *elem, int16_t *gap);
-
-// Effective EQ sliders+labels group box: x/y are the stored anchor, but w/h are
-// DERIVED — w from the band metrics above, h from eq_slider_h plus the frequency
-// label strip. Shared by the web dump and the screen so both agree.
+// Effective EQ sliders+labels group box: x/y/w are the stored anchor and span, h
+// is DERIVED (eq_slider_h plus the frequency label strip). Shared by the web dump
+// and the screen so both agree. The knob artwork never enters this: it is only
+// drawn, centred on its band, and may overhang — coupling the two would put a
+// floor of 10 × knob width under the group and make it impossible to shrink.
 void ui_profile_eq_group_box(const ui_profile_t *p,
                              int16_t *x, int16_t *y, int16_t *w, int16_t *h);
 

@@ -57,11 +57,21 @@ static int                s_cx, s_cy, s_cw, s_ch;   // curve box (px, on the scr
 
 // Effective slider-group geometry, derived from the group box (ui_profile) once
 // per build and reused by the knob/curve helpers so they all agree.
-static int s_band_elem;      // one band's element width (px) — slider or knob art
-static int s_band_gap;       // free space between two bands (px)
-static int s_band_pitch;     // elem + gap → distance between band left edges
+static int s_band_travel;    // span minus one slider = room the 9 steps share (px)
+static int s_band_step;      // average distance between two bands (px)
 static int s_slider_h_eff;   // slider height (px)
 static int s_slider_w_eff;   // slider thickness (px)
+
+// Left edge of band `idx` inside the group. The bands are spread across the span
+// with per-band rounding instead of one uniform integer step: band 0 sits exactly
+// on the left edge and band 9 exactly on the right one, at the price of individual
+// gaps differing by at most 1 px. A uniform step would instead quantise the span
+// to 9-px increments, which made the rightmost slider impossible to place.
+static int band_x(int idx)
+{
+    const int steps = EQ_BANDS - 1;
+    return (idx * s_band_travel + steps / 2) / steps;
+}
 
 /* ── helpers ────────────────────────────────────────────────────────────── */
 
@@ -117,11 +127,11 @@ static void update_eq_curve(void)
 static void position_eq_knob(int idx)
 {
     if (!s_knob_imgs[idx]) return;
-    int col_x    = idx * s_band_pitch;
+    int col_x    = band_x(idx);
     int travel_y = s_slider_h_eff - s_kh; if (travel_y < 0) travel_y = 0;
     int span     = EQ_GAIN_MAX - EQ_GAIN_MIN;                 // 19
     int ky       = travel_y * (EQ_GAIN_MAX - s_gains[idx]) / span;   // gain=max → top
-    int kx       = col_x + (s_band_elem - s_kw) / 2;
+    int kx       = col_x + (s_slider_w_eff - s_kw) / 2;   // centred on its slider
     lv_obj_set_pos(s_knob_imgs[idx], kx, ky);
 }
 
@@ -149,9 +159,12 @@ static void band_cont_ext_draw_cb(lv_event_t *e)
         int32_t pb = lv_obj_get_style_pad_bottom(s_sliders[0], LV_PART_KNOB);
         pad = LV_MAX(pt, pb);
     }
-    /* The frequency labels are pitch-wide and centred on their band, so the outer
-       two reach half a gap past the container — reserve that room as well. */
-    int32_t room = LV_MAX(s_slider_w_eff / 2 + pad, s_band_gap / 2);
+    /* Two more things reach past the container: the frequency labels (one step
+       wide, centred on their band, so the outer two stick out by half a gap) and
+       knob artwork wider than the slider it sits on. */
+    int32_t room = LV_MAX(s_slider_w_eff / 2 + pad,
+                          (s_band_step - s_slider_w_eff + 1) / 2);
+    if (s_knob_imgs[0]) room = LV_MAX(room, (s_kw - s_slider_w_eff + 1) / 2);
     lv_event_set_ext_draw_size(e, room + 2);
 }
 
@@ -196,9 +209,10 @@ static void build_eq_knobs(void)
 
     const int iw = s_knob_dsc->header.w, ih = s_knob_dsc->header.h;
     // User-defined cap width (eq_knob_w); 0 falls back to the whole band column
-    // (the bare track is only a few px → nearly invisible). Height follows the
-    // image aspect, capped to the slider length so it can travel.
-    s_kw = (p->eq_knob_w > 0) ? p->eq_knob_w : s_band_elem;
+    // (the bare track is only a few px → nearly invisible). Wider than the band
+    // pitch is allowed — the knobs then overlap, which is the user's call. Height
+    // follows the image aspect, capped to the slider length so it can travel.
+    s_kw = (p->eq_knob_w > 0) ? p->eq_knob_w : s_band_step;
     s_kh = (iw > 0) ? ih * s_kw / iw : s_kw;
     if (s_kh > s_slider_h_eff) {                  // very tall art — cap, keep aspect
         s_kh = s_slider_h_eff;
@@ -263,22 +277,18 @@ static void eq_create(lv_obj_t *parent)
         lv_obj_set_style_line_rounded(s_curve, true, LV_PART_MAIN);
     }
 
-    /* Group anchor from ui_profile; its size follows from the band metrics, so
-       the box always ends exactly where the tenth band ends — no leftover strip
-       that would make the bands look off-centre inside their own group. */
+    /* Group anchor + span from ui_profile: the box's left/right edges ARE the outer
+       sliders' edges, so aligning the group with a wallpaper is exact on both
+       sides. band_x() spreads the ten bands across the span. */
     int16_t gx, gy, gw, gh;
     ui_profile_eq_group_box(p, &gx, &gy, &gw, &gh);
-    int16_t elem, gap;
-    ui_profile_eq_band_metrics(p, &elem, &gap);
     int freq_h    = lv_font_get_line_height(p->eq_freq_font);
     int freq_area = p->eq_freq_hide ? 0 : (freq_h + 6);
-    s_band_elem    = elem;
-    s_band_gap     = gap;
-    s_band_pitch   = elem + gap;
+    s_slider_w_eff = p->eq_slider_w > 1 ? p->eq_slider_w : 1;
+    s_band_travel  = gw - s_slider_w_eff;  if (s_band_travel < 0) s_band_travel = 0;
+    s_band_step    = (s_band_travel + (EQ_BANDS - 1) / 2) / (EQ_BANDS - 1);
+    if (s_band_step < 1) s_band_step = 1;
     s_slider_h_eff = gh - freq_area;       if (s_slider_h_eff < 1) s_slider_h_eff = 1;
-    s_slider_w_eff = p->eq_slider_w;
-    if (s_slider_w_eff > s_band_elem) s_slider_w_eff = s_band_elem;
-    if (s_slider_w_eff < 1) s_slider_w_eff = 1;
 
     s_band_cont = lv_obj_create(parent);
     lv_obj_set_size(s_band_cont, gw, gh);
@@ -295,12 +305,12 @@ static void eq_create(lv_obj_t *parent)
 
     /* suwaki + etykiety frequency */
     for (int i = 0; i < EQ_BANDS; i++) {
-        int col_x = i * s_band_pitch;
+        int col_x = band_x(i);
 
         lv_obj_t *sl = lv_slider_create(s_band_cont);
         /* vertical orientation — in LVGL it follows from dimensions (h > w) */
         lv_obj_set_size(sl, s_slider_w_eff, s_slider_h_eff);
-        lv_obj_set_pos(sl, col_x + (s_band_elem - s_slider_w_eff) / 2, 0);
+        lv_obj_set_pos(sl, col_x, 0);          /* the slider IS the band */
         lv_slider_set_range(sl, EQ_GAIN_MIN, EQ_GAIN_MAX);
         lv_slider_set_value(sl, s_gains[i], LV_ANIM_OFF);
         lv_obj_set_style_bg_color(sl, lv_color_hex(th->text_muted), LV_PART_MAIN);
@@ -336,11 +346,12 @@ static void eq_create(lv_obj_t *parent)
             lv_label_set_text(lbl, FREQ_LABELS[i]);
             lv_obj_set_style_text_font(lbl, p->eq_freq_font, LV_PART_MAIN);
             lv_obj_set_style_text_color(lbl, lv_color_hex(th->text_muted), LV_PART_MAIN);
-            /* Pitch-wide and centred on the band, so a narrow band (thin track,
-               wide gap) still gets the whole column to print "125" in. */
-            lv_obj_set_width(lbl, s_band_pitch);
+            /* One step wide and centred on its slider, so a thin track with wide
+               gaps still gets the whole column to print "125" in. */
+            lv_obj_set_width(lbl, s_band_step);
             lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-            lv_obj_set_pos(lbl, col_x - s_band_gap / 2, s_slider_h_eff + 2);
+            lv_obj_set_pos(lbl, col_x - (s_band_step - s_slider_w_eff) / 2,
+                           s_slider_h_eff + 2);
             s_freq_labels[i] = lbl;
         }
     }
@@ -349,8 +360,10 @@ static void eq_create(lv_obj_t *parent)
        (the ext_draw cb reads the knob padding off s_sliders[0]) */
     lv_obj_refresh_ext_draw_size(s_band_cont);
 
-    /* optional shared knob artwork overlaid on the bands */
+    /* optional shared knob artwork overlaid on the bands, then one more ext_draw
+       pass — artwork wider than its slider needs that room to escape clipping */
     build_eq_knobs();
+    lv_obj_refresh_ext_draw_size(s_band_cont);
 
     /* legend/hint — optional, positionable via (eq_hint_x from centre, eq_hint_y
        from bottom) */
