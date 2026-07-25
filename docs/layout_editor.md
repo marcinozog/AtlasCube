@@ -309,10 +309,20 @@ panel resolution just like layout presets:
 /wallpapers/<width>x<height>/<name>.bin
 ```
 
-This covers all three upload paths — the per-screen *Upload…* button (which
-otherwise stays in the folder of the wallpaper the screen already uses),
-*Upload wallpaper (no assign)* on the General tab and *Install* in the online
-gallery — plus the device-side *Save to SD*, which writes to
+Screen-bound uploads go one level deeper, into the category subfolder the
+online gallery uses for that screen — `home`, `radio-sd-player` (Radio and SD
+Player share it), `wireless` or `equalizer`:
+
+```
+/wallpapers/<width>x<height>/<category>/<name>.bin
+```
+
+That is where *Install* in the online gallery saves, and where the per-screen
+*Upload…* button and the SD browser start when the screen has no wallpaper yet
+(otherwise they stay in the folder of the wallpaper it already uses).
+*Upload wallpaper (no assign)* on the General tab is not tied to a screen and
+stays in the plain resolution folder, as does the device-side *Save to SD*,
+which writes to
 `/wallpapers/<width>x<height>/internet/`. Wallpapers left in the old flat
 `/wallpapers` by earlier firmware keep working: screens store the full path
 they were assigned, and the SD browser falls back from the resolution folder

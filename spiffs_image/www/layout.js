@@ -1213,14 +1213,35 @@ async function deleteOrphanPreset(o) {
 // and the browser falls back to the flat folder.
 const WALLPAPERS_DIR = '/wallpapers';
 
+// Screen → online-gallery category. The same slugs name both the catalog
+// category on atlascube.net and the SD subfolder a wallpaper is filed under, so
+// a card keeps the gallery's grouping. Radio and SD Player share one category.
+const SECTION_WALLPAPER_CATEGORY = {
+    clock: 'home',
+    bt:    'wireless',
+    radio: 'radio-sd-player',
+    sd:    'radio-sd-player',
+    eq:    'equalizer',
+};
+
+function sectionWallpaperCategory() {
+    return SECTION_WALLPAPER_CATEGORY[state.active] || 'radio-sd-player';
+}
+
 function panelWallpaperDir() {
     return WALLPAPERS_DIR + '/' + state.meta.screen_w + 'x' + state.meta.screen_h;
 }
 
+// Per-screen wallpaper folder: this panel's resolution plus the category
+// subfolder, e.g. /wallpapers/320x240/radio-sd-player.
+function sectionWallpaperDir() {
+    return panelWallpaperDir() + '/' + sectionWallpaperCategory();
+}
+
 // Where the "Upload" button and the SD browser start: the folder of the
-// wallpaper this screen already uses, otherwise this panel's folder.
+// wallpaper this screen already uses, otherwise this screen's category folder.
 function wallpaperDirectory() {
-    if (!currentWallpaperPath.startsWith('/sdcard/')) return panelWallpaperDir();
+    if (!currentWallpaperPath.startsWith('/sdcard/')) return sectionWallpaperDir();
     const rel = currentWallpaperPath.slice('/sdcard'.length);
     return rel.replace(/\/[^/]+$/, '') || '/';
 }
@@ -1240,12 +1261,13 @@ async function toggleWallpaperBrowser() {
 function browseWallpaperDirectory(path) {
     const browser = document.getElementById('layout_wallpaper_browser');
     if (!browser) return;
-    // A card may have neither the resolution folder nor /wallpapers yet; step
-    // down to whichever exists. Move is offered so wallpapers uploaded by an
-    // older firmware can be filed into the resolution folder from here.
+    // A card may have neither the category folder, the resolution folder nor
+    // /wallpapers yet; step down to whichever exists. Move is offered so
+    // wallpapers uploaded by an older firmware can be filed into the
+    // resolution folder from here.
     SdBrowse.open(browser, {
         start: path,
-        fallback: [WALLPAPERS_DIR, '/'],
+        fallback: [panelWallpaperDir(), WALLPAPERS_DIR, '/'],
         filterExt: '.bin',
         maxHeight: '190px',
         rowFontSize: '11px',
@@ -1739,9 +1761,7 @@ async function loadOnlineWallpaperGallery() {
     const w = Number(state.meta.screen_w);
     const h = Number(state.meta.screen_h);
     const resolution = `${w}x${h}`;
-    const category = state.active === 'clock' ? 'home' :
-        state.active === 'bt' ? 'wireless' :
-        state.active === 'eq' ? 'equalizer' : 'radio-sd-player';
+    const category = sectionWallpaperCategory();
     onlineWallpaperMessage(panel, `Loading ${w} × ${h} wallpapers...`);
 
     try {
@@ -1861,7 +1881,7 @@ async function installOnlineWallpaper(item, button) {
         const filename = String(item.filename || fallbackName).split(/[\\/]/).pop();
         const file = new File([blob], filename, { type: blob.type });
         const relPath = await window.LvBin.uploadImage(
-            file, panelWallpaperDir(), state.meta.screen_w, state.meta.screen_h,
+            file, sectionWallpaperDir(), state.meta.screen_w, state.meta.screen_h,
             note, saveAs);
         await selectWallpaper(relPath);
         setOnlineWallpaperGalleryOpen(false);
