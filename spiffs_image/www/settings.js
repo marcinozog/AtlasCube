@@ -6,6 +6,7 @@
 let currentSettings = null;
 let isApMode        = false;
 let brightnessTimeout;
+let g_fwVersion     = '';   // from /api/state — stamped into settings backups
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Tabs
@@ -735,6 +736,7 @@ async function loadSettings() {
         if (stateRes.ok) {
             const state = await stateRes.json();
             isApMode = state.wifi_mode === 'ap';
+            g_fwVersion = state.version || '';
             showApBanner(isApMode);
             const verEl = document.getElementById('ota_version');
             if (verEl) {
@@ -1536,35 +1538,160 @@ function showStatusEl(id, msg, kind) {
 }
 
 // ── Settings backup / restore ────────────────────────────────────────────────
-// Bundle every file on the config partition into one JSON. The config files are
-// listed via /api/files?root=config and read through the static handler (it falls
-// back to the config root), then written back via PUT /api/files/<name>?root=config.
+// ONE bundle format, shared with the built-in setup page (components/web/setup.html):
+// every .json file on the config partition plus the NVS pin map, in one file that
+// imports on either page. setup.html is embedded in the firmware (it must work with
+// a wiped www partition), so it can't load this file — the two implementations are
+// deliberate duplicates. CHANGE BOTH, or a backup stops round-tripping.
+//
+//   { format:  'atlascube-settings',
+//     version: 2,
+//     created: '<ISO>',
+//     meta:    { app, driver, touch, firmware },
+//     files:   { '<name>.json': '<raw text>', … },   // config partition
+//     pins:    { '<key>': <gpio>, … } | null }       // NVS pin map
+//
+// Config files are listed via /api/files?root=config and read through the static
+// handler (it falls back to the config root), then written back via
+// PUT /api/files/<name>?root=config. The pin map comes from GET/POST /api/pins.
 // Layout-independent: unlike a raw partition dump it survives partition resizes,
 // which is exactly the v0.38.0 (128 KB→1 MB) case that erases user data on flash.
-const CFG_BACKUP_MAGIC = 'atlascube-settings';
+const CFG_BACKUP_MAGIC   = 'atlascube-settings';
+const CFG_BACKUP_VERSION = 2;
+
+// GPIO sanity — the hard rules from the /setup pin grid, kept in step with
+// pinValidity() there: 22–25 don't exist on the S3, 26–37 are flash/octal-PSRAM,
+// and no two signals may share a pin. Returns human-readable problems, [] = clean.
+function cfgPinProblems(pins) {
+    const bad = [], owners = {};
+    Object.keys(pins).forEach(k => {
+        const v = parseInt(pins[k], 10);
+        if (isNaN(v)) return;
+        if (v < -1 || v > 48 || (v >= 22 && v <= 25)) bad.push(k + '=' + v + ' (not a valid S3 GPIO)');
+        else if (v >= 26 && v <= 37)                  bad.push(k + '=' + v + ' (flash/octal-PSRAM)');
+        if (v >= 0) (owners[v] = owners[v] || []).push(k);
+    });
+    Object.keys(owners).forEach(n => {
+        if (owners[n].length > 1) bad.push('GPIO ' + n + ' shared by ' + owners[n].join(' + '));
+    });
+    return bad;
+}
+
+// Read the whole device config into a v2 bundle. report(msg) gets progress lines.
+async function cfgBuildBundle(report) {
+    report('Reading config files…');
+    const all = await (await fetch('/api/files?root=config', { cache: 'no-store' })).json();
+    // Only .json config files belong in a backup — skip runtime leftovers
+    // like playlist.csv or update.log that live on the same partition.
+    const list = Array.isArray(all) ? all.filter(f => /\.json$/i.test(f.name)) : [];
+    const files = {};
+    for (let i = 0; i < list.length; i++) {
+        const name = list[i].name;
+        report('Reading ' + name + ' (' + (i + 1) + '/' + list.length + ')…');
+        const r = await fetch('/' + encodeURIComponent(name), { cache: 'no-store' });
+        if (!r.ok) throw new Error('read ' + name + ' → HTTP ' + r.status);
+        files[name] = await r.text();
+    }
+
+    // Pin map + hardware identity. Best-effort: firmware without /api/pins still
+    // yields a usable files-only bundle.
+    let pins = null, driver = '', touch = '';
+    try {
+        report('Reading pin map…');
+        const pr = await fetch('/api/pins', { cache: 'no-store' });
+        if (pr.ok) {
+            const pd = await pr.json();
+            if (pd && typeof pd.pins === 'object') {
+                pins   = pd.pins;
+                driver = pd.driver || '';
+                touch  = pd.touch  || '';
+            }
+        }
+    } catch (_) { /* bundle the files without the pin map */ }
+
+    if (!list.length && !pins) throw new Error('nothing to export');
+
+    return {
+        format:  CFG_BACKUP_MAGIC,
+        version: CFG_BACKUP_VERSION,
+        created: new Date().toISOString(),
+        meta:    { app: 'AtlasCube', driver: driver, touch: touch, firmware: g_fwVersion },
+        files:   files,
+        pins:    pins
+    };
+}
+
+// Write a v2 bundle back to the device. Returns { fileOk, fileFail, pins } so the
+// caller can word the "restart" vs "power-cycle" advice. Throws on a bad bundle.
+async function cfgApplyBundle(bundle, report) {
+    if (!bundle || typeof bundle !== 'object' || bundle.format !== CFG_BACKUP_MAGIC) {
+        throw new Error('not an AtlasCube settings backup');
+    }
+    if (bundle.version !== CFG_BACKUP_VERSION) {
+        throw new Error('backup version ' + bundle.version + ' — this firmware expects ' +
+                        CFG_BACKUP_VERSION);
+    }
+
+    // Same .json-only rule as the export: never restore playlist.csv or update.log.
+    const names = Object.keys(bundle.files || {}).filter(n => /\.json$/i.test(n));
+    const pins  = (bundle.pins && typeof bundle.pins === 'object') ? bundle.pins : null;
+    if (!names.length && !pins) throw new Error('nothing to apply in the file');
+
+    // A pin map made for a different display driver is the one mismatch that can
+    // leave the device with a blank screen — ask before applying it.
+    if (pins) {
+        let driver = '';
+        try {
+            const pr = await fetch('/api/pins', { cache: 'no-store' });
+            if (pr.ok) driver = (await pr.json()).driver || '';
+        } catch (_) { /* can't compare — go ahead */ }
+        const from = (bundle.meta && bundle.meta.driver) || '';
+        if (from && driver && from !== driver &&
+            !confirm('This backup was made for driver "' + from + '", but this firmware ' +
+                     'uses "' + driver + '".\n\nImport anyway?')) {
+            throw new Error('cancelled');
+        }
+        // Hard-validate before touching the device: a bad map bricks the display
+        // until the next power-cycle + /setup fix.
+        const bad = cfgPinProblems(pins);
+        if (bad.length) throw new Error('fix the pin map in the file first — ' + bad.join('; '));
+    }
+
+    let fileOk = 0, fileFail = 0;
+    for (let i = 0; i < names.length; i++) {
+        const name = names[i];
+        report('Restoring ' + name + ' (' + (i + 1) + '/' + names.length + ')…');
+        try {
+            const r = await fetch('/api/files/' + encodeURIComponent(name) + '?root=config',
+                                  { method: 'PUT', body: bundle.files[name] });
+            if (r.ok) fileOk++; else fileFail++;
+        } catch (_) { fileFail++; }
+    }
+
+    let pinsApplied = false;
+    if (pins) {
+        report('Restoring pin map…');
+        const body = {};
+        Object.keys(pins).forEach(k => {
+            const v = parseInt(pins[k], 10);
+            if (!isNaN(v)) body[k] = v;
+        });
+        const r = await fetch('/api/pins', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(body)
+        });
+        if (!r.ok) throw new Error('pin map save failed (HTTP ' + r.status + ')');
+        pinsApplied = true;
+    }
+    return { fileOk: fileOk, fileFail: fileFail, pins: pinsApplied };
+}
 
 async function exportSettings() {
     const btn = document.getElementById('cfg_export_btn');
     btn.disabled = true;
-    showStatusEl('cfg_export_status', 'Reading config files…', '');
     try {
-        const all = await (await fetch('/api/files?root=config', { cache: 'no-store' })).json();
-        // Only .json config files belong in a backup — skip runtime leftovers
-        // like playlist.csv or update.log that live on the same partition.
-        const list = Array.isArray(all) ? all.filter(f => /\.json$/i.test(f.name)) : [];
-        if (!list.length) {
-            showStatusEl('cfg_export_status', 'Nothing to export.', 'error');
-            return;
-        }
-        const files = {};
-        for (let i = 0; i < list.length; i++) {
-            const name = list[i].name;
-            showStatusEl('cfg_export_status', 'Reading ' + name + ' (' + (i + 1) + '/' + list.length + ')…', '');
-            const r = await fetch('/' + encodeURIComponent(name), { cache: 'no-store' });
-            if (!r.ok) throw new Error('read ' + name + ' → HTTP ' + r.status);
-            files[name] = await r.text();
-        }
-        const bundle = { format: CFG_BACKUP_MAGIC, version: 1, created: new Date().toISOString(), files };
+        const bundle = await cfgBuildBundle(m => showStatusEl('cfg_export_status', m, ''));
         const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
         const stamp = bundle.created.slice(0, 19).replace(/[:T]/g, '-');
         const a = document.createElement('a');
@@ -1574,7 +1701,11 @@ async function exportSettings() {
         a.click();
         a.remove();
         URL.revokeObjectURL(a.href);
-        showStatusEl('cfg_export_status', '✅ Exported ' + list.length + ' files.', 'ok');
+        const n = Object.keys(bundle.files).length;
+        showStatusEl('cfg_export_status',
+                     '✅ Exported ' + n + ' file' + (n === 1 ? '' : 's') +
+                     (bundle.pins ? ' + pin map.' : ' — pin map unavailable, files only.'),
+                     bundle.pins ? 'ok' : 'error');
     } catch (e) {
         showStatusEl('cfg_export_status', '❌ Export failed: ' + e.message, 'error');
     } finally {
@@ -1595,30 +1726,24 @@ async function importSettings() {
         showStatusEl('cfg_import_status', '❌ Not valid JSON', 'error');
         return;
     }
-    if (!bundle || bundle.format !== CFG_BACKUP_MAGIC || !bundle.files || typeof bundle.files !== 'object') {
-        showStatusEl('cfg_import_status', '❌ Not an AtlasCube settings backup', 'error');
-        return;
-    }
-    // Same .json-only rule as export: old backups may carry playlist.csv or
-    // update.log — don't restore those onto the config partition.
-    const names = Object.keys(bundle.files).filter(n => /\.json$/i.test(n));
-    if (!names.length) { showStatusEl('cfg_import_status', '❌ Backup is empty', 'error'); return; }
 
     btn.disabled = true;
-    let ok = 0, fail = 0;
-    for (let i = 0; i < names.length; i++) {
-        const name = names[i];
-        showStatusEl('cfg_import_status', 'Restoring ' + name + ' (' + (i + 1) + '/' + names.length + ')…', '');
-        try {
-            const r = await fetch('/api/files/' + encodeURIComponent(name) + '?root=config',
-                                  { method: 'PUT', body: bundle.files[name] });
-            if (r.ok) ok++; else fail++;
-        } catch (_) { fail++; }
+    try {
+        const res = await cfgApplyBundle(bundle, m => showStatusEl('cfg_import_status', m, ''));
+        showStatusEl('cfg_import_status',
+                     'Done: ' + res.fileOk + ' restored' +
+                     (res.fileFail ? ', ' + res.fileFail + ' failed' : '') +
+                     (res.pins ? ' + pin map' : '') + '. ' +
+                     // A soft restart keeps GPIO pads latched, so a restored pin
+                     // map only takes effect after a full power cycle.
+                     (res.pins ? 'Unplug and replug the device (full power cycle) to apply.'
+                               : 'Restart the device to apply.'),
+                     res.fileFail > 0 ? 'error' : 'ok');
+    } catch (e) {
+        showStatusEl('cfg_import_status', '❌ Import failed: ' + e.message, 'error');
+    } finally {
+        btn.disabled = false;
     }
-    btn.disabled = false;
-    showStatusEl('cfg_import_status',
-                 'Done: ' + ok + ' restored' + (fail ? ', ' + fail + ' failed' : '') +
-                 '. Restart the device to apply.', fail > 0 ? 'error' : 'ok');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

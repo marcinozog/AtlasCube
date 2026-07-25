@@ -870,17 +870,21 @@
             <label class="field-label">⚙️ Settings &amp; stations backup</label>
             <div class="field-hint">
                 Download every user file on the <code>config</code> partition (settings,
-                theme, events, MQTT, layout and the station list) as a single
-                <code>.json</code> — a snapshot to keep before a full USB flash, which
-                erases them. Wi-Fi/MQTT passwords live in a separate secure store and are
-                <strong>not</strong> included. Restore reuploads each file, then restart.
+                theme, events, MQTT, layout and the station list) <strong>plus the hardware
+                pin map</strong> as a single <code>.json</code> — a snapshot to keep before a
+                full USB flash, which erases them. Wi-Fi/MQTT passwords live in a separate
+                secure store and are <strong>not</strong> included. Same file format as the
+                built-in <a href="/setup">setup page</a> — a backup made there imports here
+                and the other way round.
             </div>
             <button id="cfg_export_btn" onclick="exportSettings()">⬇️ Export settings</button>
             <div id="cfg_export_status" class="save-status"></div>
 
             <div class="ota-divider"></div>
             <div class="field-hint">
-                Restore a backup made above. Existing files are overwritten.
+                Restore a backup made above or on the setup page. Existing files are
+                overwritten; a restored pin map needs a full power cycle (not just a
+                restart) to take effect.
             </div>
             <input type="file" id="cfg_import_file" class="ota-file" accept=".json" />
             <button id="cfg_import_btn" onclick="importSettings()">⬆️ Import settings</button>
