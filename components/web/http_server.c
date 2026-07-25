@@ -134,6 +134,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(audio, "volume", s->audio.volume);
     cJSON_AddItemToObject(audio, "eq", cJSON_CreateIntArray(s->audio.eq, 10));
     cJSON_AddBoolToObject(audio,   "eq_enabled", s->audio.eq_enabled);
+    cJSON_AddBoolToObject(audio,   "mono",       s->audio.mono);
     cJSON_AddItemToObject(json, "audio", audio);
 
     // playlist
@@ -335,6 +336,10 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         cJSON *eq_en = cJSON_GetObjectItem(audio, "eq_enabled");
         if (cJSON_IsBool(eq_en)) {
             settings_set_eq_enabled(cJSON_IsTrue(eq_en));
+        }
+        cJSON *mono = cJSON_GetObjectItem(audio, "mono");
+        if (cJSON_IsBool(mono)) {
+            settings_set_mono(cJSON_IsTrue(mono));
         }
     }
 

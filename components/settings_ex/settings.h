@@ -9,6 +9,7 @@ typedef struct {
     int  volume;
     int  eq[10];
     bool eq_enabled;
+    bool mono;             // downmix L+R to both channels (single-speaker builds)
 } audio_settings_t;
 
 typedef struct {
@@ -161,6 +162,7 @@ esp_err_t settings_save(void);
 void settings_set_volume(int volume);
 void settings_set_eq_10(int *bands);
 void settings_set_eq_enabled(bool enabled);
+void settings_set_mono(bool mono);
 void settings_set_curr_index(int index);
 void settings_set_resume_on_boot(bool enabled);
 void settings_set_was_playing(bool playing);

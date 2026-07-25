@@ -53,6 +53,17 @@ void audio_dsp_set_sample_rate(audio_element_handle_t el, int sample_rate, int c
 void audio_dsp_set_eq_enabled(audio_element_handle_t el, bool enabled);
 
 /**
+ * @brief  Enables/disables the mono downmix (L+R averaged into both channels).
+ *         Frame size is unchanged — I2S stays stereo, so this can flip
+ *         mid-stream with no relink. Applied after the VU tap, so the meters
+ *         keep showing the source's stereo image. No-op on mono sources.
+ *
+ * @param  el    DSP element handle
+ * @param  mono  true = downmix to mono, false = pass stereo through
+ */
+void audio_dsp_set_mono(audio_element_handle_t el, bool mono);
+
+/**
  * @brief  Octave-spaced centre frequencies of the EQ bands (31..16000 Hz).
  *         Shared so the VU spectrum can lay its bars on the same bands as the
  *         EQ — a single source of truth, so retuning the EQ retunes the meter.

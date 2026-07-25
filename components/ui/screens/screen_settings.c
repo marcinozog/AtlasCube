@@ -110,6 +110,7 @@ static bool get_sd_show(void)    { return app_state_get()->sd_show_screen; }
 static bool get_radio_show(void) { return app_state_get()->radio_show_screen; }
 static bool get_bt_auto(void)    { return app_state_get()->bt_auto_switch; }
 static bool get_eq(void)         { return app_state_get()->eq_enabled; }
+static bool get_mono(void)       { return app_state_get()->mono; }
 static void act_restart(void)    { esp_restart(); }
 #if !CONFIG_TOUCH_NONE
 static void act_radio_layout(void) { screen_layout_editor_open(LAYOUT_EDITOR_RADIO); }
@@ -142,6 +143,8 @@ static const row_desc_t SEC_AUDIO[] = {
       .on_txt = "<    On    >", .off_txt = "<    Off    >" },
     { .title = "DSP", .kind = RK_TOGGLE, .tget = get_eq, .tset = settings_set_eq_enabled,
       .on_txt = "<    On    >", .off_txt = "<    Off    >" },
+    { .title = "Output", .kind = RK_TOGGLE, .tget = get_mono, .tset = settings_set_mono,
+      .on_txt = "<    Mono    >", .off_txt = "<    Stereo    >" },
     { .title = "Equalizer", .kind = RK_SCREEN, .screen = SCREEN_EQ },
     { .title = "Test tone", .kind = RK_ACTION, .action = act_test_tone, .on_txt = "Play >" },
 };

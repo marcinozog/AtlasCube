@@ -446,6 +446,19 @@ function setDeviceEqEnabled(t) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Audio — mono downmix / stereo
+// ─────────────────────────────────────────────────────────────────────────────
+function setDeviceMono(t) {
+    document.getElementById('settingsBtnMono')  ?.classList.toggle('active', t);
+    document.getElementById('settingsBtnStereo')?.classList.toggle('active', !t);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio: { mono: t } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Audio — exclusive source auto-switch (Radio ⇄ Bluetooth)
 // ─────────────────────────────────────────────────────────────────────────────
 function setBtAutoSwitch(on) {
@@ -891,6 +904,10 @@ function populateForm(s) {
         const eq_en = (s.audio.eq_enabled !== false);
         document.getElementById('settingsBtnDspOn') ?.classList.toggle('active', eq_en);
         document.getElementById('settingsBtnDspOff')?.classList.toggle('active', !eq_en);
+
+        const mono = !!s.audio.mono;   // default false — older backend omits it
+        document.getElementById('settingsBtnMono')  ?.classList.toggle('active', mono);
+        document.getElementById('settingsBtnStereo')?.classList.toggle('active', !mono);
     }
     if (s.playlist) {
         const rob = !!s.playlist.resume_on_boot;   // default off

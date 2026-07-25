@@ -25,6 +25,7 @@ typedef struct {
     int volume;                 // Radio volume
     int eq[10];                 // Equalizer values
     bool eq_enabled;            // EQ on/off (volume works independently)
+    bool mono;                  // Mono downmix on/off (pipeline sources only, not BT)
     char url[256];              // URL radio station
     char station_name[64];      // Station name
     char title[128];            // Music title
@@ -81,6 +82,9 @@ typedef struct {
 
     bool has_eq_enabled;
     bool eq_enabled;
+
+    bool has_mono;
+    bool mono;
 
     bool has_url;
     const char *url;

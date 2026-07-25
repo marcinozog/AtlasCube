@@ -81,6 +81,10 @@ bool audio_engine_is_playing(void);
 void audio_engine_set_volume(int volume);
 void audio_engine_set_eq_10(int *bands);
 void audio_engine_set_eq_enabled(bool enabled);
+// Mono downmix (L+R averaged into both channels) in the DSP. Applies to every
+// pipeline source; the Bluetooth module feeds the amp on its own I2S and is not
+// affected. Suspended for the duration of the channel-test tone.
+void audio_engine_set_mono(bool mono);
 
 // --- Domain hooks, registered by the net/file layers ------------------------
 // ICY StreamTitle metadata from the radio reader (net layer).

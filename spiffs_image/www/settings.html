@@ -490,6 +490,16 @@
         </div>
 
         <div class="panel">
+            <label class="field-label">Output channels</label>
+            <div class="theme-toggle" id="monoToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnStereo" onclick="setDeviceMono(false)">🎧 Stereo</button>
+                <button class="theme-btn" id="settingsBtnMono"   onclick="setDeviceMono(true)">🔊 Mono</button>
+            </div>
+            <div class="field-hint">Mono sums left and right into both channels — for single-speaker builds.
+                Bluetooth playback is unaffected (it bypasses the DSP).</div>
+        </div>
+
+        <div class="panel">
             <label class="field-label">Resume playback on boot</label>
             <div class="theme-toggle" id="resumeToggle" style="width:fit-content">
                 <button class="theme-btn" id="settingsBtnResumeOn"  onclick="setResumeOnBoot(true)">✅ On</button>
