@@ -115,7 +115,7 @@ const CLOCK_FIELDS = [
     { key: 'clock_show_weather', label: 'Show weather', type: 'bool' },
     { key: 'clock_weather_x', label: 'Weather X', type: 'number' },
     { key: 'clock_weather_y', label: 'Weather Y', type: 'number' },
-    { key: 'clock_weather_w', label: 'Weather W', type: 'number' },
+    { key: 'clock_weather_w', label: 'Weather W (0 = full width)', type: 'number' },
     { key: 'clock_weather_font', label: 'Weather font', type: 'font' },
 ];
 
@@ -276,7 +276,7 @@ const RADIO_FIELDS = [
     { key: 'radio_show_weather', label: 'Show weather', type: 'bool' },
     { key: 'radio_weather_x', label: 'Weather X', type: 'number' },
     { key: 'radio_weather_y', label: 'Weather Y', type: 'number' },
-    { key: 'radio_weather_w', label: 'Weather W', type: 'number' },
+    { key: 'radio_weather_w', label: 'Weather W (0 = full width)', type: 'number' },
     { key: 'radio_weather_font', label: 'Weather font', type: 'font' },
     { key: 'radio_volslider_show',       label: 'Show volume slider', type: 'bool' },
     { key: 'radio_volslider_vertical',   label: 'Vertical',           type: 'bool' },
@@ -381,7 +381,7 @@ const SD_FIELDS = [
     { key: 'sd_show_weather', label: 'Show weather', type: 'bool' },
     { key: 'sd_weather_x', label: 'Weather X', type: 'number' },
     { key: 'sd_weather_y', label: 'Weather Y', type: 'number' },
-    { key: 'sd_weather_w', label: 'Weather W', type: 'number' },
+    { key: 'sd_weather_w', label: 'Weather W (0 = full width)', type: 'number' },
     { key: 'sd_weather_font', label: 'Weather font', type: 'font' },
     { key: 'sd_volslider_show',       label: 'Show volume slider', type: 'bool' },
     { key: 'sd_volslider_vertical',   label: 'Vertical',           type: 'bool' },
@@ -396,17 +396,21 @@ const SD_FIELDS = [
     ...touchHotspotFields('sd'),
 ];
 
-// Equalizer — the 10-band layout is compile-time per panel; only the artwork is
-// editable here. One knob image is shared by every band; the screen background
-// uses the generic per-screen wallpaper picker (eq_wallpaper).
+// Equalizer — the 10 bands are laid out from the group anchor, one band's width
+// and the gap between bands; the group's total width is DERIVED from those (see
+// eqGeom), never typed in. One knob image is shared by every band; the screen
+// background uses the generic per-screen wallpaper picker (eq_wallpaper).
 const EQ_FIELDS = [
     { key: 'eq_info_x',    label: 'Value X',    type: 'number' },
     { key: 'eq_info_y',    label: 'Value Y',    type: 'number' },
     { key: 'eq_info_font', label: 'Value font', type: 'font'   },
     { key: 'eq_group_x',   label: 'Group X',    type: 'number' },
     { key: 'eq_group_y',   label: 'Group Y',    type: 'number' },
-    { key: 'eq_group_w',   label: 'Group W',    type: 'number', min: 0, max: 480 },
-    { key: 'eq_group_h',   label: 'Group H',    type: 'number', min: 0, max: 480 },
+    { key: 'eq_slider_h',  label: 'Slider H',   type: 'number', min: 4, max: 480 },
+    { key: 'eq_slider_w',  label: 'Slider W (track)', type: 'number', min: 1, max: 200 },
+    { key: 'eq_band_gap',  label: 'Gap between bands', type: 'number', min: 0, max: 200 },
+    { key: 'eq_group_centre', label: 'Group width is derived (see summary)',
+      type: 'action', button: 'Centre X', action: centreEqGroup },
     { key: 'eq_freq_hide', label: 'Hide frequency labels', type: 'bool' },
     { key: 'eq_hint_hide', label: 'Hide legend', type: 'bool' },
     { key: 'eq_hint_x',    label: 'Legend X (from centre)', type: 'number' },
@@ -418,7 +422,7 @@ const EQ_FIELDS = [
     { key: 'eq_knob_image', label: 'Knob image (.bin)', type: 'text',
       placeholder: '/sdcard/assets/knobs/... (empty = colour knob)',
       sdPicker: { dir: '/assets/knobs' } },
-    { key: 'eq_knob_w', label: 'Knob width (px, 0 = band)', type: 'number', min: 0, max: 200 },
+    { key: 'eq_knob_w', label: 'Knob width (px, 0 = fill band)', type: 'number', min: 0, max: 200 },
     { key: 'eq_knob_only', label: 'Knob only (no track)', type: 'bool' },
 ];
 
@@ -518,7 +522,9 @@ const FORM_GROUPS = {
         { title: 'Value label', fields: ['eq_info_x', 'eq_info_y', 'eq_info_font'] },
         { title: 'Legend', fields: ['eq_hint_hide', 'eq_hint_x', 'eq_hint_y'] },
         { heading: 'Bands' },
-        { title: 'Sliders group', fields: ['eq_group_x', 'eq_group_y', 'eq_group_w', 'eq_group_h', 'eq_freq_hide'] },
+        { title: 'Sliders group', summary: eqGroupSummary,
+          fields: ['eq_group_x', 'eq_group_y', 'eq_slider_h', 'eq_slider_w',
+                   'eq_band_gap', 'eq_group_centre', 'eq_freq_hide'] },
         { title: 'Response curve', fields: ['eq_curve_x', 'eq_curve_y', 'eq_curve_w', 'eq_curve_h'] },
         { heading: 'Artwork' },
         { title: 'Knob image', fields: ['eq_knob_image', 'eq_knob_w', 'eq_knob_only'] },
@@ -971,6 +977,7 @@ async function loadPreset() {
                 `Preset has no ${SECTIONS[state.active].title} layout yet — Save one first.`, true);
             return;
         }
+        migrateLegacyEqSection(section);
         Object.assign(state[state.active], section);
         const post = await fetch(`/api/ui/profile/${state.active}`, {
             method: 'POST',
@@ -985,6 +992,41 @@ async function loadPreset() {
         setPresetStatus(`Preset (${SECTIONS[state.active].title}) applied — device screen rebuilding.`);
     } catch (err) {
         setPresetStatus('Preset load failed: ' + err.message, true);
+    }
+}
+
+// Presets saved before the EQ group became derived carry eq_group_w/eq_group_h
+// and no eq_band_gap. Convert in place (same arithmetic as load_eq() on the
+// device) so an old preset still reproduces its look instead of silently keeping
+// whatever the device currently has.
+function migrateLegacyEqSection(section) {
+    if (!section || section.eq_band_gap !== undefined) return;
+    const gw = section.eq_group_w | 0, gh = section.eq_group_h | 0;
+    delete section.eq_group_w;
+    delete section.eq_group_h;
+    if (gw <= 0 && gh <= 0) return;
+    // Old presets predate the slider/knob fields too — fall back to the values
+    // the device currently reports, which is what the old layout was built on.
+    const n   = EQ_FREQ_LABELS.length;
+    const val = k => (section[k] !== undefined ? section[k] : state.eq[k]);
+    if (gw > 0) {
+        const art  = String(val('eq_knob_image') || '').trim();
+        const artW = art ? (val('eq_knob_w') | 0) : 0;
+        let base = Math.max(1, val('eq_slider_w') | 0);
+        if (artW > 0) base = Math.max(base, artW);
+        const gap = Math.max(0, Math.floor(gw / n) - base);
+        section.eq_band_gap = gap;
+        // The old model started the group with a full column (band + gap), the new
+        // one with the band itself — so shift the anchor by half a gap and every
+        // band stays on its pixel. Auto-width knob art folds the gap into the band
+        // (gap 0), and then nothing moves.
+        const gapEff = (art && artW === 0) ? 0 : gap;
+        if (gapEff) section.eq_group_x = (val('eq_group_x') | 0) + Math.floor(gapEff / 2);
+    }
+    if (gh > 0) {
+        const freqArea = val('eq_freq_hide')
+            ? 0 : clamp(Math.round((gw / n) * 0.7), 7, 14) + 4;
+        section.eq_slider_h = Math.max(4, gh - freqArea);
     }
 }
 
@@ -2406,6 +2448,17 @@ function buildFormRow(field, data, group, details) {
             refreshGroup(details, group, data);
             renderSvg();
         });
+    } else if (field.type === 'action') {
+        // A button, not a profile field: it edits other fields (and never lands
+        // in the POSTed section object, since nothing writes data[field.key]).
+        input = document.createElement('button');
+        input.type = 'button';
+        input.className = 'btn-secondary';
+        input.textContent = field.button;
+        input.addEventListener('click', () => {
+            field.action(data);
+            refreshGroup(details, group, data);
+        });
     } else if (field.type === 'color') {
         // 0 = inherit the theme colour. A checkbox gates the picker so "no
         // override" stays representable (a colour input always holds a value).
@@ -2484,6 +2537,9 @@ function refreshGroup(details, group, data) {
 
 function groupSummary(group, data) {
     if (group.enabledBy && !data[group.enabledBy]) return 'Off';
+    // Groups whose geometry is derived rather than stored field-by-field (the EQ
+    // sliders group) report it themselves — the _x/_w sniffing below cannot.
+    if (group.summary) return group.summary(data);
     if (group.subgroups) {
         // A subgroup without an enabledBy toggle is always-on (like a top-level
         // group without one), so count it as enabled rather than undercounting.
@@ -3066,12 +3122,52 @@ function renderSd(svg) {
 }
 
 // ── EQUALIZER renderer ──────────────────────────────────────────────────────
-// Movable pieces: value label, sliders group box (drag + resize — firmware
-// derives band spacing/height to fill it), response-curve box, and legend. The
-// bands schematic inside the group uses a representative curve so the preview
-// reads as an equaliser.
+// Movable pieces: value label, sliders group (drag to move, corners change the
+// gap and the slider height), response-curve box, and legend. The bands
+// schematic inside the group uses a representative curve so the preview reads as
+// an equaliser.
 const EQ_FREQ_LABELS = ['31', '62', '125', '250', '500', '1k', '2k', '4k', '8k', '16k'];
 const EQ_PREVIEW_LEVELS = [0.68, 0.55, 0.62, 0.40, 0.50, 0.70, 0.46, 0.60, 0.74, 0.52];
+
+// Mirror of ui_profile_eq_band_metrics() + ui_profile_eq_group_box(): the group's
+// width is derived from one band's element width and the gap, so the box drawn
+// here ends exactly where the device's tenth band ends. Only freqArea is an
+// approximation (the device measures its frequency font, which is not editable
+// here) — the slider area itself, the part that has to line up with a wallpaper,
+// is exact.
+function eqGeom(e) {
+    const n = EQ_FREQ_LABELS.length;
+    let gap  = Math.max(0, e.eq_band_gap | 0);
+    let elem = Math.max(1, e.eq_slider_w | 0);
+    if (e.eq_knob_image && e.eq_knob_image.trim()) {
+        if ((e.eq_knob_w | 0) > 0) elem = Math.max(elem, e.eq_knob_w | 0);
+        else { elem += gap; gap = 0; }     // auto knob art fills the whole band
+    }
+    const pitch     = elem + gap;
+    const freqShown = !e.eq_freq_hide;
+    const labelFh   = freqShown ? clamp(Math.round(pitch * 0.7), 7, 14) : 0;
+    const freqArea  = freqShown ? labelFh + 4 : 0;
+    const sliderH   = Math.max(4, e.eq_slider_h | 0);
+    return {
+        n, elem, gap, pitch, freqShown, labelFh, freqArea, sliderH,
+        gw: elem * n + gap * (n - 1),
+        gh: sliderH + freqArea,
+    };
+}
+
+// "Centre on screen" — with a derived width this lands to the pixel, which is
+// what makes a group line up with a symmetric wallpaper.
+function centreEqGroup() {
+    const e = state.eq;
+    e.eq_group_x = Math.round((state.meta.screen_w - eqGeom(e).gw) / 2);
+    setFormValue('eq_group_x', e.eq_group_x);
+    renderSvg();
+}
+
+function eqGroupSummary(data) {
+    const g = eqGeom(data);
+    return `${data.eq_group_x | 0}, ${data.eq_group_y | 0} · ${g.gw}×${g.gh} · gap ${g.gap}`;
+}
 
 function renderEq(svg) {
     const e = state.eq;
@@ -3105,30 +3201,33 @@ function renderEq(svg) {
     // Sliders group — a movable + resizable box; the bands schematic is drawn
     // inside (decorations are pointer-transparent so the box stays draggable),
     // frequency labels below unless hidden. Matches the device group model.
-    const n = EQ_FREQ_LABELS.length;
-    const gw = e.eq_group_w | 0, gh = e.eq_group_h | 0;
+    const g = eqGeom(e);
+    const { n, gw, gh, pitch, sliderH, freqShown, labelFh, freqArea } = g;
     if (gw > 0 && gh > 0) {
         const gx = e.eq_group_x | 0, gy = e.eq_group_y | 0;
         drawFreeElement(svg, {
             x: gx, y: gy, w: gw, h: gh,
             label: 'sliders', cls: 'label-rect',
-            fields: { x: 'eq_group_x', y: 'eq_group_y', w: 'eq_group_w', h: 'eq_group_h' },
+            // No width/height field of its own: the corners edit the gap (which
+            // the width follows) and the slider height.
+            fields: {
+                x: 'eq_group_x', y: 'eq_group_y',
+                w: 'eq_band_gap', h: 'eq_slider_h',
+                wToValue: w => Math.max(0, Math.round((w - g.elem * n) / (n - 1))),
+                wFromValue: gap => g.elem * n + gap * (n - 1),
+                hToValue: h => Math.max(4, h - freqArea),
+                hFromValue: sh => sh + freqArea,
+            },
         });
         const inert = el => { el.style.pointerEvents = 'none'; return el; };
         const knobOnly  = !!e.eq_knob_only;
-        const freqShown = !e.eq_freq_hide;
-        const bandCol   = gw / n;
-        const labelFh   = freqShown ? Math.max(7, Math.min(14, Math.round(bandCol * 0.7))) : 0;
-        const freqArea  = freqShown ? labelFh + 4 : 0;
-        const sliderH   = Math.max(4, gh - freqArea);
-        const trackW    = Math.max(2, Math.round(bandCol * 0.16));
-        // User knob width (eq_knob_w, real px) or the band column as fallback.
-        const knobW     = e.eq_knob_w > 0 ? Math.max(2, e.eq_knob_w | 0)
-                                          : Math.max(4, Math.round(bandCol * 0.9));
+        const trackW    = Math.max(2, Math.min(g.elem, e.eq_slider_w | 0));
+        // Knob artwork: its own width, or the whole band when set to auto.
+        const knobW     = e.eq_knob_w > 0 ? Math.max(2, e.eq_knob_w | 0) : g.elem;
         const knobH     = Math.max(4, Math.round(sliderH * 0.1));
 
         for (let i = 0; i < n; i++) {
-            const cx    = gx + i * bandCol + bandCol / 2;
+            const cx    = gx + i * pitch + g.elem / 2;
             const level = EQ_PREVIEW_LEVELS[i];              // 0 (bottom) .. 1 (top)
             const knobY = gy + (sliderH - knobH) * (1 - level);
 
@@ -3297,11 +3396,17 @@ function drawFreeElement(svg, opts) {
 // draw the span as a dashed guide (movable, W-editable in the form) and a
 // filled pill sized to the rendered content, centered within the span.
 function drawWeatherElement(svg, opts) {
-    const frame = rect(svg, {
+    rect(svg, {
         x: opts.x, y: opts.y, width: opts.w, height: opts.h,
         class: `label-frame ${placeholderClass('weather')}`,
     });
-    setupMove(frame, svg, opts.fields);
+    // The span's visible stroke is too thin to grab and its interior stays
+    // click-through, so drags on the border go through a fat invisible edge.
+    const grip = rect(svg, {
+        x: opts.x, y: opts.y, width: opts.w, height: opts.h,
+        class: 'label-frame-grip',
+    });
+    setupMove(grip, svg, opts.fields, false);
     tag(svg, opts.x + 2, opts.y + 7, opts.label);
 
     const cx = opts.x + opts.w / 2;
@@ -3315,8 +3420,14 @@ function drawWeatherElement(svg, opts) {
         x: cx - pw / 2, y: opts.y, width: pw, height: opts.h,
         class: `label-rect ${placeholderClass('weather')}`,
     });
-    pill.style.pointerEvents = 'none';   // let drags fall through to the frame
+    // The pill is the visible plate, so it is also the primary drag handle and
+    // the element that carries the keyboard-selection outline.
+    setupMove(pill, svg, opts.fields);
     svg.insertBefore(pill, t);           // paint the pill behind the text
+
+    // Corners resize the span's width only — weather has no height field, the
+    // font drives its height. Drawn last so they sit above pill and grip.
+    addCornerHandles(svg, opts.x, opts.y, opts.w, opts.h, opts.fields);
 }
 
 function addCornerHandles(svg, x, y, w, h, fields) {
@@ -3334,12 +3445,12 @@ function addCornerHandles(svg, x, y, w, h, fields) {
             class: 'corner-handle',
             'data-corner': cr.dir,
         });
-        setupResize(handle, svg, fields, cr.dir);
+        setupResize(handle, svg, fields, cr.dir, w, h);
     }
 }
 
-function setupMove(el, svg, fields) {
-    showKeyboardSelection(el, fields);
+function setupMove(el, svg, fields, selectable = true) {
+    if (selectable) showKeyboardSelection(el, fields);
     el.addEventListener('pointerdown', (e) => {
         if (e.target !== el) return;
         e.preventDefault();
@@ -3375,7 +3486,13 @@ function setupMove(el, svg, fields) {
     });
 }
 
-function setupResize(el, svg, fields, dir) {
+// baseW/baseH are the size the element was actually drawn with. They matter for
+// fields where 0 means "auto" (weather's centering span → full screen width):
+// without them the first drag would grow from 0 instead of from what is on
+// screen. They are also the starting size for elements whose w/h field is not a
+// size at all: fields.wToValue/hToValue translate the dragged size into what the
+// field stores (EQ group → band gap and slider height).
+function setupResize(el, svg, fields, dir, baseW, baseH) {
     el.addEventListener('pointerdown', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -3386,7 +3503,8 @@ function setupResize(el, svg, fields, dir) {
         const start = {
             mx: e.clientX, my: e.clientY,
             x: data[fields.x] | 0, y: data[fields.y] | 0,
-            w: data[fields.w] | 0, h: data[fields.h] | 0,
+            w: fields.wToValue ? (baseW | 0) : ((data[fields.w] | 0) || (baseW | 0)),
+            h: fields.hToValue ? (baseH | 0) : (data[fields.h] | 0),
         };
         const px = svg.getBoundingClientRect();
         const pxPerU = { x: px.width / state.meta.screen_w,
@@ -3415,12 +3533,21 @@ function setupResize(el, svg, fields, dir) {
             if (fields.h && nh < 4) { nh = 4; if (dir.includes('t')) ny = start.y + start.h - 4; }
             }
 
+            const wVal = fields.wToValue ? fields.wToValue(nw) : nw;
+            const hVal = fields.hToValue ? fields.hToValue(nh) : nh;
+            // A translated field can only represent some sizes (one gap px = 9 px
+            // of group width), so re-derive the real size and pin the edge the
+            // user is NOT dragging — otherwise the whole box slides sideways.
+            if (fields.wFromValue && dir.includes('l'))
+                nx = start.x + start.w - fields.wFromValue(wVal);
+            if (fields.hFromValue && dir.includes('t'))
+                ny = start.y + start.h - fields.hFromValue(hVal);
             data[fields.x] = nx; data[fields.y] = ny;
-            data[fields.w] = nw;
-            if (fields.h && fields.h !== fields.w) data[fields.h] = nh;
+            data[fields.w] = wVal;
+            if (fields.h && fields.h !== fields.w) data[fields.h] = hVal;
             setFormValue(fields.x, nx); setFormValue(fields.y, ny);
-            setFormValue(fields.w, nw);
-            if (fields.h && fields.h !== fields.w) setFormValue(fields.h, nh);
+            setFormValue(fields.w, wVal);
+            if (fields.h && fields.h !== fields.w) setFormValue(fields.h, hVal);
             renderSvg();
         };
         const onUp = () => {

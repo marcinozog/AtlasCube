@@ -207,7 +207,9 @@ static const ui_profile_t k_defaults = {
     .eq_band_area_y            = 12,
     .eq_slider_h               = 38,
     .eq_slider_w               = 3,
-    .eq_band_w                 = 12,
+    .eq_band_gap               = 9,    // group W = 10*3 + 9*9 = 111
+    .eq_group_x                = 8,    // (128 - 111) / 2
+    .eq_group_y                = 12,
     .eq_hint_y                 = -2,
     .eq_title_font             = &lv_font_montserrat_12_pl,
     .eq_info_font              = &lv_font_montserrat_12_pl,
@@ -433,7 +435,9 @@ static const ui_profile_t k_defaults = {
     .eq_band_area_y            = 12,
     .eq_slider_h               = 38,
     .eq_slider_w               = 4,
-    .eq_band_w                 = 25,
+    .eq_band_gap               = 21,   // group W = 10*4 + 9*21 = 229
+    .eq_group_x                = 13,   // (256 - 229) / 2
+    .eq_group_y                = 12,
     .eq_hint_y                 = -2,
     .eq_title_font             = &lv_font_montserrat_12_pl,
     .eq_info_font              = &lv_font_montserrat_12_pl,
@@ -768,7 +772,9 @@ static const ui_profile_t k_defaults = {
     .eq_band_area_y            = 70,
     .eq_slider_h               = 160,
     .eq_slider_w               = 6,
-    .eq_band_w                 = 22, // 240 / 10 bands = 24 max
+    .eq_band_gap               = 16,   // group W = 10*6 + 9*16 = 204
+    .eq_group_x                = 18,   // (240 - 204) / 2
+    .eq_group_y                = 70,
     .eq_hint_y                 = -8,
     .eq_title_font             = &lv_font_montserrat_18_pl,
     .eq_info_font              = &lv_font_montserrat_14_pl,
@@ -1097,7 +1103,9 @@ static const ui_profile_t k_defaults = {
     .eq_band_area_y            = 62,
     .eq_slider_h               = 132,
     .eq_slider_w               = 8,
-    .eq_band_w                 = 28,
+    .eq_band_gap               = 20,   // group W = 10*8 + 9*20 = 260
+    .eq_group_x                = 30,   // (320 - 260) / 2
+    .eq_group_y                = 62,
     .eq_hint_y                 = -6,
     .eq_title_font             = &lv_font_montserrat_18_pl,
     .eq_info_font              = &lv_font_montserrat_14_pl,
@@ -1426,7 +1434,9 @@ static const ui_profile_t k_defaults = {
     .eq_band_area_y            = 82,
     .eq_slider_h               = 176,
     .eq_slider_w               = 12,
-    .eq_band_w                 = 42,
+    .eq_band_gap               = 30,   // group W = 10*12 + 9*30 = 390
+    .eq_group_x                = 45,   // (480 - 390) / 2
+    .eq_group_y                = 82,
     .eq_hint_y                 = -8,
     .eq_title_font             = &lv_font_montserrat_18_pl,
     .eq_info_font              = &lv_font_montserrat_18_pl,
@@ -2335,23 +2345,43 @@ void ui_profile_eq_curve_box(const ui_profile_t *p,
     *h = ah > 0 ? ah : 0;
 }
 
+void ui_profile_eq_band_metrics(const ui_profile_t *p, int16_t *elem, int16_t *gap)
+{
+    int g = p->eq_band_gap > 0 ? p->eq_band_gap : 0;
+    int e = p->eq_slider_w  > 1 ? p->eq_slider_w  : 1;
+    if (p->eq_knob_image[0]) {
+        if (p->eq_knob_w > 0) {
+            // Explicit artwork width: the knob is the band, so the gap stays the
+            // real free space between two knobs.
+            if (p->eq_knob_w > e) e = p->eq_knob_w;
+        } else {
+            // Auto width — the knob fills the whole band column (a bare track is
+            // only a few px wide). Neighbours then touch, so there is no gap
+            // left over; folding it into elem keeps the group box truthful.
+            e += g;
+            g = 0;
+        }
+    }
+    *elem = (int16_t)e;
+    *gap  = (int16_t)g;
+}
+
+// The group's SIZE is derived, never stored: the editor sets the anchor, the band
+// element width and the gap. A stored width forced a `gw / UI_EQ_BANDS` rounding
+// that swallowed up to 9 px on the right edge (bands looked off-centre inside
+// their own box) and made 1-px width edits do nothing.
 void ui_profile_eq_group_box(const ui_profile_t *p,
                              int16_t *x, int16_t *y, int16_t *w, int16_t *h)
 {
-    if (p->eq_group_w > 0 && p->eq_group_h > 0) {
-        *x = p->eq_group_x; *y = p->eq_group_y;
-        *w = p->eq_group_w; *h = p->eq_group_h;
-        return;
-    }
-    // Auto = the legacy centred layout: total width = band column × bands, top at
-    // eq_band_area_y, height = slider + (freq-label strip unless hidden).
+    int16_t elem, gap;
+    ui_profile_eq_band_metrics(p, &elem, &gap);
     int fh = p->eq_freq_font ? lv_font_get_line_height(p->eq_freq_font) : 0;
     int freq_area = p->eq_freq_hide ? 0 : (fh + 6);
-    int16_t gw = (int16_t)(p->eq_band_w * UI_EQ_BANDS);
-    *w = gw;
-    *x = (int16_t)((DISPLAY_WIDTH - gw) / 2);
-    *y = p->eq_band_area_y;
-    *h = (int16_t)(p->eq_slider_h + freq_area);
+    int sh = p->eq_slider_h > 1 ? p->eq_slider_h : 1;
+    *x = p->eq_group_x;
+    *y = p->eq_group_y;
+    *w = (int16_t)(elem * UI_EQ_BANDS + gap * (UI_EQ_BANDS - 1));
+    *h = (int16_t)(sh + freq_area);
 }
 
 static void load_eq(const cJSON *obj, ui_profile_t *p)
@@ -2366,10 +2396,12 @@ static void load_eq(const cJSON *obj, ui_profile_t *p)
     load_bool(obj, "eq_freq_hide",  &p->eq_freq_hide);
     load_i16 (obj, "eq_group_x",    &p->eq_group_x);
     load_i16 (obj, "eq_group_y",    &p->eq_group_y);
-    load_i16 (obj, "eq_group_w",    &p->eq_group_w);
-    load_i16 (obj, "eq_group_h",    &p->eq_group_h);
-    if (p->eq_group_w < 0) p->eq_group_w = 0;
-    if (p->eq_group_h < 0) p->eq_group_h = 0;
+    load_i16 (obj, "eq_slider_h",   &p->eq_slider_h);
+    load_i16 (obj, "eq_slider_w",   &p->eq_slider_w);
+    load_i16 (obj, "eq_band_gap",   &p->eq_band_gap);
+    if (p->eq_slider_h < 1) p->eq_slider_h = 1;
+    if (p->eq_slider_w < 1) p->eq_slider_w = 1;
+    if (p->eq_band_gap < 0) p->eq_band_gap = 0;
     load_i16 (obj, "eq_curve_x",    &p->eq_curve_x);
     load_i16 (obj, "eq_curve_y",    &p->eq_curve_y);
     load_i16 (obj, "eq_curve_w",    &p->eq_curve_w);
@@ -2381,6 +2413,35 @@ static void load_eq(const cJSON *obj, ui_profile_t *p)
     load_bool(obj, "eq_knob_only",  &p->eq_knob_only);
     load_str (obj, "eq_knob_image", p->eq_knob_image, sizeof(p->eq_knob_image));
     load_str (obj, "eq_wallpaper",  p->eq_wallpaper,  sizeof(p->eq_wallpaper));
+
+    // Legacy files (and layout presets) stored the group's w/h and derived the
+    // band column as gw / UI_EQ_BANDS. Convert once so they keep their look: the
+    // gap comes from the old column pitch, the slider height from the old box
+    // height. Runs only for objects that predate eq_band_gap — knob fields are
+    // already loaded above, so the band element width is known here.
+    if (!cJSON_HasObjectItem(obj, "eq_band_gap")) {
+        int16_t gw = 0, gh = 0;
+        load_i16(obj, "eq_group_w", &gw);
+        load_i16(obj, "eq_group_h", &gh);
+        if (gw > 0) {
+            int base  = p->eq_slider_w;                     // band element, gap excluded
+            if (p->eq_knob_image[0] && p->eq_knob_w > base) base = p->eq_knob_w;
+            int pitch = gw / UI_EQ_BANDS;
+            p->eq_band_gap = (int16_t)(pitch > base ? pitch - base : 0);
+            // The old model put a full column (band + gap) at the left edge; the
+            // new one starts with the band itself, so the group is half a gap
+            // narrower on each side. Move the anchor by that half gap and every
+            // band lands on exactly the pixel it used to.
+            int16_t elem_eff, gap_eff;
+            ui_profile_eq_band_metrics(p, &elem_eff, &gap_eff);
+            p->eq_group_x = (int16_t)(p->eq_group_x + gap_eff / 2);
+        }
+        if (gh > 0) {
+            int fh = p->eq_freq_font ? lv_font_get_line_height(p->eq_freq_font) : 0;
+            int sh = gh - (p->eq_freq_hide ? 0 : fh + 6);
+            p->eq_slider_h = (int16_t)(sh > 1 ? sh : 1);
+        }
+    }
 }
 
 static cJSON *dump_eq(const ui_profile_t *p)
@@ -2393,14 +2454,15 @@ static cJSON *dump_eq(const ui_profile_t *p)
     add_i16 (o, "eq_hint_y",     p->eq_hint_y);
     add_bool(o, "eq_hint_hide",  p->eq_hint_hide);
     add_bool(o, "eq_freq_hide",  p->eq_freq_hide);
-    // Emit the EFFECTIVE boxes so the editor shows/drags a real rectangle even
-    // before the user has set one (auto layout baked on first save — harmless).
-    int16_t gx, gy, gw, gh;
-    ui_profile_eq_group_box(p, &gx, &gy, &gw, &gh);
-    add_i16 (o, "eq_group_x",    gx);
-    add_i16 (o, "eq_group_y",    gy);
-    add_i16 (o, "eq_group_w",    gw);
-    add_i16 (o, "eq_group_h",    gh);
+    // The group's anchor plus the three numbers its size is derived from — the
+    // editor recomputes the box exactly like ui_profile_eq_group_box() does, so
+    // no width/height is round-tripped (and nothing gets re-rounded).
+    add_i16 (o, "eq_group_x",    p->eq_group_x);
+    add_i16 (o, "eq_group_y",    p->eq_group_y);
+    add_i16 (o, "eq_slider_h",   p->eq_slider_h);
+    add_i16 (o, "eq_slider_w",   p->eq_slider_w);
+    add_i16 (o, "eq_band_gap",   p->eq_band_gap);
+    // The curve box still round-trips its effective w/h so the editor can drag it.
     int16_t cx, cy, cw, ch;
     ui_profile_eq_curve_box(p, &cx, &cy, &cw, &ch);
     add_i16 (o, "eq_curve_x",    cx);

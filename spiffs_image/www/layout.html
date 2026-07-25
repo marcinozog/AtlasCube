@@ -278,8 +278,11 @@
         .label-rect { fill: rgba(140, 160, 220, 0.45); stroke: #8aa0dc; stroke-width: 0.5; cursor: move; }
         .label-rect.dragging { fill: rgba(180, 200, 255, 0.75); }
         /* Centering span for the weather widget — the device draws no background
-           here; the visible plate is the content-sized pill drawn inside it. */
-        .label-frame { fill: rgba(140, 160, 220, 0.08); stroke: #8aa0dc; stroke-width: 0.5; stroke-dasharray: 3 2; cursor: move; }
+           here; the visible plate is the content-sized pill drawn inside it.
+           The span itself is click-through so a full-width one cannot steal
+           pointers from widgets underneath; .label-frame-grip is its drag edge. */
+        .label-frame { fill: rgba(140, 160, 220, 0.08); stroke: #8aa0dc; stroke-width: 0.5; stroke-dasharray: 3 2; pointer-events: none; }
+        .label-frame-grip { fill: none; stroke: transparent; stroke-width: 6; pointer-events: stroke; cursor: move; }
         /* Semantic placeholder palette — the same role keeps the same colour on
            every screen, so overlapping widgets remain distinguishable. */
         .label-rect.ph-time       { fill: rgba(34, 211, 238, .30); stroke: #22d3ee; }

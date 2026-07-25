@@ -474,18 +474,16 @@ typedef struct {
     int16_t          eq_title_y;
     int16_t          eq_info_x;        // active-band value label — top-left anchor (web-editable)
     int16_t          eq_info_y;        // "1kHz: +6dB" — active band info
-    int16_t          eq_band_area_y;   // top of sliders (their upper edge)
-    int16_t          eq_slider_h;      // vertical slider height
-    int16_t          eq_slider_w;      // slider width/thickness (horizontal)
-    int16_t          eq_band_w;        // band column width (slider + gap) — legacy/auto fallback
+    int16_t          eq_band_area_y;   // header height: where the bands start (curve auto-box)
+    int16_t          eq_slider_h;      // vertical slider height (web-editable)
+    int16_t          eq_slider_w;      // slider width/thickness (web-editable)
+    int16_t          eq_band_gap;      // free space between two neighbouring bands (web-editable)
     int16_t          eq_hint_x;        // legend horizontal offset from bottom-centre (web-editable)
     int16_t          eq_hint_y;        // from bottom (negative)
     bool             eq_hint_hide;     // hide the bottom legend/hint line
     bool             eq_freq_hide;     // hide the per-band frequency labels
-    int16_t          eq_group_x;       // sliders+labels group box (top-left anchor); web-editable
-    int16_t          eq_group_y;
-    int16_t          eq_group_w;       // 0 w/h → auto (centred, from eq_band_w/eq_slider_h/eq_band_area_y)
-    int16_t          eq_group_h;
+    int16_t          eq_group_x;       // sliders+labels group — top-left anchor (web-editable);
+    int16_t          eq_group_y;       // the box SIZE is derived, see ui_profile_eq_group_box()
     const lv_font_t *eq_title_font;
     const lv_font_t *eq_info_font;
     const lv_font_t *eq_freq_font;
@@ -494,7 +492,7 @@ typedef struct {
     int16_t          eq_curve_y;
     int16_t          eq_curve_w;         // 0 w/h → auto (right ~45% of the header strip)
     int16_t          eq_curve_h;
-    int16_t          eq_knob_w;          // knob image width in px (0 = band column width); height follows aspect
+    int16_t          eq_knob_w;          // knob image width in px (0 = fill the band column); height follows aspect
     bool             eq_knob_only;        // hide track/fill — only the knob image draws (over wallpaper)
     char             eq_knob_image[128]; // knob RGB565 .bin on SD ("" = plain colour); one image shared by all bands
     char             eq_wallpaper[128];  // see clock_wallpaper — per-screen EQ background override
@@ -569,8 +567,15 @@ void  ui_profile_patch_eq(const void *obj);
 void ui_profile_eq_curve_box(const ui_profile_t *p,
                              int16_t *x, int16_t *y, int16_t *w, int16_t *h);
 
-// Effective EQ sliders+labels group box (stored x/y/w/h, or the auto centred
-// layout derived from eq_band_w/eq_slider_h/eq_band_area_y when w/h are unset).
+// One band's element width and the free space to its neighbour (px). The band
+// PITCH is elem + gap, so `gap` is what the eye reads as the space between two
+// bands. With knob artwork the knob is the widest thing in a band; an artwork
+// width of 0 means "fill the whole band column", which folds the gap into elem.
+void ui_profile_eq_band_metrics(const ui_profile_t *p, int16_t *elem, int16_t *gap);
+
+// Effective EQ sliders+labels group box: x/y are the stored anchor, but w/h are
+// DERIVED — w from the band metrics above, h from eq_slider_h plus the frequency
+// label strip. Shared by the web dump and the screen so both agree.
 void ui_profile_eq_group_box(const ui_profile_t *p,
                              int16_t *x, int16_t *y, int16_t *w, int16_t *h);
 
