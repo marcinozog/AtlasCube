@@ -227,6 +227,7 @@ Wchodzisz na **[atlascube.net/flash](https://atlascube.net/flash/)** w Chrome / 
 | `AtlasCube-co5300-cst816d.bin`  | CO5300 240×296 (QSPI AMOLED) | CST816D |
 | `AtlasCube-ssd1322.bin` | SSD1322 256×64 (mono OLED, SPI) | — (enkoder) |
 | `AtlasCube-ili9341-xpt2046.bin` | ILI9341 320×240 (SPI) | XPT2046 (rezystancyjny) — eksperymentalny |
+| `AtlasCube-st7789v-xpt2046.bin` | ST7789V 320×240 (SPI) | XPT2046 (rezystancyjny) — eksperymentalny |
 | `AtlasCube-st7796-xpt2046.bin`  | ST7796U 480×320 (SPI) | XPT2046 (rezystancyjny) — eksperymentalny |
 | `AtlasCube-ili9488-xpt2046.bin` | ILI9488 480×320 (SPI, 18-bit) | XPT2046 (rezystancyjny) — eksperymentalny |
 
