@@ -407,6 +407,14 @@ void display_set_invert(bool invert)
     writeCommand(invert ? CMD_INVON : CMD_INVOFF);
 }
 
+void display_set_bgr(bool bgr)
+{
+    // No-op: this AMOLED's channel order is correct on the verified hardware and
+    // the red/blue swap is deliberately not wired up here. The web toggle stays
+    // visible on this variant but does nothing, like invert on the SSD1322.
+    (void)bgr;
+}
+
 void display_set_flip(bool flip)
 {
     // writeC8D8() takes SPI_LOCK, so this is safe to call from any task.

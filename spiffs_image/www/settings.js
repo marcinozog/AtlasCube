@@ -253,6 +253,19 @@ function setInvert(on) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Swap the red/blue channels (applied live — no restart)
+// ─────────────────────────────────────────────────────────────────────────────
+function setBgr(on) {
+    document.getElementById('settingsBtnBgrOn') ?.classList.toggle('active', on);
+    document.getElementById('settingsBtnBgrOff')?.classList.toggle('active', !on);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { bgr: on } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Time format: 12-hour AM/PM vs 24-hour (applied live — no restart)
 // ─────────────────────────────────────────────────────────────────────────────
 function setTimeAmpm(on) {
@@ -829,6 +842,10 @@ function populateForm(s) {
         const invert = s.display.invert === true;
         document.getElementById('settingsBtnInvertOn') ?.classList.toggle('active', invert);
         document.getElementById('settingsBtnInvertOff')?.classList.toggle('active', !invert);
+
+        const bgr = s.display.bgr === true;
+        document.getElementById('settingsBtnBgrOn') ?.classList.toggle('active', bgr);
+        document.getElementById('settingsBtnBgrOff')?.classList.toggle('active', !bgr);
 
         const ampm = s.display.time_ampm === true;   // default 24-hour
         document.getElementById('settingsBtnTime12')?.classList.toggle('active', ampm);

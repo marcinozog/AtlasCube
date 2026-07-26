@@ -230,7 +230,7 @@ toggles these mirror bits:
 | Driver | normal | flipped | bits toggled |
 |---|---|---|---|
 | CO5300 | `MADCTL 0xC0` | `0x00` | MY+MX (`0xC0`) |
-| ST7789V | `MADCTL 0xA8` | `0x68` | MY+MX (`0xC0`) |
+| ST7789V | `MADCTL 0xA0` | `0x60` | MY+MX (`0xC0`) |
 | ST7796 / ILI9341 / ILI9488 | `MADCTL 0xE8` | `0x28` | MY+MX (`0xC0`) |
 | SSD1322 | remap `0xA0`→`0x14` | `0x06` | column-remap (`0x02`) + COM-scan (`0x10`) |
 
@@ -301,3 +301,40 @@ The flag is **XORed over each driver's known-good baseline**, so the default
 > wallpaper, album art and photos (they become photographic negatives). It is a
 > fix for mis-batched panels, not an aesthetic theme — a real "inverted theme"
 > belongs in the palette/theme system instead.
+
+### 7a. Red/blue channel order (`display.bgr`)
+
+The other way colours go wrong is **channel order**: the panel reads the RGB565
+words as BGR (or the driver assumes BGR on an RGB-wired panel). The symptom is
+distinctive and easy to tell apart from inversion — **red shows as blue, blue as
+orange, and green is untouched**, because only two of the three channels trade
+places. A field report on ST7789V showed exactly this: the light theme's
+`#C4243E` accent rendered violet (`#3E24C4`) and the `#6FA0E0` gradient rendered
+sand (`#E0A06F`), while the green "status OK" stayed green.
+
+`settings.display.bgr` (web UI → Display → *Swap red/blue*) toggles **MADCTL bit
+3** (`0x08`) and, like `invert`, is **XORed over each driver's baseline** — so
+`false` keeps every working panel exactly as it was. It shares `MADCTL` with the
+180° flip, so the RGB drivers keep one `s_madctl_dirty` flag for both and send
+the merged byte from `<driver>_madctl()` on the next flush.
+
+| Driver | baseline | `bgr=false` | `bgr=true` |
+|---|---|---|---|
+| ILI9341 / ST7796 / ILI9488 | BGR (`0xE8`) | BGR | RGB (`0xE0`) |
+| ST7789V | RGB (`0xA0`) | RGB | BGR (`0xA8`) |
+| CO5300 / SSD1322 | — | no-op | no-op |
+
+> ST7789V's baseline was **`0xA8` (BGR) up to v0.46.0** and is `0xA0` (RGB) from
+> the next release: the bit was set without a panel on hand, and the first real
+> ST7789V module proved it wrong. Anyone who worked around it is unaffected —
+> the option did not exist yet.
+
+> The two toggles are orthogonal, giving four states to try when colours look
+> wrong. Deliberately *not* exposed: the RGB565 **byte** order (`bswap16` in
+> every flush). A wrong byte order does not produce plausible-but-shifted
+> colours, it produces noise, so there is nothing a user could usefully toggle.
+
+CO5300 is skipped on purpose — its channel order is correct on the verified
+hardware and its `display_set_bgr()` is an explicit no-op. The toggle stays
+visible in the web UI on those builds and simply does nothing, exactly as
+*Invert colours* already does on the SSD1322.

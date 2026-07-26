@@ -22,6 +22,7 @@ static const char *TAG = "ILI9488";
 static void backlight_init(void);
 void display_set_backlight(uint8_t brightness);
 void display_set_invert(bool invert);
+void display_set_bgr(bool bgr);
 void display_set_flip(bool flip);
 
 static spi_device_handle_t spi;
@@ -32,10 +33,19 @@ static spi_device_handle_t spi;
 static bool          s_invert_on    = false;
 static volatile bool s_invert_dirty = false;
 
-// 180° flip state — same live mechanism as colour inversion. Baseline MADCTL is
-// 0xE8; flip toggles MY+MX → 0x28. Touch has its own settings.display.touch_*.
+// MADCTL state — same live mechanism as colour inversion. Baseline is 0xE8;
+// flip toggles MY+MX → 0x28, the user's red/blue swap toggles BGR (0x08). Both
+// share the register, so one dirty flag. Touch has its own display.touch_*.
 static bool          s_flip_on      = false;
-static volatile bool s_flip_dirty   = false;
+static bool          s_swap_rb      = false;  // settings.display.bgr, XORed over the baseline
+static volatile bool s_madctl_dirty = false;
+
+static uint8_t ili9488_madctl(void)
+{
+    uint8_t m = s_flip_on ? 0x28 : 0xE8;
+    if (s_swap_rb) m ^= 0x08;
+    return m;
+}
 
 /* =========================
    LOW LEVEL SPI
@@ -137,11 +147,13 @@ static void ili9488_init_cmds(void)
 
     lcd_cmd(0x36); // MADCTL — landscape 480x320
     // 0xE8 = MY + MX + MV (row/col exchange) + BGR, mirroring the ST7796 profile.
-    // UNTESTED on real hardware — flip the BGR bit (0x08) if red/blue are swapped,
-    // or toggle MX/MY (0x40/0x80) if the image is mirrored/upside-down.
+    // UNTESTED on real hardware — if red/blue come out swapped, the BGR bit is
+    // now user-reachable via Settings → Swap red/blue (display.bgr); toggle
+    // MX/MY (0x40/0x80) here if the image is mirrored/upside-down.
     // Flip 180° toggles MY+MX (0xC0) → 0x28.
     s_flip_on = settings_get()->display.flip;
-    uint8_t d6[] = { s_flip_on ? (uint8_t)0x28 : (uint8_t)0xE8 };
+    s_swap_rb = settings_get()->display.bgr;
+    uint8_t d6[] = { ili9488_madctl() };
     lcd_data(d6, 1);
 
     lcd_cmd(0x3A); // Pixel format
@@ -206,9 +218,9 @@ static void my_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_m
         s_invert_dirty = false;
         lcd_cmd(s_invert_on ? 0x21 : 0x20);
     }
-    if (s_flip_dirty) {              // apply a pending 180° flip
-        s_flip_dirty = false;
-        uint8_t m = s_flip_on ? 0x28 : 0xE8;
+    if (s_madctl_dirty) {            // apply a pending 180° flip / red-blue swap
+        s_madctl_dirty = false;
+        uint8_t m = ili9488_madctl();
         lcd_cmd(0x36); lcd_data(&m, 1);
     }
 
@@ -351,8 +363,14 @@ void display_set_invert(bool invert)
     s_invert_dirty = true;   // sent on the next flush, from the LVGL task
 }
 
+void display_set_bgr(bool bgr)
+{
+    s_swap_rb      = bgr;
+    s_madctl_dirty = true;   // sent on the next flush, from the LVGL task
+}
+
 void display_set_flip(bool flip)
 {
-    s_flip_on    = flip;
-    s_flip_dirty = true;     // sent on the next flush, from the LVGL task
+    s_flip_on      = flip;
+    s_madctl_dirty = true;   // sent on the next flush, from the LVGL task
 }

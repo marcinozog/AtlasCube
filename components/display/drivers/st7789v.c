@@ -30,6 +30,7 @@ static const char *TAG = "ST7789V";
 static void backlight_init(void);
 void display_set_backlight(uint8_t brightness);
 void display_set_invert(bool invert);
+void display_set_bgr(bool bgr);
 void display_set_flip(bool flip);
 
 static spi_device_handle_t spi;
@@ -38,16 +39,21 @@ static spi_device_handle_t spi;
 static bool          s_invert_on    = false;
 static volatile bool s_invert_dirty = false;
 
-// Landscape baseline: MY + MV + BGR. A 180-degree flip toggles MY + MX.
+// Landscape baseline: MY + MV, RGB channel order. A 180-degree flip toggles
+// MY + MX; the BGR bit (0x08) is the user's red/blue swap. Both live in the
+// same MADCTL register, so one dirty flag covers them.
 static bool          s_flip_on      = false;
-static volatile bool s_flip_dirty   = false;
+static bool          s_swap_rb      = false;  // settings.display.bgr, XORed over the baseline
+static volatile bool s_madctl_dirty = false;
 
 static spi_transaction_t s_color_trans;
 static volatile bool     s_color_inflight = false;
 
 static uint8_t st7789v_madctl(void)
 {
-    return s_flip_on ? 0x68 : 0xA8;
+    uint8_t m = s_flip_on ? 0x60 : 0xA0;
+    if (s_swap_rb) m ^= 0x08;
+    return m;
 }
 
 static void spi_post_cb(spi_transaction_t *t)
@@ -117,6 +123,7 @@ static void st7789v_init_cmds(void)
     vTaskDelay(pdMS_TO_TICKS(120));
 
     s_flip_on = settings_get()->display.flip;
+    s_swap_rb = settings_get()->display.bgr;
     uint8_t madctl = st7789v_madctl();
     lcd_cmd(0x36); lcd_data(&madctl, 1); // landscape 320x240
 
@@ -198,8 +205,8 @@ static void flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_map)
         s_invert_dirty = false;
         lcd_cmd(s_invert_on ? 0x20 : 0x21);
     }
-    if (s_flip_dirty) {
-        s_flip_dirty = false;
+    if (s_madctl_dirty) {
+        s_madctl_dirty = false;
         uint8_t madctl = st7789v_madctl();
         lcd_cmd(0x36); lcd_data(&madctl, 1);
     }
@@ -320,8 +327,14 @@ void display_set_invert(bool invert)
     s_invert_dirty = true;
 }
 
+void display_set_bgr(bool bgr)
+{
+    s_swap_rb = bgr;
+    s_madctl_dirty = true;
+}
+
 void display_set_flip(bool flip)
 {
     s_flip_on = flip;
-    s_flip_dirty = true;
+    s_madctl_dirty = true;
 }

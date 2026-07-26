@@ -263,6 +263,12 @@ void display_set_invert(bool invert)
     (void)invert;
 }
 
+void display_set_bgr(bool bgr)
+{
+    // No-op on this monochrome panel — there are no colour channels to swap.
+    (void)bgr;
+}
+
 void display_set_flip(bool flip)
 {
     s_flip_on    = flip;

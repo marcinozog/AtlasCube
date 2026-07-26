@@ -25,6 +25,7 @@ static const char *TAG = "ILI9341";
 static void backlight_init(void);
 void display_set_backlight(uint8_t brightness);
 void display_set_invert(bool invert);
+void display_set_bgr(bool bgr);
 void display_set_flip(bool flip);
 
 static spi_device_handle_t spi;
@@ -35,10 +36,20 @@ static spi_device_handle_t spi;
 static bool          s_invert_on    = false;
 static volatile bool s_invert_dirty = false;
 
-// 180° flip state — same live mechanism as colour inversion. Baseline MADCTL is
-// 0xE8; flip toggles MY+MX → 0x28. Touch has its own settings.display.touch_*.
+// MADCTL state — same live mechanism as colour inversion. Baseline is 0xE8
+// (BGR panel, HW-verified); flip toggles MY+MX → 0x28 and the user's red/blue
+// swap clears the BGR bit (0x08). One dirty flag covers both, they share the
+// register. Touch has its own settings.display.touch_*.
 static bool          s_flip_on      = false;
-static volatile bool s_flip_dirty   = false;
+static bool          s_swap_rb      = false;  // settings.display.bgr, XORed over the baseline
+static volatile bool s_madctl_dirty = false;
+
+static uint8_t ili9341_madctl(void)
+{
+    uint8_t m = s_flip_on ? 0x28 : 0xE8;
+    if (s_swap_rb) m ^= 0x08;
+    return m;
+}
 
 // Async flush: the big pixel blob is queued (non-blocking) and flush_ready fires
 // from the SPI done-ISR, so the LVGL task can render the next area into the 2nd
@@ -172,9 +183,10 @@ static void ili9341_init_cmds(void)
     lcd_data(d10, 1);
 
     lcd_cmd(0x36); // MADCTL
-    // 0xE8 baseline; flip 180° toggles MY+MX (0xC0) → 0x28.
+    // 0xE8 baseline; flip 180° toggles MY+MX (0xC0) → 0x28, bgr toggles 0x08.
     s_flip_on = settings_get()->display.flip;
-    uint8_t d11[] = { s_flip_on ? (uint8_t)0x28 : (uint8_t)0xE8 }; //0x20, 0x40, 0x80, 0xE0 | 0x08
+    s_swap_rb = settings_get()->display.bgr;
+    uint8_t d11[] = { ili9341_madctl() };
     lcd_data(d11, 1);
 
     lcd_cmd(0x3A); // Pixel format
@@ -231,9 +243,9 @@ static void my_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_m
         s_invert_dirty = false;
         lcd_cmd(s_invert_on ? 0x20 : 0x21);
     }
-    if (s_flip_dirty) {              // apply a pending 180° flip
-        s_flip_dirty = false;
-        uint8_t m = s_flip_on ? 0x28 : 0xE8;
+    if (s_madctl_dirty) {            // apply a pending 180° flip / red-blue swap
+        s_madctl_dirty = false;
+        uint8_t m = ili9341_madctl();
         lcd_cmd(0x36); lcd_data(&m, 1);
     }
 
@@ -379,8 +391,14 @@ void display_set_invert(bool invert)
     s_invert_dirty = true;   // sent on the next flush, from the LVGL task
 }
 
+void display_set_bgr(bool bgr)
+{
+    s_swap_rb      = bgr;
+    s_madctl_dirty = true;   // sent on the next flush, from the LVGL task
+}
+
 void display_set_flip(bool flip)
 {
-    s_flip_on    = flip;
-    s_flip_dirty = true;     // sent on the next flush, from the LVGL task
+    s_flip_on      = flip;
+    s_madctl_dirty = true;   // sent on the next flush, from the LVGL task
 }

@@ -64,6 +64,7 @@ esp_err_t settings_init(void)
         s_settings.display.touch_invert_x   = false;
         s_settings.display.touch_invert_y   = false;
         s_settings.display.invert           = false;
+        s_settings.display.bgr              = false;
         s_settings.display.time_ampm        = false;
         s_settings.display.date_mdy         = false;
         s_settings.display.bg_gradient      = true;
@@ -268,6 +269,8 @@ static esp_err_t load_from_file(void)
         s_settings.display.touch_invert_y = cJSON_IsBool(tiy) ? cJSON_IsTrue(tiy) : inherited;
         cJSON *iv = cJSON_GetObjectItem(display, "invert");
         s_settings.display.invert = cJSON_IsBool(iv) ? cJSON_IsTrue(iv) : false;
+        cJSON *rb = cJSON_GetObjectItem(display, "bgr");
+        s_settings.display.bgr = cJSON_IsBool(rb) ? cJSON_IsTrue(rb) : false;
         cJSON *ta = cJSON_GetObjectItem(display, "time_ampm");
         s_settings.display.time_ampm = cJSON_IsBool(ta) ? cJSON_IsTrue(ta) : false;
         cJSON *dm = cJSON_GetObjectItem(display, "date_mdy");
@@ -597,6 +600,7 @@ static esp_err_t save_to_file_locked(void)
     cJSON_AddBoolToObject(display, "touch_invert_x", s_settings.display.touch_invert_x);
     cJSON_AddBoolToObject(display, "touch_invert_y", s_settings.display.touch_invert_y);
     cJSON_AddBoolToObject(display, "invert", s_settings.display.invert);
+    cJSON_AddBoolToObject(display, "bgr", s_settings.display.bgr);
     cJSON_AddBoolToObject(display, "time_ampm", s_settings.display.time_ampm);
     cJSON_AddBoolToObject(display, "date_mdy", s_settings.display.date_mdy);
     cJSON_AddBoolToObject(display, "bg_gradient", s_settings.display.bg_gradient);
@@ -1037,6 +1041,17 @@ void settings_set_invert(bool enabled)
     if (s_settings.display.invert == enabled) return;
     s_settings.display.invert = enabled;
     display_set_invert(enabled);
+    save_to_file();
+}
+
+void settings_set_bgr(bool enabled)
+{
+    // Red/blue channel order is one MADCTL bit, latched and re-sent on the next
+    // flush exactly like flip. Independent of invert: this swaps two channels,
+    // inversion complements all three.
+    if (s_settings.display.bgr == enabled) return;
+    s_settings.display.bgr = enabled;
+    display_set_bgr(enabled);
     save_to_file();
 }
 

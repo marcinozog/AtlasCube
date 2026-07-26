@@ -46,6 +46,7 @@ typedef struct {
     bool            touch_invert_x;  // mirror touch left↔right
     bool            touch_invert_y;  // mirror touch top↔bottom
     bool            invert;          // invert panel colours (INVON/INVOFF); XOR over the driver baseline — applied live
+    bool            bgr;             // swap the red and blue channels (MADCTL BGR bit); XOR over the driver baseline — applied live
     bool            time_ampm;       // clock in 12-hour AM/PM format (false = 24-hour)
     bool            date_mdy;        // date as MM/DD/YYYY (false = YYYY-MM-DD)
     bool            bg_gradient;     // dithered gradient background on/off
@@ -181,6 +182,7 @@ void settings_set_theme(ui_theme_t theme);
 void settings_set_flip(bool enabled);
 void settings_set_touch_orient(bool swap_xy, bool invert_x, bool invert_y);
 void settings_set_invert(bool enabled);
+void settings_set_bgr(bool enabled);
 void settings_set_time_ampm(bool enabled);
 void settings_set_date_mdy(bool enabled);
 void settings_set_show_fps(bool enabled);

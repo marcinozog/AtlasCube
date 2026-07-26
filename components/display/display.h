@@ -28,6 +28,16 @@ void display_set_backlight(uint8_t brightness);  // 0–100
 void display_set_invert(bool invert);
 
 /**
+ * Swap the red and blue channels live (MADCTL BGR bit). Fixes panels wired in
+ * the opposite channel order — red shows as blue, blue as orange, green stays
+ * correct. XORed over each driver's baseline, so `false` keeps the current
+ * behaviour; latched and applied on the next flush like invert. Unlike invert
+ * this touches only two of the three channels, so the two are independent.
+ * No-op on CO5300 and on the mono SSD1322.
+ */
+void display_set_bgr(bool bgr);
+
+/**
  * Flip the panel 180° live (re-sends MADCTL / column-remap). Like invert, the
  * flag is latched and applied on the next flush from the LVGL task; touch
  * already follows settings.display.flip at runtime. Force a repaint afterwards

@@ -153,6 +153,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddBoolToObject(display, "touch_invert_x", s->display.touch_invert_x);
     cJSON_AddBoolToObject(display, "touch_invert_y", s->display.touch_invert_y);
     cJSON_AddBoolToObject(display, "invert", s->display.invert);
+    cJSON_AddBoolToObject(display, "bgr", s->display.bgr);
     cJSON_AddBoolToObject(display, "time_ampm", s->display.time_ampm);
     cJSON_AddBoolToObject(display, "date_mdy", s->display.date_mdy);
     cJSON_AddBoolToObject(display, "bg_gradient", s->display.bg_gradient);
@@ -396,6 +397,15 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             settings_set_invert(cJSON_IsTrue(iv));
             // The panel command is latched in the driver; force a full repaint so
             // it gets flushed (and the screen visibly updates) right away.
+            ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
+            ui_event_send(&ev);
+        }
+        cJSON *rb = cJSON_GetObjectItem(display, "bgr");
+        if (cJSON_IsBool(rb)) {
+            ESP_LOGI("HTTP", "POST bgr: %d", cJSON_IsTrue(rb));
+            settings_set_bgr(cJSON_IsTrue(rb));
+            // MADCTL is latched like invert — repaint so the new channel order
+            // reaches the panel immediately.
             ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
             ui_event_send(&ev);
         }

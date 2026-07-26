@@ -107,6 +107,14 @@
                 </div>
             </div>
             <div class="field-group">
+                <label class="field-label">Swap red/blue</label>
+                <div class="field-hint">Fixes panels wired in the opposite channel order — red shows as blue, blue as orange, while green stays correct. Independent of <em>Invert colours</em> above, which affects all three channels. Applies instantly. No effect on the AMOLED and mono panels.</div>
+                <div class="theme-toggle uniform" id="bgrToggle" style="width:fit-content">
+                    <button class="theme-btn" id="settingsBtnBgrOn"  onclick="setBgr(true)">🔵 Swapped</button>
+                    <button class="theme-btn" id="settingsBtnBgrOff" onclick="setBgr(false)">🎨 Normal</button>
+                </div>
+            </div>
+            <div class="field-group">
                 <label class="field-label">FPS overlay</label>
                 <div class="field-hint">Show LVGL's on-screen FPS + CPU% counter (bottom-right). Applies instantly.</div>
                 <div class="theme-toggle uniform" id="fpsToggle" style="width:fit-content">
