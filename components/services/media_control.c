@@ -1,3 +1,7 @@
+#include <string.h>
+#include <stdlib.h>
+#include "esp_log.h"
+
 #include "media_control.h"
 #include "app_state.h"
 #include "settings.h"
@@ -6,6 +10,8 @@
 #include "sd_player.h"
 #include "audio_engine.h"
 #include "bt.h"
+
+static const char *TAG = "MEDIA_CTRL";
 
 static int clamp_volume(int volume)
 {
@@ -148,5 +154,56 @@ void media_control_execute(media_source_t source, media_action_t action)
         case MEDIA_ACTION_NEXT:     sd_player_next(); break;
         case MEDIA_ACTION_PREVIOUS: sd_player_prev(); break;
         case MEDIA_ACTION_STOP:     sd_player_stop_keep(); break;
+    }
+}
+
+/*
+media_command_execute_text
+*/
+void media_command_execute_text(const char *cmd)
+{
+    ESP_LOGI(TAG, "Plain CMD: %s", cmd);
+
+    // Semantic transport (voice, remote, pilot): acts on whatever source is
+    // playing right now (radio/SD/BT), resolved by media_source_current().
+    if (strcmp(cmd, "stop") == 0) {
+        media_control_execute(media_source_current(), MEDIA_ACTION_STOP);
+    }
+    else if (strcmp(cmd, "play") == 0) {
+        media_control_execute(media_source_current(), MEDIA_ACTION_PLAY);
+    }
+    else if (strcmp(cmd, "toggle") == 0) {
+        media_control_execute(media_source_current(), MEDIA_ACTION_PLAY_TOGGLE);
+    }
+    else if (strcmp(cmd, "next") == 0) {
+        media_control_execute(media_source_current(), MEDIA_ACTION_NEXT);
+    }
+    else if (strcmp(cmd, "prev") == 0) {
+        media_control_execute(media_source_current(), MEDIA_ACTION_PREVIOUS);
+    }
+    else if (strcmp(cmd, "volp") == 0) {
+        settings_set_volume(clamp_volume(app_state_get()->volume + 5));
+    }
+    else if (strcmp(cmd, "volm") == 0) {
+        settings_set_volume(clamp_volume(app_state_get()->volume - 5));
+    }
+    else if (strncmp(cmd, "vol=", 4) == 0) {
+        int v = atoi(cmd + 4);
+        if (v >= 0 && v <= 100)
+            settings_set_volume(v);
+    }
+    else if (strncmp(cmd, "playstation=", 12) == 0) {
+        int idx = atoi(cmd + 12);
+        radio_play_index(idx);
+    }
+    else if (strncmp(cmd, "source=", 7) == 0) {
+        const char *t = cmd + 7;
+        if      (strcmp(t, "radio") == 0) media_source_switch(MEDIA_SOURCE_RADIO);
+        else if (strcmp(t, "sd")    == 0) media_source_switch(MEDIA_SOURCE_SD);
+        else if (strcmp(t, "bt")    == 0) media_source_switch(MEDIA_SOURCE_BT);
+        else ESP_LOGW(TAG, "Unknown source: %s", t);
+    }
+    else {
+        ESP_LOGW(TAG, "Unknown plain CMD: %s", cmd);
     }
 }

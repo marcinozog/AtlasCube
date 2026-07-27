@@ -25,6 +25,7 @@ apart, each carrying its own stale copy of the protocol.
 | Discovery | mDNS `_http._tcp` on port 80, instance name `AtlasCube Radio`, TXT `host=<fqdn>` and `path=/` ([components/network/mdns_service.c](../components/network/mdns_service.c)) |
 | Max WS clients | 8 (`MAX_WS_CLIENTS`); a 9th handshake is logged and gets no slot — it still receives the initial state but no broadcasts |
 | Max incoming frame | 4096 B (`WS_MAX_FRAME_LEN`); a larger frame drops the client's socket |
+| Second transport | the hardware pilot speaks the plain-text vocabulary below over ESP-NOW instead of WS — link layer in [espnow_link.md](espnow_link.md) |
 
 **Dispatch rule:** a frame whose first byte is `{` is parsed as JSON, everything
 else is treated as a plain-text command. One frame = one command; there is no
@@ -45,7 +46,13 @@ batching and no framing beyond that.
 
 ## Client → device: plain-text commands
 
-Handled by `handle_plain_cmd()`. These are **semantic transport** commands: they
+Handled by `media_command_execute_text()` in
+[components/services/media_control.c](../components/services/media_control.c) —
+transport-independent, and therefore **shared verbatim with the ESP-NOW pilot
+link** ([espnow_link.md](espnow_link.md)). A command added to this table works on
+both links at once; it must never be reimplemented per transport.
+
+These are **semantic transport** commands: they
 act on whatever source is playing right now (radio / SD / BT), resolved by
 `media_source_current()` — the client does not need to know what is playing.
 

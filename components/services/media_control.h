@@ -45,6 +45,19 @@ void media_control_execute(media_source_t source, media_action_t action);
  */
 void media_source_switch(media_source_t target);
 
+/**
+ * Executes one plain-text command ("next", "vol=42", "playstation=3", …) —
+ * the shared vocabulary documented in docs/ws_protocol.md.
+ *
+ * Transport-independent on purpose: the WS server and the ESP-NOW link both
+ * strip their own framing and land here, so the vocabulary has exactly one
+ * implementation and cannot drift between the two links.
+ *
+ * Unknown commands are logged and dropped; there is no reply and no error
+ * signal, matching the fire-and-forget contract.
+ */
+void media_command_execute_text(const char *cmd);
+
 #ifdef __cplusplus
 }
 #endif

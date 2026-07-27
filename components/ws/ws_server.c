@@ -68,61 +68,6 @@ static void broadcast_task(void *arg) {
 }
 
 /*
-static void handle_plain_cmd(const char *cmd)
-*/
-static void handle_plain_cmd(const char *cmd)
-{
-    ESP_LOGI(TAG, "Plain CMD: %s", cmd);
-
-    // Semantic transport (voice, remote): acts on whatever source is playing
-    // right now (radio/SD/BT), resolved by media_source_current().
-    if (strcmp(cmd, "stop") == 0) {
-        media_control_execute(media_source_current(), MEDIA_ACTION_STOP);
-    }
-    else if (strcmp(cmd, "play") == 0) {
-        media_control_execute(media_source_current(), MEDIA_ACTION_PLAY);
-    }
-    else if (strcmp(cmd, "toggle") == 0) {
-        media_control_execute(media_source_current(), MEDIA_ACTION_PLAY_TOGGLE);
-    }
-    else if (strcmp(cmd, "next") == 0) {
-        media_control_execute(media_source_current(), MEDIA_ACTION_NEXT);
-    }
-    else if (strcmp(cmd, "prev") == 0) {
-        media_control_execute(media_source_current(), MEDIA_ACTION_PREVIOUS);
-    }
-    else if (strcmp(cmd, "volp") == 0) {
-        int v = app_state_get()->volume + 5;
-        if (v > 100) v = 100;
-        settings_set_volume(v);
-    }
-    else if (strcmp(cmd, "volm") == 0) {
-        int v = app_state_get()->volume - 5;
-        if (v < 0) v = 0;
-        settings_set_volume(v);
-    }
-    else if (strncmp(cmd, "vol=", 4) == 0) {
-        int v = atoi(cmd + 4);
-        if (v >= 0 && v <= 100)
-            settings_set_volume(v);
-    }
-    else if (strncmp(cmd, "playstation=", 12) == 0) {
-        int idx = atoi(cmd + 12);
-        radio_play_index(idx);
-    }
-    else if (strncmp(cmd, "source=", 7) == 0) {
-        const char *t = cmd + 7;
-        if      (strcmp(t, "radio") == 0) media_source_switch(MEDIA_SOURCE_RADIO);
-        else if (strcmp(t, "sd")    == 0) media_source_switch(MEDIA_SOURCE_SD);
-        else if (strcmp(t, "bt")    == 0) media_source_switch(MEDIA_SOURCE_BT);
-        else ESP_LOGW(TAG, "Unknown source: %s", t);
-    }
-    else {
-        ESP_LOGW(TAG, "Unknown plain CMD: %s", cmd);
-    }
-}
-
-/*
 static esp_err_t ws_handler(httpd_req_t *req)
 */
 static esp_err_t ws_handler(httpd_req_t *req)
@@ -194,8 +139,9 @@ static esp_err_t ws_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "RX: %s", payload);
 
     // --- Plain text commands (e.g. from the Android app) ---
+    // Shared with the ESP-NOW pilot link — see docs/espnow_link.md.
     if (payload[0] != '{') {
-        handle_plain_cmd(payload);
+        media_command_execute_text(payload);
         free(ws_pkt.payload);
         return ESP_OK;
     }
