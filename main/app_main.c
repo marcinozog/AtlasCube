@@ -25,6 +25,7 @@
 #include "radio_service.h"
 #include "ui_profile.h"
 #include "mqtt_svc.h"
+#include "espnow_link.h"
 #include "mqtt_config.h"
 #include "heap_report.h"
 #include "board_pins.h"
@@ -113,6 +114,12 @@ void app_main(void)
     // ── Web / WebSocket ───────────────────────────────────────────────────────
     ws_init();          // app_state_subscribe #2
     http_server_start();// available on router IP (STA) and 192.168.4.1 (AP)
+
+    // ── ESP-NOW pilot link ───────────────────────────────────────────────────
+    // Third control transport, sharing the WS command vocabulary — see
+    // docs/espnow_link.md. Runs in both STA and AP mode (it binds to whichever
+    // interface is up), and after playlist_load() so get_list has data.
+    espnow_link_init();
 
     // ── MQTT ─────────────────────────────────────────────────────────────────
     // Only meaningful in STA (broker is on the LAN). esp-mqtt has its own

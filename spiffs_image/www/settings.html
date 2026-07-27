@@ -911,6 +911,22 @@
             <button id="cfg_import_btn" onclick="importSettings()">⬆️ Import settings</button>
             <div id="cfg_import_status" class="save-status"></div>
         </div>
+
+        <div class="panel">
+            <label class="field-label">🎛️ Hardware pilot (ESP-NOW)</label>
+            <div class="ota-version-row">
+                <span>Paired pilot</span>
+                <code id="espnow_peer">…</code>
+            </div>
+            <div class="field-hint">
+                The pilot talks to the radio over ESP-NOW, not Wi-Fi — this button only
+                opens a 60-second window during which the radio accepts a pairing
+                request. Press it, then start pairing from the pilot's own menu.
+                Pairing again replaces the stored pilot.
+            </div>
+            <button id="espnow_pair_btn" onclick="pairPilot()">🔗 Open pairing window</button>
+            <div id="espnow_status" class="save-status"></div>
+        </div>
     </section>
 
     <a href="/index.html" class="back-link" style="margin:18px 0 0">← Back to Radio</a>

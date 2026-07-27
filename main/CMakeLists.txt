@@ -16,6 +16,7 @@ idf_component_register(
         encoder
         touch
         mqtt_svc
+        espnow_link
         sdcard
         board_pins
         updater

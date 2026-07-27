@@ -22,8 +22,10 @@ once.
 The pilot is battery-powered and sleeps. That single fact drives every
 difference from the WS contract:
 
-- **It never associates with the AP.** No DHCP, no 2–5 s connect on every
-  button press. It transmits raw ESP-NOW frames on a stored channel.
+- **It does not associate to send a command.** No DHCP, no 2–5 s connect on
+  every button press. It transmits raw ESP-NOW frames on a stored channel. The
+  AtlasCubeController does still join the AP, but only on demand and only for
+  the configuration screens — the control screen never leaves this link.
 - **It cannot receive pushes.** The WS model ("device pushes full state on
   every change, there is no *give me the state* command") is unusable — the
   pilot is asleep when the state changes. This link is **pull**: the pilot asks,
@@ -53,19 +55,27 @@ next moves channel, then fails silently.
 
 ### Pilot side
 
-The pilot has no interface channel to inherit, so `channel = 0` is **wrong on
-this side**: its interface sits on the default channel 1 while the radio may be
-on 6 or 11, and frames vanish without an error. The pilot instead:
+The pilot normally has no interface channel to inherit, so `channel = 0` is
+**wrong on this side**: its interface sits on the default channel 1 while the
+radio may be on 6 or 11, and frames vanish without an error. The pilot instead:
 
 1. stores the radio's MAC and channel in NVS at pairing (mirrored into RTC
    memory so it survives deep sleep without an NVS read),
 2. calls `esp_wifi_set_channel(ch, WIFI_SECOND_CHAN_NONE)` explicitly before
-   every transmission,
+   every transmission — **unless it is currently associated**, see below,
 3. on TX-callback failure, retries twice on the stored channel, then **sweeps
    channels 1…13**, ~120 ms per channel, caching the winner,
 4. refreshes the stored channel from the `ch` field that every radio reply
    carries — so a router-side channel change self-heals on the next successful
    exchange.
+
+**When the pilot is associated.** A pilot that also runs a WiFi station — the
+AtlasCubeController joins the AP on demand, for the configuration screens that
+do not fit in a 1490 B frame — must skip step 2 while that association is up.
+`esp_wifi_set_channel()` on an associated interface tears the association down.
+It is also unnecessary: both ends are then on the router's channel by
+definition. So the send path branches on association state, and step 2 applies
+only to the unassociated case that everything else here assumes.
 
 ### Frame format
 
@@ -86,7 +96,7 @@ would step the volume twice. Replies echo the sequence of the request they
 answer, so the pilot can match them.
 
 **Size.** Both ends are ESP-IDF ≥ 5.4, so ESP-NOW v2 applies:
-`ESP_NOW_MAX_DATA_LEN_V2` = 1490 B. The radio still caps replies at **1400 B**
+`ESP_NOW_MAX_DATA_LEN_V2` = 1470 B. The radio still caps replies at **1400 B**
 and truncates before that limit rather than fragmenting — there is no
 reassembly layer, by design.
 
@@ -198,11 +208,17 @@ by `e`'s length and asks again until `off + len(e) == total`.
   pilot uses light sleep for a few minutes after the last press and deep sleep
   after that, so the only slow press is the one where the screen is lighting up
   anyway.
-- **Keyboard wake.** 3×4 matrix: rows held low through
-  `gpio_deep_sleep_hold_en()`, columns pulled up, `ext1` wake in `ANY_LOW` mode
-  on the four column pins (ESP32-S3 supports `ANY_LOW`; the original ESP32 did
-  not). The matrix is scanned normally after wake to identify the key. All pins
-  must be in the RTC domain, GPIO0–21.
+- **Wake source.** Whatever wakes the pilot must sit in the chip's RTC/LP domain,
+  and that domain is far smaller than the full pin count — check
+  `SOC_RTCIO_PIN_COUNT` for the target rather than assuming. It is **GPIO0–21 on
+  the ESP32-S3 but only GPIO0–7 on the ESP32-C6**, which is what the
+  AtlasCubeController runs; on that board the eight LP pins are nearly all spoken
+  for by the panel and the digitizer. The controller wakes on its CST816D touch
+  INT line, so a press on the screen is the wake event and no separate key
+  hardware is involved. A pilot built around a key matrix instead would hold rows
+  low through `gpio_deep_sleep_hold_en()`, pull the columns up, and take `ext1`
+  wake on the columns — the C6 supports a per-pin trigger level
+  (`SOC_PM_SUPPORT_EXT1_WAKEUP_MODE_PER_PIN`), the S3 only one mode for all.
 - **MQTT is not on this path.** [mqtt_svc.c](../components/mqtt_svc/mqtt_svc.c)
   encodes the same vocabulary as topic suffixes with separate payloads, and
   clamps where the plain-text form ignores (`volume`, `station`). Folding it

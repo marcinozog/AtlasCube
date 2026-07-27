@@ -1780,11 +1780,63 @@ async function importSettings() {
     }
 }
 
+// ── Hardware pilot (ESP-NOW) ─────────────────────────────────────────────────
+// The pilot pairs over ESP-NOW; this only opens the radio's 60 s accept window.
+// See docs/espnow_link.md.
+
+async function loadEspnow() {
+    const el = document.getElementById('espnow_peer');
+    if (!el) return;
+    try {
+        const r = await fetch('/api/espnow');
+        const d = await r.json();
+        el.textContent = d.paired ? d.peer : 'none';
+    } catch (_) {
+        el.textContent = '—';
+    }
+}
+
+async function pairPilot() {
+    const btn = document.getElementById('espnow_pair_btn');
+    btn.disabled = true;
+    try {
+        const r = await fetch('/api/espnow/pair', { method: 'POST' });
+        const d = await r.json();
+        if (!d.ok) throw new Error('Device error');
+
+        // Poll while the window is open so the MAC appears as soon as the pilot
+        // answers, without the user reloading the page.
+        let left = d.window_s;
+        const tick = setInterval(async () => {
+            left--;
+            if (left <= 0) {
+                clearInterval(tick);
+                btn.disabled = false;
+                await loadEspnow();
+                const el = document.getElementById('espnow_peer');
+                showStatusEl('espnow_status',
+                             el && el.textContent !== 'none'
+                                 ? '✅ Pilot paired.'
+                                 : '⌛ Window closed — no pilot answered.',
+                             el && el.textContent !== 'none' ? 'ok' : 'error');
+                return;
+            }
+            showStatusEl('espnow_status',
+                         '🔗 Waiting for the pilot… ' + left + ' s', '');
+            await loadEspnow();
+        }, 1000);
+    } catch (e) {
+        showStatusEl('espnow_status', '❌ Failed: ' + e.message, 'error');
+        btn.disabled = false;
+    }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Init
 // ─────────────────────────────────────────────────────────────────────────────
 initTabs();
 loadSettings();
+loadEspnow();
 loadColors();
 loadMqtt();
 loadWeather();

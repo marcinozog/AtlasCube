@@ -993,7 +993,7 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
 }
 .ota-file::file-selector-button:hover { background: var(--accent); color: #fff; }
 
-#ota_btn, #www_btn, #cfg_export_btn, #cfg_import_btn {
+#ota_btn, #www_btn, #cfg_export_btn, #cfg_import_btn, #espnow_pair_btn {
     width: 100%;
     margin-top: 14px;
     background: var(--accent);
@@ -1010,9 +1010,26 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
     transition: background .15s;
 }
 #ota_btn:hover:not(:disabled), #www_btn:hover:not(:disabled),
-#cfg_export_btn:hover:not(:disabled), #cfg_import_btn:hover:not(:disabled) { background: var(--accent-dim); }
+#cfg_export_btn:hover:not(:disabled), #cfg_import_btn:hover:not(:disabled),
+#espnow_pair_btn:hover:not(:disabled) { background: var(--accent-dim); }
 #ota_btn:disabled, #www_btn:disabled,
 #cfg_export_btn:disabled, #cfg_import_btn:disabled { background: var(--border); cursor: not-allowed; box-shadow: none; }
+
+/* Pairing is a 60 s listening window, not a task that finished — so the button
+   stays lit and pulses while disabled instead of going flat grey like the
+   others, which would read as "broken" rather than "waiting for the pilot". */
+#espnow_pair_btn:disabled {
+    cursor: progress;
+    background: var(--accent-dim);
+    animation: espnow-listening 1.4s ease-in-out infinite;
+}
+@keyframes espnow-listening {
+    0%, 100% { box-shadow: 0 0 6px var(--accent-glow);  opacity: .75; }
+    50%      { box-shadow: 0 0 20px var(--accent-glow); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #espnow_pair_btn:disabled { animation: none; }
+}
 
 .ota-progress-wrap {
     display: flex;

@@ -19,6 +19,7 @@ idf_component_register(
         events
         espressif__zlib
         mqtt_svc
+        espnow_link         # /api/espnow — pairing window for the hardware pilot
         sdcard
         spiffs
         fatfs

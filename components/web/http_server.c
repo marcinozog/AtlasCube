@@ -6,6 +6,7 @@
 #include "esp_system.h"
 #include "esp_app_desc.h"
 #include "esp_app_format.h"
+#include "esp_mac.h"        // MACSTR/MAC2STR for /api/espnow
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
 #include "freertos/FreeRTOS.h"
@@ -20,6 +21,7 @@
 #include "app_state.h"
 #include "wifi_manager.h"
 #include "mdns_service.h"
+#include "espnow_link.h"
 #include "theme.h"
 #include "ui_manager.h"
 #include "ui_events.h"
@@ -3372,6 +3374,55 @@ static esp_err_t api_restart_handler(httpd_req_t *req)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ESP-NOW pilot link — see docs/espnow_link.md
+//
+// GET  /api/espnow      — pairing state, peer MAC, seconds left in the window
+// POST /api/espnow/pair — opens the pairing window
+//
+// The pilot never touches these; it pairs over ESP-NOW. This is the human-facing
+// trigger that opens the window, so an unpaired pilot in range cannot attach
+// itself unattended.
+// ─────────────────────────────────────────────────────────────────────────────
+#define ESPNOW_PAIR_WINDOW_S 60
+
+static esp_err_t api_espnow_get_handler(httpd_req_t *req)
+{
+    cJSON *root = cJSON_CreateObject();
+    if (!root) return send_json_or_500(req, NULL);
+
+    uint8_t mac[ESPNOW_MAC_LEN];
+    bool paired = espnow_link_get_peer(mac);
+
+    cJSON_AddBoolToObject(root, "paired", paired);
+    if (paired) {
+        char mac_str[18];
+        snprintf(mac_str, sizeof(mac_str), MACSTR, MAC2STR(mac));
+        cJSON_AddStringToObject(root, "peer", mac_str);
+    }
+    cJSON_AddNumberToObject(root, "window_s", espnow_link_pair_window_left());
+
+    char *str = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return send_json_or_500(req, str);
+}
+
+static esp_err_t api_espnow_pair_handler(httpd_req_t *req)
+{
+    espnow_link_pair_window_open(ESPNOW_PAIR_WINDOW_S);
+
+    cJSON *root = cJSON_CreateObject();
+    if (!root) return send_json_or_500(req, NULL);
+    cJSON_AddBoolToObject(root, "ok", true);
+    cJSON_AddNumberToObject(root, "window_s", ESPNOW_PAIR_WINDOW_S);
+
+    char *str = cJSON_PrintUnformatted(root);
+    cJSON_Delete(root);
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    return send_json_or_500(req, str);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GET /api/pins — current runtime pin map + the binary's display/touch drivers.
 // Returns { "driver": "ST7796", "touch": "FT6336U", "pins": { ... } }. Built from
 // board_pins' own key list, so it auto-tracks new pins without edits here.
@@ -3475,10 +3526,12 @@ void http_server_start(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn      = httpd_uri_match_wildcard;
-    // 52 handlers are registered below and ws_register() adds one more before
-    // them. Keep a little headroom so the final wildcard GET serving the web UI
-    // can never be silently dropped when another API endpoint is added.
-    config.max_uri_handlers  = 60;
+    // 61 handlers are registered below and ws_register() adds one more before
+    // them — 62 in use. Keep real headroom: the two wildcards (/* OPTIONS and
+    // /* GET) register LAST, so an overflow drops exactly them and the symptom
+    // is the whole web UI 404-ing, not the new endpoint going missing. Raise
+    // this whenever you add an API handler.
+    config.max_uri_handlers  = 76;
     // WS handlers run on this task and chain deep: cJSON_Parse of the inbound
     // payload → radio/settings play path → send_full_state (cJSON build of the
     // whole state). The 4 KB HTTPD default overflows on that path (e.g. an
@@ -3539,6 +3592,20 @@ void http_server_start(void)
         .handler = api_restart_handler,
     };
     httpd_register_uri_handler(server, &api_restart);
+
+    httpd_uri_t api_espnow_get = {
+        .uri     = "/api/espnow",
+        .method  = HTTP_GET,
+        .handler = api_espnow_get_handler,
+    };
+    httpd_register_uri_handler(server, &api_espnow_get);
+
+    httpd_uri_t api_espnow_pair = {
+        .uri     = "/api/espnow/pair",
+        .method  = HTTP_POST,
+        .handler = api_espnow_pair_handler,
+    };
+    httpd_register_uri_handler(server, &api_espnow_pair);
 
     httpd_uri_t api_pins_get = {
         .uri     = "/api/pins",
