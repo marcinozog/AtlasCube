@@ -192,6 +192,16 @@ static char *build_state(void)
 
     if (src == MEDIA_SOURCE_SD) {
         src_str = "sd";
+        // The folder stands in for the album. ttl already carries the track's
+        // ID3 title, and station_name belongs to the radio — it keeps whatever
+        // stream played last and goes stale the moment the source changes,
+        // which on the pilot reads as "still playing that station".
+        //
+        // Basename only: sd_dir is a full path, and every character of the
+        // "/sdcard/music/" in front would come out of the 48 this field is
+        // truncated to.
+        const char *slash = strrchr(s->sd_dir, '/');
+        stn     = (slash && slash[1]) ? slash + 1 : s->sd_dir;
         playing = sd_player_is_active() && !audio_engine_is_paused();
     } else if (src == MEDIA_SOURCE_BT) {
         src_str = "bt";
