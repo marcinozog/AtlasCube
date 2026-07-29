@@ -9,6 +9,67 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-07-29
+
+### Added
+- **espnow:** add the ESP-NOW pilot link with a web-triggered pairing window
+- **display:** add a red/blue channel-order toggle and fix the ST7789V baseline to RGB
+- **wallpapers:** install online gallery wallpapers into per-screen category folders
+- **wallpapers:** file uploads and saved internet wallpapers per panel resolution
+- **audio:** add mono downmix mode with web and on-device toggle
+- **touch:** runtime touch orientation independent of display flip
+- **layout:** add online asset gallery with source-size install defaults
+- **layout:** add online gallery to Assets tab
+- **www,ui:** font colour overrides for home date/netinfo/strip labels
+- **www,ui:** font colour overrides for radio/sd/bt info + bt track labels
+- **www,ui:** per-wallpaper font colour overrides for radio/sd/bt labels (0=inherit theme)
+- **www,ui:** per-wallpaper clock time colour override (0=inherit theme)
+- **www:** add preview button to SD .bin picker modal (EQ + screen knob images)
+- **www:** add mkdir + move file actions to shared SD browser, enable in Assets tab
+- **www:** add mkdir + move file actions to shared SD browser, enable in Assets tab
+- **layout:** add folder navigation (parent + subdirs) to Assets tab file browser
+- **wallpapers:** add Equalizer category to online gallery + website catalog
+- **layout:** General-tab wallpaper upload scaled to panel res without assigning
+- **eq:** movable+resizable sliders group box, toggle freq labels & legend, positionable legend
+- **eq:** make response-curve box movable + resizable (eq_curve_x/y/w/h) in layout editor
+- **eq:** make active-value label movable (eq_info_x/y) with configurable font in layout editor
+- **eq:** drop title, move value to top-left, add live response curve (spline) top-right
+- **eq:** user-defined knob width (eq_knob_w) and knob-only mode for band sliders
+- **eq:** Open-EQ hotspot action with return-to-caller
+- **eq:** Equalizer layout tab (shared knob image + per-screen wallpaper), open-EQ hotspot action, touch hotspots 6→8
+- **audio:** configurable channel-test tone (pink/white/sine, duration) with web UI Play button
+- **audio:** built-in stereo channel-test tone (pink noise) in Settings→Audio for SD-less HW check
+- **ui:** per-slider volume max — remap slider travel to 0..max % for fine control on room-loud panels
+- **ui:** scale the volume-slider knob image to the slider size (bilinear lv_bin_image_load_scaled)
+- **ui:** knob image for the volume slider — SD .bin via Assets tab + per-field SD picker
+- **ui:** knob-only mode for the volume slider (wallpaper draws the track)
+- **ui:** explicit horizontal/vertical orientation for the volume slider
+- **ui:** draggable on-screen volume slider on radio/SD/BT screens with layout editor support
+
+### Changed
+- **eq:** spread bands across an editable group span for pixel-exact edges
+- **eq:** derive sliders-group size from slider width, height and band gap
+- **wallpapers:** name the device-saved wallpaper folder "internet"
+- **web:** unify settings backup format between settings and setup pages
+- **layout:** unify asset size selection for uploads and gallery installs
+- **www:** extract shared SD folder browser (sdbrowse.js) used by wallpaper/knob/logo/assets pickers
+
+### Fixed
+- **espnow:** fill the first line from the folder when SD is the source
+- **layout:** place label boxes from real LVGL font metrics instead of nominal size
+- **layout:** restore live resize preview broken by a stale wVal reference
+- **radio:** set station name on URL playback so podcasts don't keep the previous station
+- **www:** show .bin preview above SD picker modal + add preview to wallpaper browser
+- **layout:** start all settings menu groups collapsed instead of auto-opening the first
+- **eq:** band sliders ignore gesture bubble so drag updates value (taps worked, drag froze)
+- **web:** group layout-editor form into categories — collapsible VU-meters group + section headers so widgets are easier to find
+- **ui:** square volume-slider corners to stop large sliders hanging the LVGL renderer
+- **web:** tidy the Assets uploader — styled file picker and standalone Upload button
+- **web:** style the Assets tab inputs and the knob-image path field in the layout editor
+- **ui:** stop volume-slider drags from bubbling up as screen swipe gestures
+- **ui:** hide the themed knob under the volume-slider knob image (knob_only artwork)
+- **ui:** label plate padding no longer triggers scroll on fitting text
+
 ## [0.46.0] - 2026-07-23
 
 ### Added
@@ -786,7 +847,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.46.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.47.0...HEAD
+[0.47.0]: https://github.com/marcinozog/AtlasCube/compare/v0.46.0...v0.47.0
 [0.46.0]: https://github.com/marcinozog/AtlasCube/compare/v0.45.0...v0.46.0
 [0.45.0]: https://github.com/marcinozog/AtlasCube/compare/v0.44.0...v0.45.0
 [0.44.0]: https://github.com/marcinozog/AtlasCube/compare/v0.43.0...v0.44.0
