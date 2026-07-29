@@ -112,9 +112,10 @@ static bool get_bt_auto(void)    { return app_state_get()->bt_auto_switch; }
 static bool get_eq(void)         { return app_state_get()->eq_enabled; }
 static bool get_mono(void)       { return app_state_get()->mono; }
 static void act_restart(void)    { esp_restart(); }
+// Encoder-driven like every other Settings row — keep it out of the touch guard.
+static void act_test_tone(void)  { audio_engine_play_test_tone(1000, AUDIO_TEST_PINK); }
 #if !CONFIG_TOUCH_NONE
 static void act_radio_layout(void) { screen_layout_editor_open(LAYOUT_EDITOR_RADIO); }
-static void act_test_tone(void)    { audio_engine_play_test_tone(1000, AUDIO_TEST_PINK); }
 #endif
 
 /* ── row tables ─────────────────────────────────────────────────────────── */
