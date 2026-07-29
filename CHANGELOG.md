@@ -9,6 +9,11 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.47.1] - 2026-07-29
+
+### Fixed
+- **ui:** define the test-tone action outside the touch guard so no-touch variants build
+
 ## [0.47.0] - 2026-07-29
 
 ### Added
@@ -847,7 +852,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.47.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.47.1...HEAD
+[0.47.1]: https://github.com/marcinozog/AtlasCube/compare/v0.47.0...v0.47.1
 [0.47.0]: https://github.com/marcinozog/AtlasCube/compare/v0.46.0...v0.47.0
 [0.46.0]: https://github.com/marcinozog/AtlasCube/compare/v0.45.0...v0.46.0
 [0.45.0]: https://github.com/marcinozog/AtlasCube/compare/v0.44.0...v0.45.0
