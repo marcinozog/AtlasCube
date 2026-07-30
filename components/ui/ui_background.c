@@ -18,15 +18,19 @@ static const char *TAG = "UI_BG";
 // ── Wallpaper ───────────────────────────────────────────────────────────────
 // Full-screen LVGL .bin (RGB565, DISPLAY_WIDTH x DISPLAY_HEIGHT) backgrounds
 // loaded from SD, used in place of the gradient when display.wallpaper_on is
-// set. The path is resolved per screen: the hub sections in ui_profile
-// (clock/radio/sd/bt) may override the global default (display.wallpaper_path)
-// with their own file, or opt out with "none". Every distinct path gets its own
+// set. The path is resolved per screen: the ui_profile sections that have a
+// wallpaper field may override the global default (display.wallpaper_path) with
+// their own file, or opt out with "none". Every distinct path gets its own
 // PSRAM slot so navigating between screens never re-reads the SD card (which
 // would contend with SD music playback). Same .bin format the photo screensaver
 // consumes — see scripts/img2lvgl.py.
 #define LV_BIN_MAGIC     0x19
 #define LV_BIN_RGB565    0x12
-#define WP_SLOTS         5   // 4 per-screen overrides + the global default
+// One per screen that can override (home/radio/sd/bt/eq/playlist/browser) plus
+// the global default. A slot only allocates its panel-sized PSRAM buffer once
+// something actually loads into it, so the cost follows the number of distinct
+// wallpapers in use, not this number.
+#define WP_SLOTS         8
 
 typedef struct __attribute__((packed)) {
     uint8_t  magic;
@@ -88,7 +92,8 @@ static const char *screen_wp_override(ui_screen_id_t screen)
         case SCREEN_SD:    return p->sd_wallpaper;
         case SCREEN_BT:    return p->bt_wallpaper;
         case SCREEN_EQ:    return p->eq_wallpaper;
-        case SCREEN_PLAYLIST: return p->playlist_wallpaper;
+        case SCREEN_PLAYLIST:   return p->playlist_wallpaper;
+        case SCREEN_SD_BROWSER: return p->browser_wallpaper;
         default:           return NULL;
     }
 }

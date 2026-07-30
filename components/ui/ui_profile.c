@@ -148,6 +148,14 @@ static const ui_profile_t k_defaults = {
     .playlist_header_font      = &lv_font_montserrat_12_pl,
     .playlist_row_font         = &lv_font_montserrat_12_pl,
 
+    .browser_header_h          = 14,
+    .browser_item_h            = 12,
+    .browser_item_pad          = 1,
+    .browser_row_pad_left      = 4,
+    .browser_label_bg_opa      = 100,
+    .browser_header_font       = &lv_font_montserrat_12_pl,
+    .browser_row_font          = &lv_font_montserrat_12_pl,
+
     // BT: on 128x64 the circle makes no sense — text only
     .bt_circle_x               = 0,
     .bt_circle_y               = 0,
@@ -373,6 +381,14 @@ static const ui_profile_t k_defaults = {
     .playlist_label_bg_opa     = 100,
     .playlist_header_font      = &lv_font_montserrat_12_pl,
     .playlist_row_font         = &lv_font_montserrat_12_pl,
+
+    .browser_header_h          = 16,
+    .browser_item_h            = 14,
+    .browser_item_pad          = 1,
+    .browser_row_pad_left      = 4,
+    .browser_label_bg_opa      = 100,
+    .browser_header_font       = &lv_font_montserrat_12_pl,
+    .browser_row_font          = &lv_font_montserrat_12_pl,
 
     // BT: text only — circle makes no sense on a 64px-tall strip
     .bt_circle_x               = 0,
@@ -708,6 +724,18 @@ static const ui_profile_t k_defaults = {
     .playlist_header_font      = &lv_font_montserrat_14_pl,
     .playlist_row_font         = &lv_font_montserrat_14_pl,
 
+    .browser_header_h          = 45,
+    .browser_item_h            = 34,
+    .browser_item_pad          = 2,
+    .browser_row_pad_left      = 10,
+    .browser_label_bg_opa      = 100,
+    .browser_label_x           = 90,
+    .browser_label_y           = -10,
+    .browser_hint_x            = -20,
+    .browser_hint_y            = 10,
+    .browser_header_font       = &lv_font_montserrat_14_pl,
+    .browser_row_font          = &lv_font_montserrat_14_pl,
+
     // Bluetooth: small BT icon at top, brand + status, then track metadata
     .bt_circle_x               = (DISPLAY_WIDTH - 60) / 2,  // centered on screen
     .bt_circle_y               = 35,
@@ -1038,6 +1066,14 @@ static const ui_profile_t k_defaults = {
     .playlist_header_font      = &lv_font_montserrat_14_pl,
     .playlist_row_font         = &lv_font_montserrat_12_pl,
 
+    .browser_header_h          = 26,
+    .browser_item_h            = 28,
+    .browser_item_pad          = 2,
+    .browser_row_pad_left      = 8,
+    .browser_label_bg_opa      = 100,
+    .browser_header_font       = &lv_font_montserrat_14_pl,
+    .browser_row_font          = &lv_font_montserrat_12_pl,
+
     // 320x240 — small BT icon top, brand + status, then track metadata
     .bt_circle_x               = (DISPLAY_WIDTH - 60) / 2,  // centered on screen
     .bt_circle_y               = 25,
@@ -1365,6 +1401,14 @@ static const ui_profile_t k_defaults = {
     .playlist_label_bg_opa     = 100,
     .playlist_header_font      = &lv_font_montserrat_18_pl,
     .playlist_row_font         = &lv_font_montserrat_14_pl,
+
+    .browser_header_h          = 34,
+    .browser_item_h            = 38,
+    .browser_item_pad          = 3,
+    .browser_row_pad_left      = 12,
+    .browser_label_bg_opa      = 100,
+    .browser_header_font       = &lv_font_montserrat_18_pl,
+    .browser_row_font          = &lv_font_montserrat_14_pl,
 
     // 480x320 — small BT icon top, brand + status, then track metadata
     .bt_circle_x               = (DISPLAY_WIDTH - 84) / 2,  // centered on screen
@@ -2468,39 +2512,41 @@ static cJSON *dump_eq(const ui_profile_t *p)
 }
 
 // ── screen_playlist / screen_sd_browser ─────────────────────────────────────
-// One section for both list screens: they share the row metrics, so a wallpaper
-// cut-out sized here fits either of them.
+// Two sections of the same shape, one per list screen, so each can be lined up
+// with its own wallpaper. The geometry rules live in one place below; only the
+// JSON keys are written out per section.
 
-void ui_profile_playlist_list_box(const ui_profile_t *p,
-                                  int16_t *x, int16_t *y, int16_t *w, int16_t *h)
+// Stored box, or the auto layout: everything below the header, full width —
+// which is what both screens looked like before the box existed.
+static void list_box_of(int16_t bx, int16_t by, int16_t bw, int16_t bh,
+                        bool header_hide, int16_t header_h,
+                        int16_t *x, int16_t *y, int16_t *w, int16_t *h)
 {
-    if (p->playlist_list_w > 0 && p->playlist_list_h > 0) {
-        *x = p->playlist_list_x; *y = p->playlist_list_y;
-        *w = p->playlist_list_w; *h = p->playlist_list_h;
+    if (bw > 0 && bh > 0) {
+        *x = bx; *y = by; *w = bw; *h = bh;
         return;
     }
-    // Auto: everything below the header, full width — the pre-list-box layout.
-    int16_t top = p->playlist_header_hide ? 0 : p->playlist_header_h;
+    int16_t top = header_hide ? 0 : header_h;
     *x = 0;
     *y = top;
     *w = DISPLAY_WIDTH;
     *h = (int16_t)(DISPLAY_HEIGHT - top);
 }
 
-int16_t ui_profile_playlist_row_w(const ui_profile_t *p)
+void ui_profile_playlist_list_box(const ui_profile_t *p,
+                                  int16_t *x, int16_t *y, int16_t *w, int16_t *h)
 {
-    int16_t x, y, w, h;
-    ui_profile_playlist_list_box(p, &x, &y, &w, &h);
-    int16_t rw = (int16_t)(w - 2 * UI_PLAYLIST_LIST_PAD);
-    return rw > 8 ? rw : 8;
+    list_box_of(p->playlist_list_x, p->playlist_list_y,
+                p->playlist_list_w, p->playlist_list_h,
+                p->playlist_header_hide, p->playlist_header_h, x, y, w, h);
 }
 
-int16_t ui_profile_playlist_row_label_w(const ui_profile_t *p)
+void ui_profile_browser_list_box(const ui_profile_t *p,
+                                 int16_t *x, int16_t *y, int16_t *w, int16_t *h)
 {
-    // Leave the left padding plus a small right margin so a clipped station name
-    // never touches the row's right edge.
-    int16_t lw = (int16_t)(ui_profile_playlist_row_w(p) - p->playlist_row_pad_left - 4);
-    return lw > 8 ? lw : 8;
+    list_box_of(p->browser_list_x, p->browser_list_y,
+                p->browser_list_w, p->browser_list_h,
+                p->browser_header_hide, p->browser_header_h, x, y, w, h);
 }
 
 static void load_playlist(const cJSON *obj, ui_profile_t *p)
@@ -2563,6 +2609,63 @@ static cJSON *dump_playlist(const ui_profile_t *p)
     return o;
 }
 
+static void load_browser(const cJSON *obj, ui_profile_t *p)
+{
+    if (!cJSON_IsObject(obj)) return;
+    load_bool(obj, "browser_header_hide",  &p->browser_header_hide);
+    load_i16 (obj, "browser_header_h",     &p->browser_header_h);
+    load_bool(obj, "browser_hint_hide",    &p->browser_hint_hide);
+    load_i16 (obj, "browser_list_x",       &p->browser_list_x);
+    load_i16 (obj, "browser_list_y",       &p->browser_list_y);
+    load_i16 (obj, "browser_list_w",       &p->browser_list_w);
+    load_i16 (obj, "browser_list_h",       &p->browser_list_h);
+    load_i16 (obj, "browser_item_h",       &p->browser_item_h);
+    load_i16 (obj, "browser_item_pad",     &p->browser_item_pad);
+    load_i16 (obj, "browser_row_pad_left", &p->browser_row_pad_left);
+    load_i16 (obj, "browser_label_bg_opa", &p->browser_label_bg_opa);
+    load_i16 (obj, "browser_label_x",      &p->browser_label_x);
+    load_i16 (obj, "browser_label_y",      &p->browser_label_y);
+    load_i16 (obj, "browser_hint_x",       &p->browser_hint_x);
+    load_i16 (obj, "browser_hint_y",       &p->browser_hint_y);
+    load_font(obj, "browser_header_font",  &p->browser_header_font);
+    load_font(obj, "browser_row_font",     &p->browser_row_font);
+    load_str (obj, "browser_wallpaper",    p->browser_wallpaper, sizeof(p->browser_wallpaper));
+
+    if (p->browser_item_h < 4)       p->browser_item_h = 4;
+    if (p->browser_item_pad < 0)     p->browser_item_pad = 0;
+    if (p->browser_row_pad_left < 0) p->browser_row_pad_left = 0;
+    if (p->browser_label_bg_opa < 0)   p->browser_label_bg_opa = 0;
+    if (p->browser_label_bg_opa > 100) p->browser_label_bg_opa = 100;
+    if (p->browser_list_w < 0) p->browser_list_w = 0;
+    if (p->browser_list_h < 0) p->browser_list_h = 0;
+}
+
+static cJSON *dump_browser(const ui_profile_t *p)
+{
+    cJSON *o = cJSON_CreateObject();
+    add_bool(o, "browser_header_hide",  p->browser_header_hide);
+    add_i16 (o, "browser_header_h",     p->browser_header_h);
+    add_bool(o, "browser_hint_hide",    p->browser_hint_hide);
+    int16_t lx, ly, lw, lh;   // effective box — see dump_playlist
+    ui_profile_browser_list_box(p, &lx, &ly, &lw, &lh);
+    add_i16 (o, "browser_list_x",       lx);
+    add_i16 (o, "browser_list_y",       ly);
+    add_i16 (o, "browser_list_w",       lw);
+    add_i16 (o, "browser_list_h",       lh);
+    add_i16 (o, "browser_item_h",       p->browser_item_h);
+    add_i16 (o, "browser_item_pad",     p->browser_item_pad);
+    add_i16 (o, "browser_row_pad_left", p->browser_row_pad_left);
+    add_i16 (o, "browser_label_bg_opa", p->browser_label_bg_opa);
+    add_i16 (o, "browser_label_x",      p->browser_label_x);
+    add_i16 (o, "browser_label_y",      p->browser_label_y);
+    add_i16 (o, "browser_hint_x",       p->browser_hint_x);
+    add_i16 (o, "browser_hint_y",       p->browser_hint_y);
+    add_font(o, "browser_header_font",  p->browser_header_font);
+    add_font(o, "browser_row_font",     p->browser_row_font);
+    add_str (o, "browser_wallpaper",    p->browser_wallpaper);
+    return o;
+}
+
 // ── I/O ─────────────────────────────────────────────────────────────────────
 
 esp_err_t ui_profile_load_from_file(void)
@@ -2622,6 +2725,7 @@ esp_err_t ui_profile_load_from_file(void)
     load_sd   (cJSON_GetObjectItem(json, "sd"),    &s_runtime);
     load_eq   (cJSON_GetObjectItem(json, "eq"),    &s_runtime);
     load_playlist(cJSON_GetObjectItem(json, "playlist"), &s_runtime);
+    load_browser (cJSON_GetObjectItem(json, "browser"),  &s_runtime);
     // (other sections will land here when exposed in the UI: events, wifi, ...)
 
     cJSON_Delete(json);
@@ -2703,6 +2807,18 @@ void ui_profile_patch_playlist(const void *obj)
     load_playlist((const cJSON *)obj, &s_runtime);
 }
 
+void *ui_profile_dump_browser(void)
+{
+    ensure_initialized();
+    return dump_browser(&s_runtime);
+}
+
+void ui_profile_patch_browser(const void *obj)
+{
+    ensure_initialized();
+    load_browser((const cJSON *)obj, &s_runtime);
+}
+
 esp_err_t ui_profile_save_to_file(void)
 {
     ensure_initialized();
@@ -2718,6 +2834,7 @@ esp_err_t ui_profile_save_to_file(void)
     cJSON_AddItemToObject(json, "sd",    dump_sd   (&s_runtime));
     cJSON_AddItemToObject(json, "eq",    dump_eq   (&s_runtime));
     cJSON_AddItemToObject(json, "playlist", dump_playlist(&s_runtime));
+    cJSON_AddItemToObject(json, "browser",  dump_browser (&s_runtime));
 
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);

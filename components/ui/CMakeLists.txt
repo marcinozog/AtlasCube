@@ -36,6 +36,7 @@ idf_component_register(
         "screensavers/screensaver_photo.c"
         "screensavers/screensaver_blank.c"
         "screensavers/screensavers.c"
+        "widgets/ui_list_widget.c"
         "widgets/clock_widget.c"
         "widgets/now_playing_widget.c"
         "widgets/station_icon_widget.c"

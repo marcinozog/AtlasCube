@@ -390,8 +390,9 @@ typedef struct {
     int16_t          sd_label_bg_opa;           // floating label plate opacity, 0..100
     char             sd_wallpaper[128];         // see clock_wallpaper
 
-    // screen_playlist — the row metrics also drive screen_sd_browser, so both
-    // list screens keep the same shape (and fit the same wallpaper cut-out).
+    // screen_playlist — the station list. screen_sd_browser is the same shape
+    // but owns its fields (browser_* below): with a wallpaper per screen, the
+    // cut-out each artwork leaves for the list rarely lands in the same place.
     bool             playlist_header_hide;   // hide the whole header strip (title + hint)
     int16_t          playlist_header_h;
     bool             playlist_hint_hide;     // hide the "press - play ..." line
@@ -412,6 +413,26 @@ typedef struct {
     const lv_font_t *playlist_header_font;
     const lv_font_t *playlist_row_font;
     char             playlist_wallpaper[128]; // see clock_wallpaper
+
+    // screen_sd_browser — same fields as screen_playlist above, own values
+    bool             browser_header_hide;
+    int16_t          browser_header_h;
+    bool             browser_hint_hide;
+    int16_t          browser_list_x;
+    int16_t          browser_list_y;
+    int16_t          browser_list_w;
+    int16_t          browser_list_h;
+    int16_t          browser_item_h;
+    int16_t          browser_item_pad;
+    int16_t          browser_row_pad_left;
+    int16_t          browser_label_bg_opa;
+    int16_t          browser_label_x;
+    int16_t          browser_label_y;
+    int16_t          browser_hint_x;
+    int16_t          browser_hint_y;
+    const lv_font_t *browser_header_font;
+    const lv_font_t *browser_row_font;
+    char             browser_wallpaper[128];
 
     // screen_bt — absolute LCD coordinates (top-left origin)
     int16_t          bt_circle_x;
@@ -590,19 +611,20 @@ void  ui_profile_patch_eq(const void *obj);
 void *ui_profile_dump_playlist(void);
 void  ui_profile_patch_playlist(const void *obj);
 
-// Effective list box of the playlist / SD-browser screens: the stored x/y/w/h,
-// or the auto layout (full width under the header) when w/h are unset. Shared by
-// the screens and the web dump so both agree.
+void *ui_profile_dump_browser(void);
+void  ui_profile_patch_browser(const void *obj);
+
+// Effective list box of the two list screens: the stored x/y/w/h, or the auto
+// layout (full width under the header) when w/h are unset. Shared by the screens
+// and the web dump so both agree.
 void ui_profile_playlist_list_box(const ui_profile_t *p,
                                   int16_t *x, int16_t *y, int16_t *w, int16_t *h);
+void ui_profile_browser_list_box(const ui_profile_t *p,
+                                 int16_t *x, int16_t *y, int16_t *w, int16_t *h);
 
-// Inner padding of that box, kept here because the row width is derived from it.
-#define UI_PLAYLIST_LIST_PAD 2
-
-// Row width inside that box, and the width its label may occupy. Derived rather
-// than stored so a row can never overflow the box the wallpaper reserved.
-int16_t ui_profile_playlist_row_w(const ui_profile_t *p);
-int16_t ui_profile_playlist_row_label_w(const ui_profile_t *p);
+// Inner padding of that box. ui_list_widget derives the row width from it, so a
+// row can never overflow the box a wallpaper reserved.
+#define UI_LIST_BOX_PAD 2
 
 // Effective EQ response-curve box (stored x/y/w/h, or the auto layout when w/h
 // are unset). Shared by the web dump and the screen so both agree.

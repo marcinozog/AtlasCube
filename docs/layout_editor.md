@@ -7,9 +7,10 @@ saving, the active screen is rebuilt on the fly — no device restart
 needed.
 
 Currently covered sections: **clock**, **bt**, **radio**, **sd**, **eq**,
-**playlist** (eq exposes only its shared knob image + wallpaper — the 10-band
-geometry is compile-time; playlist owns the list box, row metrics and header of
-*both* list screens — the station list and the SD file browser). Other screens
+**playlist**, **browser** (eq exposes only its shared knob image + wallpaper —
+the 10-band geometry is compile-time; playlist and browser are the two list
+screens — the station list and the SD file browser — with the same field set,
+one section each so each can be lined up with its own wallpaper). Other screens
 (settings, events, wifi) follow the same pattern described
 below in *Adding a new section*. Sections are exposed as tabs at the
 top of the layout page.
@@ -136,7 +137,8 @@ it simply doesn't exist.
 | `/api/ui/profile/radio` | GET / POST | Radio section, same semantics as clock |
 | `/api/ui/profile/sd` | GET / POST | SD Player section, same semantics as clock |
 | `/api/ui/profile/eq` | GET / POST | Equalizer section (shared knob image / width / knob-only + wallpaper), same semantics as clock |
-| `/api/ui/profile/playlist` | GET / POST | Playlist section — list box, row metrics, header + wallpaper; also drives the SD file browser. GET always returns the *effective* list box, so an unset (auto) box arrives ready to drag |
+| `/api/ui/profile/playlist` | GET / POST | Playlist section — list box, row metrics, header + wallpaper. GET always returns the *effective* list box, so an unset (auto) box arrives ready to drag |
+| `/api/ui/profile/browser` | GET / POST | SD file browser — same fields as playlist, own values |
 | `/api/ui/profile/reset` | POST | Reset full runtime to compile-time defaults, save file, rebuild |
 
 Implementation in [components/web/http_server.c](../components/web/http_server.c).
@@ -280,8 +282,8 @@ are all section-agnostic.
 
 Each section carries a `<section>_wallpaper` source field
 (`clock_wallpaper`, `radio_wallpaper`, `sd_wallpaper`, `bt_wallpaper`,
-`eq_wallpaper`, `playlist_wallpaper`), resolved per screen in
-`ui_background_apply()`:
+`eq_wallpaper`, `playlist_wallpaper`, `browser_wallpaper`), resolved per screen
+in `ui_background_apply()`:
 
 - `""` / `"none"` (default) — **General**: the gradient/solid theme
   background, replaced by the internet wallpaper when one is fetched,
@@ -380,7 +382,7 @@ effective wallpaper:
 
 e.g. wallpaper `/sdcard/wallpapers/sunset.bin` on a 480×320 panel → preset
 `/wallpapers/layouts/480x320/sunset.json`. Format: `{ w, h, wallpaper,
-sections: { clock?, bt?, radio?, sd?, eq?, playlist? } }` — sections are optional; Save
+sections: { clock?, bt?, radio?, sd?, eq?, playlist?, browser? } }` — sections are optional; Save
 merges the active section into the existing file, so one wallpaper can
 accumulate layouts for several screens. The resolution directory keeps
 independent presets for the same wallpaper on different LCD variants.

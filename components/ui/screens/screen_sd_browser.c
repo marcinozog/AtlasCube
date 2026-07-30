@@ -2,6 +2,7 @@
 #include "ui_events.h"
 #include "ui_screen.h"
 #include "ui_manager.h"
+#include "ui_list_widget.h"
 #include "sd_player.h"
 #include "app_state.h"
 #include "theme.h"
@@ -14,10 +15,11 @@
 #include <string.h>
 #include <stdio.h>
 
-// On-device SD file browser. Mirrors screen_playlist (reuses the playlist_*
-// ui_profile fields): a header + a scrollable list of an "up" entry, subfolders
-// and audio files. Tapping a folder descends into it; tapping a track plays it
-// and returns to the SD player. Long press / back goes to the player.
+// On-device SD file browser. Mirrors screen_playlist (same ui_list_widget, its
+// own browser_* ui_profile section): a header + a scrollable list of an "up"
+// entry, subfolders and audio files. Tapping a folder descends into it; tapping
+// a track plays it and returns to the SD player. Long press / back goes to the
+// player.
 
 static const char *TAG = "SCR_SD_BR";
 
@@ -25,10 +27,9 @@ static const char *TAG = "SCR_SD_BR";
 #define SD_BR_DIR_MAX  192
 
 static lv_obj_t *s_root         = NULL;
-static lv_obj_t *s_list         = NULL;
+static lv_obj_t *s_list         = NULL;   // ui_list_widget viewport
 static lv_obj_t *s_header_label = NULL;
 static char      s_dir[SD_BR_DIR_MAX];   // current browse dir (persists between visits)
-static int       s_selected     = 0;
 static int       s_count        = 0;     // number of rows
 static ui_screen_id_t s_return  = SCREEN_SD;   // where to go after pick/exit
 
@@ -66,54 +67,27 @@ static void compute_parent(char *parent, size_t sz)
 }
 
 // --------------------------------------------------------------------------
-// Row helpers
+// List callbacks
 // --------------------------------------------------------------------------
 
-static lv_obj_t *get_row(int idx)
+static void bind_row(int idx, ui_list_row_t *row)
 {
-    if (!s_list || idx < 0 || idx >= s_count) return NULL;
-    return lv_obj_get_child(s_list, idx);
-}
-
-static void style_row(int idx)
-{
-    lv_obj_t *row = get_row(idx);
-    if (!row || !s_entries) return;
-    lv_obj_t *lbl = lv_obj_get_child(row, 0);
-
-    const ui_theme_colors_t *th = theme_get();
-    bool is_cursor   = (idx == s_selected);
-    bool is_folder   = (s_entries[idx].kind != ENT_TRACK);
-
-    uint32_t bg = is_cursor ? th->accent : th->bg_secondary;
-    uint32_t fg = is_cursor ? 0xFFFFFF
-                : is_folder ? th->accent
-                            : th->text_primary;
-
-    lv_obj_set_style_bg_color(row, lv_color_hex(bg), LV_PART_MAIN);
-    if (lbl) lv_obj_set_style_text_color(lbl, lv_color_hex(fg), LV_PART_MAIN);
-}
-
-static void highlight_item(int idx)
-{
-    int prev = s_selected;
-    s_selected = idx;
-    style_row(prev);
-    style_row(s_selected);
-
-    lv_obj_t *cur = get_row(s_selected);
-    if (cur) {
-        lv_obj_update_layout(s_list);
-        lv_coord_t row_y      = lv_obj_get_y(cur);
-        lv_coord_t row_h      = lv_obj_get_height(cur);
-        lv_coord_t view_h     = lv_obj_get_height(s_list);
-        lv_coord_t scroll_y   = lv_obj_get_scroll_y(s_list);
-        lv_coord_t max_scroll = scroll_y + lv_obj_get_scroll_bottom(s_list);
-        lv_coord_t target     = row_y + row_h / 2 - view_h / 2;
-        if (target < 0)          target = 0;
-        if (target > max_scroll) target = max_scroll;
-        lv_obj_scroll_to_y(s_list, target, LV_ANIM_ON);
+    if (!s_entries) return;
+    switch (s_entries[idx].kind) {
+        case ENT_UP:
+            snprintf(row->text, sizeof(row->text), LV_SYMBOL_UP "  ..");
+            break;
+        case ENT_FOLDER:
+            snprintf(row->text, sizeof(row->text), LV_SYMBOL_DIRECTORY " %s",
+                     s_entries[idx].name);
+            break;
+        default:
+            snprintf(row->text, sizeof(row->text), LV_SYMBOL_AUDIO " %s",
+                     s_entries[idx].name);
+            break;
     }
+    // Navigation stands out from playable files.
+    if (s_entries[idx].kind != ENT_TRACK) row->color = theme_get()->accent;
 }
 
 // --------------------------------------------------------------------------
@@ -122,16 +96,9 @@ static void highlight_item(int idx)
 
 static void activate(int idx);
 
-static void row_click_cb(lv_event_t *e)
-{
-    lv_obj_t *row = lv_event_get_target(e);
-    if (row) activate(lv_obj_get_index(row));
-}
-
-// (Re)scan s_dir and rebuild the row list.
+// (Re)scan s_dir and hand the new entry count to the list.
 static void populate(void)
 {
-    if (s_list) lv_obj_clean(s_list);
     free(s_entries);
     s_entries = NULL;
     s_count   = 0;
@@ -149,6 +116,7 @@ static void populate(void)
     }
     if (!s_entries) {
         ESP_LOGW(TAG, "No entries / alloc failed for %s", s_dir);
+        ui_list_set_count(0);
         if (s_header_label)
             lv_label_set_text(s_header_label, "SD: (empty)");
         return;
@@ -177,50 +145,13 @@ static void populate(void)
     }
     s_count = k;
 
-    const ui_theme_colors_t *th = theme_get();
-    const ui_profile_t      *p  = ui_profile_get();
-
-    for (int i = 0; i < s_count; i++) {
-        lv_obj_t *row = lv_obj_create(s_list);
-        lv_obj_set_size(row, ui_profile_playlist_row_w(p), p->playlist_item_h);
-        lv_obj_set_style_bg_color(row, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
-        lv_obj_set_style_bg_opa(row, LV_OPA_COVER, LV_PART_MAIN);
-        lv_obj_set_style_border_width(row, 0, LV_PART_MAIN);
-        lv_obj_set_style_radius(row, 3, LV_PART_MAIN);
-        lv_obj_set_style_pad_ver(row, 0, LV_PART_MAIN);
-        lv_obj_set_style_pad_left(row, p->playlist_row_pad_left, LV_PART_MAIN);
-        lv_obj_set_style_pad_right(row, 0, LV_PART_MAIN);
-        lv_obj_clear_flag(row, LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_add_event_cb(row, row_click_cb, LV_EVENT_CLICKED, NULL);
-
-        lv_obj_t *lbl = lv_label_create(row);
-        switch (s_entries[i].kind) {
-            case ENT_UP:
-                lv_label_set_text(lbl, LV_SYMBOL_UP "  ..");
-                break;
-            case ENT_FOLDER:
-                lv_label_set_text_fmt(lbl, LV_SYMBOL_DIRECTORY " %s", s_entries[i].name);
-                break;
-            default:
-                lv_label_set_text_fmt(lbl, LV_SYMBOL_AUDIO " %s", s_entries[i].name);
-                break;
-        }
-        lv_label_set_long_mode(lbl, LV_LABEL_LONG_CLIP);
-        lv_obj_set_width(lbl, ui_profile_playlist_row_label_w(p));
-        lv_obj_set_style_text_font(lbl, p->playlist_row_font, LV_PART_MAIN);
-        // Initial colour (style_row only restyles the cursor/prev rows, so set it
-        // here too or non-cursor labels would inherit an invisible default).
-        uint32_t fg = (s_entries[i].kind == ENT_TRACK) ? th->text_primary : th->accent;
-        lv_obj_set_style_text_color(lbl, lv_color_hex(fg), LV_PART_MAIN);
-        lv_obj_align(lbl, LV_ALIGN_LEFT_MID, 0, 0);
-    }
+    // Resets the scroll to the top and re-binds every row from s_entries.
+    ui_list_set_count(s_count);
 
     if (s_header_label)
         lv_label_set_text_fmt(s_header_label, "SD: %s",
                               basename_of(s_dir)[0] ? basename_of(s_dir) : "music");
 
-    s_selected = 0;
-    highlight_item(0);
     ESP_LOGI(TAG, "%s → %d folders, %d tracks", s_dir, nf, nt);
 }
 
@@ -237,10 +168,8 @@ static void activate(int idx)
             break;
 
         case ENT_FOLDER: {
-            char path[SD_BR_DIR_MAX + SD_BR_NAME_MAX];
-            snprintf(path, sizeof(path), "%s/%s", s_dir, e->name);
-            strncpy(s_dir, path, sizeof(s_dir) - 1);
-            s_dir[sizeof(s_dir) - 1] = 0;
+            size_t len = strlen(s_dir);
+            snprintf(s_dir + len, sizeof(s_dir) - len, "/%s", e->name);
             populate();
             break;
         }
@@ -271,55 +200,53 @@ static void sd_browser_create(lv_obj_t *parent)
     const ui_theme_colors_t *th = theme_get();
     const ui_profile_t      *p  = ui_profile_get();
 
-    // Header + list box come from the shared "playlist" profile section, so the
-    // browser keeps the same shape as the station list (and fits the same
-    // wallpaper cut-out).
     int16_t list_x, list_y, list_w, list_h;
-    ui_profile_playlist_list_box(p, &list_x, &list_y, &list_w, &list_h);
+    ui_profile_browser_list_box(p, &list_x, &list_y, &list_w, &list_h);
 
-    lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
+    // Background (gradient / global wallpaper / browser_wallpaper) comes from
+    // ui_manager — only the header strip and the rows paint over it.
+    lv_obj_set_style_bg_opa(parent, LV_OPA_TRANSP, LV_PART_MAIN);
     lv_obj_set_style_pad_all(parent, 0, LV_PART_MAIN);
 
     // Header
-    if (!p->playlist_header_hide) {
+    if (!p->browser_header_hide) {
         lv_obj_t *header = lv_obj_create(parent);
-        lv_obj_set_size(header, DISPLAY_WIDTH, p->playlist_header_h);
+        lv_obj_set_size(header, DISPLAY_WIDTH, p->browser_header_h);
         lv_obj_align(header, LV_ALIGN_TOP_MID, 0, 0);
         lv_obj_set_style_bg_color(header, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
         lv_obj_set_style_bg_opa(header, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_set_style_border_width(header, 0, LV_PART_MAIN);
+        lv_obj_set_style_radius(header, 0, LV_PART_MAIN);
         lv_obj_set_style_pad_all(header, 0, LV_PART_MAIN);
-        lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
 
         s_header_label = lv_label_create(header);
         lv_label_set_text(s_header_label, "SD");
-        lv_obj_set_style_text_font(s_header_label, p->playlist_header_font, LV_PART_MAIN);
+        lv_obj_set_style_text_font(s_header_label, p->browser_header_font, LV_PART_MAIN);
         lv_obj_set_style_text_color(s_header_label, lv_color_hex(th->accent), LV_PART_MAIN);
-        lv_obj_align(s_header_label, LV_ALIGN_LEFT_MID, p->playlist_label_x, p->playlist_label_y);
+        lv_obj_align(s_header_label, LV_ALIGN_LEFT_MID, p->browser_label_x, p->browser_label_y);
 
-        if (!p->playlist_hint_hide) {
+        if (!p->browser_hint_hide) {
             lv_obj_t *hint = lv_label_create(header);
             lv_label_set_text(hint, "press - open   swipe<>/long - back");
-            lv_obj_set_style_text_font(hint, p->playlist_row_font, LV_PART_MAIN);
+            lv_obj_set_style_text_font(hint, p->browser_row_font, LV_PART_MAIN);
             lv_obj_set_style_text_color(hint, lv_color_hex(th->text_muted), LV_PART_MAIN);
-            lv_obj_align(hint, LV_ALIGN_RIGHT_MID, p->playlist_hint_x, p->playlist_hint_y);
+            lv_obj_align(hint, LV_ALIGN_RIGHT_MID, p->browser_hint_x, p->browser_hint_y);
         }
     }
 
-    // Scrollable list
-    s_list = lv_obj_create(parent);
-    lv_obj_set_pos(s_list, list_x, list_y);
-    lv_obj_set_size(s_list, list_w, list_h);
-    lv_obj_set_flex_flow(s_list, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_flex_align(s_list, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
-    lv_obj_set_style_bg_color(s_list, lv_color_hex(th->bg_primary), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(s_list, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_border_width(s_list, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(s_list, UI_PLAYLIST_LIST_PAD, LV_PART_MAIN);
-    lv_obj_set_style_pad_row(s_list, p->playlist_item_pad, LV_PART_MAIN);
-    lv_obj_set_scroll_dir(s_list, LV_DIR_VER);
-    lv_obj_set_scrollbar_mode(s_list, LV_SCROLLBAR_MODE_ACTIVE);
+    // List — populate() fills in the count once the folder has been scanned.
+    const ui_list_cfg_t cfg = {
+        .x = list_x, .y = list_y, .w = list_w, .h = list_h,
+        .item_h       = p->browser_item_h,
+        .item_pad     = p->browser_item_pad,
+        .row_pad_left = p->browser_row_pad_left,
+        .row_bg_opa   = p->browser_label_bg_opa,
+        .font         = p->browser_row_font,
+        .bind         = bind_row,
+        .click        = activate,
+    };
+    s_list = ui_list_create(parent, &cfg, 0);
 
     populate();
     ESP_LOGI(TAG, "Created at %s", s_dir);
@@ -327,6 +254,7 @@ static void sd_browser_create(lv_obj_t *parent)
 
 static void sd_browser_destroy(void)
 {
+    ui_list_forget();
     free(s_entries);
     s_entries      = NULL;
     s_count        = 0;
@@ -346,20 +274,20 @@ static void sd_browser_on_input(ui_input_t input)
     switch (input) {
         case UI_INPUT_ENCODER_CW: {
             if (s_count == 0) break;
-            int next = s_selected + 1;
+            int next = ui_list_get_selected() + 1;
             if (next >= s_count) next = 0;
-            highlight_item(next);
+            ui_list_select(next);
             break;
         }
         case UI_INPUT_ENCODER_CCW: {
             if (s_count == 0) break;
-            int prev = s_selected - 1;
+            int prev = ui_list_get_selected() - 1;
             if (prev < 0) prev = s_count - 1;
-            highlight_item(prev);
+            ui_list_select(prev);
             break;
         }
         case UI_INPUT_ENCODER_PRESS:
-            activate(s_selected);
+            activate(ui_list_get_selected());
             break;
         case UI_INPUT_ENCODER_LONG_PRESS:
         case UI_INPUT_SWIPE_RIGHT:
@@ -376,12 +304,13 @@ static void sd_browser_apply_theme(void)
     if (!s_root || !s_list) return;
     const ui_theme_colors_t *th = theme_get();
 
-    lv_obj_set_style_bg_color(s_root, lv_color_hex(th->bg_primary), LV_PART_MAIN);
-    lv_obj_set_style_bg_color(s_list, lv_color_hex(th->bg_primary), LV_PART_MAIN);
-    if (s_header_label)
+    if (s_header_label) {
         lv_obj_set_style_text_color(s_header_label, lv_color_hex(th->accent), LV_PART_MAIN);
+        lv_obj_t *header = lv_obj_get_parent(s_header_label);
+        if (header) lv_obj_set_style_bg_color(header, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
+    }
 
-    for (int i = 0; i < s_count; i++) style_row(i);
+    ui_list_refresh();
     lv_obj_invalidate(s_root);
 }
 

@@ -440,30 +440,51 @@ const EQ_FIELDS = [
     { key: 'eq_knob_only', label: 'Knob only (no track)', type: 'bool' },
 ];
 
-// Playlist — the station list, and with it the SD file browser: both screens
-// share this section, so the list box drawn here is the one both scroll in. The
-// box is the element that matters against a wallpaper: size it to the frame the
-// artwork leaves free and the rows land inside it (their width is derived from
-// it, never stored). A smaller box is also a cheaper scroll — the device only
-// repaints what the box covers.
-const PLAYLIST_FIELDS = [
-    { key: 'playlist_list_x',       label: 'List X',      type: 'number' },
-    { key: 'playlist_list_y',       label: 'List Y',      type: 'number' },
-    { key: 'playlist_list_w',       label: 'List W',      type: 'number', min: 16, max: 960 },
-    { key: 'playlist_list_h',       label: 'List H',      type: 'number', min: 16, max: 960 },
-    { key: 'playlist_item_h',       label: 'Row height',  type: 'number', min: 4,  max: 200 },
-    { key: 'playlist_item_pad',     label: 'Row gap',     type: 'number', min: 0,  max: 100 },
-    { key: 'playlist_row_pad_left', label: 'Text indent', type: 'number', min: 0,  max: 200 },
-    { key: 'playlist_row_font',     label: 'Row font',    type: 'font'   },
-    { key: 'playlist_header_hide',  label: 'Hide header bar', type: 'bool' },
-    { key: 'playlist_header_h',     label: 'Header height',   type: 'number', min: 0, max: 200 },
-    { key: 'playlist_header_font',  label: 'Header font', type: 'font'   },
-    { key: 'playlist_label_x',      label: 'Title X (from left)',   type: 'number' },
-    { key: 'playlist_label_y',      label: 'Title Y (from middle)', type: 'number' },
-    { key: 'playlist_hint_hide',    label: 'Hide legend', type: 'bool' },
-    { key: 'playlist_hint_x',       label: 'Legend X (from right)',  type: 'number' },
-    { key: 'playlist_hint_y',       label: 'Legend Y (from middle)', type: 'number' },
-];
+// The two list screens — the station playlist and the SD file browser — have
+// the same shape and one section each, so each can be lined up with its own
+// wallpaper. The list box is the element that matters against artwork: size it
+// to the frame the wallpaper leaves free and the rows land inside it (their
+// width is derived from the box, never stored). A smaller box is also a cheaper
+// scroll — the device only repaints what the box covers.
+function listFields(prefix) {
+    return [
+        { key: `${prefix}_list_x`,       label: 'List X',      type: 'number' },
+        { key: `${prefix}_list_y`,       label: 'List Y',      type: 'number' },
+        { key: `${prefix}_list_w`,       label: 'List W',      type: 'number', min: 16, max: 960 },
+        { key: `${prefix}_list_h`,       label: 'List H',      type: 'number', min: 16, max: 960 },
+        { key: `${prefix}_item_h`,       label: 'Row height',  type: 'number', min: 4,  max: 200 },
+        { key: `${prefix}_item_pad`,     label: 'Row gap',     type: 'number', min: 0,  max: 100 },
+        { key: `${prefix}_row_pad_left`, label: 'Text indent', type: 'number', min: 0,  max: 200 },
+        { key: `${prefix}_row_font`,     label: 'Row font',    type: 'font'   },
+        { key: `${prefix}_header_hide`,  label: 'Hide header bar', type: 'bool' },
+        { key: `${prefix}_header_h`,     label: 'Header height',   type: 'number', min: 0, max: 200 },
+        { key: `${prefix}_header_font`,  label: 'Header font', type: 'font'   },
+        { key: `${prefix}_label_x`,      label: 'Title X (from left)',   type: 'number' },
+        { key: `${prefix}_label_y`,      label: 'Title Y (from middle)', type: 'number' },
+        { key: `${prefix}_hint_hide`,    label: 'Hide legend', type: 'bool' },
+        { key: `${prefix}_hint_x`,       label: 'Legend X (from right)',  type: 'number' },
+        { key: `${prefix}_hint_y`,       label: 'Legend Y (from middle)', type: 'number' },
+    ];
+}
+
+function listGroups(prefix) {
+    return [
+        { heading: 'List' },
+        { title: 'List box', summary: d => listBoxSummary(d, prefix),
+          fields: [`${prefix}_list_x`, `${prefix}_list_y`, `${prefix}_list_w`, `${prefix}_list_h`] },
+        { title: 'Rows', fields: [`${prefix}_item_h`, `${prefix}_item_pad`,
+                                  `${prefix}_row_pad_left`, `${prefix}_row_font`] },
+        { heading: 'Header' },
+        { title: 'Header bar',
+          summary: d => d[`${prefix}_header_hide`] ? 'Hidden' : `H ${d[`${prefix}_header_h`] | 0}`,
+          fields: [`${prefix}_header_hide`, `${prefix}_header_h`, `${prefix}_header_font`] },
+        { title: 'Title', fields: [`${prefix}_label_x`, `${prefix}_label_y`] },
+        { title: 'Legend', fields: [`${prefix}_hint_hide`, `${prefix}_hint_x`, `${prefix}_hint_y`] },
+    ];
+}
+
+const PLAYLIST_FIELDS = listFields('playlist');
+const BROWSER_FIELDS  = listFields('browser');
 
 // Form-only grouping. Field schemas above remain the API/source-of-truth; these
 // groups only decide how the editor presents them. `enabledBy` keeps the Show
@@ -568,18 +589,8 @@ const FORM_GROUPS = {
         { heading: 'Artwork' },
         { title: 'Knob image', fields: ['eq_knob_image', 'eq_knob_w', 'eq_knob_only'] },
     ],
-    playlist: [
-        { heading: 'List' },
-        { title: 'List box', summary: playlistBoxSummary,
-          fields: ['playlist_list_x', 'playlist_list_y', 'playlist_list_w', 'playlist_list_h'] },
-        { title: 'Rows', fields: ['playlist_item_h', 'playlist_item_pad',
-                                  'playlist_row_pad_left', 'playlist_row_font'] },
-        { heading: 'Header' },
-        { title: 'Header bar', summary: d => d.playlist_header_hide ? 'Hidden' : `H ${d.playlist_header_h | 0}`,
-          fields: ['playlist_header_hide', 'playlist_header_h', 'playlist_header_font'] },
-        { title: 'Title', fields: ['playlist_label_x', 'playlist_label_y'] },
-        { title: 'Legend', fields: ['playlist_hint_hide', 'playlist_hint_x', 'playlist_hint_y'] },
-    ],
+    playlist: listGroups('playlist'),
+    browser:  listGroups('browser'),
 };
 
 // Remember expanded groups while switching screen tabs or rebuilding the form.
@@ -594,7 +605,8 @@ const SECTIONS = {
     radio: { title: 'Radio',     fields: RADIO_FIELDS, renderer: renderRadio },
     sd:    { title: 'SD Player', fields: SD_FIELDS,    renderer: renderSd    },
     eq:    { title: 'Equalizer', fields: EQ_FIELDS,    renderer: renderEq    },
-    playlist: { title: 'Playlist', fields: PLAYLIST_FIELDS, renderer: renderPlaylist },
+    playlist: { title: 'Playlist',   fields: PLAYLIST_FIELDS, renderer: renderPlaylist },
+    browser:  { title: 'SD Browser', fields: BROWSER_FIELDS,  renderer: renderBrowser  },
 };
 
 const state = {
@@ -606,6 +618,7 @@ const state = {
     sd:     {},
     eq:     {},
     playlist: {},
+    browser: {},
 };
 
 // The layout preview can use the active screen's SD wallpaper as its
@@ -1319,6 +1332,7 @@ const SECTION_WALLPAPER_CATEGORY = {
     sd:    'radio-sd-player',
     eq:    'equalizer',
     playlist: 'playlist',
+    browser:  'playlist',   // both list screens share one gallery category
 };
 
 function sectionWallpaperCategory() {
@@ -3243,26 +3257,28 @@ function eqGroupSummary(data) {
            ` · gap ~${g.avgGap.toFixed(1)}${overlap}`;
 }
 
-// ── Playlist ────────────────────────────────────────────────────────────────
-// Mirror of UI_PLAYLIST_LIST_PAD: the inner padding of the list box, which the
+// ── List screens (playlist / SD browser) ────────────────────────────────────
+// Mirror of UI_LIST_BOX_PAD: the inner padding of the list box, which the
 // firmware subtracts to get the row width.
-const PLAYLIST_LIST_PAD = 2;
+const LIST_BOX_PAD = 2;
 
-function playlistPitch(d) {
-    return Math.max(1, (d.playlist_item_h | 0) + (d.playlist_item_pad | 0));
+function listPitch(d, prefix) {
+    return Math.max(1, (d[`${prefix}_item_h`] | 0) + (d[`${prefix}_item_pad`] | 0));
 }
 
-function playlistBoxSummary(d) {
-    const inner = (d.playlist_list_h | 0) - 2 * PLAYLIST_LIST_PAD;
-    const rows = Math.max(0, Math.floor(inner / playlistPitch(d)));
-    return `${d.playlist_list_x | 0}, ${d.playlist_list_y | 0} · ` +
-           `${d.playlist_list_w | 0}×${d.playlist_list_h | 0} · ~${rows} rows`;
+function listBoxSummary(d, prefix) {
+    const inner = (d[`${prefix}_list_h`] | 0) - 2 * LIST_BOX_PAD;
+    const rows = Math.max(0, Math.floor(inner / listPitch(d, prefix)));
+    return `${d[`${prefix}_list_x`] | 0}, ${d[`${prefix}_list_y`] | 0} · ` +
+           `${d[`${prefix}_list_w`] | 0}×${d[`${prefix}_list_h`] | 0} · ~${rows} rows`;
 }
 
-function renderPlaylist(svg) {
-    const p = state.playlist;
+// One renderer for both list screens: same geometry, only the sample content
+// and the legend text differ.
+function renderList(svg, prefix, title, hint, names) {
+    const p = state[prefix];
     const W = state.meta.screen_w;
-    const headerH = p.playlist_header_hide ? 0 : (p.playlist_header_h | 0);
+    const headerH = p[`${prefix}_header_hide`] ? 0 : (p[`${prefix}_header_h`] | 0);
 
     // Header strip: always the full-width top strip on the device, so only its
     // height is editable (form) — there is nothing to drag horizontally.
@@ -3270,19 +3286,16 @@ function renderPlaylist(svg) {
         rect(svg, { x: 0, y: 0, width: W, height: headerH, class: 'label-rect ph-container' });
         tag(svg, 2, 7, 'header');
 
-        const hf  = p.playlist_header_font;
-        const hfh = fontLineHeight(hf);
-        const ty  = headerH / 2 + (p.playlist_label_y | 0) - hfh / 2;
-        text(svg, (p.playlist_label_x | 0) + 2, ty + fontBaseline(hf), 'Playlist',
+        const hf  = p[`${prefix}_header_font`];
+        const ty  = headerH / 2 + (p[`${prefix}_label_y`] | 0) - fontLineHeight(hf) / 2;
+        text(svg, (p[`${prefix}_label_x`] | 0) + 2, ty + fontBaseline(hf), title,
              { 'font-size': fontHeight(hf) });
 
-        if (!p.playlist_hint_hide) {
-            const rf  = p.playlist_row_font;
-            const rfh = fontLineHeight(rf);
-            const hy  = headerH / 2 + (p.playlist_hint_y | 0) - rfh / 2;
+        if (!p[`${prefix}_hint_hide`]) {
+            const rf = p[`${prefix}_row_font`];
+            const hy = headerH / 2 + (p[`${prefix}_hint_y`] | 0) - fontLineHeight(rf) / 2;
             // Right-aligned on the device (RIGHT_MID + a negative offset).
-            text(svg, W + (p.playlist_hint_x | 0) - 2, hy + fontBaseline(rf),
-                 'press - play   swipe<>/long - exit',
+            text(svg, W + (p[`${prefix}_hint_x`] | 0) - 2, hy + fontBaseline(rf), hint,
                  { 'font-size': fontHeight(rf), 'text-anchor': 'end' });
         }
     }
@@ -3290,31 +3303,29 @@ function renderPlaylist(svg) {
     // The list box — the one element to line up with a wallpaper. Rows are drawn
     // inside it as decorations: their width is derived from the box, so there is
     // nothing per-row to drag.
-    const lx = p.playlist_list_x | 0, ly = p.playlist_list_y | 0;
-    const lw = p.playlist_list_w | 0, lh = p.playlist_list_h | 0;
+    const lx = p[`${prefix}_list_x`] | 0, ly = p[`${prefix}_list_y`] | 0;
+    const lw = p[`${prefix}_list_w`] | 0, lh = p[`${prefix}_list_h`] | 0;
     if (lw <= 0 || lh <= 0) return;
 
     drawFreeElement(svg, {
         x: lx, y: ly, w: lw, h: lh,
         label: 'list', cls: 'label-rect ph-container',
         fillOpacity: 0.12,
-        fields: { x: 'playlist_list_x', y: 'playlist_list_y',
-                  w: 'playlist_list_w', h: 'playlist_list_h' },
+        fields: { x: `${prefix}_list_x`, y: `${prefix}_list_y`,
+                  w: `${prefix}_list_w`, h: `${prefix}_list_h` },
     });
 
-    const pitch  = playlistPitch(p);
-    const rowH   = Math.max(1, p.playlist_item_h | 0);
-    const rowW   = Math.max(8, lw - 2 * PLAYLIST_LIST_PAD);
-    const rowX   = lx + PLAYLIST_LIST_PAD;
-    const indent = p.playlist_row_pad_left | 0;
-    const rf     = p.playlist_row_font;
-    const opa    = clamp(p.playlist_label_bg_opa ?? 100, 0, 100) / 100;
-    const names  = ['Radio Nowy Świat', 'Radio 357', 'Trójka', 'Chillout FM',
-                    'Jazz Radio', 'Classic FM', 'Rock Antenne', 'Nocturne'];
+    const pitch  = listPitch(p, prefix);
+    const rowH   = Math.max(1, p[`${prefix}_item_h`] | 0);
+    const rowW   = Math.max(8, lw - 2 * LIST_BOX_PAD);
+    const rowX   = lx + LIST_BOX_PAD;
+    const indent = p[`${prefix}_row_pad_left`] | 0;
+    const rf     = p[`${prefix}_row_font`];
+    const opa    = clamp(p[`${prefix}_label_bg_opa`] ?? 100, 0, 100) / 100;
 
     for (let i = 0; ; i++) {
-        const y = ly + PLAYLIST_LIST_PAD + i * pitch;
-        if (y + rowH > ly + lh - PLAYLIST_LIST_PAD) break;
+        const y = ly + LIST_BOX_PAD + i * pitch;
+        if (y + rowH > ly + lh - LIST_BOX_PAD) break;
         const r = rect(svg, {
             x: rowX, y, width: rowW, height: rowH,
             // The first row stands in for the encoder cursor.
@@ -3324,10 +3335,22 @@ function renderPlaylist(svg) {
         r.style.pointerEvents = 'none';       // the box underneath stays draggable
         const t = text(svg, rowX + indent,
                        y + (rowH - fontLineHeight(rf)) / 2 + fontBaseline(rf),
-                       `${i + 1}. ${names[i % names.length]}`,
+                       names[i % names.length],
                        { 'font-size': fontHeight(rf) });
         t.style.pointerEvents = 'none';
     }
+}
+
+function renderPlaylist(svg) {
+    renderList(svg, 'playlist', 'Playlist', 'press - play   swipe<>/long - exit',
+               ['1. Radio Nowy Świat', '2. Radio 357', '3. Trójka', '4. Chillout FM',
+                '5. Jazz Radio', '6. Classic FM', '7. Rock Antenne', '8. Nocturne']);
+}
+
+function renderBrowser(svg) {
+    renderList(svg, 'browser', 'SD: music', 'press - open   swipe<>/long - back',
+               ['..', 'Albums', 'Podcasts', 'Soundtracks',
+                '01 - Intro.mp3', '02 - Nightdrive.mp3', '03 - Coda.flac', '04 - Outro.mp3']);
 }
 
 function renderEq(svg) {
