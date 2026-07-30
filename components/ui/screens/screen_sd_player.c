@@ -274,7 +274,7 @@ static void sd_player_screen_create(lv_obj_t *parent)
                                 p->sd_needle_show_r,
                                 p->sd_needle_r_x, p->sd_needle_r_y,
                                 p->sd_needle_r_w, p->sd_needle_r_h,
-                                p->sd_needle_frame, MEDIA_SOURCE_SD);
+                                p->sd_needle_transparent, MEDIA_SOURCE_SD);
     }
     if (p->sd_stereo_show_l || p->sd_stereo_show_r) {
         vu_stereo_widget_create(parent,

@@ -47,6 +47,7 @@ static bool           s_created = false;
 static float          s_agc_ref = NEEDLE_AGC_REF_MIN; // shared L/R reference (dBFS)
 static uint32_t       s_last_count = 0;               // stall (pause) detection
 static media_source_t s_owner = MEDIA_SOURCE_RADIO;   // source these meters belong to
+static bool           s_transparent = false;          // no plate: needle sits on the wallpaper
 
 static void tip_for_level(const needle_meter_t *m, float lvl, int *tx, int *ty)
 {
@@ -56,7 +57,7 @@ static void tip_for_level(const needle_meter_t *m, float lvl, int *tx, int *ty)
 }
 
 // Custom draw: just the needle line and a small pivot cap, painted over the
-// (wallpaper) background. The optional frame is a plain LVGL border style.
+// plate (or straight over the wallpaper when transparent).
 static void needle_draw_cb(lv_event_t *e)
 {
     needle_meter_t *m = lv_event_get_user_data(e);
@@ -182,7 +183,7 @@ static void tick_cb(lv_timer_t *t)
 }
 
 static void meter_create(needle_meter_t *m, lv_obj_t *parent,
-                         int16_t x, int16_t y, int16_t w, int16_t h, bool frame)
+                         int16_t x, int16_t y, int16_t w, int16_t h)
 {
     const ui_theme_colors_t *th = theme_get();
 
@@ -207,11 +208,12 @@ static void meter_create(needle_meter_t *m, lv_obj_t *parent,
     lv_obj_set_size(m->cont, w, h);
     lv_obj_set_pos(m->cont, x, y);
     lv_obj_clear_flag(m->cont, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
-    // Background stays transparent by design — the meter face is the wallpaper.
-    if (frame) {
-        lv_obj_set_style_border_color(m->cont, lv_color_hex(th->vu_bg), 0);
-        lv_obj_set_style_border_width(m->cont, 1, 0);
-        lv_obj_set_style_border_opa(m->cont, LV_OPA_COVER, 0);
+    // Opaque plate in the theme's vu_bg is the cheap path: the delta bbox around
+    // the needle repaints as a solid fill. Transparent leaves the wallpaper as
+    // the meter face (scale, markings) instead.
+    if (!s_transparent) {
+        lv_obj_set_style_bg_color(m->cont, lv_color_hex(th->vu_bg), 0);
+        lv_obj_set_style_bg_opa(m->cont, LV_OPA_COVER, 0);
     }
     lv_obj_add_event_cb(m->cont, needle_draw_cb, LV_EVENT_DRAW_POST, m);
 
@@ -221,17 +223,18 @@ static void meter_create(needle_meter_t *m, lv_obj_t *parent,
 void vu_needle_widget_create(lv_obj_t *parent,
                              bool show_l, int16_t l_x, int16_t l_y, int16_t l_w, int16_t l_h,
                              bool show_r, int16_t r_x, int16_t r_y, int16_t r_w, int16_t r_h,
-                             bool frame, media_source_t owner)
+                             bool transparent, media_source_t owner)
 {
     if (s_created) return;
     if (!show_l && !show_r) return;
     s_created = true;
     s_owner = owner;
+    s_transparent = transparent;
 
     s_m[0] = (needle_meter_t){ 0 };
     s_m[1] = (needle_meter_t){ 0 };
-    if (show_l) meter_create(&s_m[0], parent, l_x, l_y, l_w, l_h, frame);
-    if (show_r) meter_create(&s_m[1], parent, r_x, r_y, r_w, r_h, frame);
+    if (show_l) meter_create(&s_m[0], parent, l_x, l_y, l_w, l_h);
+    if (show_r) meter_create(&s_m[1], parent, r_x, r_y, r_w, r_h);
 
     s_agc_ref = NEEDLE_AGC_REF_MIN;   // re-anchor to the new programme on recreate
     s_last_count = audio_levels_count();
@@ -256,7 +259,7 @@ void vu_needle_widget_apply_theme(void)
     const ui_theme_colors_t *th = theme_get();
     for (int i = 0; i < 2; i++) {
         if (!s_m[i].cont) continue;
-        lv_obj_set_style_border_color(s_m[i].cont, lv_color_hex(th->vu_bg), 0);
+        if (!s_transparent) lv_obj_set_style_bg_color(s_m[i].cont, lv_color_hex(th->vu_bg), 0);
         lv_obj_invalidate(s_m[i].cont);   // needle colour is read fresh in the draw cb
     }
 }

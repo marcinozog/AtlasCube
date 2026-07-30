@@ -218,7 +218,7 @@ typedef struct {
     bool             radio_vu_transparent;     // no bg fill: bars sit on wallpaper/gradient
     bool             radio_needle_show_l;      // analogue needle VU, left channel meter
     bool             radio_needle_show_r;      // right channel meter (each independent)
-    bool             radio_needle_frame;       // thin 1 px frame around each meter
+    bool             radio_needle_transparent; // no plate: needles sit on wallpaper/gradient
     int16_t          radio_needle_l_x;         // per-meter top-left + size (LCD px)
     int16_t          radio_needle_l_y;
     int16_t          radio_needle_l_w;
@@ -324,7 +324,7 @@ typedef struct {
     bool             sd_vu_transparent;         // no bg fill: bars sit on wallpaper/gradient
     bool             sd_needle_show_l;          // analogue needle VU, left channel meter
     bool             sd_needle_show_r;          // right channel meter (each independent)
-    bool             sd_needle_frame;           // thin 1 px frame around each meter
+    bool             sd_needle_transparent;     // no plate: needles sit on wallpaper/gradient
     int16_t          sd_needle_l_x;             // per-meter top-left + size (LCD px)
     int16_t          sd_needle_l_y;
     int16_t          sd_needle_l_w;

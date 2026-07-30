@@ -157,7 +157,7 @@ static void radio_create(lv_obj_t *parent)
                                 p->radio_needle_show_r,
                                 p->radio_needle_r_x, p->radio_needle_r_y,
                                 p->radio_needle_r_w, p->radio_needle_r_h,
-                                p->radio_needle_frame, MEDIA_SOURCE_RADIO);
+                                p->radio_needle_transparent, MEDIA_SOURCE_RADIO);
     }
     if (p->radio_stereo_show_l || p->radio_stereo_show_r) {
         vu_stereo_widget_create(parent,

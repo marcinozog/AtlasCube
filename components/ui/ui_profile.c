@@ -563,7 +563,6 @@ static const ui_profile_t k_defaults = {
     .radio_vu_y                = 238,
     .radio_vu_w                = 238,
     .radio_vu_h                = 58,
-    .radio_needle_frame        = true,
     .radio_needle_l_x          = 6,
     .radio_needle_l_y          = 118,
     .radio_needle_l_w          = 110,
@@ -646,7 +645,6 @@ static const ui_profile_t k_defaults = {
     .sd_vu_y                   = 238,
     .sd_vu_w                   = 238,
     .sd_vu_h                   = 58,
-    .sd_needle_frame           = true,
     .sd_needle_l_x             = 6,
     .sd_needle_l_y             = 118,
     .sd_needle_l_w             = 110,
@@ -901,7 +899,6 @@ static const ui_profile_t k_defaults = {
     .radio_vu_y                = 182,
     .radio_vu_w                = 318,
     .radio_vu_h                = 58,
-    .radio_needle_frame        = true,
     .radio_needle_l_x          = 15,
     .radio_needle_l_y          = 80,
     .radio_needle_l_w          = 140,
@@ -984,7 +981,6 @@ static const ui_profile_t k_defaults = {
     .sd_vu_y                   = 182,
     .sd_vu_w                   = 318,
     .sd_vu_h                   = 58,
-    .sd_needle_frame           = true,
     .sd_needle_l_x             = 15,
     .sd_needle_l_y             = 80,
     .sd_needle_l_w             = 140,
@@ -1232,7 +1228,6 @@ static const ui_profile_t k_defaults = {
     .radio_vu_y                = 248,
     .radio_vu_w                = 478,
     .radio_vu_h                = 72,
-    .radio_needle_frame        = true,
     .radio_needle_l_x          = 30,
     .radio_needle_l_y          = 100,
     .radio_needle_l_w          = 200,
@@ -1315,7 +1310,6 @@ static const ui_profile_t k_defaults = {
     .sd_vu_y                   = 248,
     .sd_vu_w                   = 478,
     .sd_vu_h                   = 72,
-    .sd_needle_frame           = true,
     .sd_needle_l_x             = 30,
     .sd_needle_l_y             = 100,
     .sd_needle_l_w             = 200,
@@ -1831,7 +1825,7 @@ static void load_radio(const cJSON *obj, ui_profile_t *p)
     load_bool(obj, "radio_vu_transparent",       &p->radio_vu_transparent);
     load_bool(obj, "radio_needle_show_l",        &p->radio_needle_show_l);
     load_bool(obj, "radio_needle_show_r",        &p->radio_needle_show_r);
-    load_bool(obj, "radio_needle_frame",         &p->radio_needle_frame);
+    load_bool(obj, "radio_needle_transparent",   &p->radio_needle_transparent);
     load_i16 (obj, "radio_needle_l_x",           &p->radio_needle_l_x);
     load_i16 (obj, "radio_needle_l_y",           &p->radio_needle_l_y);
     load_i16 (obj, "radio_needle_l_w",           &p->radio_needle_l_w);
@@ -1946,7 +1940,7 @@ static cJSON *dump_radio(const ui_profile_t *p)
     add_bool(o, "radio_vu_transparent",       p->radio_vu_transparent);
     add_bool(o, "radio_needle_show_l",        p->radio_needle_show_l);
     add_bool(o, "radio_needle_show_r",        p->radio_needle_show_r);
-    add_bool(o, "radio_needle_frame",         p->radio_needle_frame);
+    add_bool(o, "radio_needle_transparent",   p->radio_needle_transparent);
     add_i16 (o, "radio_needle_l_x",           p->radio_needle_l_x);
     add_i16 (o, "radio_needle_l_y",           p->radio_needle_l_y);
     add_i16 (o, "radio_needle_l_w",           p->radio_needle_l_w);
@@ -2049,7 +2043,7 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_bool(obj, "sd_vu_transparent",         &p->sd_vu_transparent);
     load_bool(obj, "sd_needle_show_l",          &p->sd_needle_show_l);
     load_bool(obj, "sd_needle_show_r",          &p->sd_needle_show_r);
-    load_bool(obj, "sd_needle_frame",           &p->sd_needle_frame);
+    load_bool(obj, "sd_needle_transparent",     &p->sd_needle_transparent);
     load_i16 (obj, "sd_needle_l_x",             &p->sd_needle_l_x);
     load_i16 (obj, "sd_needle_l_y",             &p->sd_needle_l_y);
     load_i16 (obj, "sd_needle_l_w",             &p->sd_needle_l_w);
@@ -2155,7 +2149,7 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_bool(o, "sd_vu_transparent",         p->sd_vu_transparent);
     add_bool(o, "sd_needle_show_l",          p->sd_needle_show_l);
     add_bool(o, "sd_needle_show_r",          p->sd_needle_show_r);
-    add_bool(o, "sd_needle_frame",           p->sd_needle_frame);
+    add_bool(o, "sd_needle_transparent",     p->sd_needle_transparent);
     add_i16 (o, "sd_needle_l_x",             p->sd_needle_l_x);
     add_i16 (o, "sd_needle_l_y",             p->sd_needle_l_y);
     add_i16 (o, "sd_needle_l_w",             p->sd_needle_l_w);
