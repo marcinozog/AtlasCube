@@ -18,14 +18,14 @@ typedef struct {
     uint32_t status_ok;      // Connected/Playing status etc. (semantic green)
     uint32_t bg_grad_top;    // gradient background — top colour
     uint32_t bg_grad_bottom; // gradient background — bottom colour
-    uint32_t vu_bg;          // VU meter background (defaults to bg_primary)
-    uint32_t vu_bar;         // VU meter bars       (defaults to accent)
-    uint32_t vu_needle_bg;   // needle VU plate     (defaults to vu_bg)
 } ui_theme_colors_t;
 
 // Resolve a per-screen colour override from ui_profile against the palette:
 // 0 means "not overridden, follow the theme". Pure black is therefore not a
 // valid override — #010101 is identical after the RGB565 conversion anyway.
+// The VU meters have no palette entries of their own: unset they fall back to
+// bg_primary (backgrounds) and accent (bars/needle), and anything else is set
+// per screen in ui_profile.
 static inline uint32_t theme_color_or(uint32_t custom, uint32_t fallback)
 {
     return custom ? custom : fallback;

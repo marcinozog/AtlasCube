@@ -108,7 +108,7 @@ static void bar_draw_cb(lv_event_t *e)
     if (!s_zones) {
         // Single zone spanning the whole bar, in the profile/theme bar colour.
         z1 = z2 = m->span;
-        c_lo = theme_color_or(s_bar_color, theme_get()->vu_bar);
+        c_lo = theme_color_or(s_bar_color, theme_get()->accent);
     }
 
     int fill = m->fill < 0 ? 0 : (m->fill > m->span ? m->span : m->fill);
@@ -254,12 +254,12 @@ static void meter_create(bar_meter_t *m, lv_obj_t *parent,
     // Opaque bg is the cheap path (changed strips are a solid fill). Transparent
     // shows the screen bg (wallpaper/gradient) under the bar.
     if (!s_transparent) {
-        lv_obj_set_style_bg_color(m->cont, lv_color_hex(theme_color_or(s_bg_color, th->vu_bg)), 0);
+        lv_obj_set_style_bg_color(m->cont, lv_color_hex(theme_color_or(s_bg_color, th->bg_primary)), 0);
         lv_obj_set_style_bg_opa(m->cont, LV_OPA_COVER, 0);
     }
     if (frame) {
         lv_obj_set_style_border_color(m->cont,
-                                      lv_color_hex(theme_color_or(s_bg_color, th->vu_bg)), 0);
+                                      lv_color_hex(theme_color_or(s_bg_color, th->bg_primary)), 0);
         lv_obj_set_style_border_width(m->cont, 1, 0);
         lv_obj_set_style_border_opa(m->cont, LV_OPA_COVER, 0);
     }
@@ -313,7 +313,7 @@ void vu_stereo_widget_apply_theme(void)
     const ui_theme_colors_t *th = theme_get();
     for (int i = 0; i < 2; i++) {
         if (!s_m[i].cont) continue;
-        const uint32_t bg = theme_color_or(s_bg_color, th->vu_bg);
+        const uint32_t bg = theme_color_or(s_bg_color, th->bg_primary);
         if (!s_transparent) lv_obj_set_style_bg_color(s_m[i].cont, lv_color_hex(bg), 0);
         lv_obj_set_style_border_color(s_m[i].cont, lv_color_hex(bg), 0);
         lv_obj_invalidate(s_m[i].cont);   // repaint bg/frame (+ bar when zones off)

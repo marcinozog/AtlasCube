@@ -19,14 +19,13 @@ extern "C" {
 // the bar from the bottom up; horizontal=true grows it from the left edge. Either
 // side can be hidden. With peak=true a thin marker holds the recent maximum and
 // falls back slowly. zones=true paints classic positional colour zones
-// (green/orange/red); zones=false is a solid bar in vu_bar. Frame/background come
-// from vu_bg; transparent=true drops the background so the bars sit on the wallpaper
+// (green/orange/red); zones=false is a solid bar. Frame and background share one
+// colour; transparent=true drops the background so the bars sit on the wallpaper
 // behind (still delta-bounded, ~2× the pixel work of an opaque fill).
 //
 // bg_color/bar_color are the screen's ui_profile overrides; 0 falls back to the
-// theme's vu_bg/vu_bar, so an override survives a theme switch. bar_color has no
-// effect with zones=true — the zone palette is fixed, exactly as vu_bar is ignored
-// there today.
+// theme's bg_primary/accent, so an override survives a theme switch. bar_color has
+// no effect with zones=true — the zone palette is fixed.
 //
 // One instance at a time (radio or SD-player screen — only one is shown at once).
 // create() spins up the refresh timer; destroy() tears it down.

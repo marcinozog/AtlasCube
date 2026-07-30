@@ -170,7 +170,7 @@ static void vu_draw_cb(lv_event_t *e)
 
     lv_draw_rect_dsc_t dsc;
     lv_draw_rect_dsc_init(&dsc);
-    dsc.bg_color = lv_color_hex(theme_color_or(s_bar_color, th->vu_bar));
+    dsc.bg_color = lv_color_hex(theme_color_or(s_bar_color, th->accent));
     dsc.bg_opa   = LV_OPA_COVER;
     dsc.radius   = 0;   // square bars — corner AA was ~3 ms/frame for no visible gain
 
@@ -323,7 +323,7 @@ void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h, bool transpa
     // shows the screen bg (wallpaper/gradient) under the bars: each changed strip
     // also re-blits that bg — still delta-bounded, just ~2× the pixel work.
     if (!s_transparent) {
-        lv_obj_set_style_bg_color(s_cont, lv_color_hex(theme_color_or(s_bg_color, th->vu_bg)), 0);
+        lv_obj_set_style_bg_color(s_cont, lv_color_hex(theme_color_or(s_bg_color, th->bg_primary)), 0);
         lv_obj_set_style_bg_opa(s_cont, LV_OPA_COVER, 0);
     }
     lv_obj_clear_flag(s_cont, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
@@ -385,6 +385,6 @@ void vu_widget_apply_theme(void)
     if (!s_cont) return;
     const ui_theme_colors_t *th = theme_get();
     if (!s_transparent)
-        lv_obj_set_style_bg_color(s_cont, lv_color_hex(theme_color_or(s_bg_color, th->vu_bg)), 0);
+        lv_obj_set_style_bg_color(s_cont, lv_color_hex(theme_color_or(s_bg_color, th->bg_primary)), 0);
     lv_obj_invalidate(s_cont);   // bar colour is read fresh in vu_draw_cb
 }

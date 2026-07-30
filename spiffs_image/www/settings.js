@@ -1293,9 +1293,6 @@ const COLOR_FIELDS = [
     ['accent',         'Accent / highlight',  'Radio station name, slider fill',                'Accents'],
     ['bt_brand',       'Bluetooth',           'BT icon, "Bluetooth Audio", BT slider',          'Accents'],
     ['status_ok',      'Status OK',           'Connected / Playing (semantic green)',           'Accents'],
-    ['vu_bg',          'VU meter background', 'Spectrum/VU meter panel background',              'VU / spectrum'],
-    ['vu_bar',         'VU meter bars',       'Spectrum/VU meter bar colour',                   'VU / spectrum'],
-    ['vu_needle_bg',   'Needle VU plate',     'Background plate behind the analogue needles',   'VU / spectrum'],
 ];
 
 let colorData     = { dark: {}, light: {} };

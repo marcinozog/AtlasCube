@@ -10,8 +10,8 @@ extern "C" {
 #endif
 
 // Analogue needle VU meter: two independently positioned meters (left/right
-// channel), each just a pivoting needle over a plate filled with the theme's
-// vu_needle_bg. transparent=true drops the fill so the meter face (scale, markings)
+// channel), each just a pivoting needle over a solid plate.
+// transparent=true drops the fill so the meter face (scale, markings)
 // comes from the wallpaper behind instead. Fed by the per-channel RMS tracked
 // in audio_levels; no FFT, so much lighter than the spectrum VU.
 //
@@ -20,7 +20,7 @@ extern "C" {
 // hidden (e.g. a single mono dial on the wallpaper).
 //
 // bg_color/needle_color are the screen's ui_profile overrides; 0 falls back to the
-// theme's vu_needle_bg/vu_bar, so an override survives a theme switch.
+// theme's bg_primary/accent, so an override survives a theme switch.
 //
 // One instance at a time (radio or SD-player screen — only one is shown at
 // once). create() spins up the refresh timer; destroy() tears it down.

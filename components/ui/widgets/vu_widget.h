@@ -14,13 +14,13 @@ extern "C" {
 // runs on its own task pinned to core 0 (off the LVGL/display core); the widget's
 // LVGL timer is render-only. The audio hot path stays a cheap ring append.
 //
-// transparent=false fills the container with vu_bg (cheapest: a changed strip is a
-// solid fill). transparent=true draws no background, so the bars sit directly on the
-// screen behind (wallpaper/gradient); each changed strip then also re-blits that
+// transparent=false fills the container with a solid background (cheapest: a changed
+// strip is a solid fill). transparent=true draws no background, so the bars sit directly
+// on the screen behind (wallpaper/gradient); each changed strip then also re-blits that
 // background, still delta-bounded — fine for a small VU.
 //
-// bg_color/bar_color are the screen's ui_profile overrides; 0 falls back to the
-// theme's vu_bg/vu_bar, so an override survives a theme switch (see theme_color_or).
+// bg_color/bar_color are the screen's ui_profile overrides; 0 falls back to the theme's
+// bg_primary/accent, so an override survives a theme switch (see theme_color_or).
 //
 // One instance at a time (radio or SD-player screen — only one is shown at once).
 // create() spins up the refresh timer; destroy() tears it and the bars down.
