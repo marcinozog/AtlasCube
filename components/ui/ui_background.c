@@ -77,8 +77,8 @@ static void dim_rgb565(uint16_t *px, size_t n, int dim_pct)
 }
 
 // Per-screen wallpaper override from ui_profile: "" inherit, "none" opt out,
-// else an fopen path. Returns NULL for screens without a hub section — they
-// always follow the global default.
+// else an fopen path. Returns NULL for screens without a section of their own —
+// they always follow the global default.
 static const char *screen_wp_override(ui_screen_id_t screen)
 {
     const ui_profile_t *p = ui_profile_get();
@@ -88,6 +88,7 @@ static const char *screen_wp_override(ui_screen_id_t screen)
         case SCREEN_SD:    return p->sd_wallpaper;
         case SCREEN_BT:    return p->bt_wallpaper;
         case SCREEN_EQ:    return p->eq_wallpaper;
+        case SCREEN_PLAYLIST: return p->playlist_wallpaper;
         default:           return NULL;
     }
 }

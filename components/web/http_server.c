@@ -1895,6 +1895,42 @@ static esp_err_t api_ui_profile_sd_post_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+static esp_err_t api_ui_profile_playlist_get_handler(httpd_req_t *req)
+{
+    cJSON *pl = (cJSON *)ui_profile_dump_playlist();
+
+    char *str = cJSON_PrintUnformatted(pl);
+    cJSON_Delete(pl);
+
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    return send_json_or_500(req, str);
+}
+
+static esp_err_t api_ui_profile_playlist_post_handler(httpd_req_t *req)
+{
+    char *buf = NULL;
+    if (read_body(req, &buf, 4096) != ESP_OK) return ESP_FAIL;
+
+    cJSON *json = cJSON_Parse(buf);
+    free(buf);
+    if (!json) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid JSON");
+        return ESP_FAIL;
+    }
+
+    ui_profile_patch_playlist(json);
+    cJSON_Delete(json);
+
+    ui_profile_save_to_file();
+
+    ui_event_t ev = { .type = UI_EVT_PROFILE_CHANGED };
+    ui_event_send(&ev);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true}");
+    return ESP_OK;
+}
+
 static esp_err_t api_ui_profile_eq_get_handler(httpd_req_t *req)
 {
     cJSON *eq = (cJSON *)ui_profile_dump_eq();
@@ -3522,8 +3558,8 @@ void http_server_start(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn      = httpd_uri_match_wildcard;
-    // 61 handlers are registered below and ws_register() adds one more before
-    // them — 62 in use. Keep real headroom: the two wildcards (/* OPTIONS and
+    // 63 handlers are registered below and ws_register() adds one more before
+    // them — 64 in use. Keep real headroom: the two wildcards (/* OPTIONS and
     // /* GET) register LAST, so an overflow drops exactly them and the symptom
     // is the whole web UI 404-ing, not the new endpoint going missing. Raise
     // this whenever you add an API handler.
@@ -3853,6 +3889,20 @@ void http_server_start(void)
         .handler = api_ui_profile_eq_post_handler,
     };
     httpd_register_uri_handler(server, &api_ui_eq_post);
+
+    httpd_uri_t api_ui_playlist_get = {
+        .uri = "/api/ui/profile/playlist",
+        .method = HTTP_GET,
+        .handler = api_ui_profile_playlist_get_handler,
+    };
+    httpd_register_uri_handler(server, &api_ui_playlist_get);
+
+    httpd_uri_t api_ui_playlist_post = {
+        .uri = "/api/ui/profile/playlist",
+        .method = HTTP_POST,
+        .handler = api_ui_profile_playlist_post_handler,
+    };
+    httpd_register_uri_handler(server, &api_ui_playlist_post);
 
     httpd_uri_t api_ui_reset = {
         .uri = "/api/ui/profile/reset",

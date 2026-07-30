@@ -182,7 +182,7 @@ static void populate(void)
 
     for (int i = 0; i < s_count; i++) {
         lv_obj_t *row = lv_obj_create(s_list);
-        lv_obj_set_size(row, p->playlist_row_w, p->playlist_item_h);
+        lv_obj_set_size(row, ui_profile_playlist_row_w(p), p->playlist_item_h);
         lv_obj_set_style_bg_color(row, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
         lv_obj_set_style_bg_opa(row, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_set_style_border_width(row, 0, LV_PART_MAIN);
@@ -206,7 +206,7 @@ static void populate(void)
                 break;
         }
         lv_label_set_long_mode(lbl, LV_LABEL_LONG_CLIP);
-        lv_obj_set_width(lbl, p->playlist_row_label_w);
+        lv_obj_set_width(lbl, ui_profile_playlist_row_label_w(p));
         lv_obj_set_style_text_font(lbl, p->playlist_row_font, LV_PART_MAIN);
         // Initial colour (style_row only restyles the cursor/prev rows, so set it
         // here too or non-cursor labels would inherit an invisible default).
@@ -270,44 +270,53 @@ static void sd_browser_create(lv_obj_t *parent)
 
     const ui_theme_colors_t *th = theme_get();
     const ui_profile_t      *p  = ui_profile_get();
-    const int16_t list_h = DISPLAY_HEIGHT - p->playlist_header_h;
+
+    // Header + list box come from the shared "playlist" profile section, so the
+    // browser keeps the same shape as the station list (and fits the same
+    // wallpaper cut-out).
+    int16_t list_x, list_y, list_w, list_h;
+    ui_profile_playlist_list_box(p, &list_x, &list_y, &list_w, &list_h);
 
     lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_pad_all(parent, 0, LV_PART_MAIN);
 
     // Header
-    lv_obj_t *header = lv_obj_create(parent);
-    lv_obj_set_size(header, DISPLAY_WIDTH, p->playlist_header_h);
-    lv_obj_align(header, LV_ALIGN_TOP_MID, 0, 0);
-    lv_obj_set_style_bg_color(header, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(header, LV_OPA_COVER, LV_PART_MAIN);
-    lv_obj_set_style_border_width(header, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(header, 0, LV_PART_MAIN);
-    lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
+    if (!p->playlist_header_hide) {
+        lv_obj_t *header = lv_obj_create(parent);
+        lv_obj_set_size(header, DISPLAY_WIDTH, p->playlist_header_h);
+        lv_obj_align(header, LV_ALIGN_TOP_MID, 0, 0);
+        lv_obj_set_style_bg_color(header, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(header, LV_OPA_COVER, LV_PART_MAIN);
+        lv_obj_set_style_border_width(header, 0, LV_PART_MAIN);
+        lv_obj_set_style_pad_all(header, 0, LV_PART_MAIN);
+        lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
 
-    s_header_label = lv_label_create(header);
-    lv_label_set_text(s_header_label, "SD");
-    lv_obj_set_style_text_font(s_header_label, p->playlist_header_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_header_label, lv_color_hex(th->accent), LV_PART_MAIN);
-    lv_obj_align(s_header_label, LV_ALIGN_LEFT_MID, p->playlist_label_x, p->playlist_label_y);
+        s_header_label = lv_label_create(header);
+        lv_label_set_text(s_header_label, "SD");
+        lv_obj_set_style_text_font(s_header_label, p->playlist_header_font, LV_PART_MAIN);
+        lv_obj_set_style_text_color(s_header_label, lv_color_hex(th->accent), LV_PART_MAIN);
+        lv_obj_align(s_header_label, LV_ALIGN_LEFT_MID, p->playlist_label_x, p->playlist_label_y);
 
-    lv_obj_t *hint = lv_label_create(header);
-    lv_label_set_text(hint, "press - open   swipe<>/long - back");
-    lv_obj_set_style_text_font(hint, p->playlist_row_font, LV_PART_MAIN);
-    lv_obj_set_style_text_color(hint, lv_color_hex(th->text_muted), LV_PART_MAIN);
-    lv_obj_align(hint, LV_ALIGN_RIGHT_MID, p->playlist_hint_x, p->playlist_hint_y);
+        if (!p->playlist_hint_hide) {
+            lv_obj_t *hint = lv_label_create(header);
+            lv_label_set_text(hint, "press - open   swipe<>/long - back");
+            lv_obj_set_style_text_font(hint, p->playlist_row_font, LV_PART_MAIN);
+            lv_obj_set_style_text_color(hint, lv_color_hex(th->text_muted), LV_PART_MAIN);
+            lv_obj_align(hint, LV_ALIGN_RIGHT_MID, p->playlist_hint_x, p->playlist_hint_y);
+        }
+    }
 
     // Scrollable list
     s_list = lv_obj_create(parent);
-    lv_obj_set_size(s_list, DISPLAY_WIDTH, list_h);
-    lv_obj_align(s_list, LV_ALIGN_BOTTOM_MID, 0, 0);
+    lv_obj_set_pos(s_list, list_x, list_y);
+    lv_obj_set_size(s_list, list_w, list_h);
     lv_obj_set_flex_flow(s_list, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(s_list, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_START);
     lv_obj_set_style_bg_color(s_list, lv_color_hex(th->bg_primary), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(s_list, LV_OPA_COVER, LV_PART_MAIN);
     lv_obj_set_style_border_width(s_list, 0, LV_PART_MAIN);
-    lv_obj_set_style_pad_all(s_list, 2, LV_PART_MAIN);
+    lv_obj_set_style_pad_all(s_list, UI_PLAYLIST_LIST_PAD, LV_PART_MAIN);
     lv_obj_set_style_pad_row(s_list, p->playlist_item_pad, LV_PART_MAIN);
     lv_obj_set_scroll_dir(s_list, LV_DIR_VER);
     lv_obj_set_scrollbar_mode(s_list, LV_SCROLLBAR_MODE_ACTIVE);

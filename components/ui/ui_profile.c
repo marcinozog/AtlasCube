@@ -143,9 +143,8 @@ static const ui_profile_t k_defaults = {
     .playlist_header_h         = 14,
     .playlist_item_h           = 12,
     .playlist_item_pad         = 1,
-    .playlist_row_w            = 126,
-    .playlist_row_label_w      = 118,
     .playlist_row_pad_left     = 4,
+    .playlist_label_bg_opa     = 100,
     .playlist_header_font      = &lv_font_montserrat_12_pl,
     .playlist_row_font         = &lv_font_montserrat_12_pl,
 
@@ -370,9 +369,8 @@ static const ui_profile_t k_defaults = {
     .playlist_header_h         = 16,
     .playlist_item_h           = 14,
     .playlist_item_pad         = 1,
-    .playlist_row_w            = 252,
-    .playlist_row_label_w      = 244,
     .playlist_row_pad_left     = 4,
+    .playlist_label_bg_opa     = 100,
     .playlist_header_font      = &lv_font_montserrat_12_pl,
     .playlist_row_font         = &lv_font_montserrat_12_pl,
 
@@ -701,9 +699,8 @@ static const ui_profile_t k_defaults = {
     .playlist_header_h         = 45,
     .playlist_item_h           = 34,
     .playlist_item_pad         = 2,
-    .playlist_row_w            = 234,
-    .playlist_row_label_w      = 210,
     .playlist_row_pad_left     = 10,
+    .playlist_label_bg_opa     = 100,
     .playlist_label_x          = 90,
     .playlist_label_y          = -10,
     .playlist_hint_x           = -20,
@@ -1036,9 +1033,8 @@ static const ui_profile_t k_defaults = {
     .playlist_header_h         = 26,
     .playlist_item_h           = 28,
     .playlist_item_pad         = 2,
-    .playlist_row_w            = 314,
-    .playlist_row_label_w      = 298,
     .playlist_row_pad_left     = 8,
+    .playlist_label_bg_opa     = 100,
     .playlist_header_font      = &lv_font_montserrat_14_pl,
     .playlist_row_font         = &lv_font_montserrat_12_pl,
 
@@ -1365,9 +1361,8 @@ static const ui_profile_t k_defaults = {
     .playlist_header_h         = 34,
     .playlist_item_h           = 38,
     .playlist_item_pad         = 3,
-    .playlist_row_w            = 470,
-    .playlist_row_label_w      = 446,
     .playlist_row_pad_left     = 12,
+    .playlist_label_bg_opa     = 100,
     .playlist_header_font      = &lv_font_montserrat_18_pl,
     .playlist_row_font         = &lv_font_montserrat_14_pl,
 
@@ -2472,6 +2467,102 @@ static cJSON *dump_eq(const ui_profile_t *p)
     return o;
 }
 
+// ── screen_playlist / screen_sd_browser ─────────────────────────────────────
+// One section for both list screens: they share the row metrics, so a wallpaper
+// cut-out sized here fits either of them.
+
+void ui_profile_playlist_list_box(const ui_profile_t *p,
+                                  int16_t *x, int16_t *y, int16_t *w, int16_t *h)
+{
+    if (p->playlist_list_w > 0 && p->playlist_list_h > 0) {
+        *x = p->playlist_list_x; *y = p->playlist_list_y;
+        *w = p->playlist_list_w; *h = p->playlist_list_h;
+        return;
+    }
+    // Auto: everything below the header, full width — the pre-list-box layout.
+    int16_t top = p->playlist_header_hide ? 0 : p->playlist_header_h;
+    *x = 0;
+    *y = top;
+    *w = DISPLAY_WIDTH;
+    *h = (int16_t)(DISPLAY_HEIGHT - top);
+}
+
+int16_t ui_profile_playlist_row_w(const ui_profile_t *p)
+{
+    int16_t x, y, w, h;
+    ui_profile_playlist_list_box(p, &x, &y, &w, &h);
+    int16_t rw = (int16_t)(w - 2 * UI_PLAYLIST_LIST_PAD);
+    return rw > 8 ? rw : 8;
+}
+
+int16_t ui_profile_playlist_row_label_w(const ui_profile_t *p)
+{
+    // Leave the left padding plus a small right margin so a clipped station name
+    // never touches the row's right edge.
+    int16_t lw = (int16_t)(ui_profile_playlist_row_w(p) - p->playlist_row_pad_left - 4);
+    return lw > 8 ? lw : 8;
+}
+
+static void load_playlist(const cJSON *obj, ui_profile_t *p)
+{
+    if (!cJSON_IsObject(obj)) return;
+    load_bool(obj, "playlist_header_hide",  &p->playlist_header_hide);
+    load_i16 (obj, "playlist_header_h",     &p->playlist_header_h);
+    load_bool(obj, "playlist_hint_hide",    &p->playlist_hint_hide);
+    load_i16 (obj, "playlist_list_x",       &p->playlist_list_x);
+    load_i16 (obj, "playlist_list_y",       &p->playlist_list_y);
+    load_i16 (obj, "playlist_list_w",       &p->playlist_list_w);
+    load_i16 (obj, "playlist_list_h",       &p->playlist_list_h);
+    load_i16 (obj, "playlist_item_h",       &p->playlist_item_h);
+    load_i16 (obj, "playlist_item_pad",     &p->playlist_item_pad);
+    load_i16 (obj, "playlist_row_pad_left", &p->playlist_row_pad_left);
+    load_i16 (obj, "playlist_label_bg_opa", &p->playlist_label_bg_opa);
+    load_i16 (obj, "playlist_label_x",      &p->playlist_label_x);
+    load_i16 (obj, "playlist_label_y",      &p->playlist_label_y);
+    load_i16 (obj, "playlist_hint_x",       &p->playlist_hint_x);
+    load_i16 (obj, "playlist_hint_y",       &p->playlist_hint_y);
+    load_font(obj, "playlist_header_font",  &p->playlist_header_font);
+    load_font(obj, "playlist_row_font",     &p->playlist_row_font);
+    load_str (obj, "playlist_wallpaper",    p->playlist_wallpaper, sizeof(p->playlist_wallpaper));
+
+    if (p->playlist_item_h < 4)       p->playlist_item_h = 4;
+    if (p->playlist_item_pad < 0)     p->playlist_item_pad = 0;
+    if (p->playlist_row_pad_left < 0) p->playlist_row_pad_left = 0;
+    if (p->playlist_label_bg_opa < 0)   p->playlist_label_bg_opa = 0;
+    if (p->playlist_label_bg_opa > 100) p->playlist_label_bg_opa = 100;
+    // A zero w/h means "auto" — anything positive must still be a usable box.
+    if (p->playlist_list_w < 0) p->playlist_list_w = 0;
+    if (p->playlist_list_h < 0) p->playlist_list_h = 0;
+}
+
+static cJSON *dump_playlist(const ui_profile_t *p)
+{
+    cJSON *o = cJSON_CreateObject();
+    add_bool(o, "playlist_header_hide",  p->playlist_header_hide);
+    add_i16 (o, "playlist_header_h",     p->playlist_header_h);
+    add_bool(o, "playlist_hint_hide",    p->playlist_hint_hide);
+    // The box always round-trips its EFFECTIVE geometry, so the editor can drag
+    // it straight away instead of first having to guess the auto layout.
+    int16_t lx, ly, lw, lh;
+    ui_profile_playlist_list_box(p, &lx, &ly, &lw, &lh);
+    add_i16 (o, "playlist_list_x",       lx);
+    add_i16 (o, "playlist_list_y",       ly);
+    add_i16 (o, "playlist_list_w",       lw);
+    add_i16 (o, "playlist_list_h",       lh);
+    add_i16 (o, "playlist_item_h",       p->playlist_item_h);
+    add_i16 (o, "playlist_item_pad",     p->playlist_item_pad);
+    add_i16 (o, "playlist_row_pad_left", p->playlist_row_pad_left);
+    add_i16 (o, "playlist_label_bg_opa", p->playlist_label_bg_opa);
+    add_i16 (o, "playlist_label_x",      p->playlist_label_x);
+    add_i16 (o, "playlist_label_y",      p->playlist_label_y);
+    add_i16 (o, "playlist_hint_x",       p->playlist_hint_x);
+    add_i16 (o, "playlist_hint_y",       p->playlist_hint_y);
+    add_font(o, "playlist_header_font",  p->playlist_header_font);
+    add_font(o, "playlist_row_font",     p->playlist_row_font);
+    add_str (o, "playlist_wallpaper",    p->playlist_wallpaper);
+    return o;
+}
+
 // ── I/O ─────────────────────────────────────────────────────────────────────
 
 esp_err_t ui_profile_load_from_file(void)
@@ -2530,7 +2621,8 @@ esp_err_t ui_profile_load_from_file(void)
     load_radio(cJSON_GetObjectItem(json, "radio"), &s_runtime);
     load_sd   (cJSON_GetObjectItem(json, "sd"),    &s_runtime);
     load_eq   (cJSON_GetObjectItem(json, "eq"),    &s_runtime);
-    // (other sections will land here when exposed in the UI: playlist, ...)
+    load_playlist(cJSON_GetObjectItem(json, "playlist"), &s_runtime);
+    // (other sections will land here when exposed in the UI: events, wifi, ...)
 
     cJSON_Delete(json);
     ESP_LOGI(TAG, "%s loaded", UI_PROFILE_FILE);
@@ -2599,6 +2691,18 @@ void ui_profile_patch_eq(const void *obj)
     load_eq((const cJSON *)obj, &s_runtime);
 }
 
+void *ui_profile_dump_playlist(void)
+{
+    ensure_initialized();
+    return dump_playlist(&s_runtime);
+}
+
+void ui_profile_patch_playlist(const void *obj)
+{
+    ensure_initialized();
+    load_playlist((const cJSON *)obj, &s_runtime);
+}
+
 esp_err_t ui_profile_save_to_file(void)
 {
     ensure_initialized();
@@ -2613,6 +2717,7 @@ esp_err_t ui_profile_save_to_file(void)
     cJSON_AddItemToObject(json, "radio", dump_radio(&s_runtime));
     cJSON_AddItemToObject(json, "sd",    dump_sd   (&s_runtime));
     cJSON_AddItemToObject(json, "eq",    dump_eq   (&s_runtime));
+    cJSON_AddItemToObject(json, "playlist", dump_playlist(&s_runtime));
 
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
