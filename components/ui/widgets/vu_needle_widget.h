@@ -17,8 +17,10 @@ extern "C" {
 //
 // X/Y are the top-left corner of each meter rectangle in absolute LCD pixels;
 // the needle pivots at the bottom-centre and sweeps ~±45°. Either meter can be
-// hidden (e.g. a single mono dial on the wallpaper). Needle colour comes from
-// the theme's vu_bar, plate colour from vu_needle_bg.
+// hidden (e.g. a single mono dial on the wallpaper).
+//
+// bg_color/needle_color are the screen's ui_profile overrides; 0 falls back to the
+// theme's vu_needle_bg/vu_bar, so an override survives a theme switch.
 //
 // One instance at a time (radio or SD-player screen — only one is shown at
 // once). create() spins up the refresh timer; destroy() tears it down.
@@ -29,10 +31,12 @@ extern "C" {
 void vu_needle_widget_create(lv_obj_t *parent,
                              bool show_l, int16_t l_x, int16_t l_y, int16_t l_w, int16_t l_h,
                              bool show_r, int16_t r_x, int16_t r_y, int16_t r_w, int16_t r_h,
-                             bool transparent, media_source_t owner);
+                             bool transparent, uint32_t bg_color, uint32_t needle_color,
+                             media_source_t owner);
 void vu_needle_widget_destroy(void);
 
-// Recolour needle + plate from the active theme. Safe to call when not created.
+// Recolour needle + plate from the active theme (overrides keep their colour).
+// Safe to call when not created.
 void vu_needle_widget_apply_theme(void);
 
 #ifdef __cplusplus

@@ -216,9 +216,13 @@ typedef struct {
     int16_t          radio_vu_w;
     int16_t          radio_vu_h;
     bool             radio_vu_transparent;     // no bg fill: bars sit on wallpaper/gradient
+    uint32_t         radio_vu_bg_color;        // per-screen colour override, 0 = theme vu_bg
+    uint32_t         radio_vu_bar_color;       // 0 = theme vu_bar
     bool             radio_needle_show_l;      // analogue needle VU, left channel meter
     bool             radio_needle_show_r;      // right channel meter (each independent)
     bool             radio_needle_transparent; // no plate: needles sit on wallpaper/gradient
+    uint32_t         radio_needle_bg_color;    // 0 = theme vu_needle_bg
+    uint32_t         radio_needle_color;       // 0 = theme vu_bar
     int16_t          radio_needle_l_x;         // per-meter top-left + size (LCD px)
     int16_t          radio_needle_l_y;
     int16_t          radio_needle_l_w;
@@ -233,7 +237,9 @@ typedef struct {
     bool             radio_stereo_horizontal;  // bars fill left→right instead of bottom→up
     bool             radio_stereo_transparent; // no bg fill: bars sit on wallpaper/gradient
     bool             radio_stereo_peak;        // hold a thin peak marker with slow fall
-    bool             radio_stereo_zones;       // green/orange/red zones; off = theme vu_bar
+    bool             radio_stereo_zones;       // green/orange/red zones; off = solid bar colour
+    uint32_t         radio_stereo_bg_color;    // 0 = theme vu_bg (bg + frame)
+    uint32_t         radio_stereo_bar_color;   // 0 = theme vu_bar; ignored when zones is on
     int16_t          radio_stereo_l_x;         // per-bar top-left + size (LCD px)
     int16_t          radio_stereo_l_y;
     int16_t          radio_stereo_l_w;
@@ -322,9 +328,13 @@ typedef struct {
     int16_t          sd_vu_w;
     int16_t          sd_vu_h;
     bool             sd_vu_transparent;         // no bg fill: bars sit on wallpaper/gradient
+    uint32_t         sd_vu_bg_color;            // per-screen colour override, 0 = theme vu_bg
+    uint32_t         sd_vu_bar_color;           // 0 = theme vu_bar
     bool             sd_needle_show_l;          // analogue needle VU, left channel meter
     bool             sd_needle_show_r;          // right channel meter (each independent)
     bool             sd_needle_transparent;     // no plate: needles sit on wallpaper/gradient
+    uint32_t         sd_needle_bg_color;        // 0 = theme vu_needle_bg
+    uint32_t         sd_needle_color;           // 0 = theme vu_bar
     int16_t          sd_needle_l_x;             // per-meter top-left + size (LCD px)
     int16_t          sd_needle_l_y;
     int16_t          sd_needle_l_w;
@@ -339,7 +349,9 @@ typedef struct {
     bool             sd_stereo_horizontal;     // bars fill left→right instead of bottom→up
     bool             sd_stereo_transparent;    // no bg fill: bars sit on wallpaper/gradient
     bool             sd_stereo_peak;           // hold a thin peak marker with slow fall
-    bool             sd_stereo_zones;          // green/orange/red zones; off = theme vu_bar
+    bool             sd_stereo_zones;          // green/orange/red zones; off = solid bar colour
+    uint32_t         sd_stereo_bg_color;       // 0 = theme vu_bg (bg + frame)
+    uint32_t         sd_stereo_bar_color;      // 0 = theme vu_bar; ignored when zones is on
     int16_t          sd_stereo_l_x;            // per-bar top-left + size (LCD px)
     int16_t          sd_stereo_l_y;
     int16_t          sd_stereo_l_w;

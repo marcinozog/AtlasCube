@@ -69,6 +69,8 @@ static int         s_bar_w  = 0;   // drawn bar width (< slot → leaves the gap
 static int         s_pad    = 0;   // left padding to centre the row
 static bool        s_transparent = false; // no bg fill: bars sit on the screen bg
 static media_source_t s_owner = MEDIA_SOURCE_RADIO; // source this meter belongs to
+static uint32_t    s_bg_color  = 0;   // ui_profile overrides; 0 = follow the theme
+static uint32_t    s_bar_color = 0;
 
 // ── FFT task (core 0) ────────────────────────────────────────────────────────
 static TaskHandle_t      s_fft_task = NULL;
@@ -168,7 +170,7 @@ static void vu_draw_cb(lv_event_t *e)
 
     lv_draw_rect_dsc_t dsc;
     lv_draw_rect_dsc_init(&dsc);
-    dsc.bg_color = lv_color_hex(th->vu_bar);
+    dsc.bg_color = lv_color_hex(theme_color_or(s_bar_color, th->vu_bar));
     dsc.bg_opa   = LV_OPA_COVER;
     dsc.radius   = 0;   // square bars — corner AA was ~3 ms/frame for no visible gain
 
@@ -276,12 +278,14 @@ static void tick_cb(lv_timer_t *t)
 }
 
 void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h, bool transparent,
-                      media_source_t owner)
+                      uint32_t bg_color, uint32_t bar_color, media_source_t owner)
 {
     if (s_cont) return;
     const ui_theme_colors_t *th = theme_get();
     s_transparent = transparent;
     s_owner       = owner;
+    s_bg_color    = bg_color;
+    s_bar_color   = bar_color;
 
     // Working buffers in PSRAM — kept out of the tight internal-RAM budget
     // (TLS/LVGL). The FFT runs ~20 fps on the LVGL task, so the slower PSRAM
@@ -319,7 +323,7 @@ void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h, bool transpa
     // shows the screen bg (wallpaper/gradient) under the bars: each changed strip
     // also re-blits that bg — still delta-bounded, just ~2× the pixel work.
     if (!s_transparent) {
-        lv_obj_set_style_bg_color(s_cont, lv_color_hex(th->vu_bg), 0);
+        lv_obj_set_style_bg_color(s_cont, lv_color_hex(theme_color_or(s_bg_color, th->vu_bg)), 0);
         lv_obj_set_style_bg_opa(s_cont, LV_OPA_COVER, 0);
     }
     lv_obj_clear_flag(s_cont, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
@@ -380,6 +384,7 @@ void vu_widget_apply_theme(void)
 {
     if (!s_cont) return;
     const ui_theme_colors_t *th = theme_get();
-    if (!s_transparent) lv_obj_set_style_bg_color(s_cont, lv_color_hex(th->vu_bg), 0);
+    if (!s_transparent)
+        lv_obj_set_style_bg_color(s_cont, lv_color_hex(theme_color_or(s_bg_color, th->vu_bg)), 0);
     lv_obj_invalidate(s_cont);   // bar colour is read fresh in vu_draw_cb
 }

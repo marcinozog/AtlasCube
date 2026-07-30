@@ -264,7 +264,8 @@ static void sd_player_screen_create(lv_obj_t *parent)
     }
     if (p->sd_show_vu) {
         vu_widget_create(parent, p->sd_vu_x, p->sd_vu_y, p->sd_vu_w, p->sd_vu_h,
-                         p->sd_vu_transparent, MEDIA_SOURCE_SD);
+                         p->sd_vu_transparent,
+                         p->sd_vu_bg_color, p->sd_vu_bar_color, MEDIA_SOURCE_SD);
     }
     if (p->sd_needle_show_l || p->sd_needle_show_r) {
         vu_needle_widget_create(parent,
@@ -274,7 +275,9 @@ static void sd_player_screen_create(lv_obj_t *parent)
                                 p->sd_needle_show_r,
                                 p->sd_needle_r_x, p->sd_needle_r_y,
                                 p->sd_needle_r_w, p->sd_needle_r_h,
-                                p->sd_needle_transparent, MEDIA_SOURCE_SD);
+                                p->sd_needle_transparent,
+                                p->sd_needle_bg_color, p->sd_needle_color,
+                                MEDIA_SOURCE_SD);
     }
     if (p->sd_stereo_show_l || p->sd_stereo_show_r) {
         vu_stereo_widget_create(parent,
@@ -286,7 +289,9 @@ static void sd_player_screen_create(lv_obj_t *parent)
                                 p->sd_stereo_r_w, p->sd_stereo_r_h,
                                 p->sd_stereo_horizontal, p->sd_stereo_frame,
                                 p->sd_stereo_transparent, p->sd_stereo_peak,
-                                p->sd_stereo_zones, MEDIA_SOURCE_SD);
+                                p->sd_stereo_zones,
+                                p->sd_stereo_bg_color, p->sd_stereo_bar_color,
+                                MEDIA_SOURCE_SD);
     }
     if (p->sd_show_weather) {
         weather_widget_create(parent, p->sd_weather_x, p->sd_weather_y,

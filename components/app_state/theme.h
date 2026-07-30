@@ -23,6 +23,14 @@ typedef struct {
     uint32_t vu_needle_bg;   // needle VU plate     (defaults to vu_bg)
 } ui_theme_colors_t;
 
+// Resolve a per-screen colour override from ui_profile against the palette:
+// 0 means "not overridden, follow the theme". Pure black is therefore not a
+// valid override — #010101 is identical after the RGB565 conversion anyway.
+static inline uint32_t theme_color_or(uint32_t custom, uint32_t fallback)
+{
+    return custom ? custom : fallback;
+}
+
 const ui_theme_colors_t *theme_get(void);
 void       theme_set(ui_theme_t t);
 ui_theme_t theme_current(void);

@@ -19,10 +19,14 @@ extern "C" {
 // the bar from the bottom up; horizontal=true grows it from the left edge. Either
 // side can be hidden. With peak=true a thin marker holds the recent maximum and
 // falls back slowly. zones=true paints classic positional colour zones
-// (green/orange/red); zones=false is a solid bar in the theme's vu_bar. Frame/
-// background come from vu_bg; transparent=true drops the background so the bars
-// sit on the wallpaper behind (still delta-bounded, ~2× the pixel work of an
-// opaque fill).
+// (green/orange/red); zones=false is a solid bar in vu_bar. Frame/background come
+// from vu_bg; transparent=true drops the background so the bars sit on the wallpaper
+// behind (still delta-bounded, ~2× the pixel work of an opaque fill).
+//
+// bg_color/bar_color are the screen's ui_profile overrides; 0 falls back to the
+// theme's vu_bg/vu_bar, so an override survives a theme switch. bar_color has no
+// effect with zones=true — the zone palette is fixed, exactly as vu_bar is ignored
+// there today.
 //
 // One instance at a time (radio or SD-player screen — only one is shown at once).
 // create() spins up the refresh timer; destroy() tears it down.
@@ -34,10 +38,12 @@ void vu_stereo_widget_create(lv_obj_t *parent,
                              bool show_l, int16_t l_x, int16_t l_y, int16_t l_w, int16_t l_h,
                              bool show_r, int16_t r_x, int16_t r_y, int16_t r_w, int16_t r_h,
                              bool horizontal, bool frame, bool transparent,
-                             bool peak, bool zones, media_source_t owner);
+                             bool peak, bool zones, uint32_t bg_color, uint32_t bar_color,
+                             media_source_t owner);
 void vu_stereo_widget_destroy(void);
 
-// Recolour bars + frame from the active theme. Safe to call when not created.
+// Recolour bars + frame from the active theme (overrides keep their colour).
+// Safe to call when not created.
 void vu_stereo_widget_apply_theme(void);
 
 #ifdef __cplusplus

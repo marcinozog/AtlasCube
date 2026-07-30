@@ -2,6 +2,7 @@
 
 #include "lvgl.h"
 #include "media_control.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,10 +14,13 @@ extern "C" {
 // runs on its own task pinned to core 0 (off the LVGL/display core); the widget's
 // LVGL timer is render-only. The audio hot path stays a cheap ring append.
 //
-// transparent=false fills the container with the theme's vu_bg (cheapest: a changed
-// strip is a solid fill). transparent=true draws no background, so the bars sit
-// directly on the screen behind (wallpaper/gradient); each changed strip then also
-// re-blits that background, still delta-bounded — fine for a small VU.
+// transparent=false fills the container with vu_bg (cheapest: a changed strip is a
+// solid fill). transparent=true draws no background, so the bars sit directly on the
+// screen behind (wallpaper/gradient); each changed strip then also re-blits that
+// background, still delta-bounded — fine for a small VU.
+//
+// bg_color/bar_color are the screen's ui_profile overrides; 0 falls back to the
+// theme's vu_bg/vu_bar, so an override survives a theme switch (see theme_color_or).
 //
 // One instance at a time (radio or SD-player screen — only one is shown at once).
 // create() spins up the refresh timer; destroy() tears it and the bars down.
@@ -25,10 +29,11 @@ extern "C" {
 // audio path (media_source_current() != owner) the bars rest at zero instead
 // of visualizing the foreign programme.
 void vu_widget_create(lv_obj_t *parent, int x, int y, int w, int h, bool transparent,
-                      media_source_t owner);
+                      uint32_t bg_color, uint32_t bar_color, media_source_t owner);
 void vu_widget_destroy(void);
 
-// Recolour bars + container from the active theme. Safe to call when not created.
+// Recolour bars + container from the active theme (overrides keep their colour).
+// Safe to call when not created.
 void vu_widget_apply_theme(void);
 
 #ifdef __cplusplus

@@ -55,7 +55,9 @@ static bool          s_created = false;
 static bool          s_horizontal = false;   // fill left→right instead of bottom→up
 static bool          s_transparent = false;  // no bg fill: bars sit on wallpaper
 static bool          s_peak = false;         // draw the peak-hold marker
-static bool          s_zones = false;        // colour zones; false = theme vu_bar
+static bool          s_zones = false;        // colour zones; false = solid bar colour
+static uint32_t      s_bg_color = 0;         // ui_profile overrides; 0 = follow the theme
+static uint32_t      s_bar_color = 0;
 static float         s_agc_ref = BAR_AGC_REF_MIN; // shared L/R reference (dBFS)
 static uint32_t      s_last_count = 0;            // stall (pause) detection
 static media_source_t s_owner = MEDIA_SOURCE_RADIO; // source these bars belong to
@@ -104,9 +106,9 @@ static void bar_draw_cb(lv_event_t *e)
     int z2 = (int)(BAR_ZONE_HOT * (float)m->span + 0.5f);
     uint32_t c_lo = BAR_COLOR_LO;
     if (!s_zones) {
-        // Single zone spanning the whole bar, in the theme's bar colour.
+        // Single zone spanning the whole bar, in the profile/theme bar colour.
         z1 = z2 = m->span;
-        c_lo = theme_get()->vu_bar;
+        c_lo = theme_color_or(s_bar_color, theme_get()->vu_bar);
     }
 
     int fill = m->fill < 0 ? 0 : (m->fill > m->span ? m->span : m->fill);
@@ -252,11 +254,12 @@ static void meter_create(bar_meter_t *m, lv_obj_t *parent,
     // Opaque bg is the cheap path (changed strips are a solid fill). Transparent
     // shows the screen bg (wallpaper/gradient) under the bar.
     if (!s_transparent) {
-        lv_obj_set_style_bg_color(m->cont, lv_color_hex(th->vu_bg), 0);
+        lv_obj_set_style_bg_color(m->cont, lv_color_hex(theme_color_or(s_bg_color, th->vu_bg)), 0);
         lv_obj_set_style_bg_opa(m->cont, LV_OPA_COVER, 0);
     }
     if (frame) {
-        lv_obj_set_style_border_color(m->cont, lv_color_hex(th->vu_bg), 0);
+        lv_obj_set_style_border_color(m->cont,
+                                      lv_color_hex(theme_color_or(s_bg_color, th->vu_bg)), 0);
         lv_obj_set_style_border_width(m->cont, 1, 0);
         lv_obj_set_style_border_opa(m->cont, LV_OPA_COVER, 0);
     }
@@ -267,7 +270,8 @@ void vu_stereo_widget_create(lv_obj_t *parent,
                              bool show_l, int16_t l_x, int16_t l_y, int16_t l_w, int16_t l_h,
                              bool show_r, int16_t r_x, int16_t r_y, int16_t r_w, int16_t r_h,
                              bool horizontal, bool frame, bool transparent,
-                             bool peak, bool zones, media_source_t owner)
+                             bool peak, bool zones, uint32_t bg_color, uint32_t bar_color,
+                             media_source_t owner)
 {
     if (s_created) return;
     if (!show_l && !show_r) return;
@@ -277,6 +281,8 @@ void vu_stereo_widget_create(lv_obj_t *parent,
     s_transparent = transparent;
     s_peak        = peak;
     s_zones       = zones;
+    s_bg_color    = bg_color;
+    s_bar_color   = bar_color;
 
     s_m[0] = (bar_meter_t){ 0 };
     s_m[1] = (bar_meter_t){ 0 };
@@ -307,8 +313,9 @@ void vu_stereo_widget_apply_theme(void)
     const ui_theme_colors_t *th = theme_get();
     for (int i = 0; i < 2; i++) {
         if (!s_m[i].cont) continue;
-        if (!s_transparent) lv_obj_set_style_bg_color(s_m[i].cont, lv_color_hex(th->vu_bg), 0);
-        lv_obj_set_style_border_color(s_m[i].cont, lv_color_hex(th->vu_bg), 0);
+        const uint32_t bg = theme_color_or(s_bg_color, th->vu_bg);
+        if (!s_transparent) lv_obj_set_style_bg_color(s_m[i].cont, lv_color_hex(bg), 0);
+        lv_obj_set_style_border_color(s_m[i].cont, lv_color_hex(bg), 0);
         lv_obj_invalidate(s_m[i].cont);   // repaint bg/frame (+ bar when zones off)
     }
 }
