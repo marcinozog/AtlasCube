@@ -20,6 +20,7 @@ typedef struct {
     uint32_t bg_grad_bottom; // gradient background — bottom colour
     uint32_t vu_bg;          // VU meter background (defaults to bg_primary)
     uint32_t vu_bar;         // VU meter bars       (defaults to accent)
+    uint32_t vu_needle_bg;   // needle VU plate     (defaults to vu_bg)
 } ui_theme_colors_t;
 
 const ui_theme_colors_t *theme_get(void);

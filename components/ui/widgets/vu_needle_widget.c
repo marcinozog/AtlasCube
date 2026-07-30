@@ -208,11 +208,11 @@ static void meter_create(needle_meter_t *m, lv_obj_t *parent,
     lv_obj_set_size(m->cont, w, h);
     lv_obj_set_pos(m->cont, x, y);
     lv_obj_clear_flag(m->cont, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
-    // Opaque plate in the theme's vu_bg is the cheap path: the delta bbox around
-    // the needle repaints as a solid fill. Transparent leaves the wallpaper as
-    // the meter face (scale, markings) instead.
+    // Opaque plate in the theme's vu_needle_bg is the cheap path: the delta bbox
+    // around the needle repaints as a solid fill. Transparent leaves the wallpaper
+    // as the meter face (scale, markings) instead.
     if (!s_transparent) {
-        lv_obj_set_style_bg_color(m->cont, lv_color_hex(th->vu_bg), 0);
+        lv_obj_set_style_bg_color(m->cont, lv_color_hex(th->vu_needle_bg), 0);
         lv_obj_set_style_bg_opa(m->cont, LV_OPA_COVER, 0);
     }
     lv_obj_add_event_cb(m->cont, needle_draw_cb, LV_EVENT_DRAW_POST, m);
@@ -259,7 +259,7 @@ void vu_needle_widget_apply_theme(void)
     const ui_theme_colors_t *th = theme_get();
     for (int i = 0; i < 2; i++) {
         if (!s_m[i].cont) continue;
-        if (!s_transparent) lv_obj_set_style_bg_color(s_m[i].cont, lv_color_hex(th->vu_bg), 0);
+        if (!s_transparent) lv_obj_set_style_bg_color(s_m[i].cont, lv_color_hex(th->vu_needle_bg), 0);
         lv_obj_invalidate(s_m[i].cont);   // needle colour is read fresh in the draw cb
     }
 }
