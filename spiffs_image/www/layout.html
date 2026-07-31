@@ -173,6 +173,10 @@
             margin-bottom: 6px;
             gap: 8px;
         }
+        /* refreshGroup() hides the controls of a switched-off group with the
+           `hidden` attribute. The browser's own [hidden] rule carries no
+           !important, so the display above would win — these say it explicitly. */
+        .form-row[hidden], .form-subgroup[hidden] { display: none; }
         .form-row label {
             font-size: 12px;
             color: var(--text);

@@ -475,11 +475,17 @@ function listGroups(prefix) {
         { title: 'Rows', fields: [`${prefix}_item_h`, `${prefix}_item_pad`,
                                   `${prefix}_row_pad_left`, `${prefix}_row_font`] },
         { heading: 'Header' },
-        { title: 'Header bar',
-          summary: d => d[`${prefix}_header_hide`] ? 'Hidden' : `H ${d[`${prefix}_header_h`] | 0}`,
-          fields: [`${prefix}_header_hide`, `${prefix}_header_h`, `${prefix}_header_font`] },
-        { title: 'Title', fields: [`${prefix}_label_x`, `${prefix}_label_y`] },
-        { title: 'Legend', fields: [`${prefix}_hint_hide`, `${prefix}_hint_x`, `${prefix}_hint_y`] },
+        // Title and legend are drawn inside the header bar, so they hang off its
+        // toggle: hiding the bar takes them with it instead of leaving two
+        // groups of coordinates that no longer place anything.
+        { title: 'Header bar', enabledBy: `!${prefix}_header_hide`,
+          summary: d => `H ${d[`${prefix}_header_h`] | 0}`,
+          fields: [`${prefix}_header_hide`, `${prefix}_header_h`, `${prefix}_header_font`],
+          subgroups: [
+              { title: 'Title', fields: [`${prefix}_label_x`, `${prefix}_label_y`] },
+              { title: 'Legend', enabledBy: `!${prefix}_hint_hide`,
+                fields: [`${prefix}_hint_hide`, `${prefix}_hint_x`, `${prefix}_hint_y`] },
+          ] },
     ];
 }
 
@@ -580,7 +586,8 @@ const FORM_GROUPS = {
     eq: [
         { heading: 'Text & labels' },
         { title: 'Value label', fields: ['eq_info_x', 'eq_info_y', 'eq_info_font'] },
-        { title: 'Legend', fields: ['eq_hint_hide', 'eq_hint_x', 'eq_hint_y'] },
+        { title: 'Legend', enabledBy: '!eq_hint_hide',
+          fields: ['eq_hint_hide', 'eq_hint_x', 'eq_hint_y'] },
         { heading: 'Bands' },
         { title: 'Sliders group', summary: eqGroupSummary,
           fields: ['eq_group_x', 'eq_group_y', 'eq_group_w', 'eq_slider_h',
@@ -2526,7 +2533,8 @@ function buildFormRow(field, data, group, details) {
     const row = document.createElement('div');
     row.className = 'form-row';
     row.dataset.field = field.key;
-    if (group.enabledBy && field.key !== group.enabledBy)
+    // Every row except the toggle itself disappears when the group is off.
+    if (group.enabledBy && field.key !== groupToggleKey(group))
         row.classList.add('form-row-conditional');
 
     const lab = document.createElement('label');
@@ -2662,13 +2670,31 @@ function buildFormRow(field, data, group, details) {
     return row;
 }
 
+// `enabledBy` names the bool that gates a group. Prefix it with '!' when the
+// stored flag is inverted (a *_hide field) — that way a group can be gated
+// either way round without a second, mirror-image option.
+function groupToggleKey(group) {
+    const key = group.enabledBy;
+    return key && key[0] === '!' ? key.slice(1) : key;
+}
+
+function groupEnabled(group, data) {
+    if (!group.enabledBy) return true;
+    const on = !!data[groupToggleKey(group)];
+    return group.enabledBy[0] === '!' ? !on : on;
+}
+
 function refreshGroup(details, group, data) {
-    const enabled = !group.enabledBy || !!data[group.enabledBy];
+    const enabled = groupEnabled(group, data);
     details.classList.toggle('is-disabled', !enabled);
     const body = details.children[1];
     if (body) {
         for (const row of body.children) {
-            if (row.classList.contains('form-row-conditional')) row.hidden = !enabled;
+            // Nested subgroups belong to their parent's toggle just as much as
+            // its own rows do: hiding the header hides the title and legend
+            // that live inside it.
+            if (row.classList.contains('form-row-conditional') ||
+                row.classList.contains('form-subgroup')) row.hidden = !enabled;
         }
     }
     const meta = details.firstElementChild?.querySelector('.form-group-meta');
@@ -2685,14 +2711,14 @@ function refreshGroup(details, group, data) {
 }
 
 function groupSummary(group, data) {
-    if (group.enabledBy && !data[group.enabledBy]) return 'Off';
+    if (!groupEnabled(group, data)) return 'Off';
     // Groups whose geometry is derived rather than stored field-by-field (the EQ
     // sliders group) report it themselves — the _x/_w sniffing below cannot.
     if (group.summary) return group.summary(data);
     if (group.subgroups) {
         // A subgroup without an enabledBy toggle is always-on (like a top-level
         // group without one), so count it as enabled rather than undercounting.
-        const enabled = group.subgroups.filter(s => !s.enabledBy || !!data[s.enabledBy]).length;
+        const enabled = group.subgroups.filter(s => groupEnabled(s, data)).length;
         return `${enabled}/${group.subgroups.length} enabled`;
     }
 
