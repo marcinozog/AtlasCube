@@ -13,6 +13,7 @@
 #include "net_wallpaper_sched.h"
 #include "settings.h"
 #include "ui_manager.h"
+#include "ui_profile.h"   // DISPLAY_WIDTH/HEIGHT for the wallpaper scheduler
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
