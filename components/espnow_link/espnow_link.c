@@ -20,6 +20,7 @@
 #include "app_state.h"
 #include "playlist.h"
 #include "sd_player.h"
+#include "sdcard.h"         // sdcard_is_mounted() for the card flag in t:"sd"
 #include "audio_engine.h"
 #include "settings.h"
 #include "wifi_manager.h"
@@ -271,6 +272,158 @@ static char *build_list(int off, int cnt)
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// SD browsing
+//
+// The pilot navigates by index and never sees a path, exactly as it plays
+// stations by index and never sees a URL. What makes that work is that
+// sd_player already keeps a cursor — the last folder it scanned — so "entry 3"
+// has a meaning here without the pilot having to say where from.
+//
+// Folders and tracks share one numbering, folders first. An index the pilot read
+// off a row therefore means the same thing in get_sd, sd_open and sd_play_index,
+// and neither end has to agree about anything beyond `nf`.
+
+// Mirrors sd_player's own SD_DIR_MAX: a path it cannot store is a path there is
+// no point building.
+#define SD_PATH_MAX     192
+
+static bool sd_at_root(void)
+{
+    return strcmp(sd_player_dir(), sd_player_root()) == 0;
+}
+
+// The current folder's own name, not its path — paths do not cross this link,
+// and a pilot's screen has room for one word of it anyway. Empty at the root.
+static const char *sd_dir_name(void)
+{
+    const char *dir = sd_player_dir();
+    if (!dir[0] || sd_at_root()) {
+        return "";
+    }
+
+    const char *slash = strrchr(dir, '/');
+    return slash ? slash + 1 : dir;
+}
+
+// Reads the listing sd_player already holds rather than rescanning per page: a
+// page is one request, and rescanning the card for each would put a directory
+// walk between the pilot's finger and every row it scrolls past. The scan
+// happens when the folder changes — and here, once, for a card nobody has
+// browsed yet on this boot.
+static char *build_sd(int off, int cnt)
+{
+    if (!sd_player_dir()[0]) {
+        sd_player_scan(NULL);   // also mounts the card, lazily
+    }
+
+    // Asked of the card rather than inferred from the listing. It gets its own
+    // field because "no card" and "empty folder" both list nothing and want
+    // different words on the pilot's screen — and because a card pulled after a
+    // scan stops answering here while the cursor it left behind does not.
+    const bool card    = sdcard_is_mounted();
+    const int  folders = card ? sd_player_folder_count() : 0;
+    const int  tracks  = card ? sd_player_count() : 0;
+    const int  total   = folders + tracks;
+
+    if (off < 0)     off = 0;
+    if (off > total) off = total;
+    if (cnt <= 0 || cnt > LIST_MAX) cnt = LIST_MAX;
+    if (off + cnt > total)          cnt = total - off;
+
+    // Same halving guard as build_list: file names are longer and less
+    // predictable than station names, so the frame cap is likelier to bite here.
+    for (;;) {
+        cJSON *r = cJSON_CreateObject();
+        if (!r) return NULL;
+
+        cJSON_AddStringToObject(r, "t",     "sd");
+        cJSON_AddNumberToObject(r, "card",  card ? 1 : 0);
+        cJSON_AddStringToObject(r, "dir",   sd_dir_name());
+        cJSON_AddNumberToObject(r, "up",    (card && !sd_at_root()) ? 1 : 0);
+        cJSON_AddNumberToObject(r, "off",   off);
+        cJSON_AddNumberToObject(r, "total", total);
+        cJSON_AddNumberToObject(r, "nf",    folders);
+        cJSON *arr = cJSON_AddArrayToObject(r, "e");
+
+        for (int i = 0; arr && i < cnt; i++) {
+            const int   idx  = off + i;
+            const char *name = idx < folders ? sd_player_folder(idx)
+                                             : sd_player_track(idx - folders);
+            if (!name) break;
+
+            char nm[NAME_MAX];
+            copy_trunc(nm, sizeof(nm), name);
+            cJSON_AddItemToArray(arr, cJSON_CreateString(nm));
+        }
+
+        char *out = cJSON_PrintUnformatted(r);
+        cJSON_Delete(r);
+
+        if (!out) return NULL;
+        if (strlen(out) <= REPLY_MAX || cnt == 0) return out;
+
+        free(out);
+        cnt /= 2;
+    }
+}
+
+// The path is built before the scan that invalidates the name it was built from:
+// sd_player_folder() points into the listing buffers, and scanning rewrites them.
+static void sd_open(int n)
+{
+    if (n < 0 || n >= sd_player_folder_count()) {
+        ESP_LOGW(TAG, "sd_open=%d is not a folder", n);
+        return;
+    }
+
+    char path[SD_PATH_MAX];
+    snprintf(path, sizeof(path), "%s/%s", sd_player_dir(), sd_player_folder(n));
+    sd_player_scan(path);
+}
+
+static void sd_up(void)
+{
+    if (sd_at_root()) {
+        return;   // the browse root is the top; there is nothing above it
+    }
+
+    char path[SD_PATH_MAX];
+    snprintf(path, sizeof(path), "%s", sd_player_dir());
+
+    char *slash = strrchr(path, '/');
+    if (!slash) {
+        return;
+    }
+    *slash = 0;
+
+    // The cursor is shared with the web UI, which is free to point it anywhere
+    // on the card — so climbing from wherever it was left can land outside the
+    // browse root. Going home is the only sensible reading of "up" from there.
+    if (strncmp(path, sd_player_root(), strlen(sd_player_root())) != 0) {
+        sd_player_scan(NULL);
+        return;
+    }
+
+    sd_player_scan(path);
+}
+
+static void sd_play_index(int n)
+{
+    const int folders = sd_player_folder_count();
+    if (n < folders || n >= folders + sd_player_count()) {
+        ESP_LOGW(TAG, "sd_play_index=%d is not a track", n);
+        return;
+    }
+
+    char path[SD_PATH_MAX];
+    snprintf(path, sizeof(path), "%s/%s",
+             sd_player_dir(), sd_player_track(n - folders));
+    sd_player_play_path(path);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 static char *build_pair_ack(void)
 {
     uint8_t mac[ESPNOW_MAC_LEN] = { 0 };
@@ -362,6 +515,14 @@ static void handle_frame(const rx_frame_t *f)
         reply(f->src, f->seq, build_list(off, cnt));
         return;
     }
+    if (strncmp(cmd, "get_sd=", 7) == 0) {
+        const char *args  = cmd + 7;
+        const char *comma = strchr(args, ',');
+        int off = atoi(args);
+        int cnt = comma ? atoi(comma + 1) : LIST_MAX;
+        reply(f->src, f->seq, build_sd(off, cnt));
+        return;
+    }
 
     // ── mutating commands: a repeated sequence means the pilot never saw our
     //    MAC ACK and retried something we already did. next/prev/volp are not
@@ -371,6 +532,24 @@ static void handle_frame(const rx_frame_t *f)
         return;
     }
     s_last_seq = f->seq;
+
+    // Card navigation is deliberately on this side of the dedup, and deliberately
+    // silent. Moving the cursor is not idempotent — a retried sd_open would
+    // descend twice — so it has to be a command the dedup can drop, which means
+    // it cannot carry the new listing back. The pilot reads that with get_sd,
+    // one exchange later.
+    if (strncmp(cmd, "sd_open=", 8) == 0) {
+        sd_open(atoi(cmd + 8));
+        return;
+    }
+    if (strcmp(cmd, "sd_up") == 0) {
+        sd_up();
+        return;
+    }
+    if (strncmp(cmd, "sd_play_index=", 14) == 0) {
+        sd_play_index(atoi(cmd + 14));
+        return;
+    }
 
     media_command_execute_text(cmd);
 }

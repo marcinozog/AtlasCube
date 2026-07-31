@@ -147,8 +147,36 @@ These have no WS equivalent because WS clients get everything pushed.
 |---|---|---|
 | `get_state` | `t:"state"` | One snapshot. The pull-model replacement for the WS state broadcast. |
 | `get_list=OFF,CNT` | `t:"list"` | One page of playlist names starting at 0-based `OFF`. `CNT` is clamped to what fits in a frame. |
+| `get_sd=OFF,CNT` | `t:"sd"` | One page of the **current SD folder**, same paging rules. |
+| `sd_open=N` | — | Descend into entry `N`. Ignored unless `N` is a folder. |
+| `sd_up` | — | One level up; no-op at the browse root. |
+| `sd_play_index=N` | — | Play entry `N`. Ignored unless `N` is a track. |
 | `ping` | `t:"pong"` | Link and channel check; cheapest way to confirm the stored channel is still right. |
 | `pair` | `t:"pair"` | Broadcast only, honoured only inside the pairing window. |
+
+### Browsing the card by index
+
+The pilot never sees a path, exactly as it never sees a station's URL. What makes
+that work is that `sd_player` already keeps a cursor — the last folder it
+scanned — so "entry 3" has a meaning without the pilot saying where from.
+
+**Folders and tracks share one numbering, folders first.** `nf` in the reply says
+how many of the listing's entries are folders, so an index below it is a folder
+and one at or above it is a track. The same index therefore means the same thing
+in `get_sd`, `sd_open` and `sd_play_index`, and neither end has to agree about
+anything else.
+
+**`sd_play_index=N` is not the WS `sd_play` command.** That one takes a folder
+and plays it; this one takes an entry index in the current listing. The names are
+close enough to be worth reading twice.
+
+**The three navigation commands do not reply**, which costs an extra exchange on
+every descent and is the price of correctness. They are not idempotent — a
+retried `sd_open` would descend twice — so they have to sit on the *mutating*
+side of the sequence-number dedup, where a duplicate is dropped. A command the
+dedup may drop cannot be the one that carries the new listing back, so the pilot
+reads it with `get_sd` afterwards. Descending costs ~300 ms and survives a lost
+frame.
 
 ## Radio → pilot
 
@@ -189,6 +217,41 @@ Names only — **URLs never cross this link**. The pilot plays by index
 `off` echoes the requested offset, `total` is `playlist_get_count()`, and `e` is
 however many entries fit. A short `e` is not an error: the pilot advances `off`
 by `e`'s length and asks again until `off + len(e) == total`.
+
+### `t:"sd"`
+
+```json
+{"t":"sd","card":1,"dir":"rock","up":1,"off":0,"total":23,"nf":2,
+ "e":["live","studio","01 - Intro.mp3","02 - ..."]}
+```
+
+| Key | Meaning |
+|---|---|
+| `card` | 1 when the card is mounted. 0 means there is nothing to browse — distinct from an empty folder, which the pilot has to word differently |
+| `dir` | the current folder's **name**, not its path; `""` at the browse root |
+| `up` | 1 when there is a level to go up to |
+| `off`, `total`, `e` | as in `t:"list"`; `total` counts folders *and* tracks |
+| `nf` | how many entries of the whole listing are folders — they come first |
+
+Names are truncated to 32 characters like the playlist's. File names run longer
+than station names, but a pilot row shows fewer characters than that anyway.
+
+The first `get_sd` of a boot mounts the card and scans the root, so it can take
+far longer than the 300 ms a pilot waits for a reply. `get_sd` is a query and is
+answered on a retry, so this surfaces as one slow first look rather than a
+failure — but it is why a pilot should not treat a single unanswered `get_sd` as
+"no card".
+
+> **The browse cursor is shared.** `sd_player`'s listing buffers are the same
+> ones the web UI's `sd_list` scans into, so a browser session moves the folder
+> under a pilot that is looking at it. Two consequences, and only the first is
+> handled here: a pilot **must** compare the `dir` of each page against the one
+> its list was built for and reload from scratch when they differ, rather than
+> splicing pages from two folders together. The second has no fix on this side —
+> between a pilot's last page and its `sd_play_index`, the cursor can move and
+> the wrong track plays. The window is seconds and needs someone browsing the
+> card from two places at once; if that stops being hypothetical, the answer is a
+> folder token on the command rather than a second scan context.
 
 ### `t:"pong"` / `t:"pair"`
 
