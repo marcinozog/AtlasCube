@@ -28,7 +28,7 @@ extern "C" {
 // What to show for one entry — filled by the owner in its bind callback.
 typedef struct {
     char     text[UI_LIST_TEXT_MAX];
-    uint32_t color;   // RGB text colour; preset to the theme's text_primary
+    uint32_t color;   // RGB text colour; preset to the configured row text colour
 } ui_list_row_t;
 
 // Called for an entry that just scrolled into the window. Runs on the LVGL task.
@@ -41,6 +41,12 @@ typedef struct {
     int16_t          item_pad;      // gap between rows
     int16_t          row_pad_left;  // text indent inside a row
     int16_t          row_bg_opa;    // row plate opacity, 0..100
+    // Colours, 0 = follow the theme. Resolved on every restyle, so a theme
+    // change still moves the parts that were left unset.
+    uint32_t         row_bg_color;      // 0 = theme bg_secondary
+    uint32_t         row_text_color;    // 0 = theme text_primary
+    uint32_t         cursor_bg_color;   // 0 = theme accent
+    uint32_t         cursor_text_color; // 0 = white
     const lv_font_t *font;
     ui_list_bind_cb_t  bind;
     ui_list_click_cb_t click;       // NULL = rows are not tappable

@@ -446,7 +446,9 @@ const EQ_FIELDS = [
 // to the frame the wallpaper leaves free and the rows land inside it (their
 // width is derived from the box, never stored). A smaller box is also a cheaper
 // scroll — the device only repaints what the box covers.
-function listFields(prefix) {
+// `accentLabel` names the rows each screen picks out of the list — the playing
+// station, or the ".." and folder entries.
+function listFields(prefix, accentLabel) {
     return [
         { key: `${prefix}_list_x`,       label: 'List X',      type: 'number' },
         { key: `${prefix}_list_y`,       label: 'List Y',      type: 'number' },
@@ -456,6 +458,11 @@ function listFields(prefix) {
         { key: `${prefix}_item_pad`,     label: 'Row gap',     type: 'number', min: 0,  max: 100 },
         { key: `${prefix}_row_pad_left`, label: 'Text indent', type: 'number', min: 0,  max: 200 },
         { key: `${prefix}_row_font`,     label: 'Row font',    type: 'font'   },
+        { key: `${prefix}_row_bg_color`,      label: 'Row plate colour',  type: 'color' },
+        { key: `${prefix}_row_text_color`,    label: 'Row text colour',   type: 'color' },
+        { key: `${prefix}_row_accent_color`,  label: `${accentLabel} colour`, type: 'color' },
+        { key: `${prefix}_cursor_bg_color`,   label: 'Selected plate colour', type: 'color' },
+        { key: `${prefix}_cursor_text_color`, label: 'Selected text colour',  type: 'color' },
         { key: `${prefix}_header_hide`,  label: 'Hide header bar', type: 'bool' },
         { key: `${prefix}_header_h`,     label: 'Header height',   type: 'number', min: 0, max: 200 },
         { key: `${prefix}_header_font`,  label: 'Header font', type: 'font'   },
@@ -474,6 +481,11 @@ function listGroups(prefix) {
           fields: [`${prefix}_list_x`, `${prefix}_list_y`, `${prefix}_list_w`, `${prefix}_list_h`] },
         { title: 'Rows', fields: [`${prefix}_item_h`, `${prefix}_item_pad`,
                                   `${prefix}_row_pad_left`, `${prefix}_row_font`] },
+        // Unset colours follow the theme, which is tuned for a plain background;
+        // over a wallpaper the list usually wants its own.
+        { title: 'Row colours', fields: [`${prefix}_row_bg_color`, `${prefix}_row_text_color`,
+                                         `${prefix}_row_accent_color`, `${prefix}_cursor_bg_color`,
+                                         `${prefix}_cursor_text_color`] },
         { heading: 'Header' },
         // Title and legend are drawn inside the header bar, so they hang off its
         // toggle: hiding the bar takes them with it instead of leaving two
@@ -489,8 +501,8 @@ function listGroups(prefix) {
     ];
 }
 
-const PLAYLIST_FIELDS = listFields('playlist');
-const BROWSER_FIELDS  = listFields('browser');
+const PLAYLIST_FIELDS = listFields('playlist', 'Playing station');
+const BROWSER_FIELDS  = listFields('browser',  'Folders & ..');
 
 // Form-only grouping. Field schemas above remain the API/source-of-truth; these
 // groups only decide how the editor presents them. `enabledBy` keeps the Show
@@ -2528,6 +2540,11 @@ function numToHex(n) {
 function hexToNum(h) {
     return parseInt(h.slice(1), 16) | 0;
 }
+// '#rrggbb' for an override, null when the field is unset — renderers pass that
+// straight to a fill and leave the placeholder styling in place.
+function colorOrNull(n) {
+    return n ? numToHex(n) : null;
+}
 
 function buildFormRow(field, data, group, details) {
     const row = document.createElement('div');
@@ -3429,20 +3446,31 @@ function renderList(svg, prefix, title, hint, names) {
     const rf     = p[`${prefix}_row_font`];
     const opa    = clamp(p[`${prefix}_label_bg_opa`] ?? 100, 0, 100) / 100;
 
+    // Unset colours keep the placeholder classes, so the preview still reads as
+    // "follows the theme" rather than committing to one palette's colours.
+    const rowFill    = colorOrNull(p[`${prefix}_row_bg_color`]);
+    const rowText    = colorOrNull(p[`${prefix}_row_text_color`]);
+    const cursorFill = colorOrNull(p[`${prefix}_cursor_bg_color`]);
+    const cursorText = colorOrNull(p[`${prefix}_cursor_text_color`]);
+
     for (let i = 0; ; i++) {
         const y = ly + LIST_BOX_PAD + i * pitch;
         if (y + rowH > ly + lh - LIST_BOX_PAD) break;
+        const isCursor = i === 0;             // the first row stands in for the encoder cursor
         const r = rect(svg, {
             x: rowX, y, width: rowW, height: rowH,
-            // The first row stands in for the encoder cursor.
-            class: `label-rect ${i === 0 ? 'ph-media-primary' : 'ph-default'}`,
+            class: `label-rect ${isCursor ? 'ph-media-primary' : 'ph-default'}`,
         });
+        const fill = isCursor ? cursorFill : rowFill;
+        if (fill) r.style.fill = fill;
         r.style.fillOpacity = opa;
         r.style.pointerEvents = 'none';       // the box underneath stays draggable
         const t = text(svg, rowX + indent,
                        y + (rowH - fontLineHeight(rf)) / 2 + fontBaseline(rf),
                        names[i % names.length],
                        { 'font-size': fontHeight(rf) });
+        const tFill = isCursor ? cursorText : rowText;
+        if (tFill) t.style.fill = tFill;
         t.style.pointerEvents = 'none';
     }
 }

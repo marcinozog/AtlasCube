@@ -410,6 +410,14 @@ typedef struct {
     int16_t          playlist_label_y;
     int16_t          playlist_hint_x;        // hint offset inside the header (from RIGHT_MID)
     int16_t          playlist_hint_y;
+    // Row colours, 0 = inherit the theme. The palette dresses the list for a
+    // plain background; over a wallpaper it usually clashes, and each list
+    // screen sits on its own artwork — hence per-section overrides.
+    uint32_t         playlist_row_bg_color;     // row plate, 0 = theme bg_secondary
+    uint32_t         playlist_row_text_color;   // row text, 0 = theme text_primary
+    uint32_t         playlist_row_accent_color; // playing station, 0 = theme accent
+    uint32_t         playlist_cursor_bg_color;  // selected row plate, 0 = theme accent
+    uint32_t         playlist_cursor_text_color;// selected row text, 0 = white
     const lv_font_t *playlist_header_font;
     const lv_font_t *playlist_row_font;
     char             playlist_wallpaper[128]; // see clock_wallpaper
@@ -430,6 +438,11 @@ typedef struct {
     int16_t          browser_label_y;
     int16_t          browser_hint_x;
     int16_t          browser_hint_y;
+    uint32_t         browser_row_bg_color;      // see the playlist_* row colours
+    uint32_t         browser_row_text_color;
+    uint32_t         browser_row_accent_color;  // ".." and folders, 0 = theme accent
+    uint32_t         browser_cursor_bg_color;
+    uint32_t         browser_cursor_text_color;
     const lv_font_t *browser_header_font;
     const lv_font_t *browser_row_font;
     char             browser_wallpaper[128];

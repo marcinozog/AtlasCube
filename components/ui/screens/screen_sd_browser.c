@@ -87,7 +87,9 @@ static void bind_row(int idx, ui_list_row_t *row)
             break;
     }
     // Navigation stands out from playable files.
-    if (s_entries[idx].kind != ENT_TRACK) row->color = theme_get()->accent;
+    if (s_entries[idx].kind != ENT_TRACK)
+        row->color = theme_color_or(ui_profile_get()->browser_row_accent_color,
+                                    theme_get()->accent);
 }
 
 // --------------------------------------------------------------------------
@@ -242,6 +244,10 @@ static void sd_browser_create(lv_obj_t *parent)
         .item_pad     = p->browser_item_pad,
         .row_pad_left = p->browser_row_pad_left,
         .row_bg_opa   = p->browser_label_bg_opa,
+        .row_bg_color      = p->browser_row_bg_color,
+        .row_text_color    = p->browser_row_text_color,
+        .cursor_bg_color   = p->browser_cursor_bg_color,
+        .cursor_text_color = p->browser_cursor_text_color,
         .font         = p->browser_row_font,
         .bind         = bind_row,
         .click        = activate,

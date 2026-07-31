@@ -2567,6 +2567,11 @@ static void load_playlist(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "playlist_label_y",      &p->playlist_label_y);
     load_i16 (obj, "playlist_hint_x",       &p->playlist_hint_x);
     load_i16 (obj, "playlist_hint_y",       &p->playlist_hint_y);
+    load_u32 (obj, "playlist_row_bg_color",      &p->playlist_row_bg_color);
+    load_u32 (obj, "playlist_row_text_color",    &p->playlist_row_text_color);
+    load_u32 (obj, "playlist_row_accent_color",  &p->playlist_row_accent_color);
+    load_u32 (obj, "playlist_cursor_bg_color",   &p->playlist_cursor_bg_color);
+    load_u32 (obj, "playlist_cursor_text_color", &p->playlist_cursor_text_color);
     load_font(obj, "playlist_header_font",  &p->playlist_header_font);
     load_font(obj, "playlist_row_font",     &p->playlist_row_font);
     load_str (obj, "playlist_wallpaper",    p->playlist_wallpaper, sizeof(p->playlist_wallpaper));
@@ -2603,6 +2608,11 @@ static cJSON *dump_playlist(const ui_profile_t *p)
     add_i16 (o, "playlist_label_y",      p->playlist_label_y);
     add_i16 (o, "playlist_hint_x",       p->playlist_hint_x);
     add_i16 (o, "playlist_hint_y",       p->playlist_hint_y);
+    add_u32 (o, "playlist_row_bg_color",      p->playlist_row_bg_color);
+    add_u32 (o, "playlist_row_text_color",    p->playlist_row_text_color);
+    add_u32 (o, "playlist_row_accent_color",  p->playlist_row_accent_color);
+    add_u32 (o, "playlist_cursor_bg_color",   p->playlist_cursor_bg_color);
+    add_u32 (o, "playlist_cursor_text_color", p->playlist_cursor_text_color);
     add_font(o, "playlist_header_font",  p->playlist_header_font);
     add_font(o, "playlist_row_font",     p->playlist_row_font);
     add_str (o, "playlist_wallpaper",    p->playlist_wallpaper);
@@ -2627,6 +2637,11 @@ static void load_browser(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "browser_label_y",      &p->browser_label_y);
     load_i16 (obj, "browser_hint_x",       &p->browser_hint_x);
     load_i16 (obj, "browser_hint_y",       &p->browser_hint_y);
+    load_u32 (obj, "browser_row_bg_color",      &p->browser_row_bg_color);
+    load_u32 (obj, "browser_row_text_color",    &p->browser_row_text_color);
+    load_u32 (obj, "browser_row_accent_color",  &p->browser_row_accent_color);
+    load_u32 (obj, "browser_cursor_bg_color",   &p->browser_cursor_bg_color);
+    load_u32 (obj, "browser_cursor_text_color", &p->browser_cursor_text_color);
     load_font(obj, "browser_header_font",  &p->browser_header_font);
     load_font(obj, "browser_row_font",     &p->browser_row_font);
     load_str (obj, "browser_wallpaper",    p->browser_wallpaper, sizeof(p->browser_wallpaper));
@@ -2660,6 +2675,11 @@ static cJSON *dump_browser(const ui_profile_t *p)
     add_i16 (o, "browser_label_y",      p->browser_label_y);
     add_i16 (o, "browser_hint_x",       p->browser_hint_x);
     add_i16 (o, "browser_hint_y",       p->browser_hint_y);
+    add_u32 (o, "browser_row_bg_color",      p->browser_row_bg_color);
+    add_u32 (o, "browser_row_text_color",    p->browser_row_text_color);
+    add_u32 (o, "browser_row_accent_color",  p->browser_row_accent_color);
+    add_u32 (o, "browser_cursor_bg_color",   p->browser_cursor_bg_color);
+    add_u32 (o, "browser_cursor_text_color", p->browser_cursor_text_color);
     add_font(o, "browser_header_font",  p->browser_header_font);
     add_font(o, "browser_row_font",     p->browser_row_font);
     add_str (o, "browser_wallpaper",    p->browser_wallpaper);

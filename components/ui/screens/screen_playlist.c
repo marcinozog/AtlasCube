@@ -58,7 +58,9 @@ static void bind_row(int idx, ui_list_row_t *row)
     // '*' prefix marks favorites; constant width keeps numbers aligned.
     snprintf(row->text, sizeof(row->text), "%c%2d. %s",
              (e && e->favorite) ? '*' : ' ', idx + 1, e ? e->name : "");
-    if (idx == s_playing) row->color = theme_get()->accent;
+    if (idx == s_playing)
+        row->color = theme_color_or(ui_profile_get()->playlist_row_accent_color,
+                                    theme_get()->accent);
 }
 
 static void play_display_index(int disp_idx)
@@ -140,6 +142,10 @@ static void playlist_create(lv_obj_t *parent)
         .item_pad     = p->playlist_item_pad,
         .row_pad_left = p->playlist_row_pad_left,
         .row_bg_opa   = p->playlist_label_bg_opa,
+        .row_bg_color      = p->playlist_row_bg_color,
+        .row_text_color    = p->playlist_row_text_color,
+        .cursor_bg_color   = p->playlist_cursor_bg_color,
+        .cursor_text_color = p->playlist_cursor_text_color,
         .font         = p->playlist_row_font,
         .bind         = bind_row,
         .click        = play_display_index,

@@ -30,10 +30,13 @@ static void style_row(int k)
     const ui_theme_colors_t *th = theme_get();
     bool is_cursor = (s_row_idx[k] == s_selected);
 
-    lv_obj_set_style_bg_color(s_rows[k],
-        lv_color_hex(is_cursor ? th->accent : th->bg_secondary), LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_rows[k],
-        lv_color_hex(is_cursor ? 0xFFFFFF : s_row_fg[k]), LV_PART_MAIN);
+    uint32_t bg = is_cursor ? theme_color_or(s_cfg.cursor_bg_color, th->accent)
+                            : theme_color_or(s_cfg.row_bg_color,    th->bg_secondary);
+    uint32_t fg = is_cursor ? theme_color_or(s_cfg.cursor_text_color, 0xFFFFFF)
+                            : s_row_fg[k];
+
+    lv_obj_set_style_bg_color(s_rows[k], lv_color_hex(bg), LV_PART_MAIN);
+    lv_obj_set_style_text_color(s_rows[k], lv_color_hex(fg), LV_PART_MAIN);
 }
 
 // Restyle the slot showing `idx`, if that entry is on screen right now.
@@ -59,7 +62,9 @@ static void bind_row(int k, int idx)
 
     // Zero-initialised, so a callback that writes nothing yields an empty row
     // rather than stale bytes.
-    ui_list_row_t data = { .color = theme_get()->text_primary };
+    ui_list_row_t data = {
+        .color = theme_color_or(s_cfg.row_text_color, theme_get()->text_primary)
+    };
     if (s_cfg.bind) s_cfg.bind(idx, &data);
 
     lv_label_set_text(row, data.text);
@@ -184,7 +189,7 @@ lv_obj_t *ui_list_create(lv_obj_t *parent, const ui_list_cfg_t *cfg, int count)
         lv_obj_add_flag(row, LV_OBJ_FLAG_HIDDEN);   // until bound
         s_rows[k]    = row;
         s_row_idx[k] = -1;
-        s_row_fg[k]  = theme_get()->text_primary;
+        s_row_fg[k]  = theme_color_or(cfg->row_text_color, theme_get()->text_primary);
     }
 
     // One layout pass so the viewport knows its scroll range before the first
