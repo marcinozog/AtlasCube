@@ -1175,6 +1175,54 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
 
 .pw-eye:hover { opacity: 1; }
 
+/* ─── WiFi scan results ───────────────────────────────────────────── */
+.scan-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 240px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+}
+
+.scan-list.hidden { display: none; }
+
+.scan-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-panel);
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.scan-row:hover    { border-color: var(--green); }
+.scan-row.current  { border-color: var(--accent); }
+
+.scan-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scan-sig {
+    flex-shrink: 0;
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+}
+
+.scan-sig.strong { color: var(--green); }
+.scan-sig.ok     { color: var(--orange); }
+.scan-sig.weak   { color: var(--text-label); }
+
 /* ─── Colors section ──────────────────────────────────────────────── */
 .color-section {
     font-size: 10px;

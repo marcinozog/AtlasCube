@@ -557,6 +557,15 @@
     <section class="tab-pane" id="tab-wifi" data-tab="wifi">
         <div id="wifi_mode_banner" class="wifi-banner hidden"></div>
 
+        <button id="wifi_scan_btn" class="wifi-save-btn" style="margin-bottom:6px"
+                onclick="scanWifi()">🔍 Scan networks</button>
+        <div class="field-hint">
+            Pick a network instead of typing its name. While connected, a scan
+            briefly hops off-channel and a playing stream may stutter.
+        </div>
+        <div id="wifi_scan_status" class="save-status"></div>
+        <div id="wifi_scan_list" class="scan-list hidden"></div>
+
         <div class="field-group">
             <label class="field-label">Network SSID</label>
             <input type="text" id="wifi_ssid" class="field-input"

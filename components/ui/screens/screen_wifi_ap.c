@@ -347,6 +347,15 @@ static void open_password_overlay(const char *ssid, bool secure)
 
 // ── Network list ─────────────────────────────────────────────────────────────
 
+// Signal buckets for the RSSI column. The palette carries no warning colour, so
+// a weak network is drawn muted — which reads as "faded / unreliable" anyway.
+static uint32_t rssi_color(int8_t rssi, const ui_theme_colors_t *th)
+{
+    if (rssi >= -60) return th->status_ok;
+    if (rssi >= -75) return th->text_primary;
+    return th->text_muted;
+}
+
 static void net_row_cb(lv_event_t *e)
 {
     lv_obj_t *row = lv_event_get_target(e);
@@ -383,10 +392,22 @@ static void rebuild_list(void)
         lv_label_set_text_fmt(name, "%s%s",
                               s_aps[i].ssid, s_aps[i].secure ? "" : "  (open)");
         lv_label_set_long_mode(name, LV_LABEL_LONG_DOT);
-        lv_obj_set_width(name, LV_PCT(100));
+        // Leaves room for the signal column on the right — the SSID gets an
+        // ellipsis before it reaches the number instead of running under it.
+        lv_obj_set_width(name, LV_PCT(70));
         lv_obj_set_style_text_font(name, p->wifi_value_font, LV_PART_MAIN);
         lv_obj_set_style_text_color(name, lv_color_hex(th->text_primary), LV_PART_MAIN);
         lv_obj_align(name, LV_ALIGN_LEFT_MID, 0, 0);
+
+        // Signal strength as a number, not a bar glyph: the _pl fonts carry
+        // neither the FontAwesome nor the block-drawing range, so any icon here
+        // would render blank.
+        lv_obj_t *sig = lv_label_create(row);
+        lv_label_set_text_fmt(sig, "%d dBm", s_aps[i].rssi);
+        lv_obj_set_style_text_font(sig, p->wifi_key_font, LV_PART_MAIN);
+        lv_obj_set_style_text_color(sig, lv_color_hex(rssi_color(s_aps[i].rssi, th)),
+                                    LV_PART_MAIN);
+        lv_obj_align(sig, LV_ALIGN_RIGHT_MID, 0, 0);
     }
 }
 

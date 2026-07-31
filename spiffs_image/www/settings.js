@@ -643,6 +643,105 @@ function togglePwVisibility() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// WiFi — scan for nearby networks
+//
+// The device scans asynchronously: POST /api/wifi/scan starts one, GET reports
+// { busy, aps[] }. We poll until busy clears, capped so a scan that never
+// finishes (radio busy, driver hiccup) can't spin here forever.
+// ─────────────────────────────────────────────────────────────────────────────
+const SCAN_POLL_MS  = 700;
+const SCAN_POLL_MAX = 20;   // ~14 s of patience
+
+function showScanStatus(msg, type) {
+    const el = document.getElementById('wifi_scan_status');
+    if (!el) return;
+    // No auto-clear: this line labels the result list below it.
+    el.innerText = msg;
+    el.className = 'save-status' + (type ? ' ' + type : '');
+}
+
+async function scanWifi() {
+    const btn  = document.getElementById('wifi_scan_btn');
+    const list = document.getElementById('wifi_scan_list');
+
+    btn.disabled = true;
+    list.classList.add('hidden');
+    list.innerHTML = '';
+    showScanStatus('📡 Scanning…', '');
+
+    try {
+        const res = await fetch('/api/wifi/scan', { method: 'POST' });
+        if (!res.ok) throw new Error('start failed');
+
+        for (let i = 0; i < SCAN_POLL_MAX; i++) {
+            await new Promise(r => setTimeout(r, SCAN_POLL_MS));
+            const data = await (await fetch('/api/wifi/scan')).json();
+            if (data.busy) continue;
+            renderScanList(data.aps || []);
+            return;
+        }
+        showScanStatus('⏱ Scan timed out — try again.', 'error');
+    } catch (e) {
+        showScanStatus('❌ Scan failed — is the device still reachable?', 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function renderScanList(aps) {
+    const list = document.getElementById('wifi_scan_list');
+    if (!aps.length) {
+        showScanStatus('No networks found — try again closer to the router.', '');
+        return;
+    }
+
+    const current = (document.getElementById('wifi_ssid').value || '').trim();
+    list.innerHTML = '';
+
+    aps.forEach(ap => {
+        const row = document.createElement('button');
+        row.type      = 'button';
+        row.className = 'scan-row' + (ap.ssid === current ? ' current' : '');
+        row.dataset.ssid = ap.ssid;
+        row.onclick   = () => pickScannedNetwork(ap.ssid, ap.secure);
+
+        // textContent, never innerHTML — an SSID is arbitrary text from the air.
+        const name = document.createElement('span');
+        name.className   = 'scan-name';
+        name.textContent = (ap.secure ? '🔒 ' : '🔓 ') + ap.ssid;
+
+        const sig = document.createElement('span');
+        sig.className = 'scan-sig ' +
+            (ap.rssi >= -60 ? 'strong' : ap.rssi >= -75 ? 'ok' : 'weak');
+        sig.textContent = ap.rssi + ' dBm';
+
+        row.append(name, sig);
+        list.appendChild(row);
+    });
+
+    list.classList.remove('hidden');
+    showScanStatus('Found ' + aps.length + ' network' + (aps.length > 1 ? 's' : '') +
+                   ' — click one to fill in the name below.', 'ok');
+}
+
+function pickScannedNetwork(ssid, secure) {
+    document.getElementById('wifi_ssid').value = ssid;
+
+    // A different network needs its own password — clearing the field also stops
+    // the "blank keeps the old one" rule from carrying the wrong secret over.
+    const pw = document.getElementById('wifi_password');
+    pw.value = '';
+
+    document.querySelectorAll('#wifi_scan_list .scan-row').forEach(r =>
+        r.classList.toggle('current', r.dataset.ssid === ssid));
+
+    showScanStatus('Selected "' + ssid + '"' +
+        (secure ? ' — enter the password below.' : ' — open network, no password needed.'),
+        'ok');
+    if (secure) pw.focus();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // WiFi — save & restart
 // ─────────────────────────────────────────────────────────────────────────────
 async function saveWifi() {

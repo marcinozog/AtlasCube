@@ -3613,12 +3613,60 @@ static esp_err_t api_pins_reset_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// WiFi scan — POST /api/wifi/scan starts one, GET /api/wifi/scan polls for the
+// result. Feeds the network picker on the settings page, which is the main
+// provisioning path in AP mode (typing an SSID by hand is error-prone).
+//
+// Poll-based on purpose: wifi_manager_set_scan_done_cb() is a single-owner slot
+// held by the on-device setup screen, and hooking it from here would leave that
+// screen without its refresh. wifi_manager_scan_get() copies out of the shared
+// result buffer, so no lock is needed either.
+//
+// In STA mode a scan hops off-channel for a moment and a playing stream may
+// stall — the page warns about that before the user presses the button.
+// ─────────────────────────────────────────────────────────────────────────────
+static esp_err_t api_wifi_scan_post_handler(httpd_req_t *req)
+{
+    if (!wifi_manager_scan_busy()) wifi_manager_scan_start();
+
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true,\"busy\":true}");
+    return ESP_OK;
+}
+
+static esp_err_t api_wifi_scan_get_handler(httpd_req_t *req)
+{
+    bool           busy = wifi_manager_scan_busy();
+    wifi_scan_ap_t aps[WIFI_SCAN_MAX_AP];
+    int            n    = busy ? 0 : wifi_manager_scan_get(aps, WIFI_SCAN_MAX_AP);
+
+    cJSON *json = cJSON_CreateObject();
+    cJSON_AddBoolToObject(json, "busy", busy);
+    cJSON *arr = cJSON_AddArrayToObject(json, "aps");
+    for (int i = 0; i < n; i++) {
+        cJSON *o = cJSON_CreateObject();
+        cJSON_AddStringToObject(o, "ssid",   aps[i].ssid);
+        cJSON_AddNumberToObject(o, "rssi",   aps[i].rssi);
+        cJSON_AddBoolToObject  (o, "secure", aps[i].secure);
+        cJSON_AddItemToArray(arr, o);
+    }
+
+    char *str = cJSON_PrintUnformatted(json);
+    cJSON_Delete(json);
+
+    httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    return send_json_or_500(req, str);
+}
+
 void http_server_start(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn      = httpd_uri_match_wildcard;
-    // 65 handlers are registered below and ws_register() adds one more before
-    // them — 66 in use. Keep real headroom: the two wildcards (/* OPTIONS and
+    // 67 handlers are registered below and ws_register() adds one more before
+    // them — 68 in use. Keep real headroom: the two wildcards (/* OPTIONS and
     // /* GET) register LAST, so an overflow drops exactly them and the symptom
     // is the whole web UI 404-ing, not the new endpoint going missing. Raise
     // this whenever you add an API handler.
@@ -3718,6 +3766,20 @@ void http_server_start(void)
         .handler = api_pins_reset_handler,
     };
     httpd_register_uri_handler(server, &api_pins_reset);
+
+    httpd_uri_t api_wifi_scan_post = {
+        .uri     = "/api/wifi/scan",
+        .method  = HTTP_POST,
+        .handler = api_wifi_scan_post_handler,
+    };
+    httpd_register_uri_handler(server, &api_wifi_scan_post);
+
+    httpd_uri_t api_wifi_scan_get = {
+        .uri     = "/api/wifi/scan",
+        .method  = HTTP_GET,
+        .handler = api_wifi_scan_get_handler,
+    };
+    httpd_register_uri_handler(server, &api_wifi_scan_get);
 
     // Always-available built-in setup page (Wi-Fi + UI upload + hardware pins),
     // independent of the www partition contents.

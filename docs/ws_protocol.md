@@ -205,6 +205,8 @@ wallpaper, UI profiles) is registered in
 | `GET /api/playlist.csv` | The on-disk format: `name\turl\t<0\|1>\tstationuuid\ticon_path\n` (three-column legacy files still load) |
 | `/api/events*` | Reminders, playback schedules, calendar mirror — see [events.md](events.md) |
 | `GET /api/settings`, `POST /api/settings` | Device configuration. POST is a **partial patch**; sections: `display`, `bluetooth`, `audio`, `wifi`, `ntp`, `playlist`, `scrsaver`, `dashboard` |
+| `POST /api/wifi/scan` | Starts an async scan for nearby APs; `{"ok":true,"busy":true}`. A no-op while one is already running. In STA mode the device stays connected but hops off-channel, so a playing stream may stutter. |
+| `GET /api/wifi/scan` | Polls it: `{"busy":false,"aps":[{"ssid","rssi","secure"}, …]}`. `aps` is empty while `busy` is true; poll ~700 ms until it clears. Max 20 entries, hidden SSIDs skipped, deduplicated by SSID and sorted by `rssi` (dBm, negative — closer to 0 is stronger). |
 | `POST /api/restart` | Reboot (`OPTIONS` is handled for CORS preflight) |
 
 ## Conventions and gotchas
