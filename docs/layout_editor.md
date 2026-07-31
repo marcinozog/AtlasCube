@@ -332,8 +332,10 @@ which writes to
 `/wallpapers/<width>x<height>/internet/`. Wallpapers left in the old flat
 `/wallpapers` by earlier firmware keep working: screens store the full path
 they were assigned, and the SD browser falls back from the resolution folder
-to `/wallpapers` and then to the card root. Its *Move* button files old ones
-into the resolution folder without leaving the editor.
+to `/wallpapers` and then to the card root. It deliberately offers no *Move*:
+a screen stores the path it was assigned, so relocating a `.bin` from under it
+would leave that screen pointing at nothing. The Assets tab keeps a browser
+that can move files, for artwork no screen refers to by path.
 
 In the editor, the wallpaper picker above the canvas edits the **active
 tab's** screen: *Choose from SD…* assigns an SD file, *Internet* shows

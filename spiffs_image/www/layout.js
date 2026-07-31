@@ -1453,16 +1453,16 @@ function browseWallpaperDirectory(path) {
     const browser = document.getElementById('layout_wallpaper_browser');
     if (!browser) return;
     // A card may have neither the category folder, the resolution folder nor
-    // /wallpapers yet; step down to whichever exists. Move is offered so
-    // wallpapers uploaded by an older firmware can be filed into the
-    // resolution folder from here.
+    // /wallpapers yet; step down to whichever exists. No Move here: uploads and
+    // gallery installs file themselves per screen, and moving a .bin behind the
+    // profile's back only leaves the screen pointing at a path that is gone.
+    // The Assets tab keeps a browser that can move files.
     SdBrowse.open(browser, {
         start: path,
         fallback: [panelWallpaperDir(), WALLPAPERS_DIR, '/'],
         filterExt: '.bin',
         maxHeight: '190px',
         rowFontSize: '11px',
-        allowMove: true,
         emptyText: 'No .bin wallpapers in this folder.',
         // Flag the wallpaper currently applied to this screen with a check mark.
         fileLabel: (full, e) =>
