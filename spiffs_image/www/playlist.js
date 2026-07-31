@@ -582,6 +582,7 @@ function iconOpen(idx) {
     document.getElementById('icon_station_name').textContent = st.name || 'Unnamed station';
     document.getElementById('icon_current_path').textContent = st.icon || 'No icon assigned';
     document.getElementById('icon_results').innerHTML = '';
+    iconSdBrowserReset();
     document.getElementById('icon_modal').hidden = false;
     iconSetStatus('');
     iconRefreshPreview();
@@ -590,6 +591,7 @@ function iconOpen(idx) {
 function iconClose() {
     document.getElementById('icon_modal').hidden = true;
     document.getElementById('icon_results').innerHTML = '';
+    iconSdBrowserReset();
     iconEditIdx = -1;
     iconCandidates = [];
 }
@@ -830,6 +832,44 @@ async function iconUploadSelected(input) {
     }
 }
 
+function iconSdBrowserReset() {
+    const box = document.getElementById('icon_sd_browser');
+    box.hidden = true;
+    box.innerHTML = '';
+}
+
+// Assign an icon that is already on the card. Nothing is converted or copied —
+// this is the "flash erased, playlist gone, /station-icons survived" case, and
+// several stations may legitimately point at the same file.
+function iconSdToggle() {
+    const box = document.getElementById('icon_sd_browser');
+    const open = box.hidden;
+    iconSdBrowserReset();
+    if (!open) return;
+    box.hidden = false;
+    SdBrowse.open(box, {
+        start: '/station-icons',
+        fallback: '/',              // fresh card may not have the folder yet
+        filterExt: '.bin',
+        fileIcon: '🖼️ ',
+        maxHeight: '38vh',
+        emptyText: 'No .bin icon files in this folder.',
+        onFile: iconSdPick,
+    });
+}
+
+async function iconSdPick(path) {
+    syncFromDom();
+    if (iconEditIdx < 0 || !stations[iconEditIdx]) return;
+    stations[iconEditIdx].icon = path;
+    document.getElementById('icon_current_path').textContent = path;
+    render();
+    iconSetStatus('✓ Assigned ' + path + '. Save & Apply to keep the assignment.', 'ok');
+    // Reading the file back is the validation: a .bin the decoder chokes on
+    // reports itself here instead of silently blanking on the device.
+    await iconRefreshPreview();
+}
+
 function iconRemove() {
     if (iconEditIdx < 0 || !stations[iconEditIdx]) return;
     stations[iconEditIdx].icon = '';
@@ -929,8 +969,12 @@ async function iconAudit() {
         const files = await iconListFiles();
         const fileSet = new Set(files);
         const referenced = new Set(stations.map(st => (st.icon || '').trim()).filter(Boolean));
+        // Only /station-icons is listed, so an assignment pointing elsewhere on
+        // the card cannot be judged here — leave it alone instead of calling it
+        // missing.
         const missing = stations
-            .filter(st => st.icon && !fileSet.has(st.icon.trim()))
+            .filter(st => st.icon && st.icon.trim().startsWith('/station-icons/') &&
+                          !fileSet.has(st.icon.trim()))
             .map(st => ({ name: st.name, icon: st.icon.trim() }));
         const orphans = files.filter(path => !referenced.has(path));
         iconAuditRender(missing, orphans);

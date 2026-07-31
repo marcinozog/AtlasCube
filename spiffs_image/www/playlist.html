@@ -98,15 +98,18 @@
             <label class="btn-secondary icon-upload">⬆ Upload image
                 <input id="icon_upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,image/x-icon" onchange="iconUploadSelected(this)" hidden>
             </label>
+            <button class="btn-secondary" id="icon_sd_btn" type="button" onclick="iconSdToggle()">📂 From SD card</button>
             <button class="btn-secondary icon-remove" type="button" onclick="iconRemove()">Remove assignment</button>
         </div>
+        <div id="icon_sd_browser" class="icon-sd-browser" hidden></div>
         <div id="icon_results" class="icon-results"></div>
         <div id="icon_status" class="icon-status"></div>
-        <div class="icon-note">Images are fitted into a 64×64 tile, converted to LVGL RGB565 and uploaded to the SD card. Save &amp; Apply keeps the assignment in the playlist.</div>
+        <div class="icon-note">Uploaded and downloaded images are fitted into a 64×64 tile, converted to LVGL RGB565 and stored on the SD card. <strong>From SD card</strong> assigns a <code>.bin</code> that is already there, unchanged. Save &amp; Apply keeps the assignment in the playlist.</div>
     </div>
 </div>
 
 <script src="lvbin.js"></script>
+<script src="sdbrowse.js"></script>
 <script src="playlist.js"></script>
 </body>
 </html>

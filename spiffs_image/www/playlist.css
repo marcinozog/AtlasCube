@@ -419,6 +419,7 @@
 .icon-actions { flex-wrap: wrap; margin: 14px 0 10px; }
 .icon-upload { cursor: pointer; }
 .icon-remove { color: var(--red); }
+.icon-sd-browser { margin: 0 0 12px; }
 .icon-results { display: flex; flex-direction: column; gap: 6px; }
 .icon-candidate {
     display: grid;
