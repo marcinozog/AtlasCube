@@ -316,7 +316,8 @@ panel resolution just like layout presets:
 
 Screen-bound uploads go one level deeper, into the category subfolder the
 online gallery uses for that screen — `home`, `radio-sd-player` (Radio and SD
-Player share it), `wireless` or `equalizer`:
+Player share it), `playlist-sd-browser` (both list screens share it),
+`wireless` or `equalizer`:
 
 ```
 /wallpapers/<width>x<height>/<category>/<name>.bin

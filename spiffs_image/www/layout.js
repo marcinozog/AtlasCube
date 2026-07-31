@@ -1324,15 +1324,17 @@ const WALLPAPERS_DIR = '/wallpapers';
 
 // Screen → online-gallery category. The same slugs name both the catalog
 // category on atlascube.net and the SD subfolder a wallpaper is filed under, so
-// a card keeps the gallery's grouping. Radio and SD Player share one category.
+// a card keeps the gallery's grouping. Radio and SD Player share one category;
+// so do the two list screens (playlist, SD browser) — a list wallpaper is a
+// frame around a list, and both frame the same shape.
 const SECTION_WALLPAPER_CATEGORY = {
     clock: 'home',
     bt:    'wireless',
     radio: 'radio-sd-player',
     sd:    'radio-sd-player',
     eq:    'equalizer',
-    playlist: 'playlist',
-    browser:  'playlist',   // both list screens share one gallery category
+    playlist: 'playlist-sd-browser',
+    browser:  'playlist-sd-browser',   // both list screens share one category
 };
 
 function sectionWallpaperCategory() {
