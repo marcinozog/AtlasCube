@@ -1,5 +1,6 @@
 #include "ui_list_widget.h"
 #include "ui_profile.h"   // UI_LIST_BOX_PAD
+#include "ui_manager.h"   // ui_input_send — swipes that started on a row
 #include "theme.h"
 #include "esp_log.h"
 
@@ -94,10 +95,41 @@ static void list_scroll_cb(lv_event_t *e)
     refresh_window();
 }
 
+// A sideways drag over a row finds nothing scrollable in that direction (the box
+// scrolls vertically only), so LVGL keeps the press on the row and turns the
+// release into a click — a swipe-to-exit that fell short of LVGL's gesture
+// threshold would pick the entry instead of leaving the screen. Rows therefore
+// only take a click that stayed put, and pass anything longer on as the swipe it
+// was meant to be. The two paths can't both fire: when the gesture does trigger,
+// ui_manager consumes the release (lv_indev_wait_release) and no click follows.
+#define ROW_CLICK_SLOP 20   // px of sideways travel still counted as a tap
+
+static int32_t s_press_x = 0;
+
+static void row_press_cb(lv_event_t *e)
+{
+    (void)e;
+    lv_indev_t *indev = lv_indev_active();
+    if (!indev) return;
+    lv_point_t p;
+    lv_indev_get_point(indev, &p);
+    s_press_x = p.x;
+}
+
 static void row_click_cb(lv_event_t *e)
 {
     lv_obj_t *row = lv_event_get_target(e);
     if (!row || !s_cfg.click) return;
+
+    lv_indev_t *indev = lv_indev_active();
+    if (indev) {
+        lv_point_t p;
+        lv_indev_get_point(indev, &p);
+        int32_t dx = p.x - s_press_x;
+        if (dx >  ROW_CLICK_SLOP) { ui_input_send(UI_INPUT_SWIPE_RIGHT); return; }
+        if (dx < -ROW_CLICK_SLOP) { ui_input_send(UI_INPUT_SWIPE_LEFT);  return; }
+    }
+
     s_cfg.click((int)(intptr_t)lv_obj_get_user_data(row));
 }
 
@@ -184,6 +216,7 @@ lv_obj_t *ui_list_create(lv_obj_t *parent, const ui_list_cfg_t *cfg, int count)
         if (cfg->font) lv_obj_set_style_text_font(row, cfg->font, LV_PART_MAIN);
         if (cfg->click) {
             lv_obj_add_flag(row, LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_add_event_cb(row, row_press_cb, LV_EVENT_PRESSED, NULL);
             lv_obj_add_event_cb(row, row_click_cb, LV_EVENT_CLICKED, NULL);
         }
         lv_obj_add_flag(row, LV_OBJ_FLAG_HIDDEN);   // until bound
