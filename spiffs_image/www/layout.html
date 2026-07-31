@@ -522,13 +522,14 @@
         <div class="section-group">
             <span class="section-group-label">Screens</span>
             <div class="section-group-tabs">
-                <button class="section-tab active" data-section="clock" onclick="selectSection('clock')">🏠 Home</button>
-                <button class="section-tab"        data-section="sd"    onclick="selectSection('sd')">💾 SD Player</button>
-                <button class="section-tab"        data-section="radio" onclick="selectSection('radio')">📻 Radio</button>
-                <button class="section-tab"        data-section="bt"    onclick="selectSection('bt')">🔵 Bluetooth</button>
-                <button class="section-tab"        data-section="eq"    onclick="selectSection('eq')">🎚 Equalizer</button>
+                <!-- Each screen is followed by the list screen it opens. -->
+                <button class="section-tab active" data-section="clock"    onclick="selectSection('clock')">🏠 Home</button>
+                <button class="section-tab"        data-section="sd"       onclick="selectSection('sd')">💾 SD Player</button>
+                <button class="section-tab"        data-section="browser"  onclick="selectSection('browser')">📁 SD Browser</button>
+                <button class="section-tab"        data-section="radio"    onclick="selectSection('radio')">📻 Radio</button>
                 <button class="section-tab"        data-section="playlist" onclick="selectSection('playlist')">📝 Playlist</button>
-                <button class="section-tab"        data-section="browser" onclick="selectSection('browser')">📁 SD Browser</button>
+                <button class="section-tab"        data-section="bt"       onclick="selectSection('bt')">🔵 Bluetooth</button>
+                <button class="section-tab"        data-section="eq"       onclick="selectSection('eq')">🎚 Equalizer</button>
             </div>
         </div>
         <div class="section-group">
