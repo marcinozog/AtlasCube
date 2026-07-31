@@ -1,6 +1,6 @@
 #include "ui_list_widget.h"
 #include "ui_profile.h"   // UI_LIST_BOX_PAD
-#include "ui_manager.h"   // ui_input_send — swipes that started on a row
+#include "ui_swipe.h"     // exit swipes that started on a row
 #include "theme.h"
 #include "esp_log.h"
 
@@ -95,87 +95,37 @@ static void list_scroll_cb(lv_event_t *e)
     refresh_window();
 }
 
-// Sideways drags: the list's own swipe detector.
-//
-// A drag across a row finds nothing scrollable in that direction (the box scrolls
-// vertically only), so LVGL keeps the press on the row. Its built-in gesture
-// wants both distance and speed, and a swipe that misses either would arrive as a
-// plain click on the row — picking an entry when the user meant to leave the
-// screen. So the list watches the drag itself: distance only, no speed floor, and
-// it fires mid-drag rather than waiting for the release.
-//
-// Vertical is left entirely to LVGL — the list has to stay scrollable, and these
-// screens only use the horizontal swipe (to exit). Once LVGL has committed the
-// press to a scroll there is nothing to interpret, hence the scroll_obj bail-out.
-#define ROW_SWIPE_MIN 30   // px of sideways travel that counts as a swipe
-
-static lv_point_t s_press_pt;
-static bool       s_swipe_sent = false;
-
+// Sideways drags over a row are the screen's exit swipe, not a pick: the box
+// scrolls vertically only, so LVGL keeps the press on the row and a swipe that
+// missed its gesture threshold would arrive here as a plain click. ui_swipe
+// watches the drag by distance instead — see ui_swipe.h.
 static void row_press_cb(lv_event_t *e)
 {
     (void)e;
-    lv_indev_t *indev = lv_indev_active();
-    if (!indev) return;
-    lv_indev_get_point(indev, &s_press_pt);
-    s_swipe_sent = false;
-}
-
-// How far the press has travelled since it started. Returns false if there is no
-// active pointer to ask.
-static bool drag_delta(int32_t *dx, int32_t *dy)
-{
-    lv_indev_t *indev = lv_indev_active();
-    if (!indev) return false;
-    lv_point_t p;
-    lv_indev_get_point(indev, &p);
-    *dx = p.x - s_press_pt.x;
-    *dy = p.y - s_press_pt.y;
-    return true;
+    ui_swipe_begin();
 }
 
 static void row_pressing_cb(lv_event_t *e)
 {
     (void)e;
-    if (s_swipe_sent) return;
-
-    lv_indev_t *indev = lv_indev_active();
-    if (!indev || lv_indev_get_scroll_obj(indev)) return;   // scrolling: not ours
-
-    int32_t dx, dy;
-    if (!drag_delta(&dx, &dy)) return;
-    if (LV_ABS(dx) < ROW_SWIPE_MIN) return;
-
-    s_swipe_sent = true;
-    lv_indev_wait_release(indev);   // swallow the release so no row gets clicked
-    ui_input_send(dx > 0 ? UI_INPUT_SWIPE_RIGHT : UI_INPUT_SWIPE_LEFT);
+    ui_swipe_check();
 }
 
 // Backstop for a flick fast enough to cross the whole threshold between two
-// LV_EVENT_PRESSING callbacks. LV_EVENT_RELEASED still arrives in that case,
-// while LV_EVENT_CLICKED would already be too late to stop the row reacting.
+// LV_EVENT_PRESSING callbacks.
 static void row_release_cb(lv_event_t *e)
 {
     (void)e;
-    if (s_swipe_sent) return;
-
-    lv_indev_t *indev = lv_indev_active();
-    if (!indev || lv_indev_get_scroll_obj(indev)) return;
-
-    int32_t dx, dy;
-    if (!drag_delta(&dx, &dy)) return;
-    if (LV_ABS(dx) < ROW_SWIPE_MIN) return;
-
-    s_swipe_sent = true;
-    lv_indev_wait_release(indev);
-    ui_input_send(dx > 0 ? UI_INPUT_SWIPE_RIGHT : UI_INPUT_SWIPE_LEFT);
+    ui_swipe_check();
 }
 
 static void row_click_cb(lv_event_t *e)
 {
     lv_obj_t *row = lv_event_get_target(e);
     if (!row || !s_cfg.click) return;
-    if (s_swipe_sent) return;   // the drag already left the screen
+    // A swipe caught on LV_EVENT_RELEASED comes too late to stop LVGL sending
+    // the click that follows it in the same release.
+    if (ui_swipe_fired()) return;
     s_cfg.click((int)(intptr_t)lv_obj_get_user_data(row));
 }
 

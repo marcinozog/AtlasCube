@@ -7,6 +7,7 @@
 #include "ui_screen.h"
 #include "ui_events.h"
 #include "ui_manager.h"
+#include "ui_swipe.h"
 #include "lv_bin_image.h"
 #include "lvgl.h"
 #include "esp_log.h"
@@ -241,6 +242,41 @@ static void build_eq_knobs(void)
     }
 }
 
+/* ── exit swipe over the band group ─────────────────────────────────────── */
+
+/* The sliders keep LVGL's gesture switched off (see eq_create), so a sideways
+   drag over them would only move a band and never leave the screen. ui_swipe
+   recognises it by distance instead. The band goes back to the value it had when
+   the finger landed — leaving the screen must not leave a gain behind — and no
+   flash write happens, because LVGL turns the swallowed press into
+   LV_EVENT_PRESS_LOST and settings_set_eq_10() hangs off LV_EVENT_RELEASED. */
+static int s_press_gain = 0;
+
+static void slider_press_cb(lv_event_t *e)
+{
+    int idx = (int)(uintptr_t)lv_event_get_user_data(e);
+    if (idx < 0 || idx >= EQ_BANDS) return;
+    s_press_gain = s_gains[idx];
+    ui_swipe_begin();
+}
+
+static void slider_drag_cb(lv_event_t *e)
+{
+    int idx = (int)(uintptr_t)lv_event_get_user_data(e);
+    if (idx < 0 || idx >= EQ_BANDS) return;
+    if (!ui_swipe_check()) return;
+
+    s_gains[idx] = s_press_gain;
+    update_slider_visual(idx);
+    update_info_label();
+    update_eq_curve();
+}
+
+/* The gaps between faders and the frequency-label strip belong to the group
+   container — same swipe, with nothing to undo. */
+static void band_cont_press_cb(lv_event_t *e) { (void)e; ui_swipe_begin(); }
+static void band_cont_drag_cb (lv_event_t *e) { (void)e; ui_swipe_check(); }
+
 /* ── lifecycle ──────────────────────────────────────────────────────────── */
 
 static void eq_create(lv_obj_t *parent)
@@ -302,6 +338,8 @@ static void eq_create(lv_obj_t *parent)
     lv_obj_add_flag(s_band_cont, LV_OBJ_FLAG_OVERFLOW_VISIBLE);
     lv_obj_add_event_cb(s_band_cont, band_cont_ext_draw_cb,
                         LV_EVENT_REFR_EXT_DRAW_SIZE, NULL);
+    lv_obj_add_event_cb(s_band_cont, band_cont_press_cb, LV_EVENT_PRESSED,  NULL);
+    lv_obj_add_event_cb(s_band_cont, band_cont_drag_cb,  LV_EVENT_PRESSING, NULL);
 
     /* suwaki + etykiety frequency */
     for (int i = 0; i < EQ_BANDS; i++) {
@@ -336,6 +374,11 @@ static void eq_create(lv_obj_t *parent)
         lv_obj_add_event_cb(sl, slider_touch_cb, LV_EVENT_VALUE_CHANGED,
                             (void *)(uintptr_t)i);
         lv_obj_add_event_cb(sl, slider_touch_cb, LV_EVENT_RELEASED,
+                            (void *)(uintptr_t)i);
+        /* ...but a sideways drag still has to leave the screen — see above */
+        lv_obj_add_event_cb(sl, slider_press_cb, LV_EVENT_PRESSED,
+                            (void *)(uintptr_t)i);
+        lv_obj_add_event_cb(sl, slider_drag_cb, LV_EVENT_PRESSING,
                             (void *)(uintptr_t)i);
         s_sliders[i] = sl;
 
