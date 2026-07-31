@@ -48,7 +48,7 @@ typedef struct {
     bool            invert;          // invert panel colours (INVON/INVOFF); XOR over the driver baseline — applied live
     bool            bgr;             // swap the red and blue channels (MADCTL BGR bit); XOR over the driver baseline — applied live
     bool            time_ampm;       // clock in 12-hour AM/PM format (false = 24-hour)
-    bool            date_mdy;        // date as MM/DD/YYYY (false = YYYY-MM-DD)
+    bool            date_mdy;        // date as MM-DD-YYYY (false = YYYY-MM-DD)
     bool            bg_gradient;     // dithered gradient background on/off
     bool            wallpaper_on;       // SD wallpaper background on/off (wins over gradient)
     char            wallpaper_path[128]; // full path to a panel-sized RGB565 .bin on SD

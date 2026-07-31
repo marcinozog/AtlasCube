@@ -279,7 +279,7 @@ function setTimeAmpm(on) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Date format: MM/DD/YYYY vs YYYY-MM-DD (applied live — no restart)
+// Date format: MM-DD-YYYY vs YYYY-MM-DD (applied live — no restart)
 // ─────────────────────────────────────────────────────────────────────────────
 function setDateMdy(on) {
     document.getElementById('settingsBtnDateMdy')?.classList.toggle('active', on);
