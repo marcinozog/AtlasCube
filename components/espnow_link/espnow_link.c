@@ -449,6 +449,20 @@ esp_err_t espnow_link_init(void)
     return ESP_OK;
 }
 
+void espnow_link_rebind(void)
+{
+    if (!s_ready || !s_paired) return;
+
+    // The peer carries the interface it was added on. A late AP→STA transition
+    // (the recovery supervisor reaching the router minutes after boot) leaves it
+    // pinned to WIFI_IF_AP, which no longer exists — the pilot then goes silent
+    // with no error anywhere. Re-add it against the current interface.
+    esp_now_del_peer(s_peer);
+    peer_ensure(s_peer);
+    ESP_LOGI(TAG, "peer rebound to %s on ch %d",
+             link_if() == WIFI_IF_AP ? "AP" : "STA", current_channel());
+}
+
 void espnow_link_pair_window_open(uint32_t seconds)
 {
     s_pair_until_us = esp_timer_get_time() + (int64_t)seconds * 1000000;

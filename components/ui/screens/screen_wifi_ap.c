@@ -79,7 +79,13 @@ static void wifi_create(lv_obj_t *parent)
 
     // ── Hint at the bottom of the screen ─────────────────────────────────────
     lv_obj_t *hint = lv_label_create(parent);
-    lv_label_set_text(hint, "Open browser to configure WiFi:\nhttp://192.168.4.1");
+    // With credentials saved this is a wait, not a dead end — the supervisor
+    // keeps retrying and the device leaves this screen by itself once online.
+    if (settings_get()->wifi.ssid[0])
+        lv_label_set_text_fmt(hint, "Waiting for \"%s\"...\nor configure: http://192.168.4.1",
+                              settings_get()->wifi.ssid);
+    else
+        lv_label_set_text(hint, "Open browser to configure WiFi:\nhttp://192.168.4.1");
     lv_obj_set_style_text_font(hint, p->wifi_hint_font, LV_PART_MAIN);
     lv_obj_set_style_text_color(hint, lv_color_hex(th->text_muted), LV_PART_MAIN);
     lv_obj_align(hint, LV_ALIGN_BOTTOM_MID, 0, p->wifi_hint_y);
@@ -455,6 +461,17 @@ static void wifi_create(lv_obj_t *parent)
                               "Scan to switch network, hold knob or swipe to go back",
                               settings_get()->wifi.ssid,
                               wifi_get_ip(ip, sizeof(ip)));
+    } else if (settings_get()->wifi.ssid[0]) {
+        // Credentials exist, they just haven't worked yet — most often the
+        // router is still booting after a power cut. Say so: the plain "AP mode"
+        // line reads like the configuration was lost, and the device is in fact
+        // retrying in the background and will leave this screen on its own.
+        lv_label_set_text_fmt(s_status,
+                              "Waiting for \"%s\" - retrying in the background\n"
+                              "Meanwhile: http://192.168.4.1  WiFi \"%s\"  pass: %s\n"
+                              "or press the knob to pick another network",
+                              settings_get()->wifi.ssid,
+                              wifi_get_ap_ssid(), wifi_get_ap_pass());
     } else {
         lv_label_set_text_fmt(s_status,
                               "AP mode - browser setup: http://192.168.4.1\n"

@@ -28,6 +28,14 @@ extern "C" {
 esp_err_t espnow_link_init(void);
 
 /**
+ * Re-adds the paired peer against whichever WiFi interface is up now. Call
+ * after a run-mode change (AP↔STA) — an ESP-NOW peer remembers the interface it
+ * was added on, so one that outlived its interface stops delivering silently.
+ * No-op when the link isn't running or no pilot is paired.
+ */
+void espnow_link_rebind(void);
+
+/**
  * Opens the pairing window for `seconds`. Outside the window `pair` frames are
  * ignored, so an unpaired pilot in range cannot attach itself unattended.
  * Re-pairing simply overwrites the stored peer — there is no separate "forget".

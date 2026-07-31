@@ -62,7 +62,14 @@ flowchart LR
     SPLASH["⧉ SPLASH (boot)"] -.-> ring
     NOTIF["🔔 EVENT NOTIFICATION<br/>fullscreen toast"] -. "OK / press → return to caller" .-> ring
     WIFI["📶 WIFI AP setup<br/>shown only in AP mode"]
+    WIFI -. "link recovered → saved screen" .-> ring
 ```
+
+The WiFi screen is not a dead end: when credentials are saved but the network
+was not reachable at boot, the recovery supervisor keeps retrying in the
+background and the device leaves this screen for the saved one as soon as it
+gets an IP — see [`wifi_manager.c`](../components/network/wifi_manager.c) and
+[`network_services.c`](../main/network_services.c).
 
 ## Inputs per home screen
 

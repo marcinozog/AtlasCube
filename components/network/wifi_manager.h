@@ -13,10 +13,28 @@ typedef enum {
  * falls back to AP on failure. If ssid is empty — goes straight to AP.
  * AP SSID: "AtlasCube", password: "99876543"
  * The function BLOCKS until the mode is settled.
+ *
+ * A failed attempt is NOT the end: the device stays in APSTA (the AP keeps
+ * serving 192.168.4.1) and a supervisor task retries the saved network with a
+ * backoff, indefinitely. That covers the common power-cut case where the router
+ * takes minutes longer to boot than the radio — when it finally appears the
+ * device moves to STA and drops the AP on its own, without a restart.
  */
 void            wifi_init(const char *ssid, const char *pass);
 bool            wifi_is_connected(void);
 wifi_run_mode_t wifi_get_run_mode(void);
+
+/**
+ * Registers a callback fired when the link comes up (true) or is given up on
+ * (false). Runs on the supervisor task — never on the WiFi event task — so it
+ * may take its time and start services. Pass NULL to clear.
+ *
+ * Note that the first link-up at boot happens inside wifi_init(), long before
+ * the rest of the system is initialized. Register late and check
+ * wifi_is_connected() once yourself; see main/network_services.c.
+ */
+typedef void (*wifi_link_cb_t)(bool up);
+void wifi_manager_set_link_cb(wifi_link_cb_t cb);
 
 const char *wifi_get_ap_ssid(void);
 const char *wifi_get_ap_pass(void);

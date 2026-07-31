@@ -6,7 +6,10 @@
 #include "esp_mac.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
+#include "esp_timer.h"
+#include "esp_random.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "freertos/event_groups.h"
 #include <string.h>
 #include <stdio.h>
@@ -19,6 +22,18 @@ static const char *TAG = "WIFI";
 #define WIFI_STA_MAX_RETRY       5
 #define WIFI_CONNECT_TIMEOUT_MS  15000
 
+// Recovery supervisor: how long one background attempt may take before the
+// cycle is written off. Shorter than the boot window — the retry burst in the
+// event handler already fails within milliseconds when the AP is simply absent,
+// so this only bounds the "associated but no DHCP lease" case.
+#define WIFI_RECOVERY_ATTEMPT_MS 12000
+
+// Provisioning grace period. Someone standing at the device scanning networks
+// and typing a password should not have the screen pulled out from under them
+// by a background reconnect. Each scan pushes the window out; it expires on its
+// own so a user who walks away doesn't disable recovery permanently.
+#define WIFI_RECOVERY_HOLD_MS    120000
+
 #define WIFI_CONNECTED_BIT  BIT0
 #define WIFI_FAIL_BIT       BIT1
 
@@ -26,6 +41,9 @@ static EventGroupHandle_t s_event_group;
 static bool               s_connected = false;
 static int                s_retry_cnt = 0;
 static wifi_run_mode_t    s_run_mode  = WIFI_RUN_MODE_AP;
+
+static wifi_link_cb_t     s_link_cb   = NULL;
+static int64_t            s_recovery_hold_until_us = 0;
 
 // STA auto-connect is only wanted when we actually run as a client. The scan
 // path (provisioning) brings up a STA interface purely to scan, so the STA_START
@@ -106,7 +124,9 @@ static void event_handler(void *arg, esp_event_base_t base,
                 ESP_LOGI(TAG, "STA retry %d/%d", s_retry_cnt, WIFI_STA_MAX_RETRY);
                 esp_wifi_connect();
             } else {
-                ESP_LOGW(TAG, "STA: max retries exceeded → FAIL");
+                // Not a dead end — this hands the link over to the supervisor
+                // task, which owns every retry that involves waiting.
+                ESP_LOGW(TAG, "STA: fast retries exhausted → supervisor");
                 xEventGroupSetBits(s_event_group, WIFI_FAIL_BIT);
             }
 
@@ -144,6 +164,102 @@ static void configure_ap(void)
     cfg.ap.pmf_cfg.required = false;
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &cfg));
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Recovery supervisor
+//
+// Owns every retry that happens after wifi_init() returns. The ESP-IDF event
+// handler keeps its short reconnect burst (WIFI_STA_MAX_RETRY immediate
+// attempts, free when the AP is absent) and then raises WIFI_FAIL_BIT — that
+// bit is the handover point. Everything with a timer in it lives here, in a
+// task, never in the event callback.
+//
+// There is no scan and no candidate ranking: with a single saved network there
+// is nothing to choose between, so a cycle is just connect-and-wait.
+// ─────────────────────────────────────────────────────────────────────────────
+
+static void switch_to_sta_only(void)
+{
+    esp_wifi_set_mode(WIFI_MODE_STA);            // AP interface off
+    esp_netif_t *ap = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+    if (ap) esp_netif_destroy(ap);
+    s_run_mode = WIFI_RUN_MODE_STA;
+}
+
+// 10 s, 20 s, then every 30 s. The jitter keeps several devices on one router
+// from hammering it in lockstep after a shared power cut.
+static uint32_t backoff_ms(int attempt)
+{
+    uint32_t base = (attempt <= 0) ? 10000 : (attempt == 1) ? 20000 : 30000;
+    int32_t  jit  = (int32_t)(esp_random() % 6001) - 3000;   // ±3 s
+    return (uint32_t)((int32_t)base + jit);
+}
+
+static void supervisor_task(void *arg)
+{
+    bool link_up = (bool)(intptr_t)arg;   // boot outcome: did we settle in STA?
+
+    for (;;) {
+        // Block until the event handler gives up on the link. On a boot that
+        // never connected FAIL_BIT is already set and this returns at once.
+        xEventGroupWaitBits(s_event_group, WIFI_FAIL_BIT, pdTRUE, pdFALSE,
+                            portMAX_DELAY);
+
+        // A late GOT_IP can beat us here — the boot window may have expired
+        // while the association was still in flight, or the handler's own retry
+        // burst may have won. Then there is nothing to recover, only the state
+        // below to settle.
+        if (!s_connected) {
+            if (link_up) {
+                ESP_LOGW(TAG, "link lost — entering recovery");
+                link_up = false;
+                if (s_link_cb) s_link_cb(false);
+            } else {
+                ESP_LOGW(TAG, "no link at boot — recovery will keep retrying");
+            }
+
+            int attempt = 0;
+            while (!s_connected) {
+                vTaskDelay(pdMS_TO_TICKS(backoff_ms(attempt)));
+                if (s_connected) break;
+
+                // Don't fight the on-screen provisioning flow (see the hold above).
+                if (s_scan_busy || esp_timer_get_time() < s_recovery_hold_until_us)
+                    continue;
+
+                attempt++;
+                ESP_LOGI(TAG, "recovery attempt %d", attempt);
+
+                s_retry_cnt       = 0;      // re-arm the handler's fast retry burst
+                s_sta_autoconnect = true;   // a scan may have cleared it
+                xEventGroupClearBits(s_event_group,
+                                     WIFI_CONNECTED_BIT | WIFI_FAIL_BIT);
+
+                esp_err_t err = esp_wifi_connect();
+                if (err != ESP_OK)
+                    ESP_LOGW(TAG, "connect: %s", esp_err_to_name(err));
+
+                xEventGroupWaitBits(s_event_group,
+                                    WIFI_CONNECTED_BIT | WIFI_FAIL_BIT,
+                                    pdFALSE, pdFALSE,
+                                    pdMS_TO_TICKS(WIFI_RECOVERY_ATTEMPT_MS));
+            }
+        }
+
+        if (s_run_mode == WIFI_RUN_MODE_AP) {
+            ESP_LOGI(TAG, "connected → STA, disabling AP");
+            switch_to_sta_only();
+        }
+        xEventGroupClearBits(s_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT);
+        if (!link_up) {
+            ESP_LOGI(TAG, "link up");
+            link_up = true;
+            if (s_link_cb) s_link_cb(true);
+        }
+    }
+}
+
+void wifi_manager_set_link_cb(wifi_link_cb_t cb) { s_link_cb = cb; }
 
 // ─────────────────────────────────────────────────────────────────────────────
 void wifi_init(const char *ssid, const char *pass)
@@ -193,17 +309,25 @@ void wifi_init(const char *ssid, const char *pass)
             pdFALSE, pdFALSE,
             pdMS_TO_TICKS(WIFI_CONNECT_TIMEOUT_MS));
 
-        if (bits & WIFI_CONNECTED_BIT) {
+        bool ok = (bits & WIFI_CONNECTED_BIT) != 0;
+        if (ok) {
             ESP_LOGI(TAG, "STA connected ✓ → disabling AP");
-            esp_wifi_set_mode(WIFI_MODE_STA);   // AP interface off
-            esp_netif_destroy(esp_netif_get_handle_from_ifkey("WIFI_AP_DEF"));
-            s_run_mode = WIFI_RUN_MODE_STA;
+            switch_to_sta_only();
         } else {
-            ESP_LOGW(TAG, "STA timeout/fail → AP mode (192.168.4.1)");
-            esp_wifi_disconnect();
-            esp_wifi_set_mode(WIFI_MODE_AP);    // STA interface off, AP active
+            // NOT the end of the road. We stay in APSTA — the AP keeps serving
+            // 192.168.4.1 so the setup page is reachable, while the supervisor
+            // retries the saved network underneath. The common case is a power
+            // cut where the router needs minutes longer to boot than the radio.
+            ESP_LOGW(TAG, "STA timeout/fail → AP (192.168.4.1), retrying in background");
             s_run_mode = WIFI_RUN_MODE_AP;
+            xEventGroupSetBits(s_event_group, WIFI_FAIL_BIT);   // hand over to the supervisor
         }
+
+        // Owns every retry from here on, for both outcomes: a boot that never
+        // connected and a link that dies after hours of streaming.
+        if (xTaskCreate(supervisor_task, "wifi_sup", 5120,
+                        (void *)(intptr_t)ok, 4, NULL) != pdPASS)
+            ESP_LOGE(TAG, "supervisor task create failed — no auto-recovery");
 
     } else {
         ESP_LOGI(TAG, "No credentials → AP-only");
@@ -246,6 +370,11 @@ void wifi_manager_scan_start(void)
         // loop (relevant when we fell back to AP after a failed STA attempt —
         // that STA netif already exists).
         s_sta_autoconnect = false;
+
+        // Somebody is provisioning at the device. Hold off the recovery
+        // supervisor so it can't connect and navigate away mid-password.
+        s_recovery_hold_until_us =
+            esp_timer_get_time() + (int64_t)WIFI_RECOVERY_HOLD_MS * 1000;
 
         // Scanning needs a STA interface. In AP-only mode bring one up (the AP
         // stays online) and switch to APSTA.
