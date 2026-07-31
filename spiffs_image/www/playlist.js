@@ -10,6 +10,9 @@ const PL_URL_MAX  = 255;
 const PL_UUID_MAX = 36;
 const PL_ICON_MAX = 127;
 const ICON_SIZE   = 64;
+// Longest station-name prefix in an icon filename. '/station-icons/' + slug +
+// '-' + a 36-char UUID + '.bin' stays well inside PL_ICON_MAX.
+const ICON_SLUG_MAX = 48;
 
 let stations = [];   // [{name, url, favorite, stationuuid, icon}, ...]
 let dragIdx  = -1;   // index of the row being dragged
@@ -793,13 +796,35 @@ function iconStorageKey(st, uuid) {
     return 'custom-' + (h >>> 0).toString(16).padStart(8, '0');
 }
 
+// Readable filename prefix: "Radio Nowy Świat" -> "radio-nowy-swiat". Purely
+// cosmetic, so that browsing /station-icons is not a wall of UUIDs.
+function iconNameSlug(name) {
+    return String(name || '')
+        .toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')   // strip diacritics
+        .replace(/ł/g, 'l')                                 // ł does not decompose
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, ICON_SLUG_MAX)
+        .replace(/-+$/, '');                               // slice may cut mid-word
+}
+
+// The trailing key identifies the station; the slug in front is decoration, so
+// bare "<key>.bin" files written by earlier versions stay perfectly valid.
+// Renaming a station makes the next import write a new file and leave the old
+// one behind — "Check icon files" lists it as unused.
+function iconStoragePath(st, uuid) {
+    const key  = iconStorageKey(st, uuid);
+    const slug = iconNameSlug(st.name);
+    return '/station-icons/' + (slug ? slug + '-' + key : key) + '.bin';
+}
+
 async function iconImportBlobForIndex(idx, sourceBlob, uuid = '') {
     syncFromDom();
     const st = stations[idx];
     if (!st) throw new Error('station no longer exists');
     const bin = await iconToLvBin(sourceBlob);
-    const key = iconStorageKey(st, uuid);
-    const path = '/station-icons/' + key + '.bin';
+    const path = iconStoragePath(st, uuid);
     const upload = await fetch('/api/sd/file?path=' + encodeURIComponent(path), {
         method: 'POST', body: bin
     });
