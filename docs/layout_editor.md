@@ -374,19 +374,40 @@ screen untouched.
 
 Different wallpapers usually need different widget placement (hotspots,
 now-playing, VU meter…). The editor can therefore snapshot the **active
-section** into a preset file on the SD card, named after that screen's
-effective wallpaper:
+section** into a preset file on the SD card, stored under `/wallpapers/layouts`
+as a **mirror of where the wallpaper itself lives**:
 
 ```
-/wallpapers/layouts/<width>x<height>/<wallpaper-basename>.json
+/sdcard/wallpapers/480x320/radio-sd-player/sunset.bin
+     → /wallpapers/layouts/480x320/radio-sd-player/sunset.json
 ```
 
-e.g. wallpaper `/sdcard/wallpapers/sunset.bin` on a 480×320 panel → preset
-`/wallpapers/layouts/480x320/sunset.json`. Format: `{ w, h, wallpaper,
+The resolution segment is always the *panel's*, so the stamp inside the file can
+never disagree with the directory. Everything below it — the category subfolder,
+`internet`, or nothing at all — is mirrored, which gives exactly one preset file
+per `.bin`. A wallpaper picked from anywhere else on the card falls back to the
+flat `/wallpapers/layouts/<width>x<height>/<basename>.json`.
+
+Format: `{ w, h, wallpaper,
 sections: { clock?, bt?, radio?, sd?, eq?, playlist?, browser? } }` — sections are optional; Save
-merges the active section into the existing file, so one wallpaper can
-accumulate layouts for several screens. The resolution directory keeps
-independent presets for the same wallpaper on different LCD variants.
+merges the active section into the existing file, so one artwork can accumulate
+layouts for **every screen that uses it** (Radio + SD Player, Playlist + SD
+Browser). Filing presets by basename alone used to conflate unrelated artworks:
+a themed set with `home/zen.bin`, `radio-sd-player/zen.bin` and
+`playlist-sd-browser/zen.bin` — three different images — shared one `zen.json`,
+and the orphan scan then reported it as healthy as long as any one of the three
+still existed. The mirrored path removes that.
+
+Presets written before the mirror are still **read**: Load, the offer-on-switch
+check and Save's merge all fall back to the flat path. Sections copied out of
+such a legacy file are filtered to those pinning the current wallpaper (plus
+sections too old to pin anything), so migration does not drag another artwork's
+layout along. Save always writes the mirrored path, so the legacy file is left
+behind untouched — harmless, but a duplicate worth deleting from the Presets tab.
+
+Save aborts if the existing preset cannot be read for any reason other than "not
+there" (busy card, I/O error): writing then would silently drop the sections
+belonging to the other screens.
 
 This is a **frontend-only** feature — no firmware involvement. Save
 uploads the editor's current state via `POST /api/sd/file` (parent
@@ -399,8 +420,8 @@ with that screen's section and offers to apply it.
 
 The `w`/`h` stamp is checked against both the active panel and the resolution
 directory. A mismatched file is refused on load (same cross-LCD guard as
-`ui_profile.json`). Presets from the old flat `/wallpapers/layouts/*.json`
-format are intentionally not loaded.
+`ui_profile.json`). Presets from the pre-resolution flat
+`/wallpapers/layouts/*.json` format are intentionally not loaded.
 
 Note: **Save** snapshots what the editor currently shows — including
 tweaks not yet applied to the device. Load-then-Save round-trips

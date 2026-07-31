@@ -943,20 +943,83 @@ function buildWallpaperPicker() {
 }
 
 // ── Per-wallpaper layout presets on SD ─────────────────────────────────────
-// One file per wallpaper and panel resolution:
-// /wallpapers/layouts/<width>x<height>/<wallpaper-basename>.json. The w/h
-// stamp remains a second guard against a misplaced or damaged preset. Since
-// wallpapers are assigned per screen, Save merges only the ACTIVE section into
-// the file and Load applies only the active section. One file can accumulate
-// layouts for several screens, but never for different panel resolutions.
+// One file per wallpaper .bin, stored under /wallpapers/layouts as a mirror of
+// where that .bin lives (see presetPath). The w/h stamp remains a second guard
+// against a misplaced or damaged preset. Since wallpapers are assigned per
+// screen, Save merges only the ACTIVE section into the file and Load applies
+// only the active section. One file can therefore accumulate layouts for
+// several screens sharing that artwork, but never for different panel
+// resolutions — and no longer for unrelated artworks that share a filename.
 
 const LAYOUTS_DIR = '/wallpapers/layouts';
 
+// A preset mirrors its wallpaper's own place under /wallpapers, so one .bin has
+// exactly one preset file:
+//   /sdcard/wallpapers/320x240/radio-sd-player/japanese.bin
+//        → /wallpapers/layouts/320x240/radio-sd-player/japanese.json
+// Screens that share an artwork (Radio + SD Player, Playlist + SD Browser) keep
+// sharing its file — they are different sections inside it. Screens that only
+// share a NAME across category folders no longer collide, which they did while
+// presets were filed by basename alone.
+// The resolution segment is always the panel's, so the stamp inside the file can
+// never disagree with the directory it sits in.
 function presetPath() {
     if (!currentWallpaperPath) return '';
-    const base = currentWallpaperPath.split('/').pop().replace(/\.bin$/i, '');
     const resolution = `${state.meta.screen_w}x${state.meta.screen_h}`;
-    return LAYOUTS_DIR + '/' + resolution + '/' + base + '.json';
+    const rel = currentWallpaperPath.startsWith(SD_MOUNT + '/')
+        ? currentWallpaperPath.slice(SD_MOUNT.length)
+        : currentWallpaperPath;
+    // Everything below the wallpaper's own resolution folder is mirrored — the
+    // category subfolder, "internet", or nothing at all.
+    const m = rel.match(/^\/wallpapers\/\d+x\d+\/(.+)$/i);
+    if (m) return `${LAYOUTS_DIR}/${resolution}/${m[1].replace(/\.bin$/i, '')}.json`;
+    // A wallpaper from anywhere else on the card keeps the flat layout.
+    return legacyPresetPath();
+}
+
+// Where presets lived before they mirrored the wallpaper tree: one file per
+// basename per resolution. Still read (never written) so existing presets load.
+function legacyPresetPath() {
+    if (!currentWallpaperPath) return '';
+    const base = currentWallpaperPath.split('/').pop().replace(/\.bin$/i, '');
+    return `${LAYOUTS_DIR}/${state.meta.screen_w}x${state.meta.screen_h}/${base}.json`;
+}
+
+// Reads one preset file. null = not there; anything else that went wrong throws,
+// so callers can tell "no preset yet" from "the card did not answer".
+async function readPresetJson(path) {
+    const r = await fetch('/api/sd/file?path=' + encodeURIComponent(path),
+                          { cache: 'no-store' });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await r.json();
+}
+
+// The mirrored file, else the legacy flat one. Returns { preset, path, legacy }
+// or null when neither exists.
+async function readPreset() {
+    const path = presetPath();
+    if (!path) return null;
+    const preset = await readPresetJson(path);
+    if (preset) return { preset, path, legacy: false };
+
+    const old = legacyPresetPath();
+    if (old === path) return null;
+    const legacyPreset = await readPresetJson(old);
+    return legacyPreset ? { preset: legacyPreset, path: old, legacy: true } : null;
+}
+
+// Sections carried over from a legacy flat file may belong to a DIFFERENT
+// artwork that happened to share this basename — that was the whole point of
+// moving presets into the wallpaper's folder. Keep only what pins this exact
+// wallpaper, plus sections too old to pin anything (not ours to drop).
+function sectionsForCurrentWallpaper(sections) {
+    const kept = {};
+    for (const [name, data] of Object.entries(sections)) {
+        const pinned = data && data[`${name}_wallpaper`];
+        if (!pinned || pinned === currentWallpaperPath) kept[name] = data;
+    }
+    return kept;
 }
 
 function setPresetStatus(msg, error = false) {
@@ -980,21 +1043,21 @@ async function savePreset() {
             wallpaper: currentWallpaperPath.split('/').pop(),
             sections: {},
         };
-        // Merge only a correctly stamped file. The resolution directory keeps
-        // panel variants separate; this check also prevents a manually moved
-        // or damaged file from contaminating the new preset.
-        try {
-            const old = await fetch('/api/sd/file?path=' + encodeURIComponent(path), {
-                cache: 'no-store',
-            });
-            if (old.ok) {
-                const parsed = await old.json();
-                if (parsed && parsed.w === state.meta.screen_w &&
-                    parsed.h === state.meta.screen_h && parsed.sections) {
-                    preset.sections = parsed.sections;
-                }
-            }
-        } catch { /* no existing preset — start fresh */ }
+        // Carry over what is already stored for the OTHER screens. Only a
+        // correctly stamped file is merged: the resolution directory keeps panel
+        // variants separate, and the check keeps a damaged file from
+        // contaminating the new preset.
+        //
+        // A read that fails for any reason other than "not there" aborts the
+        // save — writing now would silently drop those sections, and a card busy
+        // with playback is exactly when this read fails.
+        const existing = await readPreset();
+        if (existing && existing.preset.w === state.meta.screen_w &&
+            existing.preset.h === state.meta.screen_h && existing.preset.sections) {
+            preset.sections = existing.legacy
+                ? sectionsForCurrentWallpaper(existing.preset.sections)
+                : existing.preset.sections;
+        }
         // Pin the SD wallpaper path into the stored copy so the preset stays
         // attached to its file (presets only exist for screens set to an SD
         // wallpaper; General/Internet screens carry no path here).
@@ -1009,7 +1072,7 @@ async function savePreset() {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         setPresetStatus(`Preset (${SECTIONS[state.active].title}) saved to SD: ` + path);
     } catch (err) {
-        setPresetStatus('Preset save failed: ' + err.message, true);
+        setPresetStatus('Preset save failed: ' + err.message + ' — nothing written.', true);
     }
 }
 
@@ -1023,15 +1086,13 @@ async function loadPreset() {
     }
     setPresetStatus('Loading preset...');
     try {
-        const r = await fetch('/api/sd/file?path=' + encodeURIComponent(path), {
-            cache: 'no-store',
-        });
-        if (r.status === 404) {
+        // Mirrored location first, then the legacy flat one.
+        const found = await readPreset();
+        if (!found) {
             setPresetStatus('No preset saved for this wallpaper yet.', true);
             return;
         }
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const preset = await r.json();
+        const preset = found.preset;
         if (preset.w !== state.meta.screen_w || preset.h !== state.meta.screen_h) {
             setPresetStatus(
                 `Preset was saved for a ${preset.w}×${preset.h} LCD — not applied.`, true);
@@ -1100,14 +1161,11 @@ function migrateLegacyEqSection(section) {
 // After switching a screen's wallpaper, offer to apply its saved layout for
 // this screen (if one exists) so wallpaper + matching layout travel together.
 async function offerPresetForWallpaper() {
-    const path = presetPath();
-    if (!path) return;
+    if (!presetPath()) return;
     try {
-        const r = await fetch('/api/sd/file?path=' + encodeURIComponent(path), {
-            cache: 'no-store',
-        });
-        if (!r.ok) return;
-        const preset = await r.json();
+        const found = await readPreset();
+        if (!found) return;
+        const preset = found.preset;
         if (preset.w !== state.meta.screen_w || preset.h !== state.meta.screen_h)
             return;
         if (!preset.sections || !preset.sections[state.active]) return;
@@ -1163,6 +1221,17 @@ function collectWallpaperRefs(node, out = []) {
     return out;
 }
 
+async function listSdEntries(relDir) {
+    const r = await fetch('/api/sd/list?path=' + encodeURIComponent(relDir),
+                          { cache: 'no-store' });
+    if (!r.ok) return [];
+    const d = await r.json();
+    return d.entries || [];
+}
+
+// Presets sit either directly in the resolution folder (wallpapers filed flat,
+// and everything saved before presets mirrored the wallpaper tree) or one level
+// deeper, in the mirror of the wallpaper's category folder. Both are scanned.
 async function listResolutionPresetFiles() {
     const root = await fetch('/api/sd/list?path=' + encodeURIComponent(LAYOUTS_DIR),
                              { cache: 'no-store' });
@@ -1170,19 +1239,23 @@ async function listResolutionPresetFiles() {
     const data = await root.json();
     const dirs = (data.entries || []).filter(
         e => e.dir && /^\d+x\d+$/i.test(e.name));
+    const isJson = e => !e.dir && /\.json$/i.test(e.name);
     const nested = await Promise.all(dirs.map(async dir => {
         const relDir = LAYOUTS_DIR + '/' + dir.name;
-        const r = await fetch('/api/sd/list?path=' + encodeURIComponent(relDir),
-                              { cache: 'no-store' });
-        if (!r.ok) return [];
-        const d = await r.json();
-        return (d.entries || [])
-            .filter(e => !e.dir && /\.json$/i.test(e.name))
-            .map(e => ({
-                name: e.name,
-                rel: relDir + '/' + e.name,
-                resolution: dir.name.toLowerCase(),
-            }));
+        const resolution = dir.name.toLowerCase();
+        const entries = await listSdEntries(relDir);
+        const asPreset = (baseDir, e) => ({
+            name: e.name,
+            rel: baseDir + '/' + e.name,
+            resolution,
+        });
+        const here = entries.filter(isJson).map(e => asPreset(relDir, e));
+        const deeper = await Promise.all(entries.filter(e => e.dir).map(async sub => {
+            const subDir = relDir + '/' + sub.name;
+            return (await listSdEntries(subDir)).filter(isJson)
+                .map(e => asPreset(subDir, e));
+        }));
+        return here.concat(deeper.flat());
     }));
     return nested.flat();
 }
@@ -1226,12 +1299,17 @@ async function checkOrphanPresets() {
                 continue;
             }
             // If no full wallpaper paths were stored, look for <stem>.bin in the
-            // standard wallpaper locations — this panel's resolution folder and
-            // its "internet" subfolder (where the device drops fetched internet
-            // wallpapers), plus the flat pre-resolution layout.
+            // standard wallpaper locations: first the exact mirror of where this
+            // preset sits (a preset in .../320x240/home/ belongs to the wallpaper
+            // in /wallpapers/320x240/home/), then this panel's resolution folder
+            // and its "internet" subfolder (where the device drops fetched
+            // internet wallpapers), plus the flat pre-resolution layout.
             if (!refs.length) {
                 const stem = e.name.replace(/\.json$/i, '');
-                refs = ['/wallpapers/' + e.resolution,
+                const mirrored = e.rel.slice(LAYOUTS_DIR.length)   // /320x240/home/x.json
+                                      .replace(/\/[^/]+$/, '');    // /320x240/home
+                refs = ['/wallpapers' + mirrored,
+                        '/wallpapers/' + e.resolution,
                         '/wallpapers/' + e.resolution + '/internet',
                         '/wallpapers',
                         '/wallpapers/saved',   // pre-resolution internet saves
