@@ -45,6 +45,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>   // strcasecmp — wallpaper extension test
 #include <dirent.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -2779,6 +2780,19 @@ static int sd_rm_rf(const char *path)
     return rc;
 }
 
+// ui_background.c keeps every loaded wallpaper in a PSRAM slot keyed by path and
+// never re-reads a path it already tried, so overwriting a wallpaper under its
+// own name would leave the old pixels on screen until the next reboot. Uploading
+// under a NEW name is unaffected (new path → new slot), which is exactly what
+// makes the stale case easy to miss.
+static bool path_is_wallpaper_bin(const char *path)
+{
+    const char *dir = SD_MOUNT_POINT "/wallpapers/";
+    size_t len = strlen(path);
+    return strncmp(path, dir, strlen(dir)) == 0 &&
+           len > 4 && strcasecmp(path + len - 4, ".bin") == 0;
+}
+
 // POST /api/sd/file?path=/dir/name  → streams the body into the file (overwrite)
 static esp_err_t api_sd_post_handler(httpd_req_t *req)
 {
@@ -2823,6 +2837,15 @@ static esp_err_t api_sd_post_handler(httpd_req_t *req)
     }
 
     ESP_LOGI("HTTP", "SD upload %s (%d bytes)", path, received);
+
+    // Drop the wallpaper cache so a replaced file is re-read from SD: the LVGL
+    // task re-applies the background for the visible screen, the others pick the
+    // new file up the next time they are shown.
+    if (path_is_wallpaper_bin(path)) {
+        ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
+        ui_event_send(&ev);
+    }
+
     char body[48];
     snprintf(body, sizeof(body), "{\"ok\":true,\"size\":%d}", received);
     httpd_resp_set_type(req, "application/json");
