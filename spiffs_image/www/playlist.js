@@ -696,7 +696,13 @@ function iconRenderCandidates() {
 
 async function iconUseCandidate(idx) {
     const candidate = iconCandidates[idx];
-    if (!candidate || iconEditIdx < 0) return;
+    if (!candidate || iconEditIdx < 0 || !stations[iconEditIdx]) return;
+    // A hand-picked icon is easy to lose here: when the new file resolves to the
+    // same name, the import overwrites it on the card, not just the assignment.
+    const current = (stations[iconEditIdx].icon || '').trim();
+    if (current && !confirm('This station already uses:\n\n' + current +
+                            '\n\nReplace it with the downloaded image? ' +
+                            'A file of the same name on the SD card is overwritten.')) return;
     iconSetStatus('Downloading and converting image…');
     try {
         await iconImportRemoteForIndex(iconEditIdx, candidate.favicon, candidate.stationuuid || '');
