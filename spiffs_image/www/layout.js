@@ -654,6 +654,7 @@ let netWallpaperActive = false;  // device shows a fetched internet wallpaper
 // 1 is the safe default so a pre-slots device still gets a working single-slot
 // UI instead of ten phantom pickers.
 let netWpSlotCount = 1;
+let netWpSlotKnown = false;      // the count has been read from the device
 let netWpUrls      = [];         // index = slot, mirrors display.wallpaper_urls
 let netWpCurSlot   = 0;          // slot the Background tab is editing
 let keyboardSelection = null;
@@ -2012,6 +2013,9 @@ function trustedOnlineWallpaperUrl(raw) {
 async function loadOnlineWallpaperGallery() {
     const panel = document.getElementById('layout_online_wallpaper_gallery');
     if (!panel) return;
+    // The gallery can be opened without ever visiting the Background tab, and it
+    // renders a slot picker — so make sure the count is real first.
+    await ensureNetWpSlotCount();
     const w = Number(state.meta.screen_w);
     const h = Number(state.meta.screen_h);
     const resolution = `${w}x${h}`;
@@ -2059,6 +2063,29 @@ function renderOnlineWallpaperGallery(catalog, category) {
         return;
     }
 
+    // Which internet slot the "Use in slot" buttons target. One control for the
+    // whole gallery rather than one per card — the cards are a grid of many.
+    const slotRow = document.createElement('div');
+    slotRow.className = 'online-wallpaper-meta';
+    slotRow.style.cssText = 'display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap';
+    const slotLabel = document.createElement('span');
+    slotLabel.textContent = 'Use in slot:';
+    const slotSel = document.createElement('select');
+    slotSel.id = 'online_wp_slot';
+    slotSel.className = 'field-input';
+    slotSel.style.cssText = 'width:auto;padding:4px 6px;font-size:11px';
+    for (let i = 0; i < netWpSlotCount; i++) {
+        const o = document.createElement('option');
+        o.value = String(i);
+        o.textContent = 'slot ' + (i + 1);
+        slotSel.appendChild(o);
+    }
+    const slotHint = document.createElement('span');
+    slotHint.style.opacity = '.75';
+    slotHint.textContent = 'the device downloads it itself — no SD card needed';
+    slotRow.append(slotLabel, slotSel, slotHint);
+    panel.appendChild(slotRow);
+
     const grid = document.createElement('div');
     grid.className = 'online-wallpaper-grid';
     const [rw, rh] = catalog.resolution.split('x').map(Number);
@@ -2093,16 +2120,84 @@ function renderOnlineWallpaperGallery(catalog, category) {
         preview.target = '_blank';
         preview.rel = 'noopener';
         preview.textContent = 'Preview';
+        // Two ways to take a wallpaper: onto the SD card as a .bin (converted
+        // here in the browser), or into a RAM slot the device downloads itself.
+        // The slot route is the one that works without an SD card at all.
+        const useSlot = document.createElement('button');
+        useSlot.type = 'button';
+        useSlot.textContent = 'Use in slot';
+        useSlot.title = 'Store this URL in the selected internet slot and fetch it now';
+        useSlot.addEventListener('click', () => useOnlineWallpaperInSlot(item, useSlot));
         const install = document.createElement('button');
         install.type = 'button';
-        install.textContent = 'Install';
+        install.textContent = 'Install to SD';
         install.addEventListener('click', () => installOnlineWallpaper(item, install));
-        actions.append(preview, install);
+        actions.append(preview, useSlot, install);
         body.append(cardTitle, meta, actions);
         card.append(image, body);
         grid.appendChild(card);
     }
     panel.appendChild(grid);
+}
+
+// Hand a catalog wallpaper to the device instead of to the SD card: store its
+// URL in an internet slot, have the device download and decode it, and pin the
+// active screen to that slot. Nothing is written to SD and the browser converts
+// nothing — this is the path for devices with no card at all.
+async function useOnlineWallpaperInSlot(item, button) {
+    const status = document.getElementById('layout_wallpaper_status');
+    const note = message => { if (status) status.textContent = message; };
+    const oldLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Working...';
+    try {
+        const imageUrl = trustedOnlineWallpaperUrl(item.image);
+
+        // The device decodes JPEG only. Refusing an obvious PNG here beats
+        // spending a fetch — and therefore a radio-stop window — on something
+        // that can only fail on the device.
+        if (/\.(png|webp|gif|bmp)(\?|$)/i.test(imageUrl)) {
+            throw new Error('the device decodes JPEG only, and this file is not JPEG — ' +
+                            'use "Install to SD", or publish a JPEG version in the gallery');
+        }
+
+        await ensureNetWpSlotCount();   // seeds netWpUrls — see the note there
+
+        const slot = (() => {
+            const sel = document.getElementById('online_wp_slot');
+            const n = sel ? parseInt(sel.value, 10) : 0;
+            return (n >= 0 && n < netWpSlotCount) ? n : 0;
+        })();
+
+        // Persist the URL into that slot, then fetch it. Keep the local mirror in
+        // step so the Background tab shows the same thing without a reload.
+        while (netWpUrls.length < netWpSlotCount) netWpUrls.push('');
+        netWpUrls[slot] = imageUrl;
+        note('Saving to slot ' + (slot + 1) + '...');
+        await postDisplay({ wallpaper_urls: netWpUrls.slice(0, netWpSlotCount) });
+
+        note('Device is downloading (the radio pauses)...');
+        const r = await fetch('/api/wallpaper/fetch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: imageUrl, slot }),
+        });
+        const j = await r.json();
+        if (j.result !== 'started') throw new Error('device is busy (' + j.result + ')');
+
+        // Pin the screen the gallery was opened for, so the result is visible
+        // straight away rather than only on whatever screen inherits slot 0.
+        await setSectionWallpaper('net' + slot,
+                                  'Screen shows internet slot ' + (slot + 1) + '.');
+        buildNetWpSlotSelect();
+        pollNetWallpaper();
+        setOnlineWallpaperGalleryOpen(false);
+    } catch (err) {
+        note('Slot assignment failed: ' + err.message);
+    } finally {
+        button.disabled = false;
+        button.textContent = oldLabel;
+    }
 }
 
 async function installOnlineWallpaper(item, button) {
@@ -2333,8 +2428,10 @@ function selectSection(name) {
 // every control posts straight to /api/settings and the device repaints itself.
 let netWpTimer = null;
 
+// Returns the request promise so callers that must sequence work after the
+// settings landed can await it; the many fire-and-forget callers ignore it.
 function postDisplay(patch) {
-    fetch('/api/settings', {
+    return fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ display: patch }),
@@ -2392,16 +2489,38 @@ function netWpSlotChanged() {
     refreshNetWpThumb();
 }
 
+// Slot count AND the current per-slot URLs, once per page load. Anything that
+// renders a slot picker or patches one slot awaits this first.
+//
+// Seeding the URL mirror matters as much as the count: the patch sends the whole
+// `wallpaper_urls` array, so writing one slot from an unseeded mirror would blank
+// every other slot the user had configured.
+async function ensureNetWpSlotCount() {
+    if (netWpSlotKnown) return;
+    netWpSlotKnown = true;
+    try {
+        const s = await fetch('/api/wallpaper/status', { cache: 'no-store' });
+        if (s.ok) {
+            const j = await s.json();
+            if (j.slots > 0) netWpSlotCount = j.slots;
+        }
+    } catch { /* offline or old firmware — keep the default */ }
+
+    if (!netWpUrls.length) {
+        try {
+            const r = await fetch('/api/settings', { cache: 'no-store' });
+            if (r.ok) {
+                const d = (await r.json()).display || {};
+                netWpUrls = Array.isArray(d.wallpaper_urls) ? d.wallpaper_urls.slice()
+                                                            : [d.wallpaper_url || ''];
+            }
+        } catch { /* leave it empty — the caller pads and only writes its own slot */ }
+    }
+}
+
 async function loadBackgroundTab() {
     try {
-        // Slot count first: the pickers are sized from it.
-        try {
-            const s = await fetch('/api/wallpaper/status', { cache: 'no-store' });
-            if (s.ok) {
-                const j = await s.json();
-                if (j.slots > 0) netWpSlotCount = j.slots;
-            }
-        } catch { /* pre-slots firmware — the default of 1 is correct */ }
+        await ensureNetWpSlotCount();   // the pickers are sized from it
 
         const r = await fetch('/api/settings', { cache: 'no-store' });
         if (!r.ok) throw new Error('settings HTTP ' + r.status);
@@ -2554,8 +2673,13 @@ function pollNetWallpaper() {
         // A batch says which slot it is on, so a ten-slot refresh does not look
         // like a hung "busy".
         const batch = j.total > 1 && j.status === 'busy';
-        document.getElementById('netWpStatus').textContent =
-            batch ? ('busy ' + Math.min(j.done + 1, j.total) + '/' + j.total) : j.status;
+        const text  = batch ? ('busy ' + Math.min(j.done + 1, j.total) + '/' + j.total)
+                            : j.status;
+        // The Background tab's status line only exists while that tab is built —
+        // a fetch started from the gallery reports into the picker line instead.
+        const el = document.getElementById('netWpStatus') ||
+                   document.getElementById('layout_wallpaper_status');
+        if (el) el.textContent = text;
         if (j.status === 'busy') {
             netWpTimer = setTimeout(pollNetWallpaper, 1000);
         } else if (j.status === 'ok') {

@@ -334,7 +334,17 @@ Player share it), `playlist-sd-browser` (both list screens share it),
 /wallpapers/<width>x<height>/<category>/<name>.bin
 ```
 
-That is where *Install* in the online gallery saves, and where the per-screen
+Each gallery card offers two routes. *Install to SD* is the original one: the
+browser downloads the image, converts it with `lvbin.js` and uploads the `.bin`
+to the card. *Use in slot* skips SD entirely — it stores the catalog URL in the
+internet slot chosen at the top of the gallery, tells the device to fetch it
+(`POST /api/wallpaper/fetch {url, slot}`) and pins the active screen to that
+slot. That is the route for devices with no SD card at all, and the reason the
+gallery is useful to them. It refuses obvious PNG/WebP entries up front: the
+on-device decoder is JPEG-only, so those would cost a radio-stop window and then
+fail — publish a JPEG variant in the catalog for slot use.
+
+*Install to SD* saves where the paragraph below describes, and that is where the per-screen
 *Upload…* button and the SD browser start when the screen has no wallpaper yet
 (otherwise they stay in the folder of the wallpaper it already uses).
 *Upload wallpaper (no assign)* on the General tab is not tied to a screen and
