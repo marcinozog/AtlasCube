@@ -40,6 +40,22 @@ static bool s_booted_in_ap = false;   // boot ended without a link → the WiFi 
 // mDNS/MQTT twice.
 static SemaphoreHandle_t s_lock = NULL;
 
+// Boot batch finished (ok or not) — the wallpapers are in PSRAM and nothing is
+// about to stop the stream, so playback can finally start. Runs on the fetch
+// task, which is already the context that resumes the radio after a manual
+// fetch, so radio_play_index() is on familiar ground here.
+static void resume_radio_after_wallpapers(void)
+{
+    // Belt and braces: the gate fires once and the pending check below is taken
+    // microseconds after init, but replaying a station because both paths ran
+    // would be an ugly way to find out otherwise.
+    static bool resumed = false;
+    if (resumed) return;
+    resumed = true;
+    ESP_LOGI(TAG, "wallpaper boot batch done — starting radio");
+    radio_resume_on_boot();
+}
+
 static void on_connected(void)
 {
     if (s_lock) xSemaphoreTake(s_lock, portMAX_DELAY);
@@ -71,10 +87,21 @@ static void on_connected(void)
 
         // Internet-wallpaper auto refresh (needs internet; daily mode needs NTP).
         // Arms its one-shot only when the feature is enabled in settings.
+        //
+        // Wallpapers go FIRST, radio second. The batch stops any playing stream
+        // for its whole duration (one TLS session at a time — see
+        // project_radio_https_fragility), so starting the radio first would mean
+        // starting music only to cut it seconds later, for as long as the batch
+        // runs. Fetching before playback costs the user a slightly later first
+        // note and gets the screens dressed before they look at them.
+        net_wallpaper_sched_set_boot_done_cb(resume_radio_after_wallpapers);
         net_wallpaper_sched_init(DISPLAY_WIDTH, DISPLAY_HEIGHT);
 
-        // Opt-in via playlist.resume_on_boot.
-        radio_resume_on_boot();
+        // Opt-in via playlist.resume_on_boot. Deferred to the callback above
+        // when a boot batch is actually coming; with nothing to fetch, nothing
+        // would ever fire it, so start now.
+        if (!net_wallpaper_sched_boot_fetch_pending())
+            resume_radio_after_wallpapers();
 
         ESP_LOGI(TAG, "online services started");
     } else {

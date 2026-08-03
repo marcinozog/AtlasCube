@@ -306,7 +306,16 @@ The boot refresh fetches every configured slot in **one** batch, stopping
 the radio once for the whole run rather than once per slot — the on-screen
 pill counts the slots ("Updating wallpapers 2/5") so the silence is
 explained and visibly finite. A slot that fails does not abandon the ones
-after it. Explicit
+after it.
+
+That batch runs **before** the radio autostart, not after: it starts a few
+seconds after the link comes up, and `radio_resume_on_boot()` is deferred
+until it finishes (`net_wallpaper_sched_set_boot_done_cb`). Starting the
+music first would only mean cutting it seconds later for the length of the
+batch. The gate opens on the batch's first result whether it succeeded or
+not — a failed batch retries 15 minutes later and the radio must not wait
+for that — and a device with the fetch mode off, or with no slot URLs,
+starts playing immediately as before. Explicit
 per-screen choices are **not** gated by `display.wallpaper_on`. That
 global SD-wallpaper switch has been retired from the UI (its picker was
 removed), so it now stays off and screens without a hub section
