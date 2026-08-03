@@ -79,10 +79,17 @@ static void refresh(void)
     if (d.update_available && d.update_latest[0])
         p = append(buf, sizeof(buf), p, "Upd   %s available\n", d.update_latest);
 
-    p = append(buf, sizeof(buf), p, "\nPSRAM %uK free / %uK\n", kb(d.psram_free), kb(d.psram_total));
-    p = append(buf, sizeof(buf), p, "      %uK min\n", kb(d.psram_min_free));
-    p = append(buf, sizeof(buf), p, "INT   %uK free / %uK\n", kb(d.int_free), kb(d.int_total));
-    p = append(buf, sizeof(buf), p, "      %uK min, %uK blk\n", kb(d.int_min_free), kb(d.int_largest));
+    // Spelled out rather than "min / blk": on the panel there is no room for a
+    // legend, so each figure has to say what it is. "Lowest ever free" is the
+    // low-water mark since boot, the number that matters when sizing anything
+    // long-lived; "largest block" is what a TLS handshake (~6K) needs to find.
+    p = append(buf, sizeof(buf), p, "\nPSRAM (external)\n");
+    p = append(buf, sizeof(buf), p, "  %uK free of %uK\n", kb(d.psram_free), kb(d.psram_total));
+    p = append(buf, sizeof(buf), p, "  %uK lowest ever free\n", kb(d.psram_min_free));
+    p = append(buf, sizeof(buf), p, "Internal RAM\n");
+    p = append(buf, sizeof(buf), p, "  %uK free of %uK\n", kb(d.int_free), kb(d.int_total));
+    p = append(buf, sizeof(buf), p, "  %uK lowest ever free\n", kb(d.int_min_free));
+    p = append(buf, sizeof(buf), p, "  %uK largest block\n", kb(d.int_largest));
 
     p = append(buf, sizeof(buf), p, "\nCPU   %d%% / %d%%\n", cpu0, cpu1);
     p = append(buf, sizeof(buf), p, "Up    %s\n", up);
@@ -98,7 +105,7 @@ static void refresh(void)
     p = append(buf, sizeof(buf), p, "Flash %uK\n", kb(d.flash_size));
     p = append(buf, sizeof(buf), p, "Panel %dx%d\n", DISPLAY_WIDTH, DISPLAY_HEIGHT);
     if (d.sd_mounted && d.sd_total)
-        p = append(buf, sizeof(buf), p, "SD    %uM free / %uM", mb(d.sd_free), mb(d.sd_total));
+        p = append(buf, sizeof(buf), p, "SD    %uM free of %uM", mb(d.sd_free), mb(d.sd_total));
     else if (d.sd_mounted)
         p = append(buf, sizeof(buf), p, "SD    mounted");
     else

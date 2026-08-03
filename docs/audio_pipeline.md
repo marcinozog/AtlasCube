@@ -267,19 +267,23 @@ section header, which had no room for the firmware version and low-water
 marks a bug report actually needs. Any press or swipe returns to Settings.
 
 ```
-FW    v0.47.1-22-gd7537fd     PSRAM 5734K free / 8064K
-Build Jul 31 2026 10:52:26          4901K min
-IDF   v5.4.1                  INT   55K free / 388K
-Var   st7796-ft6336u                41K min, 24K blk
-Web   ok
+FW    v0.47.1-22-gd7537fd     PSRAM (external)
+Build Jul 31 2026 10:52:26      5734K free of 8064K
+IDF   v5.4.1                    4901K lowest ever free
+Var   st7796-ft6336u          Internal RAM
+Web   ok                        55K free of 388K
+                                41K lowest ever free
+                                24K largest block
 ```
 
-- **PSRAM free / total** — total is what the heap owns, slightly under the
-  physical chip: `EXT_RAM_BSS_ATTR` statics (LVGL's 64 KB pool among them)
-  are carved out before the allocator sees the region
-- **min** — low-water mark since boot, the number that matters when sizing
-  anything long-lived (wallpaper slots, ring buffers)
-- **blk** — largest contiguous internal block (TLS handshake needs ~6 KB)
+- **free of** — the total is what the heap owns, slightly under the physical
+  chip: `EXT_RAM_BSS_ATTR` statics (LVGL's 64 KB pool among them) are carved
+  out before the allocator sees the region
+- **lowest ever free** — low-water mark since boot, the number that matters
+  when sizing anything long-lived (wallpaper slots, ring buffers)
+- **largest block** — biggest contiguous internal allocation still possible
+  (a TLS handshake needs ~6 KB); it can be far below the free total once the
+  internal heap fragments
 - **CPU N% / M%** — usage per core, derived from `IDLE0` / `IDLE1` task
   runtime counters via `uxTaskGetSystemState` (requires
   `CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y` and
