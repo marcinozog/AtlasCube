@@ -286,16 +286,27 @@ Each section carries a `<section>_wallpaper` source field
 in `ui_background_apply()`:
 
 - `""` / `"none"` (default) — **General**: the gradient/solid theme
-  background, replaced by the internet wallpaper when one is fetched,
-- `"net"` — **Internet**: the fetched wallpaper, pinned to this screen,
+  background, replaced by internet slot 1 when one is fetched,
+- `"net0"`..`"net5"` — **Internet**: that slot's fetched wallpaper, pinned
+  to this screen (bare `"net"` is the pre-slots spelling and still means
+  slot 0 — existing profiles keep working),
 - anything else — **SD**: an fopen path to a panel-sized RGB565 `.bin` on
   SD, which outranks the internet wallpaper.
 
-An internet-fetched wallpaper (`/api/wallpaper/fetch`) lives only in
-PSRAM and replaces the General background on every screen at once — one
-fetch shown everywhere — until the next reboot or an explicit background
-change (`net_wallpaper_dismiss()`). A screen set to an SD file keeps it;
-a screen set to Internet always shows the fetched image. Explicit
+Internet wallpapers (`/api/wallpaper/fetch`) live only in PSRAM, in up to
+`WALLPAPER_SLOTS` (6) independent slots, so different screens can show
+different downloaded images. A slot costs one panel-sized buffer only
+once something has been fetched into it — six empty slots cost nothing.
+They last until the next reboot or an explicit background change
+(`net_wallpaper_dismiss()`), and the scheduler re-downloads them after
+boot. A screen set to an SD file keeps it; a screen set to Internet
+always shows its slot.
+
+The boot refresh fetches every configured slot in **one** batch, stopping
+the radio once for the whole run rather than once per slot — the on-screen
+pill counts the slots ("Updating wallpapers 2/5") so the silence is
+explained and visibly finite. A slot that fails does not abandon the ones
+after it. Explicit
 per-screen choices are **not** gated by `display.wallpaper_on`. That
 global SD-wallpaper switch has been retired from the UI (its picker was
 removed), so it now stays off and screens without a hub section
@@ -359,13 +370,22 @@ tabs — it used to be in Settings → Display → Wallpapers, now removed:
   palette, so this tab only links out to Settings → Display → Theme for
   them. It also carries the wallpaper **brightness** slider
   (`wallpaper_dim`) — global, applied to both SD and internet wallpapers.
-- **🌍 Internet** — the internet-fetched wallpaper: a URL preset picker,
-  *Fetch now* (`POST /api/wallpaper/fetch`), *Save to SD*
-  (`POST /api/wallpaper/save`), a thumbnail of the currently fetched
-  image (`GET /api/wallpaper/image`, shown on tab open and refreshed
-  after a fetch) and an auto-refresh schedule
-  (`wallpaper_fetch_mode` / `_hour` / `_min`). See `net_wallpaper.c` for
-  the fetch/decode path.
+- **🌍 Internet** — the internet-fetched wallpapers. A **Slot** selector
+  picks which of the six the rest of the card edits; switching slots
+  persists whatever was typed for the previous one, so an edit is never
+  lost by clicking away. Per slot: a URL preset picker, *Fetch now*
+  (`POST /api/wallpaper/fetch` `{url, slot}`), *Save to SD*
+  (`POST /api/wallpaper/save?slot=N`) and a thumbnail
+  (`GET /api/wallpaper/image?slot=N`, shown on tab open and refreshed
+  after a fetch). *Refresh all slots* posts `{all:true}` — the same batch
+  the boot fetch runs. The auto-refresh schedule
+  (`wallpaper_fetch_mode` / `_hour` / `_min`) is shared by every slot;
+  the URLs persist as `display.wallpaper_urls` (array, index = slot).
+  See `net_wallpaper.c` for the fetch/decode path.
+
+  Assigning a slot to a screen happens in the wallpaper picker under the
+  canvas: the **Internet** button plus the slot dropdown next to it write
+  `net<N>` into that screen's `*_wallpaper` field.
 
 Both tabs read their state from `/api/settings` via `loadBackgroundTab()`
 and write on every change; the device repaints itself. Like *Presets*,

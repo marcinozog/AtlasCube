@@ -645,11 +645,17 @@ const state = {
 // dragging widgets does not re-fetch or re-decode the .bin on every render.
 // Each profile section carries a `<section>_wallpaper` source field:
 // "" / "none" = General (gradient/solid, or the internet wallpaper when one is
-// fetched), "net" = the fetched internet wallpaper, else an SD .bin path.
+// fetched), "net0".."net5" = that internet slot, else an SD .bin path.
 let wallpaperPreviewUrl = '';
 let wallpaperPreviewDim = 0;
 let currentWallpaperPath = '';   // effective SD path for the ACTIVE section
 let netWallpaperActive = false;  // device shows a fetched internet wallpaper
+// Internet slots. The count comes from the firmware (/api/wallpaper/status);
+// 1 is the safe default so a pre-slots device still gets a working single-slot
+// UI instead of six phantom pickers.
+let netWpSlotCount = 1;
+let netWpUrls      = [];         // index = slot, mirrors display.wallpaper_urls
+let netWpCurSlot   = 0;          // slot the Background tab is editing
 let keyboardSelection = null;
 const ONLINE_WALLPAPER_CATALOG = 'https://atlascube.net/wallpapers/catalog.php';
 const ONLINE_WALLPAPER_ORIGIN = 'https://atlascube.net';
@@ -675,14 +681,29 @@ function sectionWallpaperValue() {
     return String(state[state.active][sectionWallpaperKey()] || '');
 }
 
+// Slot named by a per-screen override, mirroring net_slot_of() in the firmware:
+// "net0".."net5" name a slot, bare "net" is the pre-slots spelling for slot 0,
+// anything else (a path, "none", "") is not an internet override.
+// Deliberately NOT validated against netWpSlotCount: that count arrives with the
+// Background tab's status poll, and a section override is read before then. A
+// syntactic 0-9 keeps "net3" an internet override at page load instead of
+// briefly resolving it as an SD path; the firmware bounds it for real.
+function netSlotOf(ovr) {
+    if (!ovr || ovr.slice(0, 3) !== 'net') return -1;
+    if (ovr.length === 3) return 0;
+    if (ovr.length !== 4) return -1;
+    const n = ovr.charCodeAt(3) - 48;
+    return (n >= 0 && n <= 9) ? n : -1;
+}
+
 // Mirror of the firmware's resolution in ui_background_apply(): an explicit
 // per-screen SD file resolves to its path here. General ("" / "none") and
-// Internet ("net") carry no SD file — their preview is the gradient, or the
-// fetched internet wallpaper (via /api/wallpaper/image) when the device has
-// one, with a "net wallpaper" text placeholder as the fallback.
+// Internet ("net0".."net5") carry no SD file — their preview is the gradient, or
+// the fetched internet wallpaper (via /api/wallpaper/image?slot=N) when the
+// device has one, with a "net wallpaper" text placeholder as the fallback.
 function effectiveWallpaperPath() {
     const ovr = sectionWallpaperValue();
-    if (ovr && ovr !== 'none' && ovr !== 'net') return ovr;
+    if (ovr && ovr !== 'none' && netSlotOf(ovr) < 0) return ovr;
     return '';
 }
 
@@ -768,8 +789,11 @@ function updateWallpaperPickerLabel() {
     const label = document.getElementById('layout_wallpaper_name');
     if (!label) return;
     const ovr = sectionWallpaperValue();
-    if (ovr === 'net') {
-        label.textContent = '(internet)';
+    const slot = netSlotOf(ovr);
+    if (slot >= 0) {
+        label.textContent = '(internet slot ' + (slot + 1) + ')';
+        const sel = document.getElementById('layout_wp_net_slot');
+        if (sel) sel.value = String(slot);   // the picker follows the section
     } else if (ovr && ovr !== 'none') {
         label.textContent = ovr.split('/').pop();
     } else {
@@ -783,7 +807,7 @@ function updateWallpaperPickerLabel() {
     // Highlight the mode button matching the section's current state. Inline
     // styles, not the .active class — selectSection() strips .active from
     // every .section-tab while toggling the screen tabs.
-    const mode = ovr === 'net' ? 'net'
+    const mode = slot >= 0 ? 'net'
                : (ovr && ovr !== 'none') ? 'sd'
                : 'general';
     const modeBtns = {
@@ -858,9 +882,29 @@ function buildWallpaperPicker() {
     onlineBtn.style.cssText = 'padding:6px 10px;color:#ff6b6f;border-color:#e5484d';
     const button = smallBtn('layout_wp_btn_sd', 'Choose from SD...',
         'Pick a wallpaper file for this screen', toggleWallpaperBrowser);
+    // Internet: which of the fetched slots this screen shows. The select is the
+    // slot, the button applies it — so assigning slot 3 to one screen and slot 1
+    // to another is two clicks, and the select follows whatever the section
+    // already has (updateWallpaperPickerLabel).
+    const netSel = document.createElement('select');
+    netSel.id = 'layout_wp_net_slot';
+    netSel.className = 'field-input';
+    netSel.style.cssText = 'width:auto;padding:5px 6px;font-size:11px';
+    for (let i = 0; i < netWpSlotCount; i++) {
+        const o = document.createElement('option');
+        o.value = String(i);
+        o.textContent = 'slot ' + (i + 1);
+        netSel.appendChild(o);
+    }
+    netSel.addEventListener('change', () => {
+        if (netSlotOf(sectionWallpaperValue()) < 0) return;   // not on Internet yet
+        setSectionWallpaper('net' + netSel.value,
+                            'Screen shows internet slot ' + (+netSel.value + 1) + '.');
+    });
     const netBtn = smallBtn('layout_wp_btn_net', 'Internet',
-        'Show the fetched internet wallpaper on this screen',
-        () => setSectionWallpaper('net', 'Screen shows the internet wallpaper.'));
+        'Show a fetched internet wallpaper on this screen',
+        () => setSectionWallpaper('net' + netSel.value,
+                                  'Screen shows internet slot ' + (+netSel.value + 1) + '.'));
     const generalBtn = smallBtn('layout_wp_btn_general', 'General',
         'Standard background — gradient/solid, or the internet wallpaper when fetched',
         () => setSectionWallpaper('', 'Screen uses the general background.'));
@@ -879,7 +923,7 @@ function buildWallpaperPicker() {
         localStorage.setItem('layout_preset_autoload', autoCheck.checked ? '1' : '0');
     });
     autoLabel.append(autoCheck, document.createTextNode('Auto-apply preset'));
-    row.append(uploadBtn, onlineBtn, button, netBtn, generalBtn, autoLabel, uploadInput);
+    row.append(uploadBtn, onlineBtn, button, netBtn, netSel, generalBtn, autoLabel, uploadInput);
 
     // The active wallpaper path gets its own full-width line under the
     // buttons — inside the button row it was squeezed to a few characters.
@@ -2157,8 +2201,12 @@ async function loadWallpaperPreview() {
         // pixels at /api/wallpaper/image, so preview them instead of the
         // gradient. A screen with an explicit SD file is unaffected.
         const ovr = sectionWallpaperValue();
-        const isSdFile = ovr && ovr !== 'none' && ovr !== 'net';
+        const ovrSlot  = netSlotOf(ovr);
+        const isSdFile = ovr && ovr !== 'none' && ovrSlot < 0;
         if (!isSdFile) {
+            // A screen pinned to a slot previews THAT slot; General previews
+            // slot 0, which is what the firmware falls back to.
+            const previewSlot = ovrSlot >= 0 ? ovrSlot : 0;
             try {
                 const st = await fetch('/api/wallpaper/status', { cache: 'no-store' });
                 const info = st.ok ? await st.json() : null;
@@ -2169,7 +2217,8 @@ async function loadWallpaperPreview() {
                     // The firmware serves the fetched pixels as an LVGL .bin —
                     // decode them exactly like an SD wallpaper. If this fails,
                     // the textual "net wallpaper" placeholder stays as fallback.
-                    const img = await fetch('/api/wallpaper/image', { cache: 'no-store' });
+                    const img = await fetch('/api/wallpaper/image?slot=' + previewSlot,
+                                            { cache: 'no-store' });
                     if (img.ok) {
                         await ensureLvBin();
                         const decoded = window.LvBin.decodeToCanvas(await img.arrayBuffer());
@@ -2293,8 +2342,67 @@ function postDisplay(patch) {
 }
 
 // Populate the tab's controls from the current settings.
+// Fill the slot <select> once the count is known. Rebuilt rather than patched:
+// the firmware's NET_WP_SLOTS is the authority and arrives with the status poll.
+function buildNetWpSlotSelect() {
+    const sel = document.getElementById('netWpSlot');
+    if (sel) {
+        const keep = sel.value;
+        sel.textContent = '';
+        for (let i = 0; i < netWpSlotCount; i++) {
+            const o = document.createElement('option');
+            o.value = String(i);
+            o.textContent = 'Slot ' + (i + 1) + (netWpUrls[i] ? '' : ' (empty)');
+            sel.appendChild(o);
+        }
+        sel.value = (keep && +keep < netWpSlotCount) ? keep : '0';
+        netWpCurSlot = +sel.value;
+    }
+
+    // The per-screen picker is built before the slot count is known (it lives on
+    // the canvas card, not this tab), so re-fill it here with the real count.
+    const pick = document.getElementById('layout_wp_net_slot');
+    if (pick && pick.options.length !== netWpSlotCount) {
+        const keep = pick.value;
+        pick.textContent = '';
+        for (let i = 0; i < netWpSlotCount; i++) {
+            const o = document.createElement('option');
+            o.value = String(i);
+            o.textContent = 'slot ' + (i + 1);
+            pick.appendChild(o);
+        }
+        pick.value = (keep && +keep < netWpSlotCount) ? keep : '0';
+        updateWallpaperPickerLabel();   // re-sync it with the active section
+    }
+}
+
+// Switching slots persists whatever was typed for the previous one, so an edit
+// is never lost by clicking away from it.
+function netWpSlotChanged() {
+    const sel = document.getElementById('netWpSlot');
+    const field = document.getElementById('netWpUrl');
+    const typed = field.value.trim();
+    if (typed !== (netWpUrls[netWpCurSlot] || '')) {
+        netWpUrls[netWpCurSlot] = typed;
+        postDisplay({ wallpaper_urls: netWpUrls.slice(0, netWpSlotCount) });
+    }
+    netWpCurSlot = +sel.value;
+    field.value = netWpUrls[netWpCurSlot] || '';
+    syncNetWpPreset();
+    refreshNetWpThumb();
+}
+
 async function loadBackgroundTab() {
     try {
+        // Slot count first: the pickers are sized from it.
+        try {
+            const s = await fetch('/api/wallpaper/status', { cache: 'no-store' });
+            if (s.ok) {
+                const j = await s.json();
+                if (j.slots > 0) netWpSlotCount = j.slots;
+            }
+        } catch { /* pre-slots firmware — the default of 1 is correct */ }
+
         const r = await fetch('/api/settings', { cache: 'no-store' });
         if (!r.ok) throw new Error('settings HTTP ' + r.status);
         const d = (await r.json()).display || {};
@@ -2308,7 +2416,11 @@ async function loadBackgroundTab() {
         document.getElementById('wp_dim_slider').value = bright;
         document.getElementById('wp_dim_value').textContent = bright + '%';
 
-        if (d.wallpaper_url) document.getElementById('netWpUrl').value = d.wallpaper_url;
+        // Array form when the firmware has slots, the old scalar otherwise.
+        netWpUrls = Array.isArray(d.wallpaper_urls) ? d.wallpaper_urls.slice()
+                                                    : [d.wallpaper_url || ''];
+        buildNetWpSlotSelect();
+        document.getElementById('netWpUrl').value = netWpUrls[netWpCurSlot] || '';
         syncNetWpPreset();
         const mode = d.wallpaper_fetch_mode || 0;
         document.getElementById('netWpMode').value = String(mode);
@@ -2367,13 +2479,22 @@ function syncNetWpPreset() {
 
 // Persist URL + auto-refresh mode/time in one patch; the firmware re-arms its
 // scheduler on this POST.
+// Capture the URL field into the slot array. Every action that persists or
+// fetches goes through this, so the typed value and the stored slot agree.
+function netWpCaptureUrl() {
+    const url = document.getElementById('netWpUrl').value.trim();
+    netWpUrls[netWpCurSlot] = url;
+    return url;
+}
+
 function saveNetWpSchedule() {
     const mode = parseInt(document.getElementById('netWpMode').value, 10) || 0;
     const timeEl = document.getElementById('netWpTime');
     timeEl.style.display = (mode === 2) ? '' : 'none';
     const [h, m] = (timeEl.value || '04:00').split(':').map(Number);
+    netWpCaptureUrl();
     postDisplay({
-        wallpaper_url:        document.getElementById('netWpUrl').value.trim(),
+        wallpaper_urls:       netWpUrls.slice(0, netWpSlotCount),
         wallpaper_fetch_mode: mode,
         wallpaper_fetch_hour: h,
         wallpaper_fetch_min:  m,
@@ -2381,15 +2502,32 @@ function saveNetWpSchedule() {
 }
 
 function fetchNetWallpaper() {
-    const url = document.getElementById('netWpUrl').value.trim();
+    const url = netWpCaptureUrl();
     const st  = document.getElementById('netWpStatus');
     if (!url) return;
-    postDisplay({ wallpaper_url: url });   // keep the scheduled URL in sync
+    postDisplay({ wallpaper_urls: netWpUrls.slice(0, netWpSlotCount) });   // keep the stored slot in sync
     st.textContent = 'starting…';
     fetch('/api/wallpaper/fetch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, slot: netWpCurSlot }),
+    }).then(r => r.json()).then(j => {
+        if (j.result !== 'started') { st.textContent = j.result; return; }
+        pollNetWallpaper();
+    }).catch(() => { st.textContent = 'request failed'; });
+}
+
+// Refresh every configured slot the way the device does after a reboot: one
+// batch, one radio-stop window, progress reported by the status poll.
+function fetchAllNetWallpapers() {
+    const st = document.getElementById('netWpStatus');
+    netWpCaptureUrl();
+    postDisplay({ wallpaper_urls: netWpUrls.slice(0, netWpSlotCount) });
+    st.textContent = 'starting…';
+    fetch('/api/wallpaper/fetch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ all: true }),
     }).then(r => r.json()).then(j => {
         if (j.result !== 'started') { st.textContent = j.result; return; }
         pollNetWallpaper();
@@ -2401,7 +2539,7 @@ function fetchNetWallpaper() {
 function saveNetWallpaper() {
     const st = document.getElementById('netWpStatus');
     st.textContent = 'saving…';
-    fetch('/api/wallpaper/save', { method: 'POST' })
+    fetch('/api/wallpaper/save?slot=' + netWpCurSlot, { method: 'POST' })
         .then(r => r.json())
         .then(j => {
             st.textContent = (j.result === 'ok') ? ('saved: ' + j.path)
@@ -2413,10 +2551,15 @@ function saveNetWallpaper() {
 function pollNetWallpaper() {
     clearTimeout(netWpTimer);
     fetch('/api/wallpaper/status').then(r => r.json()).then(j => {
-        document.getElementById('netWpStatus').textContent = j.status;
+        // A batch says which slot it is on, so a six-slot refresh doesn't look
+        // like a hung "busy".
+        const batch = j.total > 1 && j.status === 'busy';
+        document.getElementById('netWpStatus').textContent =
+            batch ? ('busy ' + Math.min(j.done + 1, j.total) + '/' + j.total) : j.status;
         if (j.status === 'busy') {
             netWpTimer = setTimeout(pollNetWallpaper, 1000);
         } else if (j.status === 'ok') {
+            if (Array.isArray(j.filled)) buildNetWpSlotSelect();
             // A fresh image landed — update the tab thumbnail and the layout
             // preview. Retries cover the beat between the fetch task reporting
             // "ok" and the LVGL task committing the buffer.
@@ -2432,7 +2575,7 @@ async function refreshNetWpThumb(retries = 0) {
     const img = document.getElementById('netWpPreviewImg');
     if (!img) return;
     try {
-        const r = await fetch('/api/wallpaper/image', { cache: 'no-store' });
+        const r = await fetch('/api/wallpaper/image?slot=' + netWpCurSlot, { cache: 'no-store' });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         await ensureLvBin();
         const decoded = window.LvBin.decodeToCanvas(await r.arrayBuffer());

@@ -402,7 +402,10 @@ static void on_net_wallpaper_done(bool ok)
 {
     ui_event_t ev = { .type = UI_EVT_NET_WP, .net_wp_state = ok ? 0 : -1 };
     ui_event_send(&ev);
-    if (!ok) return;
+    // Always post BG_CHANGED, including on failure: `ok` is false when ANY slot
+    // of a batch failed, and the slots that did succeed still have buffers
+    // waiting for net_wallpaper_commit(). The commit is a no-op when nothing is
+    // pending, so this costs nothing in the all-failed case.
     ui_event_t bg = { .type = UI_EVT_BG_CHANGED };
     ui_event_send(&bg);
 }

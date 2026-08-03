@@ -58,6 +58,11 @@ static int       s_wp_evict = 0;   // round-robin victim when every slot is take
 // when the source image or the dim value changes. net_wallpaper's own buffer is
 // never touched, so save-to-SD always writes the original and dim stays fully
 // reversible.
+//
+// ONE buffer for every slot, deliberately: it is keyed on the source pointer, so
+// switching to a screen pinned to another slot just re-dims into the same
+// memory. Six slots therefore cost six buffers plus this one, not twelve — the
+// price is one memcpy+dim per screen change while dimming is on.
 static uint16_t      *s_net_dim_buf = NULL;
 static lv_image_dsc_t s_net_dim_img;
 static const uint8_t *s_net_dim_src = NULL;   // source data of the current copy
@@ -78,6 +83,18 @@ static void dim_rgb565(uint16_t *px, size_t n, int dim_pct)
         uint16_t b = (uint16_t)((( c        & 0x1F) * f) >> 8);
         px[i] = (uint16_t)((r << 11) | (g << 5) | b);
     }
+}
+
+// Internet-slot override: "net0".."net5" name a slot, bare "net" is the
+// pre-slots spelling and still means slot 0 (existing ui_profile.json files
+// carry it). Anything else — including a path or "none" — returns -1.
+static int net_slot_of(const char *ovr)
+{
+    if (!ovr || strncmp(ovr, "net", 3) != 0) return -1;
+    if (ovr[3] == '\0') return 0;
+    if (ovr[4] != '\0') return -1;                  // "net12", "network", …
+    const int n = ovr[3] - '0';
+    return (n >= 0 && n < NET_WP_SLOTS) ? n : -1;
 }
 
 // Per-screen wallpaper override from ui_profile: "" inherit, "none" opt out,
@@ -304,29 +321,36 @@ static const lv_image_dsc_t *net_dimmed(const lv_image_dsc_t *src)
     return &s_net_dim_img;
 }
 
+int ui_background_net_slot_for(ui_screen_id_t screen)
+{
+    const int slot = net_slot_of(screen_wp_override(screen));
+    return (slot >= 0) ? slot : 0;
+}
+
 void ui_background_apply(lv_obj_t *obj, ui_screen_id_t screen)
 {
     const ui_theme_t t = theme_current();
     const app_settings_t *st = settings_get();
 
     // Per-screen wallpaper source (hub sections; NULL for screens without one):
-    //   "net"      → Internet : the fetched wallpaper, pinned to this screen
-    //   "<path>"   → SD       : a specific SD .bin, outranks the internet one
-    //   ""/"none"  → General  : internet if fetched, else the gradient/solid
-    //   NULL (non-hub screen) : like General, but falls back to the global SD
-    //                           wallpaper (Settings) before the gradient
+    //   "net0".."net5" → Internet : that slot's fetched wallpaper, pinned here
+    //   "net"          → Internet : slot 0 (the pre-slots spelling, still valid)
+    //   "<path>"       → SD       : a specific SD .bin, outranks the internet one
+    //   ""/"none"      → General  : slot 0 if fetched, else the gradient/solid
+    //   NULL (non-hub screen)     : like General, but falls back to the global SD
+    //                               wallpaper (Settings) before the gradient
     const char *ovr = screen_wp_override(screen);
-    const bool is_net  = ovr && strcmp(ovr, "net") == 0;
-    const bool is_path = ovr && ovr[0] && strcmp(ovr, "none") != 0 && !is_net;
+    const int  net_slot = net_slot_of(ovr);          // -1 when this isn't a net override
+    const bool is_path  = ovr && ovr[0] && strcmp(ovr, "none") != 0 && net_slot < 0;
 
-    // Internet wallpaper (PSRAM only, via /api/wallpaper/fetch): it replaces the
-    // General background on every screen — one fetch shown everywhere at once —
-    // but an explicit per-screen SD file keeps its own choice. It lives only in
-    // PSRAM, so it lasts until the next reboot or an explicit background change
+    // Internet wallpaper (PSRAM only, via /api/wallpaper/fetch): each screen can
+    // pin its own slot, and screens that don't choose fall back to slot 0 — so a
+    // single-slot device behaves exactly as before. It lives only in PSRAM, so it
+    // lasts until the next reboot or an explicit background change
     // (net_wallpaper_dismiss()); the SD wallpapers underneath are untouched and
     // return once it is cleared.
     if (!is_path) {
-        const lv_image_dsc_t *net_wp = net_wallpaper_image();
+        const lv_image_dsc_t *net_wp = net_wallpaper_image(net_slot >= 0 ? net_slot : 0);
         if (net_wp) {
             lv_obj_set_style_bg_image_src(obj, net_dimmed(net_wp), LV_PART_MAIN);
             lv_obj_set_style_bg_image_tiled(obj, false, LV_PART_MAIN);
@@ -384,5 +408,6 @@ void ui_background_apply(lv_obj_t *obj, ui_screen_id_t screen)
 
 void ui_background_apply(lv_obj_t *obj, ui_screen_id_t screen) { (void)obj; (void)screen; }
 void ui_background_reload_wallpaper(void) { }
+int  ui_background_net_slot_for(ui_screen_id_t screen) { (void)screen; return 0; }
 
 #endif

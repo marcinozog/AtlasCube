@@ -3,6 +3,7 @@
 #include "ui_profile.h"          // DISPLAY_WIDTH / DISPLAY_HEIGHT
 #include "ui_manager.h"          // ui_navigate
 #include "ui_events.h"           // SCREEN_*
+#include "ui_background.h"       // which internet slot the hub screen displays
 #include "screen_playlist.h"     // screen_playlist_set_return
 #include "screen_sd_browser.h"   // screen_sd_browser_set_return
 #include "screen_settings.h"     // screen_settings_set_return
@@ -147,10 +148,10 @@ static void adjust_volume(int delta)
 // function snapshots the active wallpaper before writing and is thread-safe.
 static void wallpaper_save_task(void *arg)
 {
-    (void)arg;
+    const int slot = (int)(intptr_t)arg;
     char path[96];
     const char *err = NULL;
-    if (net_wallpaper_save_to_sd(path, sizeof(path), &err)) {
+    if (net_wallpaper_save_to_sd(slot, path, sizeof(path), &err)) {
         ESP_LOGI(TAG, "Wallpaper saved to %s", path);
     } else {
         ESP_LOGW(TAG, "Wallpaper save failed: %s", err ? err : "unknown");
@@ -166,7 +167,10 @@ static void save_wallpaper(void)
         return;
     }
     s_save_busy = true;
-    if (xTaskCreate(wallpaper_save_task, "wp_save", 4096, NULL, 4, NULL) != pdPASS) {
+    // Save what this screen actually shows: the overlay lives on the hub, whose
+    // section may pin its own internet slot.
+    void *slot = (void *)(intptr_t)ui_background_net_slot_for(SCREEN_HOME);
+    if (xTaskCreate(wallpaper_save_task, "wp_save", 4096, slot, 4, NULL) != pdPASS) {
         s_save_busy = false;
         ESP_LOGE(TAG, "Could not start wallpaper save task");
     }
@@ -235,15 +239,14 @@ static void btn_clicked_cb(lv_event_t *e)
         // internet wallpaper. Navigation tears down this screen (and the overlay).
         case BTN_PLAYLIST: screen_playlist_set_return(SCREEN_HOME);
                            ui_navigate(SCREEN_PLAYLIST);   return;
-        case BTN_WALLPAPER_FETCH: {
-            const char *url = settings_get()->display.wallpaper_url;
-            if (!url[0]) {
-                ESP_LOGW(TAG, "Wallpaper fetch skipped: no URL configured");
-            } else if (!net_wallpaper_fetch(url, DISPLAY_WIDTH, DISPLAY_HEIGHT)) {
+        case BTN_WALLPAPER_FETCH:
+            // Refreshes every configured slot in one go — the on-screen button
+            // means "update my wallpapers", and the batch keeps that to a single
+            // radio-stop window.
+            if (!net_wallpaper_fetch_all(DISPLAY_WIDTH, DISPLAY_HEIGHT)) {
                 ESP_LOGW(TAG, "Wallpaper fetch not started: %s", net_wallpaper_status());
             }
             break;
-        }
         case BTN_WALLPAPER_SAVE: save_wallpaper(); break;
         case BTN_SD:       screen_sd_browser_set_return(SCREEN_HOME);
                            ui_navigate(SCREEN_SD_BROWSER); return;

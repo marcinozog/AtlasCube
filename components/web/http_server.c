@@ -179,7 +179,12 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddBoolToObject(display, "wallpaper_on", s->display.wallpaper_on);
     cJSON_AddNumberToObject(display, "wallpaper_dim", s->display.wallpaper_dim);
     cJSON_AddStringToObject(display, "wallpaper_path", s->display.wallpaper_path);
-    cJSON_AddStringToObject(display, "wallpaper_url", s->display.wallpaper_url);
+    // Slot URLs as an array; the scalar key stays as slot 0 so a phone app
+    // written against the pre-slots API keeps working.
+    cJSON *wurls = cJSON_AddArrayToObject(display, "wallpaper_urls");
+    for (int i = 0; i < WALLPAPER_SLOTS; i++)
+        cJSON_AddItemToArray(wurls, cJSON_CreateString(s->display.wallpaper_url[i]));
+    cJSON_AddStringToObject(display, "wallpaper_url", s->display.wallpaper_url[0]);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_mode", s->display.wallpaper_fetch_mode);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_hour", s->display.wallpaper_fetch_hour);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_min",  s->display.wallpaper_fetch_min);
@@ -473,24 +478,41 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         // (re-picking the already-active mode must still clear the net image).
         if (cJSON_IsBool(wp) || cJSON_IsString(wpp) ||
             cJSON_IsBool(cJSON_GetObjectItem(display, "bg_gradient"))) {
-            net_wallpaper_dismiss();
+            net_wallpaper_dismiss(-1);      // every slot: the user picked another background
             ui_event_t ev = { .type = UI_EVT_BG_CHANGED };
             ui_event_send(&ev);
         }
-        cJSON *wurl = cJSON_GetObjectItem(display, "wallpaper_url");
+        // Slot URLs: "wallpaper_urls" is the array form (index = slot), and the
+        // legacy scalar "wallpaper_url" still writes slot 0 so the pre-slots
+        // phone app keeps configuring the background it always did.
+        cJSON *wurls = cJSON_GetObjectItem(display, "wallpaper_urls");
+        cJSON *wurl  = cJSON_GetObjectItem(display, "wallpaper_url");
+        bool urls_changed = false;
+        if (cJSON_IsArray(wurls)) {
+            int i = 0;
+            cJSON *it = NULL;
+            cJSON_ArrayForEach(it, wurls) {
+                if (i >= WALLPAPER_SLOTS) break;
+                if (cJSON_IsString(it)) settings_set_wallpaper_slot(i, it->valuestring);
+                i++;
+            }
+            urls_changed = true;
+        } else if (cJSON_IsString(wurl)) {
+            settings_set_wallpaper_slot(0, wurl->valuestring);
+            urls_changed = true;
+        }
+
         cJSON *wfm  = cJSON_GetObjectItem(display, "wallpaper_fetch_mode");
         cJSON *wfh  = cJSON_GetObjectItem(display, "wallpaper_fetch_hour");
         cJSON *wfn  = cJSON_GetObjectItem(display, "wallpaper_fetch_min");
-        if (cJSON_IsString(wurl) || cJSON_IsNumber(wfm) ||
+        if (urls_changed || cJSON_IsNumber(wfm) ||
             cJSON_IsNumber(wfh)  || cJSON_IsNumber(wfn)) {
             app_settings_t *cur = settings_get();
-            const char *url = cJSON_IsString(wurl) ? wurl->valuestring
-                                                   : cur->display.wallpaper_url;
             int mode = cJSON_IsNumber(wfm) ? wfm->valueint : cur->display.wallpaper_fetch_mode;
             int hour = cJSON_IsNumber(wfh) ? wfh->valueint : cur->display.wallpaper_fetch_hour;
             int min  = cJSON_IsNumber(wfn) ? wfn->valueint : cur->display.wallpaper_fetch_min;
-            ESP_LOGI("HTTP", "POST wallpaper_fetch: mode=%d %02d:%02d url=%s", mode, hour, min, url);
-            settings_set_wallpaper_fetch(url, mode, hour, min);
+            ESP_LOGI("HTTP", "POST wallpaper_fetch: mode=%d %02d:%02d", mode, hour, min);
+            settings_set_wallpaper_fetch(mode, hour, min);
             net_wallpaper_sched_update();   // re-arm the auto-refresh one-shot
         }
         cJSON *lgp = cJSON_GetObjectItem(display, "logo_path");
@@ -3472,8 +3494,10 @@ static esp_err_t api_update_post_handler(httpd_req_t *req)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// POST /api/wallpaper/fetch {url:"..."} — start an async internet-wallpaper
-// fetch (net_wallpaper: download + on-device JPEG→RGB565 for this panel).
+// POST /api/wallpaper/fetch {url:"...", slot:N} — start an async
+// internet-wallpaper fetch (net_wallpaper: download + on-device JPEG→RGB565 for
+// this panel) into slot N (default 0). Body {"all":true} instead refreshes every
+// configured slot in one batch, the same thing the boot fetch does.
 // GET  /api/wallpaper/status — poll it: "idle"/"busy"/"ok" or an error message.
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t api_wallpaper_fetch_handler(httpd_req_t *req)
@@ -3487,19 +3511,43 @@ static esp_err_t api_wallpaper_fetch_handler(httpd_req_t *req)
     buf[len] = '\0';
 
     cJSON *json = cJSON_Parse(buf);
-    const cJSON *url = json ? cJSON_GetObjectItem(json, "url") : NULL;
-    if (!cJSON_IsString(url) || !url->valuestring[0]) {
-        cJSON_Delete(json);
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing url");
-        return ESP_FAIL;
-    }
+    const cJSON *all = json ? cJSON_GetObjectItem(json, "all") : NULL;
+    bool started;
 
-    bool started = net_wallpaper_fetch(url->valuestring, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+    if (cJSON_IsTrue(all)) {
+        started = net_wallpaper_fetch_all(DISPLAY_WIDTH, DISPLAY_HEIGHT);
+    } else {
+        const cJSON *url  = json ? cJSON_GetObjectItem(json, "url")  : NULL;
+        const cJSON *slot = json ? cJSON_GetObjectItem(json, "slot") : NULL;
+        if (!cJSON_IsString(url) || !url->valuestring[0]) {
+            cJSON_Delete(json);
+            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing url");
+            return ESP_FAIL;
+        }
+        const int n = cJSON_IsNumber(slot) ? slot->valueint : 0;
+        if (n < 0 || n >= NET_WP_SLOTS) {
+            cJSON_Delete(json);
+            httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Bad slot");
+            return ESP_FAIL;
+        }
+        started = net_wallpaper_fetch(n, url->valuestring, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+    }
     cJSON_Delete(json);
 
     httpd_resp_set_type(req, "application/json");
     httpd_resp_sendstr(req, started ? "{\"result\":\"started\"}" : "{\"result\":\"busy\"}");
     return ESP_OK;
+}
+
+// Slot from ?slot=N, defaulting to 0 and clamped away from out-of-range values
+// so a stale bookmark can't index past the array.
+static int wallpaper_slot_query(httpd_req_t *req)
+{
+    char q[48], v[8];
+    if (httpd_req_get_url_query_str(req, q, sizeof(q)) != ESP_OK) return 0;
+    if (httpd_query_key_value(q, "slot", v, sizeof(v)) != ESP_OK) return 0;
+    const int n = atoi(v);
+    return (n > 0 && n < NET_WP_SLOTS) ? n : 0;
 }
 
 static esp_err_t api_wallpaper_status_handler(httpd_req_t *req)
@@ -3509,19 +3557,33 @@ static esp_err_t api_wallpaper_status_handler(httpd_req_t *req)
     // Whether a fetched internet wallpaper is currently displayed (it outranks
     // the inherited SD/gradient background until reboot or dismissal) — the
     // layout editor uses this to avoid previewing the wrong background.
-    cJSON_AddBoolToObject(json, "active", net_wallpaper_image() != NULL);
+    cJSON_AddBoolToObject(json, "active", net_wallpaper_any_image());
+    cJSON_AddNumberToObject(json, "slots", NET_WP_SLOTS);
+
+    // Per-slot "is something in it", so the web UI can mark which slots are
+    // filled without pulling six panel-sized images.
+    cJSON *filled = cJSON_AddArrayToObject(json, "filled");
+    for (int i = 0; i < NET_WP_SLOTS; i++)
+        cJSON_AddItemToArray(filled, cJSON_CreateBool(net_wallpaper_image(i) != NULL));
+
+    int done = 0, total = 0;
+    net_wallpaper_progress(&done, &total);
+    cJSON_AddNumberToObject(json, "done",  done);
+    cJSON_AddNumberToObject(json, "total", total);
+
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
     return send_json_or_500(req, str);
 }
 
-// GET /api/wallpaper/image — the fetched internet wallpaper as an LVGL RGB565
-// .bin (same format as SD wallpapers), so the web layout editor can preview
-// the exact pixels the device shows. 404 until a fetch has been committed.
+// GET /api/wallpaper/image?slot=N — that slot's internet wallpaper as an LVGL
+// RGB565 .bin (same format as SD wallpapers), so the web layout editor can
+// preview the exact pixels the device shows. 404 until a fetch has been
+// committed into it.
 static esp_err_t api_wallpaper_image_handler(httpd_req_t *req)
 {
     size_t len = 0;
-    uint8_t *bin = net_wallpaper_bin_snapshot(&len);
+    uint8_t *bin = net_wallpaper_bin_snapshot(wallpaper_slot_query(req), &len);
     if (!bin) {
         httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "No wallpaper fetched");
         return ESP_FAIL;
@@ -3533,15 +3595,15 @@ static esp_err_t api_wallpaper_image_handler(httpd_req_t *req)
     return err;
 }
 
-// POST /api/wallpaper/save — persist the fetched image as an LVGL .bin under
-// /sdcard/wallpapers/<width>x<height>/internet/, without touching the background
-// settings.
+// POST /api/wallpaper/save?slot=N — persist that slot's image as an LVGL .bin
+// under /sdcard/wallpapers/<width>x<height>/internet/, without touching the
+// background settings.
 static esp_err_t api_wallpaper_save_handler(httpd_req_t *req)
 {
     char path[96];
     const char *err = NULL;
     httpd_resp_set_type(req, "application/json");
-    if (net_wallpaper_save_to_sd(path, sizeof(path), &err)) {
+    if (net_wallpaper_save_to_sd(wallpaper_slot_query(req), path, sizeof(path), &err)) {
         char body[144];
         snprintf(body, sizeof(body), "{\"result\":\"ok\",\"path\":\"%s\"}", path);
         httpd_resp_sendstr(req, body);

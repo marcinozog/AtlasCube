@@ -81,7 +81,11 @@ static void schedule_next(void)
     const app_settings_t *st = settings_get();
     const int mode = st->display.wallpaper_fetch_mode;
 
-    if (!s_inited || mode == MODE_OFF || !st->display.wallpaper_url[0]) {
+    bool any_url = false;
+    for (int i = 0; i < WALLPAPER_SLOTS; i++)
+        if (st->display.wallpaper_url[i][0]) { any_url = true; break; }
+
+    if (!s_inited || mode == MODE_OFF || !any_url) {
         disarm();
         return;
     }
@@ -108,8 +112,8 @@ static void schedule_next(void)
 static void kick_fetch(void)
 {
     s_sched_fetch = true;
-    if (!net_wallpaper_fetch(settings_get()->display.wallpaper_url,
-                             s_panel_w, s_panel_h)) {
+    // Every configured slot in one batch (one radio-stop window), not one URL.
+    if (!net_wallpaper_fetch_all(s_panel_w, s_panel_h)) {
         // Refused — a manual fetch is already running. Its completion goes
         // through net_wallpaper_sched_fetch_done, which re-arms; nothing lost.
         s_sched_fetch = false;

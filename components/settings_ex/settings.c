@@ -71,7 +71,7 @@ esp_err_t settings_init(void)
         s_settings.display.wallpaper_on     = false;
         s_settings.display.wallpaper_path[0] = '\0';
         s_settings.display.wallpaper_dim    = 0;
-        s_settings.display.wallpaper_url[0] = '\0';
+        memset(s_settings.display.wallpaper_url, 0, sizeof(s_settings.display.wallpaper_url));
         s_settings.display.wallpaper_fetch_mode = 0;
         s_settings.display.wallpaper_fetch_hour = 4;
         s_settings.display.wallpaper_fetch_min  = 0;
@@ -287,11 +287,27 @@ static esp_err_t load_from_file(void)
         cJSON *wpd = cJSON_GetObjectItem(display, "wallpaper_dim");
         int wpdim = cJSON_IsNumber(wpd) ? wpd->valueint : 0;
         s_settings.display.wallpaper_dim = (wpdim < 0) ? 0 : (wpdim > 80) ? 80 : wpdim;
-        cJSON *wurl = cJSON_GetObjectItem(display, "wallpaper_url");
-        s_settings.display.wallpaper_url[0] = '\0';
-        if (cJSON_IsString(wurl))
-            strncpy(s_settings.display.wallpaper_url, wurl->valuestring,
-                    sizeof(s_settings.display.wallpaper_url) - 1);
+        // Slots: "wallpaper_urls" is the array form. Files written before slots
+        // existed carry a single "wallpaper_url" string — it loads into slot 0,
+        // which is exactly what the bare "net" screen override still resolves to.
+        memset(s_settings.display.wallpaper_url, 0, sizeof(s_settings.display.wallpaper_url));
+        cJSON *wurls = cJSON_GetObjectItem(display, "wallpaper_urls");
+        if (cJSON_IsArray(wurls)) {
+            int i = 0;
+            cJSON *it = NULL;
+            cJSON_ArrayForEach(it, wurls) {
+                if (i >= WALLPAPER_SLOTS) break;
+                if (cJSON_IsString(it))
+                    strncpy(s_settings.display.wallpaper_url[i], it->valuestring,
+                            sizeof(s_settings.display.wallpaper_url[i]) - 1);
+                i++;
+            }
+        } else {
+            cJSON *wurl = cJSON_GetObjectItem(display, "wallpaper_url");
+            if (cJSON_IsString(wurl))
+                strncpy(s_settings.display.wallpaper_url[0], wurl->valuestring,
+                        sizeof(s_settings.display.wallpaper_url[0]) - 1);
+        }
         cJSON *wfm = cJSON_GetObjectItem(display, "wallpaper_fetch_mode");
         s_settings.display.wallpaper_fetch_mode = cJSON_IsNumber(wfm) ? wfm->valueint : 0;
         cJSON *wfh = cJSON_GetObjectItem(display, "wallpaper_fetch_hour");
@@ -607,7 +623,13 @@ static esp_err_t save_to_file_locked(void)
     cJSON_AddBoolToObject(display, "wallpaper_on", s_settings.display.wallpaper_on);
     cJSON_AddStringToObject(display, "wallpaper_path", s_settings.display.wallpaper_path);
     cJSON_AddNumberToObject(display, "wallpaper_dim", s_settings.display.wallpaper_dim);
-    cJSON_AddStringToObject(display, "wallpaper_url", s_settings.display.wallpaper_url);
+    // Both forms: the array is what loads back, the legacy scalar keeps slot 0
+    // readable by anything still expecting the pre-slots key (a downgraded
+    // firmware, an older phone app) instead of silently losing the URL.
+    cJSON *wurls = cJSON_AddArrayToObject(display, "wallpaper_urls");
+    for (int i = 0; i < WALLPAPER_SLOTS; i++)
+        cJSON_AddItemToArray(wurls, cJSON_CreateString(s_settings.display.wallpaper_url[i]));
+    cJSON_AddStringToObject(display, "wallpaper_url", s_settings.display.wallpaper_url[0]);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_mode", s_settings.display.wallpaper_fetch_mode);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_hour", s_settings.display.wallpaper_fetch_hour);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_min",  s_settings.display.wallpaper_fetch_min);
@@ -1129,21 +1151,31 @@ void settings_set_wallpaper_dim(int pct)
     save_to_file();
 }
 
-void settings_set_wallpaper_fetch(const char *url, int mode, int hour, int min)
+void settings_set_wallpaper_slot(int slot, const char *url)
 {
+    if (slot < 0 || slot >= WALLPAPER_SLOTS) return;
     const char *u = url ? url : "";
+    if (strcmp(s_settings.display.wallpaper_url[slot], u) == 0) return;
+
+    memset(s_settings.display.wallpaper_url[slot], 0,
+           sizeof(s_settings.display.wallpaper_url[slot]));
+    strncpy(s_settings.display.wallpaper_url[slot], u,
+            sizeof(s_settings.display.wallpaper_url[slot]) - 1);
+    // No app_state push — same contract as settings_set_wallpaper_fetch below.
+    save_to_file();
+}
+
+void settings_set_wallpaper_fetch(int mode, int hour, int min)
+{
     if (mode < 0 || mode > 2)  mode = 0;
     if (hour < 0 || hour > 23) hour = 0;
     if (min  < 0 || min  > 59) min  = 0;
 
-    if (strcmp(s_settings.display.wallpaper_url, u) == 0 &&
-        s_settings.display.wallpaper_fetch_mode == mode &&
+    if (s_settings.display.wallpaper_fetch_mode == mode &&
         s_settings.display.wallpaper_fetch_hour == hour &&
         s_settings.display.wallpaper_fetch_min  == min) {
         return;
     }
-    s_settings.display.wallpaper_url[0] = '\0';
-    strncpy(s_settings.display.wallpaper_url, u, sizeof(s_settings.display.wallpaper_url) - 1);
     s_settings.display.wallpaper_fetch_mode = mode;
     s_settings.display.wallpaper_fetch_hour = hour;
     s_settings.display.wallpaper_fetch_min  = min;

@@ -1,13 +1,17 @@
 #include "net_fetch_overlay_widget.h"
+#include "net_wallpaper.h"   // batch progress for the "2/5" counter
 #include "theme.h"
 #include "fonts/ui_fonts.h"
 #include "lvgl.h"
+#include <stdio.h>
 
 #define FAIL_HIDE_MS 3000
+#define PROGRESS_MS  500
 
 static lv_obj_t   *s_pill  = NULL;
 static lv_obj_t   *s_label = NULL;
 static lv_timer_t *s_timer = NULL;   // one-shot for the fail message; exists only while it lingers
+static lv_timer_t *s_prog  = NULL;   // ticks the slot counter while a batch runs
 
 static void hide(void)
 {
@@ -20,6 +24,35 @@ static void hide(void)
         lv_timer_del(s_timer);
         s_timer = NULL;
     }
+    if (s_prog) {
+        lv_timer_del(s_prog);
+        s_prog = NULL;
+    }
+}
+
+// A batch stops the radio for its whole duration, so the pill has to show that
+// the silence is finite: "Updating wallpapers 2/5". Polled rather than pushed —
+// the fetch task must not touch LVGL, and half a second of lag is invisible.
+static void set_progress_text(void)
+{
+    if (!s_label) return;
+    int done = 0, total = 0;
+    net_wallpaper_progress(&done, &total);
+    if (total > 1) {
+        char buf[48];
+        snprintf(buf, sizeof(buf), "Updating wallpapers %d/%d",
+                 (done < total) ? done + 1 : total, total);
+        lv_label_set_text(s_label, buf);
+    } else {
+        lv_label_set_text(s_label, "Updating wallpaper...");
+    }
+    lv_obj_center(s_pill);
+}
+
+static void progress_cb(lv_timer_t *t)
+{
+    (void)t;
+    set_progress_text();
 }
 
 static void hide_cb(lv_timer_t *t)
@@ -61,14 +94,18 @@ void net_fetch_overlay_show(void)
         lv_obj_set_style_text_align(s_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     }
 
-    lv_label_set_text(s_label, "Updating wallpaper...");
-    lv_obj_center(s_pill);
+    set_progress_text();
+    if (!s_prog) s_prog = lv_timer_create(progress_cb, PROGRESS_MS, NULL);
     lv_obj_move_foreground(s_pill);
 }
 
 void net_fetch_overlay_done(bool ok)
 {
     if (!s_pill) return;
+    if (s_prog) {                 // the counter stops with the batch
+        lv_timer_del(s_prog);
+        s_prog = NULL;
+    }
     if (ok) {
         hide();
         return;

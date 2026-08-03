@@ -684,6 +684,18 @@
                 until reboot. A playing radio stream pauses during the download. NASA APOD API
                 links are resolved automatically (DEMO_KEY is rate-limited — a free personal key
                 from api.nasa.gov lifts that).</div>
+            <!-- Slots: six independent internet wallpapers held in RAM, so screens
+                 can each show a different one. Everything below edits the slot
+                 selected here. -->
+            <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <label class="field-label" style="font-size:12px;margin:0">Slot</label>
+                <select id="netWpSlot" class="field-input" style="width:auto"
+                        onchange="netWpSlotChanged()"></select>
+                <button class="btn-secondary" onclick="fetchAllNetWallpapers()">🔄 Refresh all slots</button>
+            </div>
+            <div class="field-hint">Each filled slot costs one screen-sized image in RAM and is
+                re-downloaded after every reboot. Assign a slot to a screen in that screen's
+                <strong>Background</strong> source.</div>
             <select id="netWpPreset" class="field-input" style="width:100%;margin-top:6px"
                     onchange="netWpPresetChanged()">
                 <option value="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY">NASA — Astronomy Picture of the Day</option>

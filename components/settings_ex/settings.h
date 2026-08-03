@@ -5,6 +5,12 @@
 #include "app_state.h"
 #include <stdbool.h>
 
+// Internet-wallpaper slots held in PSRAM (net_wallpaper mirrors this as
+// NET_WP_SLOTS). Owned here because the persisted shape is settings' business —
+// settings_ex must not depend on net_wallpaper. Raising it costs one panel-sized
+// PSRAM buffer per slot that a user actually fills, nothing when left empty.
+#define WALLPAPER_SLOTS 6
+
 typedef struct {
     int  volume;
     int  eq[10];
@@ -53,7 +59,11 @@ typedef struct {
     bool            wallpaper_on;       // SD wallpaper background on/off (wins over gradient)
     char            wallpaper_path[128]; // full path to a panel-sized RGB565 .bin on SD
     int             wallpaper_dim;      // darken wallpaper by 0-80% (SD + internet; gradient unaffected)
-    char            wallpaper_url[192]; // internet-wallpaper source URL ("" = none; {w}/{h} ok)
+    // Internet-wallpaper slots: each holds a source URL ("" = unused; {w}/{h} ok)
+    // and is fetched into its own PSRAM buffer at boot. Screens bind to one with
+    // the "net0".."net5" per-screen override (bare "net" = slot 0). The count is
+    // implicit — fill as many as you want, empty ones are skipped by the fetcher.
+    char            wallpaper_url[WALLPAPER_SLOTS][192];
     int             wallpaper_fetch_mode; // auto refresh: 0=off, 1=once after boot, 2=daily
     int             wallpaper_fetch_hour; // daily fetch time (mode 2 only)
     int             wallpaper_fetch_min;
@@ -192,7 +202,10 @@ void settings_set_wallpaper_dim(int pct);   // clamped to 0-80
 // Internet-wallpaper auto-refresh config. Persists only — re-arming the
 // scheduler is the caller's job (net_wallpaper_sched_update()); settings_ex
 // must not depend on net_wallpaper.
-void settings_set_wallpaper_fetch(const char *url, int mode, int hour, int min);
+void settings_set_wallpaper_fetch(int mode, int hour, int min);
+// One slot's source URL; out-of-range slots are ignored, "" clears the slot.
+// Same persist-only contract as above.
+void settings_set_wallpaper_slot(int slot, const char *url);
 void settings_set_logo_path(const char *path);
 void settings_set_show_boot_info(bool enabled);
 void settings_set_sd_show_screen(bool show);
