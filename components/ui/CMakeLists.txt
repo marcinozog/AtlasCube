@@ -26,6 +26,7 @@ idf_component_register(
         "screens/screen_mqtt.c"
         "screens/screen_ota.c"
         "screens/screen_update.c"
+        "screens/screen_diag.c"
         "screensavers/screensaver_starfield.c"
         "screensavers/screensaver_fireworks.c"
         "screensavers/screensaver_plasma.c"
@@ -83,7 +84,7 @@ idf_component_register(
         settings_ex             # settings_set_volume itp. (z screen_radio)
         network                 # screen_wifi
         events                  # event_indicator_widget, screen_event_notification
-        esp_wifi                # RSSI w settings mem bar
+        diag                    # SCREEN_DIAG snapshot (shared with /api/diag)
         json                    # ui_profile JSON I/O
         esp_http_client         # screensaver_dashboard
         esp-tls                 # esp_crt_bundle for HTTPS

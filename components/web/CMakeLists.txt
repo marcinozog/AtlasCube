@@ -26,6 +26,7 @@ idf_component_register(
         board_pins
         secrets
         updater             # updater_www_stale() — shared web-UI staleness check
+        diag                # /api/diag — snapshot shared with the Diagnostics screen
         net_wallpaper       # /api/wallpaper endpoints
         weather
 )

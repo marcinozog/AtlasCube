@@ -38,6 +38,7 @@
 #include "updater.h"
 #include "net_wallpaper.h"
 #include "net_wallpaper_sched.h"
+#include "diag.h"           // /api/diag — snapshot shared with SCREEN_DIAG
 #include "weather.h"
 #include "esp_spiffs.h"
 #include "esp_vfs_fat.h"
@@ -748,6 +749,85 @@ static esp_err_t api_state_get_handler(httpd_req_t *req)
         updater_www_stale(WEB_ASSETS_VERSION, www_ver, sizeof(www_ver)));
     cJSON_AddStringToObject(json, "www_version",  www_ver);
     cJSON_AddStringToObject(json, "www_expected", WEB_ASSETS_VERSION);
+
+    char *str = cJSON_PrintUnformatted(json);
+    cJSON_Delete(json);
+
+    httpd_resp_set_hdr(req, "Cache-Control", "no-cache");
+    return send_json_or_500(req, str);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/diag  — the same snapshot the on-device Diagnostics screen renders
+// (Settings → System → Diagnostics), so a remote user can paste numbers into a
+// bug report instead of photographing the panel. Read-only; adds nothing the
+// screen doesn't already show except the www stamps, which live in this
+// component (the shared collector stays free of web/UI dependencies).
+// ─────────────────────────────────────────────────────────────────────────────
+static esp_err_t api_diag_handler(httpd_req_t *req)
+{
+    diag_info_t d;
+    diag_collect(&d);
+
+    // Own baseline: the screen's sampler must keep its own reference point, or
+    // the two pollers would consume each other's interval. Static, so repeated
+    // GETs report the load since the previous GET (the first reads 0).
+    static diag_cpu_state_t s_api_cpu;
+    int cpu0, cpu1;
+    diag_cpu_usage(&s_api_cpu, &cpu0, &cpu1);
+
+    cJSON *json = cJSON_CreateObject();
+
+    cJSON *fw = cJSON_AddObjectToObject(json, "fw");
+    cJSON_AddStringToObject(fw, "version", d.fw_version);
+    cJSON_AddStringToObject(fw, "build",   d.fw_build);
+    cJSON_AddStringToObject(fw, "idf",     d.idf_version);
+    cJSON_AddStringToObject(fw, "variant", d.fw_variant ? d.fw_variant : "unknown");
+    cJSON_AddBoolToObject  (fw, "update_available", d.update_available);
+    cJSON_AddStringToObject(fw, "update_latest",    d.update_latest);
+
+    char www_ver[80];
+    cJSON *www = cJSON_AddObjectToObject(json, "www");
+    cJSON_AddBoolToObject  (www, "outdated", updater_www_stale(WEB_ASSETS_VERSION, www_ver, sizeof(www_ver)));
+    cJSON_AddStringToObject(www, "version",  www_ver);
+    cJSON_AddStringToObject(www, "expected", WEB_ASSETS_VERSION);
+
+    cJSON *ps = cJSON_AddObjectToObject(json, "psram");
+    cJSON_AddNumberToObject(ps, "total",    (double)d.psram_total);
+    cJSON_AddNumberToObject(ps, "free",     (double)d.psram_free);
+    cJSON_AddNumberToObject(ps, "min_free", (double)d.psram_min_free);
+
+    cJSON *in = cJSON_AddObjectToObject(json, "internal");
+    cJSON_AddNumberToObject(in, "total",    (double)d.int_total);
+    cJSON_AddNumberToObject(in, "free",     (double)d.int_free);
+    cJSON_AddNumberToObject(in, "min_free", (double)d.int_min_free);
+    cJSON_AddNumberToObject(in, "largest",  (double)d.int_largest);
+
+    cJSON *hw = cJSON_AddObjectToObject(json, "hw");
+    cJSON_AddStringToObject(hw, "chip",       d.chip);
+    cJSON_AddNumberToObject(hw, "revision",   d.chip_rev);
+    cJSON_AddNumberToObject(hw, "cores",      d.chip_cores);
+    cJSON_AddNumberToObject(hw, "flash_size", (double)d.flash_size);
+    cJSON_AddNumberToObject(hw, "panel_w",    DISPLAY_WIDTH);
+    cJSON_AddNumberToObject(hw, "panel_h",    DISPLAY_HEIGHT);
+
+    cJSON *net = cJSON_AddObjectToObject(json, "net");
+    cJSON_AddBoolToObject  (net, "connected", d.wifi_connected);
+    cJSON_AddStringToObject(net, "ssid",      d.ssid);
+    cJSON_AddStringToObject(net, "ip",        d.ip);
+    cJSON_AddNumberToObject(net, "rssi",      d.rssi);
+    cJSON_AddStringToObject(net, "mac",       d.mac);
+
+    cJSON *sd = cJSON_AddObjectToObject(json, "sd");
+    cJSON_AddBoolToObject  (sd, "mounted", d.sd_mounted);
+    cJSON_AddNumberToObject(sd, "total",   (double)d.sd_total);
+    cJSON_AddNumberToObject(sd, "free",    (double)d.sd_free);
+
+    cJSON *cpu = cJSON_AddObjectToObject(json, "cpu");
+    cJSON_AddNumberToObject(cpu, "core0", cpu0);
+    cJSON_AddNumberToObject(cpu, "core1", cpu1);
+
+    cJSON_AddNumberToObject(json, "uptime_s", d.uptime_s);
 
     char *str = cJSON_PrintUnformatted(json);
     cJSON_Delete(json);
@@ -4091,6 +4171,13 @@ void http_server_start(void)
         .handler = api_spiffs_get_handler,
     };
     httpd_register_uri_handler(server, &api_spiffs_get);
+
+    httpd_uri_t api_diag_get = {
+        .uri     = "/api/diag",
+        .method  = HTTP_GET,
+        .handler = api_diag_handler,
+    };
+    httpd_register_uri_handler(server, &api_diag_get);
 
     // ── SD CARD file manager ──────────────────────────────────────────────────
     httpd_uri_t api_sd_info = {

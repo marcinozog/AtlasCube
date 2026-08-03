@@ -30,6 +30,7 @@ typedef enum {
     SCREEN_UPDATE,        // transient "new firmware available" prompt (never persisted,
                           // like SCREEN_OTA). Add new persisted screens BEFORE this.
     SCREEN_LAYOUT_EDITOR, // transient on-device ui_profile editor (never persisted)
+    SCREEN_DIAG,          // transient read-only diagnostics, opened from Settings
     SCREEN_COUNT
 } ui_screen_id_t;
 

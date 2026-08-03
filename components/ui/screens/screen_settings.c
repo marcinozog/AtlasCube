@@ -13,11 +13,7 @@
 #include "audio_engine.h"   // built-in channel-test tone
 #include "lvgl.h"
 #include "esp_log.h"
-#include "esp_heap_caps.h"
 #include "esp_system.h"
-#include "esp_wifi.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -78,8 +74,6 @@ static lv_obj_t *s_root      = NULL;
 static lv_obj_t *s_title     = NULL;
 static lv_obj_t *s_rows_cont = NULL;
 static lv_obj_t *s_hint      = NULL;
-static lv_obj_t *s_mem_bar   = NULL;   // only built in SECTION_SYSTEM
-static lv_timer_t *s_mem_timer = NULL;
 
 static lv_obj_t *s_row_obj[MAX_ROWS];
 static lv_obj_t *s_row_val[MAX_ROWS];
@@ -170,6 +164,7 @@ static const row_desc_t SEC_SYSTEM[] = {
     // so they don't get the entry (web portal covers them).
     { .title = "WiFi",    .kind = RK_SCREEN, .screen = SCREEN_WIFI },
 #endif
+    { .title = "Diagnostics", .kind = RK_SCREEN, .screen = SCREEN_DIAG },
     { .title = "Restart", .kind = RK_ACTION, .action = act_restart, .on_txt = "Press >" },
 };
 
@@ -196,86 +191,6 @@ static void refresh_row_label(int i);
 static void refresh_all_labels(void);
 static void row_click_cb(lv_event_t *e);
 static void slider_released_cb(lv_event_t *e);
-
-/* ── CPU usage (per core, %) ────────────────────────────────────────────────
-   Measures delta idle-task runtime per core relative to the last call.
-   Requires CONFIG_FREERTOS_USE_TRACE_FACILITY + GENERATE_RUN_TIME_STATS in sdkconfig. */
-static uint32_t s_last_idle_rt[2] = {0, 0};
-static uint32_t s_last_total_rt   = 0;
-
-static void compute_cpu_usage(int *cpu0, int *cpu1)
-{
-    *cpu0 = *cpu1 = 0;
-
-    UBaseType_t n = uxTaskGetNumberOfTasks();
-    if (n == 0) return;
-
-    TaskStatus_t *array = pvPortMalloc(n * sizeof(TaskStatus_t));
-    if (!array) return;
-
-    uint32_t total_rt = 0;
-    n = uxTaskGetSystemState(array, n, &total_rt);
-
-    TaskHandle_t idle0 = xTaskGetIdleTaskHandleForCore(0);
-    TaskHandle_t idle1 = xTaskGetIdleTaskHandleForCore(1);
-
-    uint32_t idle_rt[2] = {0, 0};
-    for (UBaseType_t i = 0; i < n; i++) {
-        if      (array[i].xHandle == idle0) idle_rt[0] = array[i].ulRunTimeCounter;
-        else if (array[i].xHandle == idle1) idle_rt[1] = array[i].ulRunTimeCounter;
-    }
-    vPortFree(array);
-
-    // First call has no reference yet — return 0 and remember the values.
-    if (s_last_total_rt != 0) {
-        uint32_t total_delta = total_rt - s_last_total_rt;
-        if (total_delta > 0) {
-            uint32_t idle0_delta = idle_rt[0] - s_last_idle_rt[0];
-            uint32_t idle1_delta = idle_rt[1] - s_last_idle_rt[1];
-            int p0 = 100 - (int)((idle0_delta * 100) / total_delta);
-            int p1 = 100 - (int)((idle1_delta * 100) / total_delta);
-            if (p0 < 0)   p0 = 0;
-            if (p0 > 100) p0 = 100;
-            if (p1 < 0)   p1 = 0;
-            if (p1 > 100) p1 = 100;
-            *cpu0 = p0;
-            *cpu1 = p1;
-        }
-    }
-
-    s_last_total_rt   = total_rt;
-    s_last_idle_rt[0] = idle_rt[0];
-    s_last_idle_rt[1] = idle_rt[1];
-}
-
-static void update_mem_bar(void)
-{
-    if (!s_mem_bar) return;
-    int free_total = (int)esp_get_free_heap_size();
-    int free_int   = (int)heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
-    int free_blk   = (int)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
-    int cpu0, cpu1;
-    compute_cpu_usage(&cpu0, &cpu1);
-
-    // RSSI (dBm); "--" when STA not connected / no data
-    char rssi_buf[8] = "--";
-    wifi_ap_record_t ap;
-    if (esp_wifi_sta_get_ap_info(&ap) == ESP_OK) {
-        snprintf(rssi_buf, sizeof(rssi_buf), "%d", ap.rssi);
-    }
-
-    char buf[96];
-    snprintf(buf, sizeof(buf), "Free:%dK Int:%dK Blk:%dK CPU:%d/%d%% RSSI:%s",
-             free_total / 1024, free_int / 1024, free_blk / 1024,
-             cpu0, cpu1, rssi_buf);
-    lv_label_set_text(s_mem_bar, buf);
-}
-
-static void mem_timer_cb(lv_timer_t *t)
-{
-    (void)t;
-    update_mem_bar();
-}
 
 /* ── focus / hint / labels ──────────────────────────────────────────────── */
 
@@ -501,8 +416,8 @@ static void build_row(int i, const ui_profile_t *p, const ui_theme_colors_t *th,
 }
 
 /* Rebuild the row list for the current section. Clears the scroll container
-   (which destroys the in-list title / memory bar) and recreates the header +
-   rows from the section's descriptor table. */
+   (which destroys the in-list title) and recreates the header + rows from the
+   section's descriptor table. */
 static void rebuild_section(void)
 {
     if (!s_rows_cont) return;   // screen was destroyed before a deferred rebuild ran
@@ -513,7 +428,6 @@ static void rebuild_section(void)
     memset(s_row_obj,    0, sizeof(s_row_obj));
     memset(s_row_val,    0, sizeof(s_row_val));
     memset(s_row_slider, 0, sizeof(s_row_slider));
-    s_mem_bar = NULL;
 
     const section_def_t *def = &SECTIONS[s_section];
     s_rows  = def->rows;
@@ -522,7 +436,6 @@ static void rebuild_section(void)
 
     bool title_in_list = p->settings_title_in_list;
     int  title_h   = lv_font_get_line_height(p->settings_title_font);
-    int  mem_bar_h = lv_font_get_line_height(p->settings_hint_font);
     int  header_y  = 0;
 
     /* title — when it scrolls with the list it is recreated each rebuild; the
@@ -536,16 +449,6 @@ static void rebuild_section(void)
         header_y += title_h + 1;
     }
     if (s_title) lv_label_set_text(s_title, def->title);
-
-    /* System section carries the read-only memory/CPU/RSSI bar in its header. */
-    if (s_section == SECTION_SYSTEM) {
-        s_mem_bar = lv_label_create(s_rows_cont);
-        lv_obj_set_style_text_font(s_mem_bar, p->settings_hint_font, LV_PART_MAIN);
-        lv_obj_set_style_text_color(s_mem_bar, lv_color_hex(th->text_muted), LV_PART_MAIN);
-        lv_obj_align(s_mem_bar, LV_ALIGN_TOP_MID, 0, header_y);
-        update_mem_bar();
-        header_y += mem_bar_h + 2;
-    }
 
     int row_base = header_y;
     for (int i = 0; i < s_count; i++) {
@@ -615,15 +518,12 @@ static void settings_create(lv_obj_t *parent)
     s_editing = false;
     rebuild_section();
 
-    s_mem_timer = lv_timer_create(mem_timer_cb, 1000, NULL);
-
     ESP_LOGI(TAG, "Created (theme=%d)", theme_current());
 }
 
 static void settings_destroy(void)
 {
-    if (s_mem_timer) { lv_timer_delete(s_mem_timer); s_mem_timer = NULL; }
-    s_root = s_title = s_rows_cont = s_hint = s_mem_bar = NULL;
+    s_root = s_title = s_rows_cont = s_hint = NULL;
     s_rows = NULL;
     s_count = 0;
     memset(s_row_obj,    0, sizeof(s_row_obj));
@@ -714,7 +614,6 @@ static void settings_apply_theme(void)
         }
     }
 
-    if (s_mem_bar) lv_obj_set_style_text_color(s_mem_bar, lv_color_hex(th->text_muted), LV_PART_MAIN);
     if (s_hint) {
         lv_obj_set_style_text_color(s_hint, lv_color_hex(th->text_muted), LV_PART_MAIN);
         lv_obj_set_style_bg_color(s_hint, lv_color_hex(th->bg_primary), LV_PART_MAIN);

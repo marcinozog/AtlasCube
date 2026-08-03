@@ -261,19 +261,37 @@ not per-bit-input. EQ on/off is the dominant factor (~24% of audio core).
 
 ## Diagnostics on device
 
-The Settings screen bottom bar shows live system stats updated every
-second:
+**Settings → System → Diagnostics** is a read-only screen refreshed every
+second. It replaced the one-line status bar that used to sit in the System
+section header, which had no room for the firmware version and low-water
+marks a bug report actually needs. Any press or swipe returns to Settings.
 
 ```
-Free:5800K Int:55K Blk:24K CPU:13/26% RSSI:-52
+FW    v0.47.1-22-gd7537fd     PSRAM 5734K free / 8064K
+Build Jul 31 2026 10:52:26          4901K min
+IDF   v5.4.1                  INT   55K free / 388K
+Var   st7796-ft6336u                41K min, 24K blk
+Web   ok
 ```
 
-- **Free** — total free heap (PSRAM + internal)
-- **Int** — free internal SRAM (the constrained one)
-- **Blk** — largest contiguous internal block (TLS handshake needs ~6 KB)
-- **CPU:N/M%** — usage per core, derived from `IDLE0` / `IDLE1` task runtime
-  counters via `uxTaskGetSystemState` (requires
+- **PSRAM free / total** — total is what the heap owns, slightly under the
+  physical chip: `EXT_RAM_BSS_ATTR` statics (LVGL's 64 KB pool among them)
+  are carved out before the allocator sees the region
+- **min** — low-water mark since boot, the number that matters when sizing
+  anything long-lived (wallpaper slots, ring buffers)
+- **blk** — largest contiguous internal block (TLS handshake needs ~6 KB)
+- **CPU N% / M%** — usage per core, derived from `IDLE0` / `IDLE1` task
+  runtime counters via `uxTaskGetSystemState` (requires
   `CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y` and
   `CONFIG_FREERTOS_USE_TRACE_FACILITY=y`)
-- **RSSI** — Wi-Fi signal in dBm, `--` when STA disconnected.
+- **WiFi** — SSID and signal in dBm.
   Reference: -50 great, -65 marginal for 256 kbps, below -75 expect drops
+- plus IDF/variant/web-UI stamps, chip + flash + panel size, MAC, uptime and
+  SD free space (reported only when the card is already mounted — opening
+  diagnostics never triggers the lazy mount)
+
+`GET /api/diag` returns the same snapshot as JSON, so a remote user can paste
+the numbers instead of photographing the panel. Both readers share
+`components/diag`, which is why the screen and the endpoint can never
+disagree; each keeps its own CPU-sampling baseline, since the percentages
+cover the interval since that caller's previous read.
