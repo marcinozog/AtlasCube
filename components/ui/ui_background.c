@@ -61,7 +61,7 @@ static int       s_wp_evict = 0;   // round-robin victim when every slot is take
 //
 // ONE buffer for every slot, deliberately: it is keyed on the source pointer, so
 // switching to a screen pinned to another slot just re-dims into the same
-// memory. Six slots therefore cost six buffers plus this one, not twelve — the
+// memory. Ten slots therefore cost ten buffers plus this one, not twenty — the
 // price is one memcpy+dim per screen change while dimming is on.
 static uint16_t      *s_net_dim_buf = NULL;
 static lv_image_dsc_t s_net_dim_img;
@@ -85,7 +85,7 @@ static void dim_rgb565(uint16_t *px, size_t n, int dim_pct)
     }
 }
 
-// Internet-slot override: "net0".."net5" name a slot, bare "net" is the
+// Internet-slot override: "net0".."net9" name a slot, bare "net" is the
 // pre-slots spelling and still means slot 0 (existing ui_profile.json files
 // carry it). Anything else — including a path or "none" — returns -1.
 static int net_slot_of(const char *ovr)
@@ -333,7 +333,7 @@ void ui_background_apply(lv_obj_t *obj, ui_screen_id_t screen)
     const app_settings_t *st = settings_get();
 
     // Per-screen wallpaper source (hub sections; NULL for screens without one):
-    //   "net0".."net5" → Internet : that slot's fetched wallpaper, pinned here
+    //   "net0".."net9" → Internet : that slot's fetched wallpaper, pinned here
     //   "net"          → Internet : slot 0 (the pre-slots spelling, still valid)
     //   "<path>"       → SD       : a specific SD .bin, outranks the internet one
     //   ""/"none"      → General  : slot 0 if fetched, else the gradient/solid

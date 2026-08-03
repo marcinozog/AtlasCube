@@ -645,14 +645,14 @@ const state = {
 // dragging widgets does not re-fetch or re-decode the .bin on every render.
 // Each profile section carries a `<section>_wallpaper` source field:
 // "" / "none" = General (gradient/solid, or the internet wallpaper when one is
-// fetched), "net0".."net5" = that internet slot, else an SD .bin path.
+// fetched), "net0".."net9" = that internet slot, else an SD .bin path.
 let wallpaperPreviewUrl = '';
 let wallpaperPreviewDim = 0;
 let currentWallpaperPath = '';   // effective SD path for the ACTIVE section
 let netWallpaperActive = false;  // device shows a fetched internet wallpaper
 // Internet slots. The count comes from the firmware (/api/wallpaper/status);
 // 1 is the safe default so a pre-slots device still gets a working single-slot
-// UI instead of six phantom pickers.
+// UI instead of ten phantom pickers.
 let netWpSlotCount = 1;
 let netWpUrls      = [];         // index = slot, mirrors display.wallpaper_urls
 let netWpCurSlot   = 0;          // slot the Background tab is editing
@@ -682,7 +682,7 @@ function sectionWallpaperValue() {
 }
 
 // Slot named by a per-screen override, mirroring net_slot_of() in the firmware:
-// "net0".."net5" name a slot, bare "net" is the pre-slots spelling for slot 0,
+// "net0".."net9" name a slot, bare "net" is the pre-slots spelling for slot 0,
 // anything else (a path, "none", "") is not an internet override.
 // Deliberately NOT validated against netWpSlotCount: that count arrives with the
 // Background tab's status poll, and a section override is read before then. A
@@ -698,7 +698,7 @@ function netSlotOf(ovr) {
 
 // Mirror of the firmware's resolution in ui_background_apply(): an explicit
 // per-screen SD file resolves to its path here. General ("" / "none") and
-// Internet ("net0".."net5") carry no SD file — their preview is the gradient, or
+// Internet ("net0".."net9") carry no SD file — their preview is the gradient, or
 // the fetched internet wallpaper (via /api/wallpaper/image?slot=N) when the
 // device has one, with a "net wallpaper" text placeholder as the fallback.
 function effectiveWallpaperPath() {
@@ -2551,7 +2551,7 @@ function saveNetWallpaper() {
 function pollNetWallpaper() {
     clearTimeout(netWpTimer);
     fetch('/api/wallpaper/status').then(r => r.json()).then(j => {
-        // A batch says which slot it is on, so a six-slot refresh doesn't look
+        // A batch says which slot it is on, so a ten-slot refresh does not look
         // like a hung "busy".
         const batch = j.total > 1 && j.status === 'busy';
         document.getElementById('netWpStatus').textContent =

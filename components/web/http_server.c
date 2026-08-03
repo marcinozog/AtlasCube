@@ -3561,7 +3561,7 @@ static esp_err_t api_wallpaper_status_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(json, "slots", NET_WP_SLOTS);
 
     // Per-slot "is something in it", so the web UI can mark which slots are
-    // filled without pulling six panel-sized images.
+    // filled without pulling every panel-sized image.
     cJSON *filled = cJSON_AddArrayToObject(json, "filled");
     for (int i = 0; i < NET_WP_SLOTS; i++)
         cJSON_AddItemToArray(filled, cJSON_CreateBool(net_wallpaper_image(i) != NULL));

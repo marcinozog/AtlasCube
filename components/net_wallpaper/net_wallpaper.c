@@ -40,7 +40,7 @@ static int  s_panel_w, s_panel_h;
 static volatile int s_prog_done, s_prog_total;   // batch progress for the UI pill
 
 // One independent wallpaper per slot. A slot only ever costs PSRAM once
-// something has actually been fetched into it, so the six-slot ceiling is free
+// something has actually been fetched into it, so the ten-slot ceiling is free
 // for anyone using one.
 typedef struct {
     uint16_t      *buf;        // buffer behind img, owned here
@@ -386,8 +386,8 @@ static void fetch_task(void *arg)
 
     // Stop a playing radio stream for the duration: its (possibly TLS) socket
     // plus ours is exactly the two-HTTPS-sessions pattern that used to starve
-    // internal RAM. The whole batch runs inside ONE stop/restore window — six
-    // slots must not mean six interruptions of the music.
+    // internal RAM. The whole batch runs inside ONE stop/restore window — ten
+    // slots must not mean ten interruptions of the music.
     app_state_t *st = app_state_get();
     bool was_radio = (st->radio_state == RADIO_STATE_PLAYING ||
                       st->radio_state == RADIO_STATE_BUFFERING);

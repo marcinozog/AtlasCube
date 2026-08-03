@@ -287,16 +287,16 @@ in `ui_background_apply()`:
 
 - `""` / `"none"` (default) — **General**: the gradient/solid theme
   background, replaced by internet slot 1 when one is fetched,
-- `"net0"`..`"net5"` — **Internet**: that slot's fetched wallpaper, pinned
+- `"net0"`..`"net9"` — **Internet**: that slot's fetched wallpaper, pinned
   to this screen (bare `"net"` is the pre-slots spelling and still means
   slot 0 — existing profiles keep working),
 - anything else — **SD**: an fopen path to a panel-sized RGB565 `.bin` on
   SD, which outranks the internet wallpaper.
 
 Internet wallpapers (`/api/wallpaper/fetch`) live only in PSRAM, in up to
-`WALLPAPER_SLOTS` (6) independent slots, so different screens can show
+`WALLPAPER_SLOTS` (10) independent slots, so different screens can show
 different downloaded images. A slot costs one panel-sized buffer only
-once something has been fetched into it — six empty slots cost nothing.
+once something has been fetched into it — ten empty slots cost nothing.
 They last until the next reboot or an explicit background change
 (`net_wallpaper_dismiss()`), and the scheduler re-downloads them after
 boot. A screen set to an SD file keeps it; a screen set to Internet
@@ -371,7 +371,7 @@ tabs — it used to be in Settings → Display → Wallpapers, now removed:
   them. It also carries the wallpaper **brightness** slider
   (`wallpaper_dim`) — global, applied to both SD and internet wallpapers.
 - **🌍 Internet** — the internet-fetched wallpapers. A **Slot** selector
-  picks which of the six the rest of the card edits; switching slots
+  picks which of the ten the rest of the card edits; switching slots
   persists whatever was typed for the previous one, so an edit is never
   lost by clicking away. Per slot: a URL preset picker, *Fetch now*
   (`POST /api/wallpaper/fetch` `{url, slot}`), *Save to SD*

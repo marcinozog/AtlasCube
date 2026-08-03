@@ -13,7 +13,7 @@ extern "C" {
 // Internet wallpapers live in PSRAM, one per slot, and are lost on reboot (the
 // scheduler re-fetches them after boot). A slot costs a panel-sized RGB565
 // buffer only once something has been fetched into it. Screens pick a slot with
-// the "net0".."net5" per-screen override; bare "net" means slot 0.
+// the "net0".."net9" per-screen override; bare "net" means slot 0.
 #define NET_WP_SLOTS  WALLPAPER_SLOTS
 
 // Fetch `url` into `slot` and convert it on-device (vendored libjpeg: decode +
@@ -27,8 +27,8 @@ extern "C" {
 bool net_wallpaper_fetch(int slot, const char *url, int panel_w, int panel_h);
 
 // Fetch every slot whose URL is set, in one pass. The radio is stopped ONCE for
-// the whole batch rather than per slot, so a six-slot device costs one silent
-// window at boot instead of six. A slot that fails does not stop the others;
+// the whole batch rather than per slot, so a fully loaded device costs one silent
+// window at boot instead of ten. A slot that fails does not stop the others;
 // the batch reports failure at the end. Returns false when a fetch is already
 // running or no slot has a URL. Progress via net_wallpaper_progress().
 bool net_wallpaper_fetch_all(int panel_w, int panel_h);

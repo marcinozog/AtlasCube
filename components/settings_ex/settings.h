@@ -8,8 +8,13 @@
 // Internet-wallpaper slots held in PSRAM (net_wallpaper mirrors this as
 // NET_WP_SLOTS). Owned here because the persisted shape is settings' business —
 // settings_ex must not depend on net_wallpaper. Raising it costs one panel-sized
-// PSRAM buffer per slot that a user actually fills, nothing when left empty.
-#define WALLPAPER_SLOTS 6
+// PSRAM buffer per slot that a user actually fills, nothing when left empty:
+// ten filled slots are 3.0 MB at 480x320, 1.5 MB at 320x240.
+//
+// TEN IS THE CEILING for the current override syntax: screens name their slot
+// with a single digit ("net0".."net9" in ui_profile), so an 11th slot would need
+// a multi-digit parser in ui_background.c AND in layout.js.
+#define WALLPAPER_SLOTS 10
 
 typedef struct {
     int  volume;
@@ -61,7 +66,7 @@ typedef struct {
     int             wallpaper_dim;      // darken wallpaper by 0-80% (SD + internet; gradient unaffected)
     // Internet-wallpaper slots: each holds a source URL ("" = unused; {w}/{h} ok)
     // and is fetched into its own PSRAM buffer at boot. Screens bind to one with
-    // the "net0".."net5" per-screen override (bare "net" = slot 0). The count is
+    // the "net0".."net9" per-screen override (bare "net" = slot 0). The count is
     // implicit — fill as many as you want, empty ones are skipped by the fetcher.
     char            wallpaper_url[WALLPAPER_SLOTS][192];
     int             wallpaper_fetch_mode; // auto refresh: 0=off, 1=once after boot, 2=daily
