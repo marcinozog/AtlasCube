@@ -9,6 +9,43 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-08-03
+
+### Added
+- **www:** add a Diagnostics panel with copyable report to the System tab
+- **diag:** add Diagnostics screen and /api/diag with PSRAM and firmware info
+- **espnow:** browse and play the SD card by index from the pilot
+- **wifi:** show RSSI in scan results and add a network picker to the settings page
+- **www:** confirm before a Radio Browser icon replaces an existing one
+- **www:** name station-icon files after the station, not just its key
+- **www:** assign station icons from .bin files already on the SD card
+- **network:** retry the saved WiFi in the background instead of parking in AP
+- **ui:** recognise the exit swipe by drag distance on lists and the equalizer
+- **ui:** give the playlist and SD browser lists their own row colours
+- **ui:** format the MDY date as MM-DD-YYYY instead of MM/DD/YYYY
+- **wallpapers:** file list-screen wallpapers under a playlist-sd-browser category
+- **ui:** give both list screens their own wallpaper and a virtualised list
+- **playlist:** add per-screen wallpaper and a resizable, virtualised list
+- **vu:** add per-screen colour overrides for all three VU meters
+- **vu:** give the needle meters their own vu_needle_bg plate colour
+- **vu:** replace the needle meter frame with a vu_bg plate
+
+### Changed
+- **layout:** pair each screen tab with the list screen it opens
+- **layout:** drop the Move button from the wallpaper picker's SD browser
+- **theme:** drop the VU palette fields in favour of per-screen overrides
+
+### Fixed
+- **http:** reclaim HTTP sockets via LRU purge and TCP keep-alive
+- **ui:** keep a sideways swipe across the volume slider from moving it
+- **diag:** spell out the memory figures on the Diagnostics screen
+- **main:** include ui_profile.h for DISPLAY_WIDTH/HEIGHT in network_services
+- **ui-list:** detect the exit swipe on list rows instead of relying on LVGL gestures
+- **ui-list:** treat a sideways drag on a list row as a swipe, not a tap
+- **layout:** actually hide switched-off form groups and nest header sub-settings
+- **web:** drop the wallpaper cache when a wallpaper .bin is overwritten
+- **layout:** mirror layout presets onto the wallpaper's own folder
+
 ## [0.47.1] - 2026-07-29
 
 ### Fixed
@@ -852,7 +889,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.47.1...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.48.0...HEAD
+[0.48.0]: https://github.com/marcinozog/AtlasCube/compare/v0.47.1...v0.48.0
 [0.47.1]: https://github.com/marcinozog/AtlasCube/compare/v0.47.0...v0.47.1
 [0.47.0]: https://github.com/marcinozog/AtlasCube/compare/v0.46.0...v0.47.0
 [0.46.0]: https://github.com/marcinozog/AtlasCube/compare/v0.45.0...v0.46.0
