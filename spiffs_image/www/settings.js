@@ -72,6 +72,9 @@ function selectTab(name, sub) {
     } else {
         updateTabHash(name);
     }
+
+    // Diagnostics polls only while its own tab is visible — see startDiagPoll().
+    if (name === 'system') startDiagPoll(); else stopDiagPoll();
 }
 
 function tabFromHash() {
@@ -1927,6 +1930,280 @@ async function pairPilot() {
         btn.disabled = false;
     }
 }
+
+// ── Diagnostics (System tab) ─────────────────────────────────────────────────
+// Mirrors the device's Settings → System → Diagnostics screen from /api/diag.
+// Polled only while the System tab is actually on screen: the endpoint's CPU
+// figures are deltas since the previous GET, so a background poller would keep
+// halving the interval of whoever is really looking.
+
+const DIAG_POLL_MS = 2000;
+let g_diagTimer = null;
+let g_diagLast  = null;   // last snapshot — what "Copy report" serialises
+
+function diagKB(bytes) { return Math.round((bytes || 0) / 1024) + 'K'; }
+
+function diagSize(b) {
+    if (!b) return '0';
+    if (b >= 1073741824) return (b / 1073741824).toFixed(1) + 'G';
+    if (b >= 1048576)    return Math.round(b / 1048576) + 'M';
+    return Math.round(b / 1024) + 'K';
+}
+
+function diagUptime(s) {
+    s = s || 0;
+    const p = n => String(n).padStart(2, '0');
+    const d = Math.floor(s / 86400);
+    return (d ? d + 'd ' : '') +
+           p(Math.floor(s % 86400 / 3600)) + ':' +
+           p(Math.floor(s % 3600 / 60)) + ':' + p(s % 60);
+}
+
+function diagUsedPct(total, free) {
+    if (!total) return 0;
+    return Math.round((total - free) * 100 / total);
+}
+
+// Built with DOM calls, not innerHTML: SSID and firmware strings come off the
+// device and go straight into the page.
+function diagGroup(parent, label) {
+    const g = document.createElement('div');
+    g.className = 'diag-group';
+    const l = document.createElement('div');
+    l.className = 'diag-group-label';
+    l.textContent = label;
+    g.appendChild(l);
+    parent.appendChild(g);
+    return g;
+}
+
+function diagRow(group, key, value, warn) {
+    const r = document.createElement('div');
+    r.className = 'diag-row' + (warn ? ' warn' : '');
+    const k = document.createElement('span');
+    k.textContent = key;
+    const v = document.createElement('span');
+    v.textContent = value;
+    r.appendChild(k);
+    r.appendChild(v);
+    group.appendChild(r);
+}
+
+// The bar fills with what is USED while the row above it reports what is FREE —
+// so it always carries its own "NN% used" caption. Without it the near-empty
+// PSRAM bar next to a "free" figure reads as the exact opposite of the truth.
+function diagBar(group, usedPct, warn) {
+    const pct = Math.max(0, Math.min(100, usedPct));
+
+    const row = document.createElement('div');
+    row.className = 'diag-barrow';
+
+    const bar = document.createElement('div');
+    bar.className = 'diag-bar' + (warn ? ' warn' : '');
+    const fill = document.createElement('i');
+    fill.style.width = pct + '%';
+    bar.appendChild(fill);
+
+    const cap = document.createElement('span');
+    cap.className = 'diag-bar-pct' + (warn ? ' warn' : '');
+    cap.textContent = pct + '% used';
+
+    row.appendChild(bar);
+    row.appendChild(cap);
+    group.appendChild(row);
+}
+
+function diagHint(group, text) {
+    const h = document.createElement('div');
+    h.className = 'diag-hint';
+    h.textContent = text;
+    group.appendChild(h);
+}
+
+function renderDiag(d) {
+    const body = document.getElementById('diag_body');
+    if (!body) return;
+    body.textContent = '';
+
+    const fw = diagGroup(body, 'Firmware');
+    diagRow(fw, 'Version', d.fw.version || '?');
+    diagRow(fw, 'Built',   d.fw.build   || '?');
+    diagRow(fw, 'Variant', d.fw.variant || '?');
+    diagRow(fw, 'IDF',     d.fw.idf     || '?');
+    diagRow(fw, 'Web UI',
+            d.www.outdated ? 'stale — re-upload below' : 'in sync',
+            d.www.outdated);
+    if (d.fw.update_available && d.fw.update_latest)
+        diagRow(fw, 'Update', d.fw.update_latest + ' available', true);
+
+    const mem = diagGroup(body, 'Memory');
+    diagHint(mem, 'PSRAM is the big external RAM (wallpapers, buffers). Internal RAM is ' +
+                  'the scarce one every subsystem competes for.');
+    diagRow(mem, 'PSRAM (external)', diagKB(d.psram.free) + ' free of ' + diagKB(d.psram.total));
+    diagBar(mem, diagUsedPct(d.psram.total, d.psram.free));
+    diagRow(mem, 'Lowest ever free', diagKB(d.psram.min_free));
+    // Internal DRAM is the constrained heap: a largest free block under ~8 KB is
+    // where TLS handshakes and httpd send buffers start failing (audio_pipeline.md).
+    const blkLow = d.internal.largest < 8192;
+    diagRow(mem, 'Internal RAM', diagKB(d.internal.free) + ' free of ' + diagKB(d.internal.total));
+    diagBar(mem, diagUsedPct(d.internal.total, d.internal.free), blkLow);
+    diagRow(mem, 'Largest free block', diagKB(d.internal.largest) + ' (TLS needs ~6K)', blkLow);
+    diagRow(mem, 'Lowest ever free', diagKB(d.internal.min_free));
+
+    const hw = diagGroup(body, 'Hardware');
+    diagRow(hw, 'Chip',  d.hw.chip + ' rev' + d.hw.revision + ', ' + d.hw.cores + ' cores');
+    diagRow(hw, 'Flash', diagKB(d.hw.flash_size));
+    diagRow(hw, 'Panel', d.hw.panel_w + '×' + d.hw.panel_h);
+    diagRow(hw, 'MAC',   d.net.mac || '?');
+
+    const sys = diagGroup(body, 'Network & load');
+    diagRow(sys, 'WiFi', d.net.connected ? (d.net.ssid || '(hidden)') + '  ' + d.net.rssi + ' dBm'
+                                         : 'not connected', !d.net.connected);
+    diagRow(sys, 'IP',   d.net.ip || '—');
+    diagRow(sys, 'SD',   d.sd.mounted
+                            ? (d.sd.total ? diagSize(d.sd.free) + ' free / ' + diagSize(d.sd.total)
+                                          : 'mounted')
+                            : 'not mounted');
+    diagRow(sys, 'CPU',    d.cpu.core0 + '% / ' + d.cpu.core1 + '%');
+    diagRow(sys, 'Uptime', diagUptime(d.uptime_s));
+}
+
+// Firmware older than these web files has no /api/diag at all (404, handled
+// below), but a mismatched pair could also answer with fewer groups — so every
+// group is defaulted rather than dereferenced blind.
+function diagNormalize(d) {
+    return {
+        fw:       d.fw       || {},
+        www:      d.www      || {},
+        psram:    d.psram    || {},
+        internal: d.internal || {},
+        hw:       d.hw       || {},
+        net:      d.net      || {},
+        sd:       d.sd       || {},
+        cpu:      d.cpu      || {},
+        uptime_s: d.uptime_s || 0,
+    };
+}
+
+async function loadDiag() {
+    const body = document.getElementById('diag_body');
+    if (!body) return;
+    try {
+        const r = await fetch('/api/diag', { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        g_diagLast = diagNormalize(await r.json());
+        renderDiag(g_diagLast);
+    } catch (e) {
+        body.textContent = 'Diagnostics unavailable: ' + e.message;
+    }
+}
+
+function startDiagPoll() {
+    if (g_diagTimer) return;
+    loadDiag();
+    g_diagTimer = setInterval(loadDiag, DIAG_POLL_MS);
+}
+
+function stopDiagPoll() {
+    if (g_diagTimer) { clearInterval(g_diagTimer); g_diagTimer = null; }
+}
+
+function buildDiagReport(d) {
+    const pad = s => (s + '         ').slice(0, 9);
+    const L = [];
+    L.push('AtlasCube diagnostics');
+    L.push(pad('FW') + d.fw.version + ' (' + d.fw.build + ')');
+    L.push(pad('Variant') + d.fw.variant);
+    L.push(pad('IDF') + d.fw.idf);
+    L.push(pad('Web UI') + (d.www.outdated ? 'STALE' : 'in sync') +
+           ' (on device ' + (d.www.version || '?').split(/\s+/)[0] +
+           ', expected ' + (d.www.expected || '?').split(/\s+/)[0] + ')');
+    if (d.fw.update_available && d.fw.update_latest)
+        L.push(pad('Update') + d.fw.update_latest + ' available');
+    L.push(pad('PSRAM') + diagKB(d.psram.free) + ' free / ' + diagKB(d.psram.total) +
+           ' total, min ' + diagKB(d.psram.min_free));
+    L.push(pad('Internal') + diagKB(d.internal.free) + ' free / ' + diagKB(d.internal.total) +
+           ' total, largest ' + diagKB(d.internal.largest) + ', min ' + diagKB(d.internal.min_free));
+    L.push(pad('Chip') + d.hw.chip + ' rev' + d.hw.revision + ', ' + d.hw.cores +
+           ' cores, flash ' + diagKB(d.hw.flash_size));
+    L.push(pad('Panel') + d.hw.panel_w + 'x' + d.hw.panel_h);
+    L.push(pad('WiFi') + (d.net.connected ? d.net.ssid + ', ' + d.net.rssi + ' dBm, ' + d.net.ip
+                                          : 'not connected'));
+    L.push(pad('MAC') + d.net.mac);
+    L.push(pad('SD') + (d.sd.mounted
+                          ? 'mounted, ' + diagSize(d.sd.free) + ' free / ' + diagSize(d.sd.total)
+                          : 'not mounted'));
+    L.push(pad('CPU') + d.cpu.core0 + '% / ' + d.cpu.core1 + '%');
+    L.push(pad('Uptime') + diagUptime(d.uptime_s));
+    return L.join('\n');
+}
+
+// The device serves plain HTTP on a LAN address, which is not a secure context,
+// so navigator.clipboard is usually missing — the textarea + execCommand path is
+// the one that normally runs. If even that is refused, the textarea stays on the
+// page, selected, so the report can still be copied by hand.
+function copyDiagText(text) {
+    const old = document.getElementById('diag_fallback');
+    if (old) old.remove();
+
+    const ta = document.createElement('textarea');
+    ta.id = 'diag_fallback';
+    ta.className = 'diag-fallback';
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    document.body.appendChild(ta);
+    ta.select();
+
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (_) { ok = false; }
+
+    if (ok) {
+        ta.remove();
+        return true;
+    }
+    // Move it where the user can reach it instead of throwing it away.
+    const panel = document.getElementById('diag_body');
+    if (panel && panel.parentNode) {
+        ta.style.position = '';
+        ta.style.top = '';
+        panel.parentNode.insertBefore(ta, document.getElementById('diag_status'));
+        ta.select();
+    } else {
+        ta.remove();
+    }
+    return false;
+}
+
+async function copyDiagReport() {
+    if (!g_diagLast) {
+        showStatusEl('diag_status', 'Nothing to copy yet — waiting for the first read.', 'error');
+        return;
+    }
+    const text = buildDiagReport(g_diagLast);
+
+    if (navigator.clipboard && window.isSecureContext) {
+        try {
+            await navigator.clipboard.writeText(text);
+            const old = document.getElementById('diag_fallback');
+            if (old) old.remove();
+            showStatusEl('diag_status', '✅ Report copied to the clipboard.', 'ok');
+            return;
+        } catch (_) { /* fall through to the textarea path */ }
+    }
+
+    const ok = copyDiagText(text);
+    showStatusEl('diag_status',
+                 ok ? '✅ Report copied to the clipboard.'
+                    : '⚠️ The browser blocked the copy — the report is selected above, press Ctrl+C.',
+                 ok ? 'ok' : 'error');
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopDiagPoll();
+    else if (document.querySelector('#tab-system.active')) startDiagPoll();
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Init

@@ -1066,6 +1066,112 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
 }
 
 /* ════════════════════════════════════════════════
+   Diagnostics panel (settings.html → System)
+   ════════════════════════════════════════════════ */
+/* Sits inside .panel-label, so it has to opt out of the label's uppercase +
+   letter-spacing to still read as a button. */
+.diag-copy {
+    flex: 0 0 auto;
+    padding: 5px 10px;
+    font-size: 11px;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+/* Two columns on desktop, one on narrow screens — the report is read top to
+   bottom either way, so the groups just reflow. */
+.diag-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 6px 18px;
+    font-size: 12px;
+}
+
+.diag-group { min-width: 0; }
+.diag-group + .diag-group { margin-top: 2px; }
+
+.diag-group-label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--text-label);
+    margin: 6px 0 4px;
+}
+
+.diag-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    padding: 2px 0;
+    color: var(--text-label);
+}
+.diag-row span:last-child {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+    text-align: right;
+    word-break: break-all;
+}
+.diag-row.warn span:last-child { color: var(--orange); }
+
+.diag-hint {
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--text-dim);
+    margin: 0 0 8px;
+}
+
+/* Thin usage bar under a memory row, with its own "NN% used" caption — the row
+   above reports free space, the bar fills with used, so it must say which. */
+.diag-barrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 2px 0 6px;
+}
+.diag-bar-pct {
+    flex: 0 0 auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-label);
+    white-space: nowrap;
+}
+.diag-bar-pct.warn { color: var(--orange); }
+
+.diag-bar {
+    flex: 1;
+    height: 4px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-input);
+    overflow: hidden;
+}
+.diag-bar > i {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    border-radius: var(--radius-sm);
+    transition: width .3s;
+}
+.diag-bar.warn > i { background: var(--orange); }
+
+/* Only shown when the browser refuses execCommand('copy') — then the report
+   stays on the page, selected, so it can still be copied by hand. */
+.diag-fallback {
+    width: 100%;
+    height: 150px;
+    margin-top: 10px;
+    padding: 8px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--bg-input);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    resize: vertical;
+}
+
+/* ════════════════════════════════════════════════
    Settings tabs (settings.html)
    ════════════════════════════════════════════════ */
 .tab-nav {

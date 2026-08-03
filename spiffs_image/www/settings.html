@@ -825,6 +825,22 @@
          System — firmware update, web UI files, backup & restore
     ══════════════════════════════════════════ -->
     <section class="tab-pane" id="tab-system" data-tab="system">
+        <div class="panel">
+            <div class="panel-label panel-label--row">
+                <span>🩺 Diagnostics</span>
+                <button type="button" id="diag_copy_btn" class="tool-btn diag-copy"
+                        onclick="copyDiagReport()">📋 Copy report</button>
+            </div>
+            <div class="field-hint">
+                Live device health, refreshed every 2 s while this tab is open — the same
+                snapshot as <strong>Settings → System → Diagnostics</strong> on the device.
+                <strong>Copy report</strong> puts it on the clipboard as plain text, ready to
+                paste into a bug report.
+            </div>
+            <div id="diag_body" class="diag-body">Loading…</div>
+            <div id="diag_status" class="save-status"></div>
+        </div>
+
         <div class="panel ota-panel">
             <label class="field-label">⬆️ Firmware update (OTA)</label>
             <div class="ota-version-row">
