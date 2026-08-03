@@ -471,6 +471,54 @@ the stored section (even when the screen was inheriting the global
 default), so loading the preset later re-applies both the layout and its
 wallpaper regardless of what the global default is by then.
 
+## End-to-end: what is stored where
+
+Three independent stores are involved, and confusing them is the usual source of
+"why did my wallpaper not come back". Nothing here holds pixels except PSRAM.
+
+| Store | Holds | Written by |
+|---|---|---|
+| `/config/settings.json` | slot URLs (`display.wallpaper_urls`), fetch mode/time, `wallpaper_dim`, the global SD wallpaper | `POST /api/settings` |
+| `/config/ui_profile.json` | the per-screen **pointer** (`"net3"`, an SD path, `""`, `"none"`) plus the whole layout | `POST /api/ui/profile/<section>` |
+| `/sdcard/wallpapers/layouts/<WxH>/…json` | a layout preset bound to one wallpaper **file** | the Presets tab's Save |
+
+**An internet wallpaper.** Picking a URL writes `wallpaper_urls[n]` to
+settings.json. About three seconds after the link comes up, the boot batch
+downloads and decodes it into PSRAM slot `n`. Assigning it to a screen writes
+`"net<n>"` into that screen's `*_wallpaper` field in ui_profile.json.
+`ui_background_apply()` then resolves the string to a slot and paints from
+PSRAM; a non-zero `wallpaper_dim` builds one dimmed copy, shared by all slots.
+Across a reboot the two files survive and the download repeats — the image
+itself never persists.
+
+**An SD wallpaper.** Picking a file writes its full path into the same
+`*_wallpaper` field. On apply, an explicit path short-circuits the internet tier
+entirely — the slot is not even consulted for that screen — and the `.bin` is
+read from the card once into the 8-entry PSRAM cache, with the dim baked in at
+load time (no extra buffer).
+
+**An SD wallpaper that has a preset.** Same as above plus one browser-side step:
+`selectWallpaper()` calls `offerPresetForWallpaper()`, which derives the preset
+path from the wallpaper's own path, reads it from SD, checks the `w`/`h` stamp
+and that the file carries the active section, then either auto-loads it (when
+the auto-load checkbox is ticked) or asks. The firmware knows nothing about
+presets: what reaches the device is an ordinary section POST.
+
+**Where per-wallpaper settings are read.** Exactly one place —
+`offerPresetForWallpaper()` in `layout.js`, reached only from
+`selectWallpaper()`, i.e. only after choosing an SD file.
+
+**Save on a preset while a screen shows an internet wallpaper** does nothing but
+report *"Select a wallpaper first — presets are stored per wallpaper."*
+`effectiveWallpaperPath()` returns an empty string for `net0`..`net9` (there is
+no file), so `presetPath()` is empty and `savePreset()` returns at its first
+check; symmetrically, switching a screen to a slot never offers a preset. Two
+reasons, both structural: presets are **keyed by file path**, which an internet
+wallpaper does not have, and they **live on the SD card**, which the users these
+slots exist for do not have. Supporting them would mean keying by slot URL (the
+only identifier that survives a reboot) and moving the files to the `config`
+partition.
+
 ## Limits
 
 - Maximum JSON size: 16 KB in `ui_profile_load_from_file()`, 4 KB in
