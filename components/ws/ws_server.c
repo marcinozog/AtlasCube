@@ -98,7 +98,11 @@ static esp_err_t ws_handler(httpd_req_t *req)
         }
 
         if (!added) {
-            ESP_LOGW("WS", "No free slot for client %d", fd);
+            // Staying connected without a slot is worse than not connecting: the
+            // client never receives a broadcast and looks hung. Fail the
+            // handshake so httpd closes the socket and the client retries.
+            ESP_LOGW(TAG, "No free slot for client %d — refusing", fd);
+            return ESP_FAIL;
         }
 
         // send initial state

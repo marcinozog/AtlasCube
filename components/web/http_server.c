@@ -70,6 +70,21 @@
 
 extern void ws_set_server(httpd_handle_t server);
 
+// Kept so /api/diag can report how much of the socket table is in use — the
+// pool is small (max_open_sockets) and a leaking client shows up here first.
+static httpd_handle_t s_server = NULL;
+
+// How many of max_open_sockets are currently taken (-1 before the server runs).
+#define HTTPD_MAX_OPEN_SOCKETS 7
+static int http_open_sockets(void)
+{
+    if (!s_server) return -1;
+    size_t fds = HTTPD_MAX_OPEN_SOCKETS;
+    int client_fds[HTTPD_MAX_OPEN_SOCKETS];
+    if (httpd_get_client_list(s_server, &fds, client_fds) != ESP_OK) return -1;
+    return (int)fds;
+}
+
 static esp_err_t api_weather_get_handler(httpd_req_t *req);
 static esp_err_t api_weather_post_handler(httpd_req_t *req);
 static esp_err_t read_body(httpd_req_t *req, char **out_buf, int max_len);
@@ -817,6 +832,11 @@ static esp_err_t api_diag_handler(httpd_req_t *req)
     cJSON_AddStringToObject(net, "ip",        d.ip);
     cJSON_AddNumberToObject(net, "rssi",      d.rssi);
     cJSON_AddStringToObject(net, "mac",       d.mac);
+    // HTTP socket table usage — the pool is small and shared by the web UI, the
+    // WebSocket and the Android app, so "sockets at max" is the signature of a
+    // client leaking connections (and of the WS refusing to connect).
+    cJSON_AddNumberToObject(net, "sockets",     http_open_sockets());
+    cJSON_AddNumberToObject(net, "sockets_max", HTTPD_MAX_OPEN_SOCKETS);
 
     cJSON *sd = cJSON_AddObjectToObject(json, "sd");
     cJSON_AddBoolToObject  (sd, "mounted", d.sd_mounted);
@@ -3758,10 +3778,24 @@ void http_server_start(void)
     config.stack_size        = 8192;
     // max_open_sockets: each lwIP socket uses ~2KB internal RAM for buffers
     // TCP + control. On ESP32 with tight internal heap (radio TLS, WiFi, LVGL)
-    // 13 sockets caused the TLS audio stream to drop on page open.
-    // 7 is plenty: the browser opens 2-4 parallel connections,
-    // plus WS and possibly a second tab.
-    config.max_open_sockets  = 7;
+    // 13 sockets caused the TLS audio stream to drop on page open. 7 is the
+    // ceiling that budget allows — it is NOT generous (see lru_purge below),
+    // so the pool has to be able to reclaim itself rather than grow.
+    config.max_open_sockets  = HTTPD_MAX_OPEN_SOCKETS;
+    // Without this the socket table is a one-way street: a browser leaves 4-6
+    // idle keep-alive connections behind after loading a page (recv_wait_timeout
+    // never fires on them — SO_RCVTIMEO only arms once data arrives), and once
+    // all 7 slots are taken httpd accepts and instantly drops every new
+    // connection, WS handshakes included, with no way back. LRU purge evicts the
+    // longest-idle session instead; clients reconnect, the server never wedges.
+    config.lru_purge_enable  = true;
+    // TCP keep-alive so a phone that fell asleep or left the network stops
+    // holding a slot until the next write happens to fail. 10 s idle, then 5
+    // probes 5 s apart — a dead peer is reclaimed in ~35 s.
+    config.keep_alive_enable   = true;
+    config.keep_alive_idle     = 10;
+    config.keep_alive_interval = 5;
+    config.keep_alive_count    = 5;
     config.linger_timeout    = 0;         // ← release sockets immediately after close
     config.recv_wait_timeout = 3;         // ← don't wait forever for data (seconds)
     config.send_wait_timeout = 3;         // ← don't wait forever for send
@@ -3772,6 +3806,7 @@ void http_server_start(void)
         ESP_LOGE("HTTP", "Failed to start server");
         return;
     }
+    s_server = server;
 
     ws_set_server(server);
     ws_register(server);

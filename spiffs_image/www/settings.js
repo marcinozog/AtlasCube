@@ -2060,6 +2060,11 @@ function renderDiag(d) {
     diagRow(sys, 'WiFi', d.net.connected ? (d.net.ssid || '(hidden)') + '  ' + d.net.rssi + ' dBm'
                                          : 'not connected', !d.net.connected);
     diagRow(sys, 'IP',   d.net.ip || '—');
+    // Older firmware has no socket counters — the row is skipped rather than
+    // showing "-1 / undefined".
+    if (d.net.sockets >= 0 && d.net.sockets_max)
+        diagRow(sys, 'HTTP sockets', d.net.sockets + ' / ' + d.net.sockets_max,
+                d.net.sockets >= d.net.sockets_max);
     diagRow(sys, 'SD',   d.sd.mounted
                             ? (d.sd.total ? diagSize(d.sd.free) + ' free / ' + diagSize(d.sd.total)
                                           : 'mounted')
@@ -2130,6 +2135,8 @@ function buildDiagReport(d) {
     L.push(pad('WiFi') + (d.net.connected ? d.net.ssid + ', ' + d.net.rssi + ' dBm, ' + d.net.ip
                                           : 'not connected'));
     L.push(pad('MAC') + d.net.mac);
+    if (d.net.sockets >= 0 && d.net.sockets_max)
+        L.push(pad('Sockets') + d.net.sockets + ' / ' + d.net.sockets_max + ' HTTP');
     L.push(pad('SD') + (d.sd.mounted
                           ? 'mounted, ' + diagSize(d.sd.free) + ' free / ' + diagSize(d.sd.total)
                           : 'not mounted'));
