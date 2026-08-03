@@ -34,6 +34,10 @@ extern "C" {
 // the BT channel and applies on release only: every BT volume change is an
 // AT command to the module over UART, so a live drag would flood the link.
 //
+// A sideways drag across the slider is the screen's exit swipe, not a volume
+// change: it navigates and the level returns to where it was when the finger
+// landed. Vertical (or along-axis) drags stay the user's volume gesture.
+//
 // vol_max (1..100) remaps the slider's full travel onto the effective output
 // range: full deflection = vol_max %, so a room-loud panel can use the whole
 // slider for fine control instead of the bottom third. The value stored in

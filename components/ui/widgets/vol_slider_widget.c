@@ -4,6 +4,7 @@
 #include "audio_engine.h"
 #include "theme.h"
 #include "lv_bin_image.h"
+#include "ui_swipe.h"
 
 static lv_obj_t       *s_slider    = NULL;
 static bool            s_bt        = false;
@@ -68,6 +69,39 @@ static void value_changed_cb(lv_event_t *e)
     if (s_bt) return;   // BT applies on release only — see header
     lv_obj_t *sl = lv_event_get_target(e);
     audio_engine_set_volume(travel_to_vol((int)lv_slider_get_value(sl)));
+}
+
+/* ── exit swipe over the slider ─────────────────────────────────────────── */
+
+/* The slider keeps LVGL's gesture switched off (see create), so a sideways drag
+   across it would only move the volume and never leave the screen — and an LVGL
+   slider jumps to the press point, so merely crossing it during a screen swipe
+   already retargets the level. ui_swipe recognises the swipe by distance
+   instead. The slider goes back to the value it had when the finger landed, and
+   no flash write happens, because LVGL turns the swallowed press into
+   LV_EVENT_PRESS_LOST and settings_set_volume() hangs off LV_EVENT_RELEASED.
+
+   A horizontal slider is left alone: there the sideways drag IS the volume
+   gesture, so the screen swipe has to give way to it. */
+static int s_press_travel = 0;
+
+static void press_cb(lv_event_t *e)
+{
+    if (!s_vertical) return;
+    s_press_travel = (int)lv_slider_get_value(lv_event_get_target(e));
+    ui_swipe_begin();
+}
+
+static void pressing_cb(lv_event_t *e)
+{
+    if (!s_vertical) return;
+    if (!ui_swipe_check()) return;
+
+    lv_slider_set_value(lv_event_get_target(e), s_press_travel, LV_ANIM_OFF);
+    position_knob();
+    // The main channel follows the drag live, so the stray level has to be
+    // undone here; BT only applies on release, which the swipe never reaches.
+    if (!s_bt) audio_engine_set_volume(travel_to_vol(s_press_travel));
 }
 
 static void released_cb(lv_event_t *e)
@@ -148,10 +182,13 @@ void vol_slider_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
     lv_obj_add_flag(s_slider, LV_OBJ_FLAG_PRESS_LOCK);
     // A drag on the slider must not double as a screen swipe: gestures bubble to
     // the screen-level handler (ui_manager) by default, so a vertical drag would
-    // also fire swipe up/down navigation. Stop the bubble at the slider.
+    // also fire swipe up/down navigation. Stop the bubble at the slider — the
+    // sideways screen swipe comes back via ui_swipe (see press_cb/pressing_cb).
     lv_obj_remove_flag(s_slider, LV_OBJ_FLAG_GESTURE_BUBBLE);
     lv_obj_set_ext_click_area(s_slider, 8);   // thin tracks stay grabbable
     lv_obj_add_event_cb(s_slider, value_changed_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_obj_add_event_cb(s_slider, press_cb, LV_EVENT_PRESSED, NULL);
+    lv_obj_add_event_cb(s_slider, pressing_cb, LV_EVENT_PRESSING, NULL);
     lv_obj_add_event_cb(s_slider, released_cb, LV_EVENT_RELEASED, NULL);
 
     apply_colors();
