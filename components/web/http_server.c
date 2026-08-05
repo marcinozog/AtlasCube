@@ -798,8 +798,9 @@ static esp_err_t api_state_get_handler(httpd_req_t *req)
 // GET /api/diag  — the same snapshot the on-device Diagnostics screen renders
 // (Settings → System → Diagnostics), so a remote user can paste numbers into a
 // bug report instead of photographing the panel. Read-only; adds nothing the
-// screen doesn't already show except the www stamps, which live in this
-// component (the shared collector stays free of web/UI dependencies).
+// screen doesn't already show except the www stamps and the MQTT link state,
+// whose sources live on this side of the fence (the shared collector stays free
+// of web/UI dependencies, and the device shows MQTT on its own screen).
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t api_diag_handler(httpd_req_t *req)
 {
@@ -862,6 +863,19 @@ static esp_err_t api_diag_handler(httpd_req_t *req)
     // client leaking connections (and of the WS refusing to connect).
     cJSON_AddNumberToObject(net, "sockets",     http_open_sockets());
     cJSON_AddNumberToObject(net, "sockets_max", HTTPD_MAX_OPEN_SOCKETS);
+
+    // Broker link state. Web-only, like the www stamps above: the device shows
+    // the same thing on its own MQTT screen, so the shared collector stays free
+    // of the dependency. Config-only fields (user, client id) belong to
+    // /api/mqtt — here the question is just "is the link up, and to whom".
+#if CONFIG_MQTT_ENABLE
+    const mqtt_config_t *mc = mqtt_config_get();
+    cJSON *mq = cJSON_AddObjectToObject(json, "mqtt");
+    cJSON_AddBoolToObject  (mq, "enabled",   mc->enabled);
+    cJSON_AddBoolToObject  (mq, "connected", mqtt_svc_is_connected());
+    cJSON_AddStringToObject(mq, "host",      mc->host);
+    cJSON_AddNumberToObject(mq, "port",      mc->port);
+#endif
 
     cJSON *sd = cJSON_AddObjectToObject(json, "sd");
     cJSON_AddBoolToObject  (sd, "mounted", d.sd_mounted);

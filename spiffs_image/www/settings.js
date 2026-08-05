@@ -2071,6 +2071,16 @@ function renderDiag(d) {
     if (d.net.sockets >= 0 && d.net.sockets_max)
         diagRow(sys, 'HTTP sockets', d.net.sockets + ' / ' + d.net.sockets_max,
                 d.net.sockets >= d.net.sockets_max);
+    // Missing group = firmware built without MQTT; the row is then meaningless.
+    // "Enabled but not connected" is the only state worth flagging — a broker
+    // that is off by choice is not a fault.
+    if (d.mqtt) {
+        const broker = (d.mqtt.host || '?') + ':' + (d.mqtt.port || 0);
+        diagRow(sys, 'MQTT',
+                !d.mqtt.enabled ? 'disabled'
+                                : (d.mqtt.connected ? 'connected — ' : 'not connected — ') + broker,
+                d.mqtt.enabled && !d.mqtt.connected);
+    }
     diagRow(sys, 'SD',   d.sd.mounted
                             ? (d.sd.total ? diagSize(d.sd.free) + ' free / ' + diagSize(d.sd.total)
                                           : 'mounted')
@@ -2092,6 +2102,9 @@ function diagNormalize(d) {
         net:      d.net      || {},
         sd:       d.sd       || {},
         cpu:      d.cpu      || {},
+        // Deliberately NOT defaulted to {}: absent means the firmware was built
+        // without MQTT, and both readers below key off that null to skip the row.
+        mqtt:     d.mqtt     || null,
         uptime_s: d.uptime_s || 0,
     };
 }
@@ -2145,6 +2158,10 @@ function buildDiagReport(d) {
     L.push(pad('MAC') + d.net.mac);
     if (d.net.sockets >= 0 && d.net.sockets_max)
         L.push(pad('Sockets') + d.net.sockets + ' / ' + d.net.sockets_max + ' HTTP');
+    if (d.mqtt)
+        L.push(pad('MQTT') + (!d.mqtt.enabled ? 'disabled'
+                              : (d.mqtt.connected ? 'connected, ' : 'not connected, ') +
+                                d.mqtt.host + ':' + d.mqtt.port));
     L.push(pad('SD') + (d.sd.mounted
                           ? 'mounted, ' + diagSize(d.sd.free) + ' free / ' + diagSize(d.sd.total)
                           : 'not mounted'));

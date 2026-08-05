@@ -298,8 +298,10 @@ Web   ok                        55K free of 388K
   SD free space (reported only when the card is already mounted — opening
   diagnostics never triggers the lazy mount)
 
-`GET /api/diag` returns the same snapshot as JSON, so a remote user can paste
-the numbers instead of photographing the panel. Both readers share
+`GET /api/diag` returns the same snapshot as JSON (plus the web-UI stamps and
+the MQTT broker link state, which the device shows on its own MQTT screen), so
+a remote user can paste the numbers instead of photographing the panel. Both
+readers share
 `components/diag`, which is why the screen and the endpoint can never
 disagree; each keeps its own CPU-sampling baseline, since the percentages
 cover the interval since that caller's previous read.
