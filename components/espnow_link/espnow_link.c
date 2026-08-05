@@ -24,6 +24,7 @@
 #include "audio_engine.h"
 #include "settings.h"
 #include "wifi_manager.h"
+#include "diag.h"           // the snapshot behind t:"diag", shared with /api/diag
 
 static const char *TAG = "ESPNOW";
 
@@ -31,7 +32,10 @@ static const char *TAG = "ESPNOW";
 #define NVS_KEY_PEER    "peer"
 
 #define RX_QUEUE_DEPTH  8
-#define RX_PAYLOAD_MAX  128     // pilot→radio frames are short plain commands
+// Pilot→radio frames are short plain commands. The longest is set_eq_10 with ten
+// two-digit negative gains, ~49 B — so this is the ceiling to raise first if the
+// settings the pilot writes ever stop fitting on one line.
+#define RX_PAYLOAD_MAX  128
 
 // media_command_execute_text() reaches settings_set_volume() → save_to_file(),
 // the same depth the 8192-byte httpd task already survives on the WS path.
@@ -461,6 +465,89 @@ static char *build_pong(void)
     return out;
 }
 
+/*
+ * The settings the pilot can edit, as a fixed reply rather than a queryable path.
+ *
+ * A path-addressed read would need the whole settings tree as cJSON to walk, and
+ * that tree only exists inside the /api/settings GET handler, built by hand. Not
+ * extracting it is a deliberate choice while the pilot edits three keys — see the
+ * note above the setters in handle_frame() for the line that changes it.
+ */
+static char *build_cfg(void)
+{
+    const app_settings_t *s = settings_get();
+
+    cJSON *r = cJSON_CreateObject();
+    if (!r) return NULL;
+
+    cJSON_AddStringToObject(r, "t",    "cfg");
+    cJSON_AddNumberToObject(r, "br",   s->display.brightness);
+    cJSON_AddBoolToObject  (r, "eqen", s->audio.eq_enabled);
+    cJSON_AddItemToObject  (r, "eq",   cJSON_CreateIntArray(s->audio.eq, 10));
+    cJSON_AddNumberToObject(r, "ch",   current_channel());
+
+    char *out = cJSON_PrintUnformatted(r);
+    cJSON_Delete(r);
+    return out;
+}
+
+/*
+ * The subset of diag_collect() a pilot has a screen for: firmware identity, the
+ * update flag, and the handful of numbers worth watching from across the room.
+ *
+ * Not the whole snapshot. /api/diag also carries the IDF version, the panel
+ * geometry, the flash size, the www staleness and the MQTT group — data for a bug
+ * report filed from a browser, none of which reads usefully on a 240 px panel.
+ * The full thing is also ~800 B of mostly variable-length strings, which is a bad
+ * bet against a 1400 B cap that truncates rather than fragments.
+ */
+static char *build_diag(void)
+{
+    diag_info_t d;
+    diag_collect(&d);
+
+    // Own baseline, exactly like the /api/diag handler keeps its own: per-core
+    // load is a delta since this state's previous call, so a pilot sharing the
+    // browser's reference point would consume it and both would read near zero.
+    static diag_cpu_state_t s_cpu;
+    int cpu0 = 0, cpu1 = 0;
+    diag_cpu_usage(&s_cpu, &cpu0, &cpu1);
+
+    cJSON *r = cJSON_CreateObject();
+    if (!r) return NULL;
+
+    cJSON_AddStringToObject(r, "t",    "diag");
+    cJSON_AddStringToObject(r, "ver",  d.fw_version);
+    cJSON_AddBoolToObject  (r, "upd",  d.update_available);
+    cJSON_AddStringToObject(r, "new",  d.update_latest);
+    cJSON_AddNumberToObject(r, "up",   d.uptime_s);
+
+    // Tenths of a degree, the unit diag_info_t already uses to stay float-free.
+    // Omitted rather than sent as a sentinel when the sensor never installed: the
+    // pilot renders a missing key as "—", and no negative value is safely out of
+    // range for a die temperature.
+    if (d.temp_valid) {
+        cJSON_AddNumberToObject(r, "t10", d.temp_c10);
+    }
+
+    cJSON_AddNumberToObject(r, "heap", (double)d.int_free);
+    cJSON_AddNumberToObject(r, "hmin", (double)d.int_min_free);
+    cJSON_AddStringToObject(r, "ssid", d.ssid);
+    cJSON_AddNumberToObject(r, "rssi", d.rssi);
+    cJSON_AddNumberToObject(r, "sd",   d.sd_mounted ? 1 : 0);
+
+    // Megabytes: the byte counts are uint64 and would spend a hundred characters
+    // of the frame on digits the pilot rounds away before it draws them.
+    cJSON_AddNumberToObject(r, "sdfree", (double)(d.sd_free / (1024 * 1024)));
+    cJSON_AddNumberToObject(r, "cpu0", cpu0);
+    cJSON_AddNumberToObject(r, "cpu1", cpu1);
+    cJSON_AddNumberToObject(r, "ch",   current_channel());
+
+    char *out = cJSON_PrintUnformatted(r);
+    cJSON_Delete(r);
+    return out;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Frame handling (worker task context)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -523,6 +610,14 @@ static void handle_frame(const rx_frame_t *f)
         reply(f->src, f->seq, build_sd(off, cnt));
         return;
     }
+    if (strcmp(cmd, "get_cfg") == 0) {
+        reply(f->src, f->seq, build_cfg());
+        return;
+    }
+    if (strcmp(cmd, "get_diag") == 0) {
+        reply(f->src, f->seq, build_diag());
+        return;
+    }
 
     // ── mutating commands: a repeated sequence means the pilot never saw our
     //    MAC ACK and retried something we already did. next/prev/volp are not
@@ -548,6 +643,66 @@ static void handle_frame(const rx_frame_t *f)
     }
     if (strncmp(cmd, "sd_play_index=", 14) == 0) {
         sd_play_index(atoi(cmd + 14));
+        return;
+    }
+
+    /*
+     * Settings. These call the setters directly instead of going through the JSON
+     * patch that POST /api/settings applies, and that is a decision with a limit
+     * written into it.
+     *
+     * That handler is 400 lines, and its sections trail side effects: flip,
+     * invert and bgr post UI_EVT_BG_CHANGED, a background change calls
+     * net_wallpaper_dismiss(), the NTP section reconfigures the time service and
+     * re-applies the dim schedule. Sharing it would mean lifting all of that into
+     * a component both transports can reach — a refactor of code that every radio
+     * runs, for a device most of them do not have.
+     *
+     * The three keys below are the ones with no such tail: bare setters, nothing
+     * to keep in step, nothing to drift. The moment the pilot wants one that does
+     * have a tail — display.flip, display.theme, anything under wallpaper or ntp
+     * — this block is the wrong place for it and that handler's body has to come
+     * out into a shared settings_apply_patch() first. Do not grow it past that.
+     *
+     * Absolute setters, so a duplicate would be harmless; they sit below the dedup
+     * anyway, because that is where anything that writes belongs.
+     */
+    if (strncmp(cmd, "set_brightness=", 15) == 0) {
+        int pct = atoi(cmd + 15);
+        // Ignored rather than clamped, the same choice vol=N makes in
+        // ws_protocol.md: an explicit setpoint the device silently rewrites is
+        // worse than one it refuses.
+        if (pct >= 0 && pct <= 100) {
+            settings_set_brightness(pct);
+        } else {
+            ESP_LOGW(TAG, "set_brightness=%d out of range — ignored", pct);
+        }
+        return;
+    }
+    if (strncmp(cmd, "set_eq_enabled=", 15) == 0) {
+        settings_set_eq_enabled(atoi(cmd + 15) != 0);
+        return;
+    }
+    if (strncmp(cmd, "set_eq_10=", 10) == 0) {
+        // Named after the WS command that does the same thing, because it is the
+        // same thing in a different encoding. Ten bands or none: settings_set_eq_10()
+        // takes the whole array, so a short list would silently zero the rest.
+        int         bands[10];
+        int         n = 0;
+        const char *p = cmd + 10;
+
+        while (n < 10 && *p) {
+            bands[n++] = atoi(p);
+            const char *comma = strchr(p, ',');
+            if (!comma) break;
+            p = comma + 1;
+        }
+
+        if (n == 10) {
+            settings_set_eq_10(bands);
+        } else {
+            ESP_LOGW(TAG, "set_eq_10: %d bands, need 10 — ignored", n);
+        }
         return;
     }
 

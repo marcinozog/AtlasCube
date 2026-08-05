@@ -12,4 +12,5 @@ idf_component_register(
         playlist
         network
         audio
+        diag                # diag_collect() for t:"diag" — same snapshot as /api/diag
 )

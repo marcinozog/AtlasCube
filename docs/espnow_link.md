@@ -22,10 +22,16 @@ once.
 The pilot is battery-powered and sleeps. That single fact drives every
 difference from the WS contract:
 
-- **It does not associate to send a command.** No DHCP, no 2–5 s connect on
-  every button press. It transmits raw ESP-NOW frames on a stored channel. The
-  AtlasCubeController does still join the AP, but only on demand and only for
-  the configuration screens — the control screen never leaves this link.
+- **It does not associate at all.** No DHCP, no 2–5 s connect on every button
+  press. It transmits raw ESP-NOW frames on a stored channel — and that now
+  covers its settings and diagnostics screens too, not just playback. The
+  AtlasCubeController joins the AP only when it is built to run the WS transport
+  instead of this link, which is a startup choice, not something a screen does.
+
+  > This used to say the pilot joined the AP on demand for the configuration
+  > screens, "which do not fit in a 1490 B frame". That was true of the whole
+  > settings tree and false of what a pilot actually edits: a handful of scalars
+  > and a ten-band array, which fit with room to spare. See `get_cfg` below.
 - **It cannot receive pushes.** The WS model ("device pushes full state on
   every change, there is no *give me the state* command") is unusable — the
   pilot is asleep when the state changes. This link is **pull**: the pilot asks,
@@ -70,8 +76,9 @@ radio may be on 6 or 11, and frames vanish without an error. The pilot instead:
    exchange.
 
 **When the pilot is associated.** A pilot that also runs a WiFi station — the
-AtlasCubeController joins the AP on demand, for the configuration screens that
-do not fit in a 1490 B frame — must skip step 2 while that association is up.
+AtlasCubeController does when it is built for the WS transport, and a
+differently-built pilot may for reasons of its own — must skip step 2 while that
+association is up.
 `esp_wifi_set_channel()` on an associated interface tears the association down.
 It is also unnecessary: both ends are then on the router's channel by
 definition. So the send path branches on association state, and step 2 applies
@@ -141,7 +148,10 @@ de-duplication.
 
 ### Pilot-only commands
 
-These have no WS equivalent because WS clients get everything pushed.
+The playback ones have no WS equivalent because WS clients get everything pushed.
+The settings and diagnostics ones do — `GET`/`POST /api/settings` and
+`GET /api/diag` — but those are REST, and a pilot that reached for them would
+have to associate. Same data, a transport that does not cost a DHCP lease.
 
 | Frame | Reply | Notes |
 |---|---|---|
@@ -151,8 +161,30 @@ These have no WS equivalent because WS clients get everything pushed.
 | `sd_open=N` | — | Descend into entry `N`. Ignored unless `N` is a folder. |
 | `sd_up` | — | One level up; no-op at the browse root. |
 | `sd_play_index=N` | — | Play entry `N`. Ignored unless `N` is a track. |
+| `get_cfg` | `t:"cfg"` | The settings a pilot may edit, all of them, in one reply. |
+| `set_brightness=N` | — | Panel brightness, 0…100. Out of range is **ignored, not clamped** — as with `vol=N`. |
+| `set_eq_enabled=0\|1` | — | Equaliser on/off. |
+| `set_eq_10=G0,…,G9` | — | Ten band gains in dB. **Ten or none** — a short list is ignored, not zero-padded. Same name and same rule as the WS `set_eq_10`, different encoding. |
+| `get_diag` | `t:"diag"` | Health snapshot, read-only. |
 | `ping` | `t:"pong"` | Link and channel check; cheapest way to confirm the stored channel is still right. |
 | `pair` | `t:"pair"` | Broadcast only, honoured only inside the pairing window. |
+
+### Why the settings are three commands and not one patch
+
+`POST /api/settings` takes a partial JSON patch, and mirroring that here was the
+obvious design. It is not the one implemented, for a reason worth writing down:
+that handler is 400 lines whose sections trail side effects — `flip`, `invert`
+and `bgr` post `UI_EVT_BG_CHANGED`, a background change calls
+`net_wallpaper_dismiss()`, the NTP section reconfigures the time service and
+re-applies the dim schedule. Feeding a pilot's patch into it means lifting all of
+that into a component both transports can reach: a refactor of code every radio
+runs, for a peripheral most of them will never have.
+
+The three keys above are the ones with no such tail — bare setters, nothing to
+keep in step. **That is also the limit.** A pilot that wants `display.flip`,
+`display.theme` or anything under `wallpaper`/`ntp` is asking for a setting whose
+meaning lives in that handler, and the answer then is to extract
+`settings_apply_patch()` first, not to add a fourth `set_*` here.
 
 ### Browsing the card by index
 
@@ -252,6 +284,52 @@ failure — but it is why a pilot should not treat a single unanswered `get_sd` 
 > the wrong track plays. The window is seconds and needs someone browsing the
 > card from two places at once; if that stops being hypothetical, the answer is a
 > folder token on the command rather than a second scan context.
+
+### `t:"cfg"`
+
+```json
+{"t":"cfg","br":75,"eqen":true,"eq":[0,0,2,0,0,0,0,1,3,3],"ch":6}
+```
+
+| Key | Meaning |
+|---|---|
+| `br` | `display.brightness`, 0…100 |
+| `eqen` | `audio.eq_enabled` |
+| `eq` | `audio.eq` — ten band gains in dB, always all ten |
+
+Everything the pilot can write, in one reply, with no way to ask for a subset.
+There is no path-addressed read here and that is not an oversight: walking paths
+needs the settings tree as cJSON, and the only code that builds that tree is the
+`/api/settings` GET handler, by hand. Three keys did not justify extracting it.
+
+### `t:"diag"`
+
+```json
+{"t":"diag","ver":"0.45.0","upd":false,"new":"","up":91240,"t10":452,
+ "heap":118400,"hmin":96112,"ssid":"dom","rssi":-58,"sd":1,"sdfree":29123,
+ "cpu0":12,"cpu1":8,"ch":6}
+```
+
+| Key | Meaning |
+|---|---|
+| `ver` | running firmware, `git describe` |
+| `upd`, `new` | a newer release was seen, and its tag (`""` when none) |
+| `up` | uptime, seconds |
+| `t10` | die temperature in **tenths** of °C — `452` is 45.2. **Absent** when the sensor never installed; there is no sentinel to test for |
+| `heap`, `hmin` | internal heap free now, and the low-water mark since boot, bytes |
+| `ssid`, `rssi` | the radio's association; `rssi` is 0 when unassociated |
+| `sd`, `sdfree` | card mounted, and its free space in **MB** (not bytes) |
+| `cpu0`, `cpu1` | per-core load %, **since this link's previous `get_diag`** |
+
+A trimmed subset of `GET /api/diag`. What is missing — IDF version, panel
+geometry, flash size, www staleness, the MQTT group — is bug-report material read
+from a browser, and the full snapshot is ~800 B of mostly variable-length strings,
+which is a poor bet against a cap that truncates rather than fragments.
+
+**`cpu0`/`cpu1` are deltas and the link keeps its own baseline.** `diag.h` requires
+one `diag_cpu_state_t` per caller; sharing the web handler's would have the pilot
+and the browser consuming each other's interval, and both would read near zero.
+The first `get_diag` after boot therefore reports `0,0` — it only sets the mark.
 
 ### `t:"pong"` / `t:"pair"`
 
