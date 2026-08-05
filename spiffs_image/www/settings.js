@@ -2055,6 +2055,12 @@ function renderDiag(d) {
     diagRow(hw, 'Flash', diagKB(d.hw.flash_size));
     diagRow(hw, 'Panel', d.hw.panel_w + '×' + d.hw.panel_h);
     diagRow(hw, 'MAC',   d.net.mac || '?');
+    // Absent on firmware without the sensor (or where it failed to install).
+    if (typeof d.hw.temp_c === 'number') {
+        diagRow(hw, 'Temperature', d.hw.temp_c.toFixed(1) + ' °C', d.hw.temp_c >= 80);
+        diagHint(hw, 'Chip die, not the room: it sits 15–25 °C above ambient while playing. ' +
+                     'Watch the trend, not the number.');
+    }
 
     const sys = diagGroup(body, 'Network & load');
     diagRow(sys, 'WiFi', d.net.connected ? (d.net.ssid || '(hidden)') + '  ' + d.net.rssi + ' dBm'
@@ -2132,6 +2138,8 @@ function buildDiagReport(d) {
     L.push(pad('Chip') + d.hw.chip + ' rev' + d.hw.revision + ', ' + d.hw.cores +
            ' cores, flash ' + diagKB(d.hw.flash_size));
     L.push(pad('Panel') + d.hw.panel_w + 'x' + d.hw.panel_h);
+    if (typeof d.hw.temp_c === 'number')
+        L.push(pad('Temp') + d.hw.temp_c.toFixed(1) + ' C (die)');
     L.push(pad('WiFi') + (d.net.connected ? d.net.ssid + ', ' + d.net.rssi + ' dBm, ' + d.net.ip
                                           : 'not connected'));
     L.push(pad('MAC') + d.net.mac);

@@ -845,6 +845,9 @@ static esp_err_t api_diag_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(hw, "revision",   d.chip_rev);
     cJSON_AddNumberToObject(hw, "cores",      d.chip_cores);
     cJSON_AddNumberToObject(hw, "flash_size", (double)d.flash_size);
+    // Die temperature in °C, one decimal. Key omitted when the sensor never
+    // installed — the page skips the row rather than printing a fake zero.
+    if (d.temp_valid) cJSON_AddNumberToObject(hw, "temp_c", d.temp_c10 / 10.0);
     cJSON_AddNumberToObject(hw, "panel_w",    DISPLAY_WIDTH);
     cJSON_AddNumberToObject(hw, "panel_h",    DISPLAY_HEIGHT);
 

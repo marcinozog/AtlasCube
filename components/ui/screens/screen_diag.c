@@ -9,6 +9,7 @@
 #include "esp_log.h"
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static const char *TAG = "SCR_DIAG";
@@ -102,6 +103,13 @@ static void refresh(void)
     p = append(buf, sizeof(buf), p, "MAC   %s\n", d.mac);
 
     p = append(buf, sizeof(buf), p, "\nChip  %s rev%d x%d\n", d.chip, d.chip_rev, d.chip_cores);
+    // Die temperature, one decimal, sign handled by hand so -0.4 doesn't print
+    // as "0.4". No "°": the montserrat_*_pl fonts carry no such glyph.
+    if (d.temp_valid) {
+        int t = d.temp_c10;
+        p = append(buf, sizeof(buf), p, "Temp  %s%d.%d C\n",
+                   t < 0 ? "-" : "", abs(t) / 10, abs(t) % 10);
+    }
     p = append(buf, sizeof(buf), p, "Flash %uK\n", kb(d.flash_size));
     p = append(buf, sizeof(buf), p, "Panel %dx%d\n", DISPLAY_WIDTH, DISPLAY_HEIGHT);
     if (d.sd_mounted && d.sd_total)

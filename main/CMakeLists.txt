@@ -20,6 +20,7 @@ idf_component_register(
         sdcard
         board_pins
         updater
+        diag
         net_wallpaper
         weather
 )

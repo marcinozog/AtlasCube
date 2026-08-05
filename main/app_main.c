@@ -30,6 +30,7 @@
 #include "mqtt_config.h"
 #include "heap_report.h"
 #include "board_pins.h"
+#include "diag.h"
 
 static const char *TAG = "MAIN";
 
@@ -43,6 +44,7 @@ void app_main(void)
              app_desc->version, app_desc->date, app_desc->time, app_desc->idf_ver);
 
     nvs_flash_init();
+    diag_init();         // die temperature sensor — must own it before any reader polls
     board_pins_load();   // resolve runtime pin map (defaults + NVS overrides) before any peripheral init
     init_fs();
     // SD is mounted lazily on first use (sdcard_init from the SD player / file

@@ -10,10 +10,19 @@
 #include "esp_timer.h"
 #include "esp_vfs_fat.h"
 #include "esp_wifi.h"
+#include "esp_log.h"
+#include "driver/temperature_sensor.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
+
+static const char *TAG = "DIAG";
+
+// NULL until diag_init() succeeds; every read is guarded, so a board whose
+// sensor refuses to install just reports no temperature.
+static temperature_sensor_handle_t s_tsens = NULL;
 
 static const char *chip_model_name(esp_chip_model_t m)
 {
@@ -26,6 +35,24 @@ static const char *chip_model_name(esp_chip_model_t m)
         case CHIP_ESP32H2: return "ESP32-H2";
         default:           return "unknown";
     }
+}
+
+void diag_init(void)
+{
+    if (s_tsens) return;
+
+    // -10..80 °C is the range with the tightest error (±1 °C). A die that ever
+    // leaves it reports a clamped value, which is still the right message.
+    temperature_sensor_config_t cfg = TEMPERATURE_SENSOR_CONFIG_DEFAULT(-10, 80);
+    esp_err_t err = temperature_sensor_install(&cfg, &s_tsens);
+    if (err == ESP_OK) err = temperature_sensor_enable(s_tsens);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "temperature sensor unavailable: %s", esp_err_to_name(err));
+        if (s_tsens) { temperature_sensor_uninstall(s_tsens); s_tsens = NULL; }
+        return;
+    }
+    // Left enabled for the lifetime of the device: the sensor draws next to
+    // nothing and enable/disable around every 1 Hz read would only add jitter.
 }
 
 void diag_collect(diag_info_t *out)
@@ -60,6 +87,11 @@ void diag_collect(diag_info_t *out)
     out->chip_cores = chip.cores;
     uint32_t flash = 0;
     if (esp_flash_get_size(NULL, &flash) == ESP_OK) out->flash_size = flash;
+    float tc = 0.0f;
+    if (s_tsens && temperature_sensor_get_celsius(s_tsens, &tc) == ESP_OK) {
+        out->temp_valid = true;
+        out->temp_c10   = (int)lroundf(tc * 10.0f);
+    }
 
     /* ── link ── */
     wifi_ap_record_t ap;

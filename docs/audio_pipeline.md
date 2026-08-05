@@ -288,6 +288,10 @@ Web   ok                        55K free of 388K
   runtime counters via `uxTaskGetSystemState` (requires
   `CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y` and
   `CONFIG_FREERTOS_USE_TRACE_FACILITY=y`)
+- **Temp N.N C** — die temperature from the chip's built-in sensor (installed
+  once by `diag_init()` in `app_main`, then left enabled). It reads 15–25 °C
+  above ambient with the radio playing, so treat it as a trend rather than a
+  room reading; the row is absent if the sensor failed to install
 - **WiFi** — SSID and signal in dBm.
   Reference: -50 great, -65 marginal for 256 kbps, below -75 expect drops
 - plus IDF/variant/web-UI stamps, chip + flash + panel size, MAC, uptime and

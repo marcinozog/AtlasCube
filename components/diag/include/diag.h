@@ -33,6 +33,13 @@ typedef struct {
     char     chip[16];
     int      chip_rev, chip_cores;
     uint32_t flash_size;
+    // Die temperature in tenths of a degree Celsius — the whole struct stays
+    // float-free because LVGL's sprintf has no %f. Reads well above ambient
+    // (typically +15..25 °C with the radio playing), so it is a trend to watch,
+    // not a room thermometer. False when diag_init() never ran or the sensor
+    // failed to install.
+    bool     temp_valid;
+    int      temp_c10;
 
     /* ── link ── */
     bool     wifi_connected;
@@ -49,6 +56,13 @@ typedef struct {
 
     uint32_t uptime_s;
 } diag_info_t;
+
+// Installs and enables the chip's temperature sensor. Call once from app_main:
+// diag_collect() runs from both the Diagnostics screen's LVGL timer and the
+// /api/diag handler, so a lazy first-use install would be a race between tasks.
+// Everything else in the snapshot works without it — a device that skips this
+// simply reports temp_valid = false.
+void diag_init(void);
 
 // Fill `out` with a fresh snapshot. Safe from any task.
 void diag_collect(diag_info_t *out);

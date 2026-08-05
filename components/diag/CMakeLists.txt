@@ -4,6 +4,7 @@ idf_component_register(
     REQUIRES
         esp_app_format      # esp_app_get_description() — version / build stamp
         esp_hw_support      # esp_chip_info, esp_read_mac
+        esp_driver_tsens    # built-in die temperature sensor
         spi_flash           # esp_flash_get_size
         esp_timer           # uptime
         esp_wifi            # associated AP record (SSID + RSSI)
