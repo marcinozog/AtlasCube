@@ -185,6 +185,15 @@
 #define RADIO_VOL_STEP 3
 
 
+// ===== HARDWARE PILOT (ESP-NOW) =====
+// The control link for AtlasCubeController — see docs/espnow_link.md.
+// Comment out to build a firmware with no ESP-NOW link at all: the component
+// compiles down to stubs, /api/espnow answers "unsupported" and the web UI hides
+// its Pilot section. Leaving it on costs nothing on a radio that never pairs one
+// — the link only starts once a pilot is stored or the pairing window opens.
+#define HAS_ESPNOW_PILOT
+
+
 // ===== BLUETOOTH =====
 
 #define BT_MOULE_PIN            18

@@ -3646,12 +3646,16 @@ static esp_err_t api_restart_handler(httpd_req_t *req)
 // ─────────────────────────────────────────────────────────────────────────────
 // ESP-NOW pilot link — see docs/espnow_link.md
 //
-// GET  /api/espnow      — pairing state, peer MAC, seconds left in the window
-// POST /api/espnow/pair — opens the pairing window
+// GET  /api/espnow      — pairing state, peer MAC, window, and link activity
+// POST /api/espnow/pair — opens the pairing window (and starts the link)
 //
 // The pilot never touches these; it pairs over ESP-NOW. This is the human-facing
 // trigger that opens the window, so an unpaired pilot in range cannot attach
 // itself unattended.
+//
+// Both stay registered in a build without HAS_ESPNOW_PILOT: GET reports
+// supported:false so the one shared www bundle can hide its Pilot section, and
+// POST answers 501.
 // ─────────────────────────────────────────────────────────────────────────────
 #define ESPNOW_PAIR_WINDOW_S 60
 
@@ -3660,16 +3664,30 @@ static esp_err_t api_espnow_get_handler(httpd_req_t *req)
     cJSON *root = cJSON_CreateObject();
     if (!root) return send_json_or_500(req, NULL);
 
-    uint8_t mac[ESPNOW_MAC_LEN];
-    bool paired = espnow_link_get_peer(mac);
+    espnow_link_status_t st;
+    espnow_link_get_status(&st);
 
-    cJSON_AddBoolToObject(root, "paired", paired);
-    if (paired) {
+    // Always registered, even in a build without the link: www is one bundle for
+    // every variant, so the page has to learn at runtime that there is no pilot
+    // support here and hide its section. Same shape as OTA answering an 8 MB board.
+    cJSON_AddBoolToObject(root, "supported", st.supported);
+    cJSON_AddBoolToObject(root, "paired",    st.paired);
+    if (st.paired) {
         char mac_str[18];
-        snprintf(mac_str, sizeof(mac_str), MACSTR, MAC2STR(mac));
+        snprintf(mac_str, sizeof(mac_str), MACSTR, MAC2STR(st.mac));
         cJSON_AddStringToObject(root, "peer", mac_str);
     }
-    cJSON_AddNumberToObject(root, "window_s", espnow_link_pair_window_left());
+    cJSON_AddNumberToObject(root, "window_s", st.window_s);
+
+    // Activity. last_seen is an age, not a verdict: the pilot sleeps between
+    // presses, so there is no "connected" to report — see espnow_link.h.
+    if (st.last_seen_s != ESPNOW_NEVER)
+        cJSON_AddNumberToObject(root, "last_seen_s", st.last_seen_s);
+    cJSON_AddNumberToObject(root, "rssi",      st.rssi);
+    cJSON_AddNumberToObject(root, "rx_frames", st.rx_frames);
+    cJSON_AddNumberToObject(root, "tx_ok",     st.tx_ok);
+    cJSON_AddNumberToObject(root, "tx_fail",   st.tx_fail);
+    cJSON_AddStringToObject(root, "last_cmd",  st.last_cmd);
 
     char *str = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
@@ -3679,6 +3697,17 @@ static esp_err_t api_espnow_get_handler(httpd_req_t *req)
 
 static esp_err_t api_espnow_pair_handler(httpd_req_t *req)
 {
+    espnow_link_status_t st;
+    espnow_link_get_status(&st);
+    if (!st.supported) {
+        httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+        httpd_resp_send_err(req, HTTPD_501_METHOD_NOT_IMPLEMENTED,
+                            "This firmware was built without the ESP-NOW pilot link");
+        return ESP_FAIL;
+    }
+
+    // Opening the window is also what starts the link on a radio that has never
+    // paired a pilot — espnow_link_init() leaves it down until then.
     espnow_link_pair_window_open(ESPNOW_PAIR_WINDOW_S);
 
     cJSON *root = cJSON_CreateObject();

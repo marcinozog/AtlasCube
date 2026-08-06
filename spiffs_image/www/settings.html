@@ -937,17 +937,29 @@
             <div id="cfg_import_status" class="save-status"></div>
         </div>
 
-        <div class="panel">
+        <div class="panel" id="espnow_panel">
             <label class="field-label">🎛️ Hardware pilot (ESP-NOW)</label>
             <div class="ota-version-row">
                 <span>Paired pilot</span>
                 <code id="espnow_peer">…</code>
+            </div>
+            <div class="ota-version-row">
+                <span>Last contact</span>
+                <code id="espnow_seen">…</code>
+            </div>
+            <div class="ota-version-row" id="espnow_link_row" style="display:none">
+                <span>Link</span>
+                <code id="espnow_link">…</code>
             </div>
             <div class="field-hint">
                 The pilot talks to the radio over ESP-NOW, not Wi-Fi — this button only
                 opens a 60-second window during which the radio accepts a pairing
                 request. Press it, then start pairing from the pilot's own menu.
                 Pairing again replaces the stored pilot.
+                <br>
+                The pilot sleeps between button presses, so “last contact” is the
+                age of the last frame it sent — hours of silence is a healthy pilot
+                on battery, not a broken link.
             </div>
             <button id="espnow_pair_btn" onclick="pairPilot()">🔗 Open pairing window</button>
             <div id="espnow_status" class="save-status"></div>

@@ -73,8 +73,10 @@ function selectTab(name, sub) {
         updateTabHash(name);
     }
 
-    // Diagnostics polls only while its own tab is visible — see startDiagPoll().
-    if (name === 'system') startDiagPoll(); else stopDiagPoll();
+    // Diagnostics and the pilot's link both live on the System tab and both poll
+    // only while it is on screen — see startDiagPoll().
+    if (name === 'system') { startDiagPoll(); startEspnowPoll(); }
+    else                   { stopDiagPoll();  stopEspnowPoll();  }
 }
 
 function tabFromHash() {
@@ -1884,16 +1886,77 @@ async function importSettings() {
 // The pilot pairs over ESP-NOW; this only opens the radio's 60 s accept window.
 // See docs/espnow_link.md.
 
+const ESPNOW_POLL_MS = 5000;
+let g_espnowTimer = null;
+
+/** "12 s", "4 min", "2 h 05 min" — an age, deliberately not a clock. */
+function espnowAge(s) {
+    if (s < 60)   return s + ' s';
+    if (s < 3600) return Math.floor(s / 60) + ' min';
+    const h = Math.floor(s / 3600);
+    const m = Math.floor(s % 3600 / 60);
+    return h + ' h ' + String(m).padStart(2, '0') + ' min';
+}
+
 async function loadEspnow() {
     const el = document.getElementById('espnow_peer');
     if (!el) return;
+    const seen     = document.getElementById('espnow_seen');
+    const linkRow  = document.getElementById('espnow_link_row');
+    const link     = document.getElementById('espnow_link');
     try {
-        const r = await fetch('/api/espnow');
+        const r = await fetch('/api/espnow', { cache: 'no-store' });
         const d = await r.json();
+
+        // A firmware built without HAS_ESPNOW_PILOT still answers here — www is one
+        // bundle for every variant, so the section has to remove itself.
+        if (d.supported === false) {
+            const panel = document.getElementById('espnow_panel');
+            if (panel) panel.style.display = 'none';
+            stopEspnowPoll();
+            return;
+        }
+
         el.textContent = d.paired ? d.peer : 'none';
+
+        // No "online" indicator on purpose: the pilot sleeps between presses, so
+        // silence is not a fault and only the age of the last frame is honest.
+        if (seen) {
+            if (typeof d.last_seen_s !== 'number') {
+                seen.textContent = d.paired ? 'never since boot' : '—';
+            } else {
+                seen.textContent = espnowAge(d.last_seen_s) + ' ago' +
+                                   (d.rssi ? ' · ' + d.rssi + ' dBm' : '');
+            }
+        }
+
+        // Frame counters are debugging material for whoever is building a pilot,
+        // so they appear only once there has been traffic.
+        if (linkRow && link) {
+            const rx = d.rx_frames || 0, fail = d.tx_fail || 0;
+            if (rx || fail) {
+                link.textContent = rx + ' frames' +
+                                   (fail ? ', ' + fail + ' unacked' : '') +
+                                   (d.last_cmd ? ' · last: ' + d.last_cmd : '');
+                linkRow.style.display = '';
+            } else {
+                linkRow.style.display = 'none';
+            }
+        }
     } catch (_) {
         el.textContent = '—';
+        if (seen) seen.textContent = '—';
     }
+}
+
+function startEspnowPoll() {
+    if (g_espnowTimer) return;
+    loadEspnow();
+    g_espnowTimer = setInterval(loadEspnow, ESPNOW_POLL_MS);
+}
+
+function stopEspnowPoll() {
+    if (g_espnowTimer) { clearInterval(g_espnowTimer); g_espnowTimer = null; }
 }
 
 async function pairPilot() {
@@ -1901,6 +1964,9 @@ async function pairPilot() {
     btn.disabled = true;
     try {
         const r = await fetch('/api/espnow/pair', { method: 'POST' });
+        // 501 = built without the pilot link. Unreachable in practice, the panel
+        // hides itself in that build, but the body is then HTML and not JSON.
+        if (!r.ok) throw new Error('HTTP ' + r.status);
         const d = await r.json();
         if (!d.ok) throw new Error('Device error');
 
@@ -2233,8 +2299,13 @@ async function copyDiagReport() {
 }
 
 document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stopDiagPoll();
-    else if (document.querySelector('#tab-system.active')) startDiagPoll();
+    if (document.hidden) {
+        stopDiagPoll();
+        stopEspnowPoll();
+    } else if (document.querySelector('#tab-system.active')) {
+        startDiagPoll();
+        startEspnowPoll();
+    }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2242,6 +2313,8 @@ document.addEventListener('visibilitychange', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 initTabs();
 loadSettings();
+// One-shot regardless of the active tab: a build without the pilot link has to
+// hide its section even if the System tab is never opened. Polling starts there.
 loadEspnow();
 loadColors();
 loadMqtt();

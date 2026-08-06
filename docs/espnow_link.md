@@ -59,6 +59,37 @@ The radio registers the paired pilot as a peer with **`channel = 0`** — "use t
 interface's current channel". Hardcoding a number here works until the router
 next moves channel, then fails silently.
 
+**The link starts lazily.** `espnow_link_init()` reads the stored peer from NVS
+and, if there is none, returns without creating anything: no RX queue, no worker
+task, no `esp_now_init()` — so not even a receive callback. It comes up on one of
+two events, boot with a peer already stored, or
+`espnow_link_pair_window_open()`, which is always someone pressing a button in
+the web UI or on the settings screen. Most AtlasCubes will never have a pilot,
+and the link is ~10 KB of internal DRAM once the worker's 8 KB stack is counted —
+in a firmware where the LVGL flush buffer and ESP-ADF's task stacks compete for
+that same pool, this is not rounding error.
+
+A pairing window that closes with nobody paired leaves the link up until the next
+reboot. Tearing it back down means deleting a task that may be mid-frame, which
+needs a shutdown sentinel through the queue and a self-deleting worker — more
+machinery than a case reached only by pressing the button yourself is worth.
+
+**Built out entirely** by commenting out `HAS_ESPNOW_PILOT` in
+[main/include/defines.h](../main/include/defines.h): the component becomes stubs,
+so no caller needs an `#ifdef`. With the lazy start above there is no RAM left to
+save, so this only reclaims flash — the point of it is a build that genuinely has
+no ESP-NOW rather than one that has it and stays quiet. `GET /api/espnow` then
+answers `supported:false` and `POST /api/espnow/pair` answers 501, because `www`
+is a single bundle shared by every variant and the page has to hide its Pilot
+section on its own.
+
+**The RX callback filters by MAC before the queue.** It sees every ESP-NOW frame
+in the air, a neighbour's radio included; without the check each one would cost a
+queue slot and a worker wake-up only to be rejected. `handle_frame()` still holds
+the authoritative check — the callback only spares the trip. Frames from unknown
+MACs pass solely while the pairing window is open, which is where broadcast
+`pair` arrives.
+
 ### Pilot side
 
 The pilot normally has no interface channel to inherit, so `channel = 0` is
@@ -166,7 +197,7 @@ have to associate. Same data, a transport that does not cost a DHCP lease.
 | `set_eq_enabled=0\|1` | — | Equaliser on/off. |
 | `set_eq_10=G0,…,G9` | — | Ten band gains in dB. **Ten or none** — a short list is ignored, not zero-padded. Same name and same rule as the WS `set_eq_10`, different encoding. |
 | `get_diag` | `t:"diag"` | Health snapshot, read-only. |
-| `ping` | `t:"pong"` | Link and channel check; cheapest way to confirm the stored channel is still right. |
+| `ping` | `t:"pong"` | Link and channel check; cheapest way to confirm the stored channel is still right. Also the pilot's only way to read its own signal strength — the reply carries the RSSI the radio measured. |
 | `pair` | `t:"pair"` | Broadcast only, honoured only inside the pairing window. |
 
 ### Why the settings are three commands and not one patch
@@ -334,9 +365,30 @@ The first `get_diag` after boot therefore reports `0,0` — it only sets the mar
 ### `t:"pong"` / `t:"pair"`
 
 ```json
-{"t":"pong","ch":6,"ver":"0.45.0"}
+{"t":"pong","ch":6,"ver":"0.45.0","rssi":-58}
 {"t":"pair","ch":6,"name":"AtlasCube Radio","mac":"a0:b1:c2:d3:e4:f5"}
 ```
+
+`rssi` is the strength of *that ping frame* as the radio's WiFi driver saw it,
+in dBm. It is here because a pilot cannot measure how well its own transmissions
+arrive — there is no TX-side RSSI — so this is the only number it can turn into a
+signal-bar indicator. It describes the pilot→radio direction; the reverse is not
+strictly symmetric, but at these power levels it is the useful approximation.
+
+## Watching the link from the radio
+
+The radio counts activity so the web UI can show whether the pilot is actually
+talking to it: age of the last accepted frame, that frame's RSSI, frames accepted
+since boot, replies the pilot's MAC did not ACK (`esp_now_register_send_cb`), and
+the last command. `espnow_link_get_status()` returns all of it; `GET /api/espnow`
+publishes it next to the pairing state.
+
+**There is no "connected" flag, and adding one would be a lie.** ESP-NOW is
+connectionless and the pilot sleeps between button presses — six hours of silence
+is a healthy pilot on battery. So the UI shows the *age* of the last contact and
+lets the reader judge. A real online/offline indicator needs a keepalive in the
+contract (the pilot pings every N minutes while awake, the radio allows ~3N before
+going grey); that is a change to both ends and has not been made.
 
 ## Conventions and gotchas
 

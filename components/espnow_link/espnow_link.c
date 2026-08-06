@@ -2,6 +2,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "defines.h"        // HAS_ESPNOW_PILOT — the whole file is behind it
+#include "espnow_link.h"
+
+#if defined(HAS_ESPNOW_PILOT)
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
@@ -15,7 +20,6 @@
 #include "nvs.h"
 #include "cJSON.h"
 
-#include "espnow_link.h"
 #include "media_control.h"
 #include "app_state.h"
 #include "playlist.h"
@@ -48,7 +52,9 @@ static const char *TAG = "ESPNOW";
 // ESP_NOW_MAX_DATA_LEN_V2 is 1470 in IDF 5.5.4; 1400 leaves room for the
 // sequence byte and stays clear of the limit.
 #define REPLY_MAX       1400
-#define NAME_MAX        32      // playlist name truncation in t:"list"
+// Not NAME_MAX: that one is POSIX's, out of limits.h, and redefining it here
+// warns wherever the toolchain got there first.
+#define ENTRY_NAME_MAX  32      // playlist / SD name truncation in t:"list", t:"sd"
 #define TEXT_MAX        48      // stn/ttl truncation in t:"state"
 #define LIST_MAX        32
 
@@ -59,9 +65,20 @@ static int64_t       s_pair_until_us;      // 0 = window closed
 static int           s_last_seq = -1;      // -1 = nothing accepted yet
 static bool          s_ready;
 
+// Link activity, read out through espnow_link_get_status(). A few dozen bytes of
+// .bss and one esp_timer_get_time() per accepted frame — a radio with no pilot
+// pays nothing for these because no frame is ever accepted.
+static int64_t  s_last_rx_us;              // 0 = nothing ever accepted
+static int8_t   s_last_rssi;
+static uint32_t s_rx_frames;
+static uint32_t s_tx_ok;
+static uint32_t s_tx_fail;
+static char     s_last_cmd[ESPNOW_LAST_CMD_MAX];
+
 typedef struct {
     uint8_t src[ESPNOW_MAC_LEN];
     uint8_t seq;
+    int8_t  rssi;                      // as the WiFi driver saw this frame, dBm
     char    payload[RX_PAYLOAD_MAX];   // NUL-terminated
 } rx_frame_t;
 
@@ -260,7 +277,7 @@ static char *build_list(int off, int cnt)
         for (int i = 0; arr && i < cnt; i++) {
             const playlist_entry_t *e = playlist_get(off + i);
             if (!e) break;
-            char nm[NAME_MAX];
+            char nm[ENTRY_NAME_MAX];
             copy_trunc(nm, sizeof(nm), e->name);
             cJSON_AddItemToArray(arr, cJSON_CreateString(nm));
         }
@@ -356,7 +373,7 @@ static char *build_sd(int off, int cnt)
                                              : sd_player_track(idx - folders);
             if (!name) break;
 
-            char nm[NAME_MAX];
+            char nm[ENTRY_NAME_MAX];
             copy_trunc(nm, sizeof(nm), name);
             cJSON_AddItemToArray(arr, cJSON_CreateString(nm));
         }
@@ -451,14 +468,22 @@ static char *build_pair_ack(void)
     return out;
 }
 
-static char *build_pong(void)
+/*
+ * `rssi` is the strength of the ping frame being answered, as the radio's WiFi
+ * driver saw it — not the radio's own signal. A pilot cannot measure how well its
+ * transmissions arrive, so this is the only number it can turn into a signal-bar
+ * indicator. It describes pilot→radio; the reverse direction is not symmetric,
+ * but at these power levels it is the useful approximation.
+ */
+static char *build_pong(int8_t rssi)
 {
     cJSON *r = cJSON_CreateObject();
     if (!r) return NULL;
 
-    cJSON_AddStringToObject(r, "t",   "pong");
-    cJSON_AddNumberToObject(r, "ch",  current_channel());
-    cJSON_AddStringToObject(r, "ver", esp_app_get_description()->version);
+    cJSON_AddStringToObject(r, "t",    "pong");
+    cJSON_AddNumberToObject(r, "ch",   current_channel());
+    cJSON_AddStringToObject(r, "ver",  esp_app_get_description()->version);
+    cJSON_AddNumberToObject(r, "rssi", rssi);
 
     char *out = cJSON_PrintUnformatted(r);
     cJSON_Delete(r);
@@ -552,6 +577,20 @@ static char *build_diag(void)
 // Frame handling (worker task context)
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Records that a frame from the pilot was accepted. Called for everything that
+ * gets past the paired-MAC check — including duplicates the dedup then drops,
+ * because "the pilot is talking to us" is true either way and that is what
+ * last_seen answers.
+ */
+static void mark_seen(const rx_frame_t *f)
+{
+    s_last_rx_us = esp_timer_get_time();
+    s_last_rssi  = f->rssi;
+    s_rx_frames++;
+    copy_trunc(s_last_cmd, sizeof(s_last_cmd), f->payload);
+}
+
 static void handle_frame(const rx_frame_t *f)
 {
     const char *cmd = f->payload;
@@ -571,9 +610,16 @@ static void handle_frame(const rx_frame_t *f)
         memcpy(s_peer, f->src, ESPNOW_MAC_LEN);
         s_paired    = true;
         s_last_seq  = -1;              // new pilot, accept whatever it sends next
+        // Activity belongs to a pilot, not to the radio: carrying the old one's
+        // frame counts past a re-pair would read as history that never happened.
+        // mark_seen() below then counts this pair frame as the first.
+        s_rx_frames = 0;
+        s_tx_ok     = 0;
+        s_tx_fail   = 0;
         peer_save();
         peer_ensure(s_peer);
         ESP_LOGI(TAG, "paired with " MACSTR, MAC2STR(s_peer));
+        mark_seen(f);
         reply(f->src, f->seq, build_pair_ack());
         return;
     }
@@ -583,11 +629,13 @@ static void handle_frame(const rx_frame_t *f)
         return;
     }
 
+    mark_seen(f);
+
     // ── queries: idempotent, so they are answered even when the sequence
     //    repeats. Deduplicating these would strand a pilot whose reply was
     //    lost — it would retry and get nothing back.
     if (strcmp(cmd, "ping") == 0) {
-        reply(f->src, f->seq, build_pong());
+        reply(f->src, f->seq, build_pong(f->rssi));
         return;
     }
     if (strcmp(cmd, "get_state") == 0) {
@@ -722,6 +770,25 @@ static void rx_task(void *arg)
 // RX callback — runs in the WiFi task
 // ─────────────────────────────────────────────────────────────────────────────
 
+/*
+ * Signature note: this used to take the destination MAC. Since IDF 5.x it takes
+ * esp_now_send_info_t (= wifi_tx_info_t), and esp_now.h says the separate
+ * `status` argument will eventually go in favour of tx_info->tx_status. Only the
+ * pass/fail matters here, so `status` stays until it actually disappears.
+ *
+ * There is one peer, so the address is not needed either — hence tx_info unused.
+ */
+static void send_cb(const esp_now_send_info_t *tx_info, esp_now_send_status_t status)
+{
+    (void)tx_info;
+
+    // Unicast ESP-NOW is ACKed at the MAC layer, so this is the only place the
+    // radio learns that a reply did not land. Counters only — the pilot owns the
+    // retry.
+    if (status == ESP_NOW_SEND_SUCCESS) s_tx_ok++;
+    else                                s_tx_fail++;
+}
+
 static void rx_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len)
 {
     // Copy and queue, nothing else. Calling into media_control or SPIFFS from
@@ -729,9 +796,19 @@ static void rx_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len)
     if (!info || !data) return;
     if (len < 2 || len > 1 + (int)(RX_PAYLOAD_MAX - 1)) return;
 
+    // Cheap gate before the queue: this callback sees every ESP-NOW frame in the
+    // air, a neighbour's radio and its broadcasts included. Without it each one
+    // costs a queue slot and a worker wake-up to be rejected in handle_frame(),
+    // which still holds the authoritative checks — this only spares the trip.
+    // Anything from an unknown MAC gets through solely while the pairing window
+    // is open, because that is where broadcast `pair` arrives.
+    bool from_peer = s_paired && memcmp(info->src_addr, s_peer, ESPNOW_MAC_LEN) == 0;
+    if (!from_peer && !window_open()) return;
+
     rx_frame_t f;
     memcpy(f.src, info->src_addr, ESPNOW_MAC_LEN);
-    f.seq = data[0];
+    f.seq  = data[0];
+    f.rssi = info->rx_ctrl ? (int8_t)info->rx_ctrl->rssi : 0;
     memcpy(f.payload, data + 1, len - 1);
     f.payload[len - 1] = 0;
 
@@ -744,7 +821,15 @@ static void rx_cb(const esp_now_recv_info_t *info, const uint8_t *data, int len)
 // Public API
 // ─────────────────────────────────────────────────────────────────────────────
 
-esp_err_t espnow_link_init(void)
+/**
+ * Everything the link costs: the RX queue, esp_now_init(), the callbacks and the
+ * worker task — roughly 10 KB of internal DRAM once the 8 KB stack is counted,
+ * plus a callback that then sees every ESP-NOW frame in the air.
+ *
+ * Split out of espnow_link_init() so a radio with no pilot never pays it. Two
+ * things call it: boot, when NVS already holds a peer, and the pairing window.
+ */
+static esp_err_t link_start(void)
 {
     if (s_ready) return ESP_OK;
 
@@ -759,8 +844,8 @@ esp_err_t espnow_link_init(void)
         return err;
     }
     esp_now_register_recv_cb(rx_cb);
+    esp_now_register_send_cb(send_cb);
 
-    peer_load();
     if (s_paired) peer_ensure(s_peer);
 
     if (xTaskCreate(rx_task, "espnow_rx", TASK_STACK, NULL, 5, NULL) != pdPASS) {
@@ -777,10 +862,26 @@ esp_err_t espnow_link_init(void)
         ESP_LOGI(TAG, "link up on ch %d, paired with " MACSTR,
                  current_channel(), MAC2STR(s_peer));
     else
-        ESP_LOGI(TAG, "link up on ch %d, no pilot paired — open the pairing "
-                      "window to attach one", current_channel());
+        ESP_LOGI(TAG, "link up on ch %d for pairing", current_channel());
 
     return ESP_OK;
+}
+
+esp_err_t espnow_link_init(void)
+{
+    if (s_ready) return ESP_OK;
+
+    // The NVS read is the whole cost on a radio that has no pilot: no queue, no
+    // task, no esp_now_init(), so not even an RX callback to run on the WiFi task.
+    // Pairing is always someone pressing a button, and that path starts the link.
+    peer_load();
+    if (!s_paired) {
+        ESP_LOGI(TAG, "no pilot paired — link stays down until the pairing "
+                      "window opens");
+        return ESP_OK;
+    }
+
+    return link_start();
 }
 
 void espnow_link_rebind(void)
@@ -799,6 +900,13 @@ void espnow_link_rebind(void)
 
 void espnow_link_pair_window_open(uint32_t seconds)
 {
+    // The link may still be down — espnow_link_init() leaves it that way when no
+    // pilot is stored. This is the deliberate act that brings it up. Failing to
+    // start is not fatal here: the window opens anyway and simply catches nothing,
+    // which the caller reports as "no pilot answered" like any other timeout.
+    if (link_start() != ESP_OK)
+        ESP_LOGE(TAG, "pairing window opened but the link failed to start");
+
     s_pair_until_us = esp_timer_get_time() + (int64_t)seconds * 1000000;
     ESP_LOGI(TAG, "pairing window open for %u s on ch %d",
              (unsigned)seconds, current_channel());
@@ -821,3 +929,51 @@ bool espnow_link_get_peer(uint8_t out[ESPNOW_MAC_LEN])
     memcpy(out, s_peer, ESPNOW_MAC_LEN);
     return true;
 }
+
+void espnow_link_get_status(espnow_link_status_t *out)
+{
+    if (!out) return;
+
+    memset(out, 0, sizeof(*out));
+    out->supported = true;
+    out->started   = s_ready;
+    out->paired    = s_paired;
+    if (s_paired) memcpy(out->mac, s_peer, ESPNOW_MAC_LEN);
+    out->window_s  = espnow_link_pair_window_left();
+    out->rssi      = s_last_rssi;
+    out->rx_frames = s_rx_frames;
+    out->tx_ok     = s_tx_ok;
+    out->tx_fail   = s_tx_fail;
+    memcpy(out->last_cmd, s_last_cmd, sizeof(out->last_cmd));
+
+    out->last_seen_s = s_last_rx_us
+        ? (uint32_t)((esp_timer_get_time() - s_last_rx_us) / 1000000)
+        : ESPNOW_NEVER;
+}
+
+#else  // !HAS_ESPNOW_PILOT
+
+// Built without the pilot link. Stubs rather than #ifdefs at every call site:
+// app_main, network_services and the web handlers stay unchanged, and the web UI
+// learns the truth from status.supported.
+
+esp_err_t espnow_link_init(void)                     { return ESP_ERR_NOT_SUPPORTED; }
+void      espnow_link_rebind(void)                   { }
+void      espnow_link_pair_window_open(uint32_t s)   { (void)s; }
+uint32_t  espnow_link_pair_window_left(void)         { return 0; }
+bool      espnow_link_is_paired(void)                { return false; }
+
+bool espnow_link_get_peer(uint8_t out[ESPNOW_MAC_LEN])
+{
+    (void)out;
+    return false;
+}
+
+void espnow_link_get_status(espnow_link_status_t *out)
+{
+    if (!out) return;
+    memset(out, 0, sizeof(*out));
+    out->last_seen_s = ESPNOW_NEVER;   // supported stays false
+}
+
+#endif // HAS_ESPNOW_PILOT
