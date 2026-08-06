@@ -106,6 +106,21 @@
             font-size: 13px;
         }
         .files-status.err { color: var(--red); }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px 18px;
+            margin-top: 10px;
+            padding: 9px 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text-dim);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+        }
+        .legend b { color: var(--text); font-weight: 400; margin-right: 5px; }
+        .legend .note { color: var(--text-label); width: 100%; }
         #upload_bar {
             height: 4px;
             background: var(--accent);
@@ -148,6 +163,15 @@
     <div class="crumbs" id="crumbs">/</div>
 
     <div id="listing"></div>
+
+    <div class="legend">
+        <span><b>⬇</b>Download to this computer</span>
+        <span><b>📋</b>Copy to another folder</span>
+        <span><b>📂</b>Move to another folder</span>
+        <span><b>✏️</b>Rename in place</span>
+        <span><b>🗑</b>Delete</span>
+        <span class="note">Folders can be moved, renamed and deleted; copy and download apply to files.</span>
+    </div>
 
 </main>
 
