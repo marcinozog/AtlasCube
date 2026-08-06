@@ -25,6 +25,11 @@
   #trackList li .num{color:var(--muted,#8b98a9);min-width:1.8rem;text-align:right}
   #trackList li.active .num{color:#dbe6ff}
   .empty{color:var(--muted,#8b98a9);padding:.6rem .2rem;font-size:.9rem}
+  .dir-row{display:flex;gap:.6rem;align-items:baseline;justify-content:space-between}
+  .dir-row .panel-label{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dir-link{flex:none;color:var(--accent,#377aff);text-decoration:none;
+            font:600 .8rem 'Chakra Petch',sans-serif;letter-spacing:.5px}
+  .dir-link:hover{text-decoration:underline}
 </style>
 </head>
 <body>
@@ -72,7 +77,11 @@
   </section>
 
   <section class="panel">
-    <div class="panel-label" id="dirLabel">/sdcard/music</div>
+    <div class="dir-row">
+      <div class="panel-label" id="dirLabel">/sdcard/music</div>
+      <a class="dir-link" id="editorLink" href="/sd-editor.html"
+         title="Manage the files in this folder">📁 FILES</a>
+    </div>
     <ul id="trackList"><li class="empty">Click "Scan"…</li></ul>
   </section>
 

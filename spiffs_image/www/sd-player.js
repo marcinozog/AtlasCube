@@ -99,9 +99,18 @@ function makeItem(icon, label, onclick, isTrack) {
     return li;
 }
 
+// The file editor takes card-relative paths ('/music/...'), the player works in
+// mounted ones ('/sdcard/music/...') — strip the mount point when deep-linking.
+function cardRelative(dir) {
+    const d = dir || '/sdcard/music';
+    return d.startsWith('/sdcard') ? (d.slice(7) || '/') : d;
+}
+
 function renderList() {
     const ul = document.getElementById('trackList');
     document.getElementById('dirLabel').innerText = curDir || '/sdcard/music';
+    document.getElementById('editorLink').href =
+        '/sd-editor.html?path=' + encodeURIComponent(cardRelative(curDir));
     ul.innerHTML = '';
 
     if (parentDir) ul.appendChild(makeItem('⬆', '..', () => browse(parentDir), false));
