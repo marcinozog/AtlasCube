@@ -115,7 +115,8 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Podcasts — plays a podcast episode as a **finite HTTP stream** (a distinct mode from endless radio: end-of-file is a clean stop, not a reconnect), with the episode title shown on screen, and **resumes mid-episode** via an HTTP `Range` request. The [Android app](https://github.com/marcinozog/AtlasCube-Remote/) is the catalog — it browses/searches feeds (iTunes search, Apple charts, or add-by-URL — all keyless), sends the episode's direct URL, and remembers the playback position; audio streams straight from the CDN to the device, exactly like a radio station
 - ICY metadata — station name and now-playing track shown on screen and in the web UI
 - 10-band parametric EQ + soft volume (custom DSP element, core 1)
-- Playlist — up to 50 stations, stored in SPIFFS
+- Playlist — up to 512 stations, stored in SPIFFS
+- Station logos — an optional per-station image shown on the radio screen; find one through the Radio Browser lookup or upload your own, and the web UI converts it to the panel's RGB565 format and stores it on the SD card
 - Bluetooth audio — A2DP sink and HFP hands-free (external QCC5125 module, Bluetooth 5.1); supported codecs: LDAC, aptX HD, aptX LL, aptX, SBC, AAC
 - SD card music player — play MP3 / WAV / FLAC / AAC files straight from a microSD folder. Browse subfolders, queue with shuffle and repeat (none / all / one), pause/resume, and auto-advance — all from the `/sd-player.html` web page. A third audio source alongside radio and Bluetooth (one active at a time); shares the EQ and volume with the radio output
 - Hardware I2S source switching — a 74HC157D multiplexer routes either the ESP32-S3 or the QCC5125 I2S output to the DAC, selected by a single GPIO
@@ -123,7 +124,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Resume on boot — optionally replays the last station after a restart if the radio was playing when it powered off (opt-in, toggled in the Settings web UI)
 
 **UI**
-- LVGL-based GUI — supports ILI9341 320×240 (SPI), ST7796U 480×320 (SPI), ILI9488 480×320 (SPI, 18-bit), CO5300 240×296 round AMOLED (QSPI), and SSD1322 256×64 mono OLED (SPI), switched via a single compile-time define
+- LVGL-based GUI — supports ILI9341 320×240 (SPI), ST7789V 320×240 (SPI), ST7796U 480×320 (SPI), ILI9488 480×320 (SPI, 18-bit), CO5300 240×296 round AMOLED (QSPI), and SSD1322 256×64 mono OLED (SPI), switched via a single compile-time define
 - Screens: home hub (clock face + adaptive controls), radio, SD player, playlist, equalizer, settings, Bluetooth, events, WiFi AP
 - Home hub — the default screen: a clock face that adapts to the active source (radio / SD / BT), with a tap overlay to control playback and jump to the playlist / SD browser / BT / settings. It covers all sources from one screen; the per-source screens are optional (hide them from Settings → Display)
 - Rotary encoder navigation (turn + press)
@@ -182,7 +183,7 @@ A hobby project — internet radio and smart clock running on a generic dev boar
 - Web **SD file manager** (Settings → Tools) — browse folders, create directories, upload, rename, and delete files straight from the browser (LVGL `.bin` images preview inline); the Android app can push files too
 - Web **SPIFFS ⇄ SD backup/restore** (Settings → Tools) — a separate dual-pane manager that copies files between the device's SPIFFS and the SD card: back up configs / web UI to the card and restore them later. Client-side, copy-only
 - Web **Settings & stations backup** (Settings → System) — one-click *Export settings* downloads every user file on the config partition (settings, theme, events, MQTT, layout, station list) as a single `.json`, and *Import settings* restores it. No SD card needed; layout-independent, so a backup survives a partition change (e.g. before a full USB flash that erases user data). Wi-Fi/MQTT passwords are stored separately and are not included
-- Backs the photo-frame slides, voice-notification clips, local music for the SD player, plus the optional screen wallpaper and custom boot splash logo; more on-card content (e.g. station logos) is on the roadmap
+- Backs the photo-frame slides, voice-notification clips, local music for the SD player, station logos, plus the optional screen wallpaper and custom boot splash logo
 
 **Android app** *(beta)*
 - Remote control for playback, station switching, and volume
@@ -616,7 +617,6 @@ Architecture and design notes in [`docs/`](docs/):
 ## Roadmap
 
 - **Enclosure** — 3D-printed case currently in design; firmware is developed and tested on the bare development board
-- **More SD-backed content** — the microSD card already powers the photo frame, voice-notification clips, and local music playback; extending it to e.g. station logos
 - **Web melody editor** — in-browser tool for composing custom buzzer notification tunes
 
 ---
