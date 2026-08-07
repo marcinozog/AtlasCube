@@ -4,6 +4,7 @@
 #include "audio_engine.h"
 #include "theme.h"
 #include "lv_bin_image.h"
+#include "ui_asset.h"
 #include "ui_swipe.h"
 
 static lv_obj_t       *s_slider    = NULL;
@@ -112,15 +113,16 @@ static void released_cb(lv_event_t *e)
     else      settings_set_volume(vol);      // → audio_engine + app_state + save
 }
 
-// Load the knob .bin and build the tracking image. The slider's thickness (cross
-// axis after normalisation: h for horizontal, w for vertical) sets the knob size;
-// the other axis follows the image's aspect ratio. On any failure the slider
-// keeps its plain themed knob.
+// Load the knob artwork — an SD .bin or an "asset<N>" internet slot, resolved by
+// ui_asset — and build the tracking image. The slider's thickness (cross axis
+// after normalisation: h for horizontal, w for vertical) sets the knob size; the
+// other axis follows the image's aspect ratio. On any failure the slider keeps
+// its plain themed knob.
 static void build_knob_image(lv_obj_t *parent, const char *knob_image, int w, int h)
 {
     if (!knob_image || !knob_image[0]) return;
 
-    s_knob_dsc = lv_bin_image_load(knob_image, 0, 0);
+    s_knob_dsc = ui_asset_load(knob_image);
     if (!s_knob_dsc) return;
 
     const int iw = s_knob_dsc->header.w, ih = s_knob_dsc->header.h;

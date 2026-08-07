@@ -13,6 +13,8 @@
 #include "events_service.h"
 #include "screensavers.h"
 #include "net_wallpaper.h"
+#include "net_asset.h"
+#include "ui_asset.h"
 #include "weather.h"
 #include "net_fetch_overlay_widget.h"
 #include "display.h"
@@ -636,9 +638,20 @@ void ui_manager_run(void)
                 continue;
             }
             if (ev.type == UI_EVT_BG_CHANGED) {
+                // Assets ride the same fetch batch as the wallpapers, so they are
+                // adopted on the same event — and on the same task, which is what
+                // lodepng needs (it decodes through lv_malloc). New artwork only
+                // reaches a widget through create(), hence the rebuild; it already
+                // re-applies the background, so the plain path is the else.
+                const bool assets_changed = net_asset_commit() &&
+                                            ui_asset_screen_uses_slots(s_active_id);
                 ui_background_reload_wallpaper();     // re-read SD wallpapers if any
-                ui_background_apply(lv_scr_act(), s_active_id);   // gradient/wallpaper toggled
-                lv_obj_invalidate(lv_scr_act());
+                if (assets_changed) {
+                    do_rebuild_active();
+                } else {
+                    ui_background_apply(lv_scr_act(), s_active_id);   // gradient/wallpaper toggled
+                    lv_obj_invalidate(lv_scr_act());
+                }
                 continue;
             }
             if (ev.type == UI_EVT_PROFILE_CHANGED) {

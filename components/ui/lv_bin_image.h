@@ -29,6 +29,14 @@ lv_image_dsc_t *lv_bin_image_load_scaled(const char *path, int dst_w, int dst_h)
 // only known after loading. dst_w/dst_h must be > 0.
 lv_image_dsc_t *lv_bin_image_scale(lv_image_dsc_t *src, int dst_w, int dst_h);
 
+// Bilinearly resample a descriptor the caller does NOT own into a fresh one —
+// e.g. an internet asset slot, whose pixels are shared by every widget bound to
+// it and must outlive them. `src` is left untouched; the result is the caller's
+// to free with lv_bin_image_free(). Copies even when the size already matches,
+// so the caller always owns independent pixels. Understands RGB565 and
+// RGB565A8 (the alpha plane is resampled too) and keeps the source's format.
+lv_image_dsc_t *lv_bin_image_scale_copy(const lv_image_dsc_t *src, int dst_w, int dst_h);
+
 // Free a descriptor from lv_bin_image_load() and its pixel buffer, dropping the
 // LVGL image cache for it first. Call only from the LVGL task.
 void lv_bin_image_free(lv_image_dsc_t *dsc);

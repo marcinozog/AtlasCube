@@ -5,6 +5,7 @@ idf_component_register(
         "ui_profile.c"
         "ui_background.c"
         "lv_bin_image.c"
+        "ui_asset.c"
         "ui_label.c"
         "ui_timefmt.c"
         "ui_swipe.c"

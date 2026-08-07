@@ -77,25 +77,38 @@ lv_image_dsc_t *lv_bin_image_load_scaled(const char *path, int dst_w, int dst_h)
     return lv_bin_image_scale(lv_bin_image_load(path, 0, 0), dst_w, dst_h);
 }
 
-lv_image_dsc_t *lv_bin_image_scale(lv_image_dsc_t *src, int dst_w, int dst_h)
+// Bilinear resample into a fresh descriptor, leaving `src` untouched. Handles
+// both formats a knob can arrive in: RGB565 (an SD .bin) and RGB565A8 (an
+// internet asset, where LVGL's layout is the colour plane followed by the alpha
+// plane, so the alpha is resampled with the same weights). The output keeps the
+// source's colour format. Returns NULL on a bad format or a failed allocation.
+static lv_image_dsc_t *scale_copy(const lv_image_dsc_t *src, int dst_w, int dst_h)
 {
-    if (!src) return NULL;
-    if (dst_w <= 0 || dst_h <= 0) { lv_bin_image_free(src); return NULL; }
+    if (!src || dst_w <= 0 || dst_h <= 0) return NULL;
 
-    const int sw = src->header.w, sh = src->header.h;
-    if (sw == dst_w && sh == dst_h) return src;   // no resampling needed
+    const bool alpha = (src->header.cf == LV_COLOR_FORMAT_RGB565A8);
+    if (!alpha && src->header.cf != LV_COLOR_FORMAT_RGB565) {
+        ESP_LOGW(TAG, "scale: unsupported colour format 0x%02x", (unsigned)src->header.cf);
+        return NULL;
+    }
 
-    const size_t dpx = (size_t)dst_w * dst_h * 2;
-    uint16_t *dbuf = heap_caps_malloc(dpx, MALLOC_CAP_SPIRAM);
-    lv_image_dsc_t *dsc = dbuf ? calloc(1, sizeof(*dsc)) : NULL;
+    const int    sw    = src->header.w, sh = src->header.h;
+    const size_t dcol  = (size_t)dst_w * dst_h * 2;
+    const size_t dsize = alpha ? dcol + (size_t)dst_w * dst_h : dcol;
+
+    uint8_t        *dbuf = heap_caps_malloc(dsize, MALLOC_CAP_SPIRAM);
+    lv_image_dsc_t *dsc  = dbuf ? calloc(1, sizeof(*dsc)) : NULL;
     if (!dbuf || !dsc) {
-        ESP_LOGE(TAG, "scale alloc failed (%u B)", (unsigned)dpx);
+        ESP_LOGE(TAG, "scale alloc failed (%u B)", (unsigned)dsize);
         free(dbuf);
-        lv_bin_image_free(src);
         return NULL;
     }
 
     const uint16_t *sbuf = (const uint16_t *)src->data;
+    const uint8_t  *salp = alpha ? src->data + (size_t)sw * sh * 2 : NULL;
+    uint16_t       *dcolp = (uint16_t *)dbuf;
+    uint8_t        *dalp  = alpha ? dbuf + dcol : NULL;
+
     for (int y = 0; y < dst_h; y++) {
         const float fy = dst_h > 1 ? (float)y * (sh - 1) / (dst_h - 1) : 0.0f;
         const int   y0 = (int)fy;
@@ -120,20 +133,45 @@ lv_image_dsc_t *lv_bin_image_scale(lv_image_dsc_t *src, int dst_w, int dst_h)
             const int r = (int)(rt + wy * (rb - rt) + 0.5f);
             const int g = (int)(gt + wy * (gb - gt) + 0.5f);
             const int b = (int)(bt + wy * (bb - bt) + 0.5f);
-            dbuf[y * dst_w + x] = (uint16_t)((r << 11) | (g << 5) | b);
+            dcolp[y * dst_w + x] = (uint16_t)((r << 11) | (g << 5) | b);
+
+            if (alpha) {
+                const float at = salp[y0 * sw + x0] +
+                                 wx * (salp[y0 * sw + x1] - salp[y0 * sw + x0]);
+                const float ab = salp[y1 * sw + x0] +
+                                 wx * (salp[y1 * sw + x1] - salp[y1 * sw + x0]);
+                dalp[y * dst_w + x] = (uint8_t)(at + wy * (ab - at) + 0.5f);
+            }
         }
     }
 
     dsc->header.magic  = LV_IMAGE_HEADER_MAGIC;
-    dsc->header.cf     = LV_COLOR_FORMAT_RGB565;
+    dsc->header.cf     = src->header.cf;
     dsc->header.w      = dst_w;
     dsc->header.h      = dst_h;
-    dsc->header.stride = dst_w * 2;
-    dsc->data_size     = (uint32_t)dpx;
+    dsc->header.stride = dst_w * 2;   // colour plane; LVGL takes the alpha
+                                      // stride as half of it
+    dsc->data_size     = (uint32_t)dsize;
     dsc->data          = (const uint8_t *)dbuf;
-    lv_bin_image_free(src);   // native pixels no longer needed
-    ESP_LOGI(TAG, "scaled knob image to %dx%d", dst_w, dst_h);
+    ESP_LOGI(TAG, "scaled image to %dx%d%s", dst_w, dst_h, alpha ? " (with alpha)" : "");
     return dsc;
+}
+
+lv_image_dsc_t *lv_bin_image_scale(lv_image_dsc_t *src, int dst_w, int dst_h)
+{
+    if (!src) return NULL;
+    if (dst_w <= 0 || dst_h <= 0) { lv_bin_image_free(src); return NULL; }
+    if (src->header.w == (uint32_t)dst_w && src->header.h == (uint32_t)dst_h)
+        return src;                       // no resampling needed
+
+    lv_image_dsc_t *dsc = scale_copy(src, dst_w, dst_h);
+    lv_bin_image_free(src);               // native pixels no longer needed
+    return dsc;
+}
+
+lv_image_dsc_t *lv_bin_image_scale_copy(const lv_image_dsc_t *src, int dst_w, int dst_h)
+{
+    return scale_copy(src, dst_w, dst_h);
 }
 
 void lv_bin_image_free(lv_image_dsc_t *dsc)

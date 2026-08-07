@@ -406,6 +406,41 @@ tabs — it used to be in Settings → Display → Wallpapers, now removed:
   canvas: the **Internet** button plus the slot dropdown next to it write
   `net<N>` into that screen's `*_wallpaper` field.
 
+## Internet asset slots (Assets tab)
+
+Small artwork — today the slider/EQ knobs — can come from the internet the
+same way a wallpaper does, which is the only route that works on a device
+**with no SD card**. Four slots, `asset0`..`asset3`, each holding a source
+URL in `display.asset_urls` (array, index = slot) and a decoded image in
+PSRAM. A widget's *Knob image* field takes `asset<N>` where it would
+otherwise take an SD path; the `🌐 asset…` dropdown next to `📂 SD` fills it
+in. The resolution happens in `ui_asset.c`, so both consumers
+(`vol_slider_widget.c`, `screen_equalizer.c`) treat the two sources alike.
+
+Differences from wallpapers, all deliberate:
+
+- **PNG, not JPEG** — a knob needs an alpha channel, which JPEG has none of.
+  The device decodes it with LVGL's bundled lodepng
+  (`CONFIG_LV_USE_LODEPNG`) into `RGB565A8`. Source images are capped at
+  128×128 px: lodepng peaks at ~8 B per source pixel inside LVGL's
+  `lv_malloc` pool (`CONFIG_LV_MEM_SIZE_KILOBYTES`, 256 KB).
+- **Decoded on the LVGL task**, not on the fetch task — lodepng allocates
+  through `lv_malloc` and that pool has no lock (`CONFIG_LV_USE_OS=0`). The
+  fetch task only downloads and parks the bytes; `net_asset_commit()` (called
+  from the `UI_EVT_BG_CHANGED` handler, like the wallpaper commit) decodes
+  them and, when a slot changed, rebuilds the active screen so widgets pick
+  the new artwork up.
+- **No schedule of their own** — assets are fetched in the wallpapers' batch,
+  under `wallpaper_fetch_mode`, so the radio is stopped once for both. With
+  auto-refresh Off, *Fetch now* on the Assets tab posts the same
+  `{all:true}` batch.
+
+The Assets tab still keeps the browser-side uploader (convert here, store on
+SD) next to the slots; it stays the right tool for artwork you author
+yourself, at the cost of flattening transparency onto black. Gallery cards
+offer both: *Install* (convert + SD) and *Use in slot* (hand the URL to the
+device).
+
 Both tabs read their state from `/api/settings` via `loadBackgroundTab()`
 and write on every change; the device repaints itself. Like *Presets*,
 they swap the editor grid for a full-width card and leave the active
@@ -478,7 +513,7 @@ Three independent stores are involved, and confusing them is the usual source of
 
 | Store | Holds | Written by |
 |---|---|---|
-| `/config/settings.json` | slot URLs (`display.wallpaper_urls`), fetch mode/time, `wallpaper_dim`, the global SD wallpaper | `POST /api/settings` |
+| `/config/settings.json` | slot URLs (`display.wallpaper_urls`, `display.asset_urls`), fetch mode/time, `wallpaper_dim`, the global SD wallpaper | `POST /api/settings` |
 | `/config/ui_profile.json` | the per-screen **pointer** (`"net3"`, an SD path, `""`, `"none"`) plus the whole layout | `POST /api/ui/profile/<section>` |
 | `/sdcard/wallpapers/layouts/<WxH>/…json` | a layout preset bound to one wallpaper **file** | the Presets tab's Save |
 

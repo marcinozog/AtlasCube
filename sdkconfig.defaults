@@ -82,6 +82,18 @@ CONFIG_LV_USE_OBSERVER=y
 CONFIG_LV_USE_SYSMON=y
 CONFIG_LV_USE_PERF_MONITOR=y
 
+# PNG decoder (LVGL's bundled lodepng) — internet asset slots download plain
+# .png artwork and decode it on the device, so knob images keep the alpha channel
+# a JPEG cannot carry. net_asset.c calls lodepng_decode32() directly.
+CONFIG_LV_USE_LODEPNG=y
+# lodepng allocates through lv_malloc, i.e. out of LVGL's builtin pool (PSRAM
+# .bss, see the root CMakeLists), and its peak is ~8 B per source pixel: the
+# inflated scanlines plus the ARGB8888 output exist at the same time. The pool
+# also holds LVGL's own objects/styles, so 64 KB would cap assets at ~8 kpx and
+# crowd the UI while decoding. 256 KB carries net_asset's 16 kpx ceiling (128x128
+# of artwork, ~128 KB transient) with the pool still half free. PSRAM only.
+CONFIG_LV_MEM_SIZE_KILOBYTES=256
+
 CONFIG_LWIP_MAX_SOCKETS=16
 
 # Segmented HLS (.m3u8) radio opens a fresh TLS connection per .ts segment and

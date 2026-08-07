@@ -9,6 +9,7 @@
 #include "ui_manager.h"
 #include "ui_swipe.h"
 #include "lv_bin_image.h"
+#include "ui_asset.h"
 #include "lvgl.h"
 #include "esp_log.h"
 #include <stdio.h>
@@ -195,17 +196,17 @@ static void update_focus_visuals(void)
     }
 }
 
-// Load ui_profile.eq_knob_image once (cap width = band column so it reads as a
-// fader cap, not the thin track; height follows the image aspect), then overlay
-// one lv_image per band on s_band_cont and hide the sliders' native knobs. All
-// bands share the single scaled descriptor. On any failure the plain themed
-// knobs stay.
+// Load ui_profile.eq_knob_image once — an SD .bin or an "asset<N>" internet
+// slot, resolved by ui_asset (cap width = band column so it reads as a fader
+// cap, not the thin track; height follows the image aspect) — then overlay one
+// lv_image per band on s_band_cont and hide the sliders' native knobs. All bands
+// share the single scaled descriptor. On any failure the plain themed knobs stay.
 static void build_eq_knobs(void)
 {
     const ui_profile_t *p = ui_profile_get();
     if (!p->eq_knob_image[0] || !s_band_cont) return;
 
-    s_knob_dsc = lv_bin_image_load(p->eq_knob_image, 0, 0);
+    s_knob_dsc = ui_asset_load(p->eq_knob_image);
     if (!s_knob_dsc) return;
 
     const int iw = s_knob_dsc->header.w, ih = s_knob_dsc->header.h;

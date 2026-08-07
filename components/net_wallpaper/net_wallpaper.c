@@ -1,5 +1,7 @@
 #include "net_wallpaper.h"
 #include "net_wallpaper_sched.h"
+#include "net_asset.h"
+#include "net_fetch.h"   // shared HTTP getter + the status line assets share
 #include "settings.h"   // WALLPAPER_SLOTS + the per-slot URLs the batch fetch walks
 #include "app_state.h"
 #include "radio_service.h"
@@ -8,8 +10,6 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
-#include "esp_http_client.h"
-#include "esp_crt_bundle.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "cJSON.h"
@@ -18,7 +18,6 @@
 #include "freertos/semphr.h"
 #include <string.h>
 #include <stdio.h>
-#include <stdarg.h>
 #include <setjmp.h>
 #include "jpeglib.h"    // vendored IJG libjpeg (components/libjpeg) — handles progressive
 
@@ -27,12 +26,9 @@ static const char *TAG = "NET_WP";
 #define URL_MAX          512
 #define APOD_JSON_MAX    (16 * 1024)     // APOD envelope (explanation text can be long)
 #define JPEG_MAX         (1536 * 1024)   // download cap — APOD `url` images are ~100–500 KB
-#define HTTP_TIMEOUT_MS  15000
 
 // ── State ────────────────────────────────────────────────────────────────────
 static volatile bool s_busy;
-static const char   *s_status = "idle";  // "idle"/"busy"/"ok" or points at s_err
-static char          s_err[96];
 
 static char s_url[URL_MAX];              // single-slot request captured by fetch()
 static int  s_req_slot = -1;             // slot to fetch, or -1 for "every configured one"
@@ -79,82 +75,6 @@ static SemaphoreHandle_t buf_lock(void)
 static void (*s_done_cb)(bool ok);
 static void (*s_start_cb)(void);
 
-static void set_err(const char *fmt, ...)
-{
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(s_err, sizeof(s_err), fmt, ap);
-    va_end(ap);
-    s_status = s_err;
-    ESP_LOGW(TAG, "%s", s_err);
-}
-
-// ── Download ─────────────────────────────────────────────────────────────────
-// GET `url` into a fresh PSRAM buffer (caller frees), following up to 3
-// redirects manually — the open/fetch_headers flow doesn't auto-follow, and
-// both picsum and the NASA image hosts answer with 30x. A body that fills the
-// whole cap is treated as too large. Returns NULL with s_status set on error.
-static uint8_t *download(const char *url, size_t cap, int *out_len)
-{
-    esp_http_client_config_t cfg = {
-        .url               = url,
-        .timeout_ms        = HTTP_TIMEOUT_MS,
-        .crt_bundle_attach = esp_crt_bundle_attach,
-        .user_agent        = "AtlasCube/1.0",
-    };
-    esp_http_client_handle_t cli = esp_http_client_init(&cfg);
-    if (!cli) { set_err("http client init failed"); return NULL; }
-
-    int status = 0;
-    for (int hop = 0; hop < 4; hop++) {
-        esp_err_t err = esp_http_client_open(cli, 0);
-        if (err != ESP_OK) {
-            set_err("connect failed (%s)", esp_err_to_name(err));
-            esp_http_client_cleanup(cli);
-            return NULL;
-        }
-        esp_http_client_fetch_headers(cli);
-        status = esp_http_client_get_status_code(cli);
-        if (status / 100 != 3) break;
-        esp_http_client_set_redirection(cli);   // Location header → client URL
-        esp_http_client_close(cli);
-    }
-    if (status / 100 != 2) {
-        set_err("HTTP %d", status);
-        esp_http_client_close(cli);
-        esp_http_client_cleanup(cli);
-        return NULL;
-    }
-
-    uint8_t *buf = heap_caps_malloc(cap, MALLOC_CAP_SPIRAM);
-    if (!buf) {
-        set_err("no PSRAM for %u B download", (unsigned)cap);
-        esp_http_client_close(cli);
-        esp_http_client_cleanup(cli);
-        return NULL;
-    }
-
-    int total = 0;
-    while ((size_t)total < cap) {
-        int r = esp_http_client_read(cli, (char *)buf + total, cap - total);
-        if (r < 0) { set_err("read failed at %d B", total); goto fail; }
-        if (r == 0) break;
-        total += r;
-    }
-    if ((size_t)total >= cap) { set_err("file larger than %u KB cap", (unsigned)(cap / 1024)); goto fail; }
-
-    esp_http_client_close(cli);
-    esp_http_client_cleanup(cli);
-    *out_len = total;
-    return buf;
-
-fail:
-    heap_caps_free(buf);
-    esp_http_client_close(cli);
-    esp_http_client_cleanup(cli);
-    return NULL;
-}
-
 // ── NASA APOD ────────────────────────────────────────────────────────────────
 // api.nasa.gov/planetary/apod answers with a JSON envelope, not an image. Pull
 // the standard-resolution `url` out of it (`hdurl` can exceed both the download
@@ -162,22 +82,22 @@ fail:
 static bool apod_resolve(const char *api_url, char *out, size_t cap)
 {
     int len = 0;
-    uint8_t *body = download(api_url, APOD_JSON_MAX, &len);
+    uint8_t *body = net_fetch_download(api_url, APOD_JSON_MAX, &len);
     if (!body) return false;
 
     cJSON *root = cJSON_ParseWithLength((const char *)body, len);
     heap_caps_free(body);
-    if (!root) { set_err("APOD: bad JSON"); return false; }
+    if (!root) { net_fetch_set_err("APOD: bad JSON"); return false; }
 
     bool ok = false;
     const cJSON *mt  = cJSON_GetObjectItem(root, "media_type");
     const cJSON *url = cJSON_GetObjectItem(root, "url");
     if (cJSON_IsString(mt) && strcmp(mt->valuestring, "image") != 0) {
-        set_err("APOD: today is a %s, not an image", mt->valuestring);
+        net_fetch_set_err("APOD: today is a %s, not an image", mt->valuestring);
     } else if (!cJSON_IsString(url) || !url->valuestring[0]) {
-        set_err("APOD: no image url");
+        net_fetch_set_err("APOD: no image url");
     } else if (strlen(url->valuestring) >= cap) {
-        set_err("APOD: image url too long");
+        net_fetch_set_err("APOD: image url too long");
     } else {
         strcpy(out, url->valuestring);
         ok = true;
@@ -200,7 +120,7 @@ static void decode_error_exit(j_common_ptr cinfo)
     struct decode_err_mgr *e = (struct decode_err_mgr *)cinfo->err;
     char msg[JMSG_LENGTH_MAX];
     (*cinfo->err->format_message)(cinfo, msg);
-    set_err("jpeg: %s", msg);
+    net_fetch_set_err("jpeg: %s", msg);
     longjmp(e->jb, 1);
 }
 
@@ -226,7 +146,7 @@ static uint16_t *decode_to_panel(uint8_t *jpg, int len, int pw, int ph)
         jpeg_destroy_decompress(&cinfo);
         if (row) heap_caps_free(row);
         if (panel) heap_caps_free(panel);
-        return NULL;   // s_status was set in decode_error_exit
+        return NULL;   // the status line was set in decode_error_exit
     }
 
     jpeg_create_decompress(&cinfo);
@@ -253,10 +173,10 @@ static uint16_t *decode_to_panel(uint8_t *jpg, int len, int pw, int ph)
         }
         const size_t free_psram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
         if (coef + 1024 * 1024 > free_psram) {   // same 1 MB headroom as jmem_esp
-            set_err("progressive %ux%u too big: needs ~%u MB, ~%u MB free",
-                    (unsigned)cinfo.image_width, (unsigned)cinfo.image_height,
-                    (unsigned)((coef + 512 * 1024) / (1024 * 1024)),
-                    (unsigned)(free_psram / (1024 * 1024)));
+            net_fetch_set_err("progressive %ux%u too big: needs ~%u MB, ~%u MB free",
+                              (unsigned)cinfo.image_width, (unsigned)cinfo.image_height,
+                              (unsigned)((coef + 512 * 1024) / (1024 * 1024)),
+                              (unsigned)(free_psram / (1024 * 1024)));
             longjmp(jerr.jb, 1);
         }
     }
@@ -279,9 +199,9 @@ static uint16_t *decode_to_panel(uint8_t *jpg, int len, int pw, int ph)
     const int dh = (int)cinfo.output_height;
 
     row = heap_caps_malloc((size_t)dw * 3, MALLOC_CAP_SPIRAM);
-    if (!row) { set_err("no PSRAM for row buffer"); longjmp(jerr.jb, 1); }
+    if (!row) { net_fetch_set_err("no PSRAM for row buffer"); longjmp(jerr.jb, 1); }
     panel = heap_caps_calloc((size_t)pw * ph, 2, MALLOC_CAP_SPIRAM);   // zeroed → black letterbox
-    if (!panel) { set_err("no PSRAM for wallpaper buffer"); longjmp(jerr.jb, 1); }
+    if (!panel) { net_fetch_set_err("no PSRAM for wallpaper buffer"); longjmp(jerr.jb, 1); }
 
     // Centered crop window: source rows [sy, sy+ch) land on panel rows
     // [dy, dy+ch), columns likewise.
@@ -339,7 +259,7 @@ static bool do_fetch(const char *url, int slot)
     }
 
     int len = 0;
-    uint8_t *jpg = download(url, JPEG_MAX, &len);
+    uint8_t *jpg = net_fetch_download(url, JPEG_MAX, &len);
     if (!jpg) return false;
     ESP_LOGI(TAG, "slot %d: downloaded %d B", slot, len);
 
@@ -358,7 +278,7 @@ static bool do_fetch(const char *url, int slot)
 }
 
 // Fetch one slot's URL, expanding {w}/{h} first. Returns false on any failure;
-// s_status already carries the reason.
+// the status line already carries the reason.
 static bool fetch_one(const char *raw_url, int slot)
 {
     char url[URL_MAX];
@@ -373,6 +293,8 @@ static void fetch_task(void *arg)
     const bool batch = (s_req_slot < 0);
 
     // Count the work up front so the UI pill can say "2/5" from the first tick.
+    // A batch also carries the internet assets (knob artwork, …): they are part
+    // of the same download window, so they are part of the same count.
     const app_settings_t *cfg = settings_get();
     s_prog_done  = 0;
     s_prog_total = 1;
@@ -380,6 +302,7 @@ static void fetch_task(void *arg)
         s_prog_total = 0;
         for (int i = 0; i < NET_WP_SLOTS; i++)
             if (cfg->display.wallpaper_url[i][0]) s_prog_total++;
+        s_prog_total += net_asset_url_count();
     }
 
     if (s_start_cb) s_start_cb();            // UI pill: explain the coming silence
@@ -404,6 +327,14 @@ static void fetch_task(void *arg)
             if (!fetch_one(u, i)) ok = false;
             s_prog_done++;
         }
+        // Second phase: the internet assets. Same task, same stopped radio —
+        // artwork the screens reference must not cost the music a second gap.
+        for (int i = 0; i < NET_ASSET_SLOTS; i++) {
+            const char *u = cfg->display.asset_url[i];
+            if (!u[0]) continue;
+            if (!net_asset_fetch_slot(i, u)) ok = false;
+            s_prog_done++;
+        }
     } else {
         ok = fetch_one(s_url, s_req_slot);
         s_prog_done = 1;
@@ -411,7 +342,7 @@ static void fetch_task(void *arg)
 
     if (was_radio) radio_play_index(prev_idx);
 
-    if (ok) s_status = "ok";                 // errors were set where they occurred
+    if (ok) net_fetch_set_status("ok");      // errors were set where they occurred
     s_busy = false;
     if (s_done_cb) s_done_cb(ok);
     net_wallpaper_sched_fetch_done(ok);      // scheduler retry/re-arm hook
@@ -423,9 +354,9 @@ static void fetch_task(void *arg)
 // few KB of headroom).
 static bool start_fetch_task(void)
 {
-    s_status = "busy";
+    net_fetch_set_status("busy");
     if (xTaskCreate(fetch_task, "net_wp", 10240, NULL, 5, NULL) != pdPASS) {
-        set_err("task create failed");
+        net_fetch_set_err("task create failed");
         s_busy = false;
         return false;
     }
@@ -454,11 +385,12 @@ bool net_wallpaper_fetch_all(int panel_w, int panel_h)
     if (s_busy) return false;
 
     // Nothing configured is success, not a failure: the scheduler would
-    // otherwise burn its retry budget on a device with no URLs set.
+    // otherwise burn its retry budget on a device with no URLs set. An asset URL
+    // on its own is enough to make the batch worth running.
     const app_settings_t *cfg = settings_get();
-    bool any = false;
-    for (int i = 0; i < NET_WP_SLOTS; i++)
-        if (cfg->display.wallpaper_url[i][0]) { any = true; break; }
+    bool any = (net_asset_url_count() > 0);
+    for (int i = 0; !any && i < NET_WP_SLOTS; i++)
+        if (cfg->display.wallpaper_url[i][0]) any = true;
     if (!any) return false;
 
     s_busy     = true;
@@ -471,7 +403,7 @@ bool net_wallpaper_fetch_all(int panel_w, int panel_h)
 
 const char *net_wallpaper_status(void)
 {
-    return s_status;
+    return net_fetch_status();
 }
 
 void net_wallpaper_progress(int *done, int *total)

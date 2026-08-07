@@ -72,6 +72,7 @@ esp_err_t settings_init(void)
         s_settings.display.wallpaper_path[0] = '\0';
         s_settings.display.wallpaper_dim    = 0;
         memset(s_settings.display.wallpaper_url, 0, sizeof(s_settings.display.wallpaper_url));
+        memset(s_settings.display.asset_url, 0, sizeof(s_settings.display.asset_url));
         s_settings.display.wallpaper_fetch_mode = 0;
         s_settings.display.wallpaper_fetch_hour = 4;
         s_settings.display.wallpaper_fetch_min  = 0;
@@ -308,6 +309,21 @@ static esp_err_t load_from_file(void)
             if (cJSON_IsString(wurl))
                 strncpy(s_settings.display.wallpaper_url[0], wurl->valuestring,
                         sizeof(s_settings.display.wallpaper_url[0]) - 1);
+        }
+        // Internet-asset slots. Array only — this setting was born with slots,
+        // so there is no scalar spelling to stay compatible with.
+        memset(s_settings.display.asset_url, 0, sizeof(s_settings.display.asset_url));
+        cJSON *aurls = cJSON_GetObjectItem(display, "asset_urls");
+        if (cJSON_IsArray(aurls)) {
+            int i = 0;
+            cJSON *it = NULL;
+            cJSON_ArrayForEach(it, aurls) {
+                if (i >= ASSET_SLOTS) break;
+                if (cJSON_IsString(it))
+                    strncpy(s_settings.display.asset_url[i], it->valuestring,
+                            sizeof(s_settings.display.asset_url[i]) - 1);
+                i++;
+            }
         }
         cJSON *wfm = cJSON_GetObjectItem(display, "wallpaper_fetch_mode");
         s_settings.display.wallpaper_fetch_mode = cJSON_IsNumber(wfm) ? wfm->valueint : 0;
@@ -633,6 +649,9 @@ static esp_err_t save_to_file_locked(void)
     for (int i = 0; i < WALLPAPER_SLOTS; i++)
         cJSON_AddItemToArray(wurls, cJSON_CreateString(s_settings.display.wallpaper_url[i]));
     cJSON_AddStringToObject(display, "wallpaper_url", s_settings.display.wallpaper_url[0]);
+    cJSON *aurls = cJSON_AddArrayToObject(display, "asset_urls");
+    for (int i = 0; i < ASSET_SLOTS; i++)
+        cJSON_AddItemToArray(aurls, cJSON_CreateString(s_settings.display.asset_url[i]));
     cJSON_AddNumberToObject(display, "wallpaper_fetch_mode", s_settings.display.wallpaper_fetch_mode);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_hour", s_settings.display.wallpaper_fetch_hour);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_min",  s_settings.display.wallpaper_fetch_min);
@@ -1176,6 +1195,19 @@ void settings_set_wallpaper_slot(int slot, const char *url)
     strncpy(s_settings.display.wallpaper_url[slot], u,
             sizeof(s_settings.display.wallpaper_url[slot]) - 1);
     // No app_state push — same contract as settings_set_wallpaper_fetch below.
+    save_to_file();
+}
+
+void settings_set_asset_slot(int slot, const char *url)
+{
+    if (slot < 0 || slot >= ASSET_SLOTS) return;
+    const char *u = url ? url : "";
+    if (strcmp(s_settings.display.asset_url[slot], u) == 0) return;
+
+    memset(s_settings.display.asset_url[slot], 0,
+           sizeof(s_settings.display.asset_url[slot]));
+    strncpy(s_settings.display.asset_url[slot], u,
+            sizeof(s_settings.display.asset_url[slot]) - 1);
     save_to_file();
 }
 

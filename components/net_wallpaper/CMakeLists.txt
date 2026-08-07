@@ -2,6 +2,8 @@ idf_component_register(
     SRCS
         "net_wallpaper.c"
         "net_wallpaper_sched.c"
+        "net_asset.c"
+        "net_fetch.c"
     INCLUDE_DIRS
         "."
     REQUIRES

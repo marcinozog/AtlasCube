@@ -173,7 +173,7 @@ const BT_FIELDS = [
     { key: 'bt_volslider_y',          label: 'Slider Y',           type: 'number' },
     { key: 'bt_volslider_w',          label: 'Slider W',           type: 'number', min: 8, max: 480 },
     { key: 'bt_volslider_h',          label: 'Slider H',           type: 'number', min: 8, max: 480 },
-    { key: 'bt_volslider_knob_image', label: 'Knob image (.bin)',  type: 'text', placeholder: '/sdcard/assets/knobs/... (empty = colour knob)', sdPicker: { dir: '/assets/knobs' } },
+    { key: 'bt_volslider_knob_image', label: 'Knob image (.bin / asset)', type: 'text', placeholder: '/sdcard/assets/knobs/... or asset0 (empty = colour knob)', sdPicker: { dir: '/assets/knobs' } },
     { key: 'bt_volslider_vol_max',    label: 'Max volume (%)',     type: 'number', min: 1, max: 100 },
     { key: 'bt_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('bt'),
@@ -291,7 +291,7 @@ const RADIO_FIELDS = [
     { key: 'radio_volslider_y',          label: 'Slider Y',           type: 'number' },
     { key: 'radio_volslider_w',          label: 'Slider W',           type: 'number', min: 8, max: 480 },
     { key: 'radio_volslider_h',          label: 'Slider H',           type: 'number', min: 8, max: 480 },
-    { key: 'radio_volslider_knob_image', label: 'Knob image (.bin)',  type: 'text', placeholder: '/sdcard/assets/knobs/... (empty = colour knob)', sdPicker: { dir: '/assets/knobs' } },
+    { key: 'radio_volslider_knob_image', label: 'Knob image (.bin / asset)', type: 'text', placeholder: '/sdcard/assets/knobs/... or asset0 (empty = colour knob)', sdPicker: { dir: '/assets/knobs' } },
     { key: 'radio_volslider_vol_max',    label: 'Max volume (%)',     type: 'number', min: 1, max: 100 },
     { key: 'radio_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('radio'),
@@ -402,7 +402,7 @@ const SD_FIELDS = [
     { key: 'sd_volslider_y',          label: 'Slider Y',           type: 'number' },
     { key: 'sd_volslider_w',          label: 'Slider W',           type: 'number', min: 8, max: 480 },
     { key: 'sd_volslider_h',          label: 'Slider H',           type: 'number', min: 8, max: 480 },
-    { key: 'sd_volslider_knob_image', label: 'Knob image (.bin)',  type: 'text', placeholder: '/sdcard/assets/knobs/... (empty = colour knob)', sdPicker: { dir: '/assets/knobs' } },
+    { key: 'sd_volslider_knob_image', label: 'Knob image (.bin / asset)', type: 'text', placeholder: '/sdcard/assets/knobs/... or asset0 (empty = colour knob)', sdPicker: { dir: '/assets/knobs' } },
     { key: 'sd_volslider_vol_max',    label: 'Max volume (%)',     type: 'number', min: 1, max: 100 },
     { key: 'sd_show_ctrl_overlay', label: 'Show tap controls overlay', type: 'bool', default: true },
     ...touchHotspotFields('sd'),
@@ -433,8 +433,8 @@ const EQ_FIELDS = [
     { key: 'eq_curve_y',   label: 'Curve Y',    type: 'number' },
     { key: 'eq_curve_w',   label: 'Curve W',    type: 'number', min: 0, max: 480 },
     { key: 'eq_curve_h',   label: 'Curve H',    type: 'number', min: 0, max: 480 },
-    { key: 'eq_knob_image', label: 'Knob image (.bin)', type: 'text',
-      placeholder: '/sdcard/assets/knobs/... (empty = colour knob)',
+    { key: 'eq_knob_image', label: 'Knob image (.bin / asset)', type: 'text',
+      placeholder: '/sdcard/assets/knobs/... or asset0 (empty = colour knob)',
       sdPicker: { dir: '/assets/knobs' } },
     { key: 'eq_knob_w', label: 'Knob width (px, 0 = fill band)', type: 'number', min: 0, max: 200 },
     { key: 'eq_knob_only', label: 'Knob only (no track)', type: 'bool' },
@@ -662,6 +662,12 @@ let netWpCurSlot   = 0;          // slot the Background tab is editing
 // slot filled by hand comes back empty after a reboot and the screens pinned to
 // it fall back to the gradient — hence the warning strips. See netWpManualHint.
 let netWpFetchMode = null;
+// Internet asset slots (knob artwork). Same shape as the wallpaper slots above,
+// separate array: they are their own setting (display.asset_urls) even though
+// one batch fetches both. The count comes from /api/wallpaper/status.
+let netAssetSlotCount = 4;
+let netAssetUrls      = [];      // index = slot, mirrors display.asset_urls
+let netAssetFilled    = [];      // index = slot, "the device has artwork here"
 let keyboardSelection = null;
 const ONLINE_WALLPAPER_CATALOG = 'https://atlascube.net/wallpapers/catalog.php';
 const ONLINE_WALLPAPER_ORIGIN = 'https://atlascube.net';
@@ -1716,6 +1722,134 @@ async function uploadGeneralWallpaper() {
     }
 }
 
+// ── Internet asset slots ────────────────────────────────────────────────────
+// PNG artwork the DEVICE downloads (net_asset), kept in RAM and addressed as
+// "asset0".."asset3" from a widget's image field. Unlike the uploader above this
+// needs no SD card and keeps the alpha channel — the browser never touches the
+// pixels. The slots ride the internet wallpapers' batch and schedule, so there
+// is no separate auto-refresh control here.
+
+async function loadNetAssets() {
+    try {
+        const r = await fetch('/api/settings', { cache: 'no-store' });
+        if (r.ok) {
+            const d = (await r.json()).display || {};
+            netAssetUrls = Array.isArray(d.asset_urls) ? d.asset_urls.slice() : [];
+        }
+    } catch { /* offline — render whatever the mirror already holds */ }
+    await refreshNetAssetFilled();
+    buildNetAssetRows();
+}
+
+// Which slots the device actually has artwork in, and how many there are. The
+// count only moves if the device reports one — firmware predating this feature
+// answers without asset_slots, and the compiled-in default is the better guess
+// than zero rows.
+async function refreshNetAssetFilled() {
+    try {
+        const r = await fetch('/api/wallpaper/status', { cache: 'no-store' });
+        if (!r.ok) return;
+        const j = await r.json();
+        if (j.asset_slots > 0) netAssetSlotCount = j.asset_slots;
+        netAssetFilled = Array.isArray(j.asset_filled) ? j.asset_filled : [];
+    } catch { /* leave the marks as they were */ }
+}
+
+function buildNetAssetRows() {
+    const host = document.getElementById('net_asset_rows');
+    if (!host) return;
+    host.replaceChildren();
+
+    for (let i = 0; i < netAssetSlotCount; i++) {
+        const row = document.createElement('div');
+        row.className = 'asset-row';
+        row.style.marginTop = i ? '6px' : '0';
+
+        const name = document.createElement('code');
+        name.textContent = 'asset' + i;
+        name.style.cssText = 'min-width:56px;opacity:.85';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = 'net_asset_url_' + i;
+        input.className = 'field-input';
+        input.style.flex = '1';
+        input.placeholder = 'https://… .png  (empty = slot unused)';
+        input.value = netAssetUrls[i] || '';
+
+        // Filled means "the device decoded it", not "a URL is typed here" — the
+        // difference is exactly what a failed fetch looks like.
+        const mark = document.createElement('span');
+        mark.className = 'field-hint';
+        mark.style.cssText = 'margin-top:0;min-width:64px';
+        mark.textContent = netAssetFilled[i] ? '● in RAM' : '○ empty';
+        mark.style.opacity = netAssetFilled[i] ? '.9' : '.5';
+
+        row.append(name, input, mark);
+        host.appendChild(row);
+    }
+}
+
+// Read the four inputs back into the mirror. Every action that persists goes
+// through this, so what is on screen is what gets stored.
+function netAssetCaptureUrls() {
+    for (let i = 0; i < netAssetSlotCount; i++) {
+        const el = document.getElementById('net_asset_url_' + i);
+        if (el) netAssetUrls[i] = el.value.trim();
+    }
+    return netAssetUrls.slice(0, netAssetSlotCount);
+}
+
+function saveNetAssets() {
+    const st = document.getElementById('net_asset_status');
+    postDisplay({ asset_urls: netAssetCaptureUrls() });
+    if (st) st.textContent = 'saved';
+}
+
+// Fetch every configured slot the way a reboot does: one batch for wallpapers
+// AND assets, one radio-stop window. There is no per-asset fetch endpoint —
+// a single knob is not worth its own interruption of the music.
+function fetchNetAssets() {
+    const st = document.getElementById('net_asset_status');
+    postDisplay({ asset_urls: netAssetCaptureUrls() });
+    if (st) st.textContent = 'starting…';
+    fetch('/api/wallpaper/fetch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ all: true }),
+    }).then(r => r.json()).then(j => {
+        if (j.result !== 'started') { if (st) st.textContent = j.result; return; }
+        pollNetWallpaper();
+    }).catch(() => { if (st) st.textContent = 'request failed'; });
+}
+
+// Put a gallery item's PNG URL into a slot — the device downloads it itself, so
+// unlike Install (which converts in the browser and writes to SD) this needs no
+// card. Returns to the slot list with the URL saved but NOT yet fetched.
+async function useOnlineAssetInSlot(item) {
+    const st = document.getElementById('net_asset_status');
+    let url;
+    try { url = trustedOnlineWallpaperUrl(item.image); }
+    catch { if (st) st.textContent = 'unsupported asset URL'; return; }
+
+    netAssetCaptureUrls();
+    const firstFree = netAssetUrls.findIndex((u, i) => i < netAssetSlotCount && !u);
+    const suggested = firstFree >= 0 ? firstFree : 0;
+    const entered = window.prompt(
+        'Use this asset in which slot (0-' + (netAssetSlotCount - 1) + ')?', String(suggested));
+    if (entered === null) return;
+    const slot = parseInt(entered, 10);
+    if (!(slot >= 0 && slot < netAssetSlotCount)) {
+        if (st) st.textContent = 'bad slot number';
+        return;
+    }
+
+    netAssetUrls[slot] = url;
+    buildNetAssetRows();
+    postDisplay({ asset_urls: netAssetUrls.slice(0, netAssetSlotCount) });
+    if (st) st.textContent = 'asset' + slot + ' set — press Fetch now to download it';
+}
+
 function browseAssets() {
     const list = document.getElementById('asset_list');
     if (!list) return;
@@ -1860,8 +1994,16 @@ function renderOnlineAssetGallery(catalog) {
         const install = document.createElement('button');
         install.type = 'button';
         install.textContent = 'Install';
+        install.title = 'Convert here and store on the SD card';
         install.addEventListener('click', () => installOnlineAsset(item, install, image));
-        actions.append(preview, install);
+        // The device-side route: hand the slot this PNG's URL and let the radio
+        // download it. No SD card, and the alpha channel survives.
+        const useSlot = document.createElement('button');
+        useSlot.type = 'button';
+        useSlot.textContent = 'Use in slot';
+        useSlot.title = 'Let the device download this PNG into an asset slot (RAM)';
+        useSlot.addEventListener('click', () => useOnlineAssetInSlot(item));
+        actions.append(preview, install, useSlot);
         body.append(cardTitle, meta, actions);
         card.append(image, body);
         grid.appendChild(card);
@@ -2391,6 +2533,11 @@ window.addEventListener('DOMContentLoaded', async () => {
             state[name] = await fetch(`/api/ui/profile/${name}`).then(r => r.json());
         }
 
+        // Asset slots are needed by every knob field's "🌐 asset…" picker, not
+        // just the Assets tab — seed them now so the ✓ marks are right on the
+        // first form the user opens. Fire and forget: two small GETs.
+        loadNetAssets();
+
         selectSection('clock');   // triggers the wallpaper preview load
     } catch (err) {
         setStatus('Failed to load profile: ' + err.message, true);
@@ -2416,7 +2563,7 @@ function selectSection(name) {
     document.getElementById('general_card').style.display  = isGeneral  ? '' : 'none';
     document.getElementById('internet_card').style.display = isInternet ? '' : 'none';
     document.getElementById('assets_card').style.display   = isAssets   ? '' : 'none';
-    if (isAssets)               { browseAssets(); return; }
+    if (isAssets)               { loadNetAssets(); browseAssets(); return; }
     if (isPresets)              { checkOrphanPresets(); return; }
     if (isGeneral || isInternet) {
         loadBackgroundTab();
@@ -2774,10 +2921,18 @@ function pollNetWallpaper() {
         const el = document.getElementById('netWpStatus') ||
                    document.getElementById('layout_wallpaper_status');
         if (el) el.textContent = text;
+        // The batch carries the asset slots too, so the Assets tab follows the
+        // same poll rather than running one of its own.
+        const assetEl = document.getElementById('net_asset_status');
+        if (assetEl) assetEl.textContent = text;
         if (j.status === 'busy') {
             netWpTimer = setTimeout(pollNetWallpaper, 1000);
         } else if (j.status === 'ok') {
             if (Array.isArray(j.filled)) buildNetWpSlotSelect();
+            if (Array.isArray(j.asset_filled)) {
+                netAssetFilled = j.asset_filled;
+                buildNetAssetRows();
+            }
             // A fresh image landed — update the tab thumbnail and the layout
             // preview. Retries cover the beat between the fetch task reporting
             // "ok" and the LVGL task committing the buffer.
@@ -3026,6 +3181,10 @@ function buildFormRow(field, data, group, details) {
 
     // Optional "pick a .bin from SD" button that fills a text path field.
     if (field.type === 'text' && field.sdPicker) {
+        // Two pickers plus the field are wider than the form column; the row
+        // wraps instead of clipping the last one (see .form-row-picker).
+        row.classList.add('form-row-picker');
+
         const pick = document.createElement('button');
         pick.type = 'button';
         pick.className = 'btn-secondary';
@@ -3044,6 +3203,30 @@ function buildFormRow(field, data, group, details) {
             });
         });
         row.appendChild(pick);
+
+        // …and the SD-less alternative: an internet asset slot, which the device
+        // downloads itself (Assets tab). Same field, different kind of value, so
+        // this drops the reference in rather than opening a browser.
+        // No .field-input class: that one is sized for the full-width panels,
+        // and in a form row the compact `.form-row select` styling is right.
+        const slotSel = document.createElement('select');
+        slotSel.style.cssText = 'width:auto;margin-left:6px';
+        slotSel.title = 'Use an internet asset slot instead of an SD file';
+        slotSel.add(new Option('🌐 asset…', ''));
+        for (let i = 0; i < netAssetSlotCount; i++) {
+            // ✓ marks a slot that already has a URL configured — a plain slot
+            // still works, it just has nothing to download yet.
+            slotSel.add(new Option('asset' + i + (netAssetUrls[i] ? ' ✓' : ''), 'asset' + i));
+        }
+        slotSel.addEventListener('change', () => {
+            if (!slotSel.value) return;
+            input.value = slotSel.value;
+            data[field.key] = slotSel.value;
+            slotSel.value = '';               // back to the "🌐 asset…" prompt
+            refreshGroup(details, group, data);
+            renderSvg();
+        });
+        row.appendChild(slotSel);
     }
     return row;
 }

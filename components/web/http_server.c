@@ -37,6 +37,7 @@
 #include "sdcard.h"
 #include "updater.h"
 #include "net_wallpaper.h"
+#include "net_asset.h"
 #include "net_wallpaper_sched.h"
 #include "diag.h"           // /api/diag — snapshot shared with SCREEN_DIAG
 #include "weather.h"
@@ -185,6 +186,11 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     for (int i = 0; i < WALLPAPER_SLOTS; i++)
         cJSON_AddItemToArray(wurls, cJSON_CreateString(s->display.wallpaper_url[i]));
     cJSON_AddStringToObject(display, "wallpaper_url", s->display.wallpaper_url[0]);
+    // Internet-asset slots (knob artwork): array only — this one was born with
+    // slots, so there is no scalar spelling to keep alive.
+    cJSON *aurls = cJSON_AddArrayToObject(display, "asset_urls");
+    for (int i = 0; i < ASSET_SLOTS; i++)
+        cJSON_AddItemToArray(aurls, cJSON_CreateString(s->display.asset_url[i]));
     cJSON_AddNumberToObject(display, "wallpaper_fetch_mode", s->display.wallpaper_fetch_mode);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_hour", s->display.wallpaper_fetch_hour);
     cJSON_AddNumberToObject(display, "wallpaper_fetch_min",  s->display.wallpaper_fetch_min);
@@ -500,6 +506,19 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             urls_changed = true;
         } else if (cJSON_IsString(wurl)) {
             settings_set_wallpaper_slot(0, wurl->valuestring);
+            urls_changed = true;
+        }
+        // Asset slots share the wallpapers' schedule, so a change here re-arms
+        // the same one-shot below.
+        cJSON *aurls = cJSON_GetObjectItem(display, "asset_urls");
+        if (cJSON_IsArray(aurls)) {
+            int i = 0;
+            cJSON *it = NULL;
+            cJSON_ArrayForEach(it, aurls) {
+                if (i >= ASSET_SLOTS) break;
+                if (cJSON_IsString(it)) settings_set_asset_slot(i, it->valuestring);
+                i++;
+            }
             urls_changed = true;
         }
 
@@ -3589,6 +3608,13 @@ static esp_err_t api_wallpaper_status_handler(httpd_req_t *req)
     cJSON *filled = cJSON_AddArrayToObject(json, "filled");
     for (int i = 0; i < NET_WP_SLOTS; i++)
         cJSON_AddItemToArray(filled, cJSON_CreateBool(net_wallpaper_image(i) != NULL));
+
+    // Same, for the internet-asset slots — they are fetched by this same batch,
+    // so the Assets tab polls this one endpoint too.
+    cJSON_AddNumberToObject(json, "asset_slots", NET_ASSET_SLOTS);
+    cJSON *afilled = cJSON_AddArrayToObject(json, "asset_filled");
+    for (int i = 0; i < NET_ASSET_SLOTS; i++)
+        cJSON_AddItemToArray(afilled, cJSON_CreateBool(net_asset_filled(i)));
 
     int done = 0, total = 0;
     net_wallpaper_progress(&done, &total);

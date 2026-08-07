@@ -1,5 +1,6 @@
 #include "net_wallpaper_sched.h"
 #include "net_wallpaper.h"
+#include "net_asset.h"      // assets share this schedule and this batch
 #include "settings.h"
 #include "ntp_service.h"
 #include "esp_log.h"
@@ -102,9 +103,10 @@ static void schedule_next(void)
     const app_settings_t *st = settings_get();
     const int mode = st->display.wallpaper_fetch_mode;
 
-    bool any_url = false;
-    for (int i = 0; i < WALLPAPER_SLOTS; i++)
-        if (st->display.wallpaper_url[i][0]) { any_url = true; break; }
+    // An asset URL counts as work too — see boot_fetch_due().
+    bool any_url = net_asset_url_count() > 0;
+    for (int i = 0; !any_url && i < WALLPAPER_SLOTS; i++)
+        if (st->display.wallpaper_url[i][0]) any_url = true;
 
     if (!s_inited || mode == MODE_OFF || !any_url) {
         disarm();
@@ -171,7 +173,9 @@ static bool boot_fetch_due(void)
     if (st->display.wallpaper_fetch_mode == MODE_OFF) return false;
     for (int i = 0; i < WALLPAPER_SLOTS; i++)
         if (st->display.wallpaper_url[i][0]) return true;
-    return false;
+    // Assets ride the same batch, so a device with only asset URLs still has a
+    // fetch coming — and the radio gate must wait for it like any other.
+    return net_asset_url_count() > 0;
 }
 
 void net_wallpaper_sched_set_boot_done_cb(void (*cb)(void))

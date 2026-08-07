@@ -16,6 +16,16 @@
 // a multi-digit parser in ui_background.c AND in layout.js.
 #define WALLPAPER_SLOTS 10
 
+// Internet-asset slots: small PNG artwork (slider knobs today) fetched into
+// PSRAM alongside the wallpapers and named "asset0".."asset3" in the ui_profile
+// fields that take an image. Same reasoning as above — the persisted shape is
+// settings' business, net_asset mirrors this as NET_ASSET_SLOTS. Four covers a
+// distinct knob on each of radio/SD/BT plus the equalizer; a filled slot costs
+// only its own decoded pixels (a 118x31 knob is ~11 KB as RGB565A8).
+//
+// Single-digit ceiling as well: the "asset<N>" override is parsed one char wide.
+#define ASSET_SLOTS 4
+
 typedef struct {
     int  volume;
     int  eq[10];
@@ -69,6 +79,11 @@ typedef struct {
     // the "net0".."net9" per-screen override (bare "net" = slot 0). The count is
     // implicit — fill as many as you want, empty ones are skipped by the fetcher.
     char            wallpaper_url[WALLPAPER_SLOTS][192];
+    // Internet-asset slots: source URL of a .png ("" = unused), fetched in the
+    // SAME batch as the wallpapers above and under the same wallpaper_fetch_mode
+    // — an asset is useless on a device that has opted out of internet artwork,
+    // and a second schedule would mean a second silent window for the radio.
+    char            asset_url[ASSET_SLOTS][192];
     int             wallpaper_fetch_mode; // auto refresh: 0=off, 1=once after boot, 2=daily
     int             wallpaper_fetch_hour; // daily fetch time (mode 2 only)
     int             wallpaper_fetch_min;
@@ -212,6 +227,9 @@ void settings_set_wallpaper_fetch(int mode, int hour, int min);
 // One slot's source URL; out-of-range slots are ignored, "" clears the slot.
 // Same persist-only contract as above.
 void settings_set_wallpaper_slot(int slot, const char *url);
+// One internet-asset slot's source URL (a .png). Same contract again: persists
+// only, the caller decides when to fetch.
+void settings_set_asset_slot(int slot, const char *url);
 void settings_set_logo_path(const char *path);
 void settings_set_show_boot_info(bool enabled);
 void settings_set_sd_show_screen(bool show);
