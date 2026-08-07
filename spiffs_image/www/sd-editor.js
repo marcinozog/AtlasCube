@@ -263,12 +263,27 @@ async function delEntry(path, name, isDir) {
 // The one irreversible action on this page, so it goes through a modal that
 // spells out what disappears and stays locked until the word is typed. The
 // device wants the same intent restated as a confirm token on the request.
-const fmtModal  = document.getElementById("fmt_modal");
-const fmtToken  = document.getElementById("fmt_token");
-const fmtGo     = document.getElementById("fmt_go");
-const fmtCancel = document.getElementById("fmt_cancel");
-const fmtStatus = document.getElementById("fmt_status");
+const fmtModal   = document.getElementById("fmt_modal");
+const fmtCard    = fmtModal.querySelector(".modal-content");
+const fmtToken   = document.getElementById("fmt_token");
+const fmtGo      = document.getElementById("fmt_go");
+const fmtCancel  = document.getElementById("fmt_cancel");
+const fmtStatus  = document.getElementById("fmt_status");
+const fmtPhase   = document.getElementById("fmt_phase");
+const fmtElapsed = document.getElementById("fmt_elapsed");
 let fmtBusy = false;
+let fmtTimer = null;
+
+// What the running modal says as the seconds pile up. f_mkfs offers no progress
+// to report, so the reassurance has to come from elapsed time alone: the wait
+// scales with card size and a silent stretch this long reads as a hang.
+// Thresholds are set around a measured 32 GB card, which takes ~2 minutes.
+const FMT_PHASES = [
+    [0,   "Erasing and building the filesystem…"],
+    [15,  "Working — a 32 GB card takes about two minutes."],
+    [140, "Past the usual time for 32 GB; a bigger card takes longer."],
+    [300, "Still running. Leave it alone and keep the power on."],
+];
 
 function openFormat() {
     fmtToken.value = "";
@@ -304,11 +319,32 @@ fmtModal.addEventListener("click", (ev) => {
     if (ev.target === fmtModal) closeFormat();  // click outside the card = cancel
 });
 
+// Swap the modal into (and out of) its running look: warning text away, moving
+// bar and ticking clock in, everything locked.
+function setFmtRunning(on) {
+    fmtBusy = on;
+    fmtCard.classList.toggle("running", on);
+    fmtGo.disabled = fmtCancel.disabled = fmtToken.disabled = on;
+    clearInterval(fmtTimer);
+    fmtTimer = null;
+    if (!on) return;
+
+    const started = Date.now();
+    const tick = () => {
+        const s = Math.floor((Date.now() - started) / 1000);
+        fmtElapsed.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+        for (const [from, text] of FMT_PHASES) {
+            if (s >= from) fmtPhase.textContent = text;
+        }
+    };
+    tick();
+    fmtTimer = setInterval(tick, 1000);
+}
+
 async function runFormat() {
     if (fmtBusy) return;
-    fmtBusy = true;
-    fmtGo.disabled = fmtCancel.disabled = fmtToken.disabled = true;
-    setFmtStatus("Formatting… do not power off");
+    setFmtRunning(true);
+    setFmtStatus("");            // the running block speaks for itself now
     metaEl.textContent = "formatting…";
     try {
         // No timeout on purpose: the device answers only once f_mkfs is done.
@@ -322,8 +358,7 @@ async function runFormat() {
     } catch (e) {
         setFmtStatus("Connection lost — check the device.", true);
     }
-    fmtBusy = false;
-    fmtGo.disabled = fmtCancel.disabled = fmtToken.disabled = false;
+    setFmtRunning(false);
     fmtToken.value = "";
     fmtGo.disabled = true;
     refresh();

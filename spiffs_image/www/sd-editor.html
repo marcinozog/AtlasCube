@@ -209,6 +209,55 @@
             font-weight: 600;
         }
         .fmt-foot button:disabled { opacity: .4; cursor: not-allowed; }
+        /* ── Running state: f_mkfs reports no progress, so the modal proves it is
+              alive with motion (sliding bar, pulsing dot) and a ticking clock.
+              A 32 GB card takes long enough to look like a hang without it. ── */
+        .fmt-run { display: none; flex-direction: column; gap: 8px; }
+        .modal-content.danger.running .fmt-run { display: flex; }
+        .modal-content.danger.running .fmt-lead,
+        .modal-content.danger.running .fmt-list,
+        .modal-content.danger.running .fmt-confirm { display: none; }
+        .fmt-bar {
+            height: 6px;
+            border-radius: 3px;
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+        .fmt-bar::before {
+            content: "";
+            display: block;
+            height: 100%;
+            width: 35%;
+            border-radius: 3px;
+            background: var(--red);
+            animation: fmt-slide 1.4s ease-in-out infinite;
+        }
+        @keyframes fmt-slide {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(286%); }   /* 100/35 of its own width */
+        }
+        .fmt-run .line {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text);
+        }
+        .fmt-run .dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: var(--red);
+            flex-shrink: 0;
+            animation: fmt-blink 1s steps(1, end) infinite;
+        }
+        @keyframes fmt-blink { 50% { opacity: .15; } }
+        .fmt-run .elapsed { margin-left: auto; color: var(--text-dim); }
+        @media (prefers-reduced-motion: reduce) {
+            .fmt-bar::before, .fmt-run .dot { animation-duration: 3s; }
+        }
     </style>
 </head>
 <body>
@@ -276,8 +325,8 @@
         </ul>
 
         <div class="fmt-note">
-            The radio stays blocked while it works: seconds on a small card, up to
-            about a minute on a large one. Do not power the device off and do not
+            The radio stays blocked while it works — about two minutes for a 32 GB
+            card, longer for a bigger one. Do not power the device off and do not
             close this page until it reports back.
         </div>
 
@@ -285,6 +334,15 @@
             Type <b>FORMAT</b> to unlock the button:
             <input type="text" id="fmt_token" autocomplete="off" spellcheck="false" placeholder="FORMAT">
         </label>
+
+        <div class="fmt-run">
+            <div class="fmt-bar"></div>
+            <div class="line">
+                <span class="dot"></span>
+                <span id="fmt_phase">Erasing and building the filesystem…</span>
+                <span class="elapsed" id="fmt_elapsed">0:00</span>
+            </div>
+        </div>
 
         <div class="fmt-foot">
             <span class="status" id="fmt_status"></span>

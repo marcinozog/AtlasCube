@@ -3051,8 +3051,8 @@ static esp_err_t api_sd_delete_handler(httpd_req_t *req)
 // POST /api/sd/format?confirm=erase-everything  → wipes the card and lays down a
 // fresh FAT filesystem. The exact token is required so no stray or mistyped
 // request can erase a card; the web UI only sends it from behind a typed
-// confirmation. Blocks for as long as the format takes (seconds to about a
-// minute on a large card), during which other web requests queue up.
+// confirmation. Blocks for as long as the format takes — measured at about two
+// minutes for a 32 GB card — during which other web requests queue up.
 static esp_err_t api_sd_format_handler(httpd_req_t *req)
 {
     char token[40];
