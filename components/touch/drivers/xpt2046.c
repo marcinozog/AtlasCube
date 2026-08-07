@@ -6,10 +6,10 @@
 
 static const char *TAG = "XPT2046";
 
-// Raw Z / X / Y dumps live behind the runtime "touch" trace flag (Settings →
-// System → Diagnostic logging): this variant was never HW-calibrated, so a
-// tester on a stock release binary has to be able to report actual controller
-// readings without rebuilding.
+// Raw Z / X / Y dumps live behind the runtime "touch" trace flag (web UI:
+// Settings → Diagnostics → Diagnostic logging): this variant was never
+// HW-calibrated, so a tester on a stock release binary has to be able to report
+// actual controller readings without rebuilding.
 
 // Control bytes: start bit set, 12-bit conversion, differential mode.
 // A2..A0 select the channel (see datasheet table).

@@ -73,10 +73,10 @@ function selectTab(name, sub) {
         updateTabHash(name);
     }
 
-    // Diagnostics and the pilot's link both live on the System tab and both poll
-    // only while it is on screen — see startDiagPoll().
-    if (name === 'system') { startDiagPoll(); startEspnowPoll(); }
-    else                   { stopDiagPoll();  stopEspnowPoll();  }
+    // Both of these poll the device, so they run only while their own tab is on
+    // screen — the health snapshot on Diagnostics, the pilot's link on System.
+    if (name === 'diag')   startDiagPoll();   else stopDiagPoll();
+    if (name === 'system') startEspnowPoll(); else stopEspnowPoll();
 }
 
 function tabFromHash() {
@@ -2389,9 +2389,10 @@ document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
         stopDiagPoll();
         stopEspnowPoll();
-    } else if (document.querySelector('#tab-system.active')) {
-        startDiagPoll();
-        startEspnowPoll();
+    } else {
+        // Each poll belongs to its own tab, same split as selectTab().
+        if (document.querySelector('#tab-diag.active'))   startDiagPoll();
+        if (document.querySelector('#tab-system.active')) startEspnowPoll();
     }
 });
 

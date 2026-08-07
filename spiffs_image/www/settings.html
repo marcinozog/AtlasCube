@@ -34,6 +34,7 @@
         <button type="button" class="tab-btn" data-tab="mqtt"        onclick="selectTab('mqtt')">📨 MQTT</button>
         <button type="button" class="tab-btn" data-tab="weather"     onclick="selectTab('weather')">🌦️ Weather</button>
         <button type="button" class="tab-btn" data-tab="tools"       onclick="selectTab('tools')">🛠️ Tools</button>
+        <button type="button" class="tab-btn" data-tab="diag"        onclick="selectTab('diag')">🩺 Diagnostics</button>
         <button type="button" class="tab-btn" data-tab="system"      onclick="selectTab('system')">⚙️ System</button>
     </nav>
 
@@ -830,9 +831,9 @@
     </section>
 
     <!-- ══════════════════════════════════════════
-         System — firmware update, web UI files, backup & restore
+         Diagnostics — device health snapshot + runtime log flags
     ══════════════════════════════════════════ -->
-    <section class="tab-pane" id="tab-system" data-tab="system">
+    <section class="tab-pane" id="tab-diag" data-tab="diag">
         <div class="panel">
             <div class="panel-label panel-label--row">
                 <span>🩺 Diagnostics</span>
@@ -860,7 +861,12 @@
             </div>
             <div id="trace_flags" class="trace-flags">Loading…</div>
         </div>
+    </section>
 
+    <!-- ══════════════════════════════════════════
+         System — firmware update, web UI files, backup & restore
+    ══════════════════════════════════════════ -->
+    <section class="tab-pane" id="tab-system" data-tab="system">
         <div class="panel ota-panel">
             <label class="field-label">⬆️ Firmware update (OTA)</label>
             <div class="ota-version-row">
