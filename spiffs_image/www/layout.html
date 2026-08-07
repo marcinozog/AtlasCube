@@ -493,6 +493,40 @@
             line-height: 1.5;
             text-align: center;
         }
+        /* A theme card is one full-width row: every screen of the set side by
+           side, so the artwork reads as a family before anything is installed. */
+        .theme-card { margin-bottom: 8px; }
+        .theme-card:last-of-type { margin-bottom: 0; }
+        .theme-strip {
+            display: flex;
+            gap: 6px;
+            padding: 7px 7px 0;
+            overflow-x: auto;
+        }
+        .theme-strip figure {
+            flex: 0 0 96px;
+            min-width: 0;
+            margin: 0;
+        }
+        .theme-strip img {
+            display: block;
+            width: 100%;
+            aspect-ratio: var(--online-wallpaper-ratio, 4 / 3);
+            object-fit: cover;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: #050508;
+        }
+        .theme-strip figcaption {
+            overflow: hidden;
+            margin-top: 3px;
+            color: var(--text-dim);
+            font-size: 9px;
+            text-align: center;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .theme-card .online-wallpaper-actions button { flex: 0 0 auto; padding: 5px 12px; }
         .online-asset-gallery .online-wallpaper-card img {
             object-fit: contain;
             padding: 10px;
@@ -579,6 +613,7 @@
         <div class="section-group">
             <span class="section-group-label">Tools</span>
             <div class="section-group-tabs">
+                <button class="section-tab" data-section="themes" onclick="selectSection('themes')">🎭 Themes</button>
                 <button class="section-tab" data-section="internet" onclick="selectSection('internet')">🌍 Internet</button>
                 <button class="section-tab" data-section="general" onclick="selectSection('general')">🎨 General</button>
                 <button class="section-tab" data-section="assets" onclick="selectSection('assets')">📦 Assets</button>
@@ -628,6 +663,20 @@
         <button class="btn-secondary" onclick="checkOrphanPresets()">🧹 Check presets</button>
         <div id="presetOrphanStatus" class="field-hint" style="margin-top:6px"></div>
         <div id="presetOrphanList" style="margin-top:4px"></div>
+    </div>
+
+    <!-- ── Themes tab: whole sets from atlascube.net, all screens at once ── -->
+    <div id="themes_card" style="display:none">
+        <div class="panel">
+            <label class="field-label">Themes</label>
+            <div class="field-hint">A theme is one published set: a wallpaper for every screen, the
+                layout drawn against each of them, and the knob artwork it was drawn with. Installing
+                converts the wallpapers to this panel's <code>.bin</code> on the SD card, files each
+                layout as that wallpaper's preset, and applies all of it — so it needs a card.
+                The knob goes to an internet asset slot instead (RAM, alpha preserved), and screens
+                whose layout leaves the knob unset keep the plain themed one.</div>
+            <div id="layout_theme_gallery" class="online-wallpaper-gallery" style="margin-top:10px"></div>
+        </div>
     </div>
 
     <!-- ── General tab: the gradient/solid look for General screens ── -->

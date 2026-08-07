@@ -506,6 +506,67 @@ the stored section (even when the screen was inheriting the global
 default), so loading the preset later re-applies both the layout and its
 wallpaper regardless of what the global default is by then.
 
+## Themes from atlascube.net
+
+A **theme** is one named set published in the online gallery: artwork for every
+screen, the layouts drawn against it, and the knob it was drawn with. The
+*Themes* button in the wallpaper picker lists them and installs one in a click.
+
+**On the server**, membership is a naming convention rather than a bundle — the
+artwork stays where the per-category gallery already keeps it:
+
+```
+files/320x240/home/japan.jpg                  → Home
+files/320x240/radio-sd-player/japan_radio.jpg → Radio
+files/320x240/radio-sd-player/japan_sd.jpg    → SD Player
+files/320x240/playlist-sd-browser/japan.jpg   → Playlist + SD Browser
+files/320x240/wireless/japan.jpg              → Bluetooth
+files/320x240/equalizer/japan.jpg             → Equalizer
+```
+
+For each screen the catalog looks for `<theme>_<screen>.<ext>` first and falls
+back to `<theme>.<ext>`, so a category serving two screens (Radio + SD Player,
+Playlist + SD Browser) can hand them one artwork or two without any declaration.
+`themes.json` on the server carries only what the convention cannot: the human
+title, the knob assets, and per-screen exceptions naming artwork borrowed from
+another set. A layout preset published as `<stem>.json` **next to** its artwork
+is paired by stem, exactly like the optional device-ready `<stem>.bin`, and is
+offered by the plain wallpaper list too — installing a single wallpaper from the
+gallery files its published layout and then offers to apply it, the same
+`offerPresetForWallpaper()` path as any preset already on the card.
+
+`catalog.php?type=themes&resolution=<WxH>` answers with the resolved set:
+`screens[]` of `{ screen, screenLabel, category, filename, image, binary,
+layout, borrowed }` plus `assets[]` of `{ role, filename, image }`. A screen
+with no matching file is simply absent — a theme may cover four screens on one
+panel and all seven on another.
+
+**Installing** walks the screens in order and is deliberately sequential (the
+card is also feeding the music):
+
+1. Reserve an internet asset slot per knob asset — the URL goes into
+   `display.asset_urls[n]`, then one batch `POST /api/wallpaper/fetch {all:true}`
+   pulls it. PNG with alpha reaches the device untouched: no conversion, no SD
+   card, no background baked into the knob. An occupied slot set is **reported,
+   not overwritten**.
+2. Per screen: download the artwork, convert it to this panel's `.bin` in the
+   browser and store it under `/wallpapers/<WxH>/<category>/`, keeping the
+   published stem so the preset lands under the name the catalog paired it with.
+   Artwork shared by two screens is uploaded once.
+3. Fetch the published layout (once per file, `w`/`h` stamp checked) and
+   **retarget** it: `<section>_wallpaper` gets the path this install just wrote,
+   and a non-empty `*_knob_image` gets the `asset<N>` reference from step 1. An
+   *empty* knob field is a decision — that screen was meant to keep the plain
+   themed knob — so it stays empty.
+4. File the retargeted section as that wallpaper's preset on SD, so Load and the
+   offer-on-switch find it later like any other.
+5. `POST /api/ui/profile/<section>` per screen. A screen whose artwork or layout
+   failed is collected into the final report and the rest still install; a screen
+   the theme has artwork but no layout for gets the wallpaper only.
+
+Still **frontend-only** — the firmware sees ordinary section POSTs, an
+`/api/settings` patch and the existing fetch endpoint.
+
 ## End-to-end: what is stored where
 
 Three independent stores are involved, and confusing them is the usual source of

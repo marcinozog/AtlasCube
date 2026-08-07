@@ -936,7 +936,8 @@ function buildWallpaperPicker() {
         localStorage.setItem('layout_preset_autoload', autoCheck.checked ? '1' : '0');
     });
     autoLabel.append(autoCheck, document.createTextNode('Auto-apply preset'));
-    row.append(uploadBtn, onlineBtn, button, netBtn, netSel, generalBtn, autoLabel, uploadInput);
+    row.append(uploadBtn, onlineBtn, button, netBtn, netSel, generalBtn,
+               autoLabel, uploadInput);
 
     // The active wallpaper path gets its own full-width line under the
     // buttons — inside the button row it was squeezed to a few characters.
@@ -1019,7 +1020,8 @@ function buildWallpaperPicker() {
     manualHint.id = 'layout_wp_manual_hint_host';
     manualHint.hidden = true;
 
-    picker.append(row, manualHint, nameRow, plateRow, browser, onlineGallery, presetRow, status);
+    picker.append(row, manualHint, nameRow, plateRow, browser, onlineGallery,
+                  presetRow, status);
     frame.insertAdjacentElement('afterend', picker);
     updateLabelPlateControl();
     updateNetWpAutoHints();
@@ -1047,24 +1049,34 @@ const LAYOUTS_DIR = '/wallpapers/layouts';
 // The resolution segment is always the panel's, so the stamp inside the file can
 // never disagree with the directory it sits in.
 function presetPath() {
-    if (!currentWallpaperPath) return '';
+    return presetPathFor(currentWallpaperPath);
+}
+
+// The same mapping for ANY wallpaper, not only the one the active screen shows:
+// installing a theme files presets for six screens it is not standing on.
+function presetPathFor(wallpaperPath) {
+    if (!wallpaperPath) return '';
     const resolution = `${state.meta.screen_w}x${state.meta.screen_h}`;
-    const rel = currentWallpaperPath.startsWith(SD_MOUNT + '/')
-        ? currentWallpaperPath.slice(SD_MOUNT.length)
-        : currentWallpaperPath;
+    const rel = wallpaperPath.startsWith(SD_MOUNT + '/')
+        ? wallpaperPath.slice(SD_MOUNT.length)
+        : wallpaperPath;
     // Everything below the wallpaper's own resolution folder is mirrored — the
     // category subfolder, "internet", or nothing at all.
     const m = rel.match(/^\/wallpapers\/\d+x\d+\/(.+)$/i);
     if (m) return `${LAYOUTS_DIR}/${resolution}/${m[1].replace(/\.bin$/i, '')}.json`;
     // A wallpaper from anywhere else on the card keeps the flat layout.
-    return legacyPresetPath();
+    return legacyPresetPathFor(wallpaperPath);
 }
 
 // Where presets lived before they mirrored the wallpaper tree: one file per
 // basename per resolution. Still read (never written) so existing presets load.
 function legacyPresetPath() {
-    if (!currentWallpaperPath) return '';
-    const base = currentWallpaperPath.split('/').pop().replace(/\.bin$/i, '');
+    return legacyPresetPathFor(currentWallpaperPath);
+}
+
+function legacyPresetPathFor(wallpaperPath) {
+    if (!wallpaperPath) return '';
+    const base = wallpaperPath.split('/').pop().replace(/\.bin$/i, '');
     return `${LAYOUTS_DIR}/${state.meta.screen_w}x${state.meta.screen_h}/${base}.json`;
 }
 
@@ -2396,6 +2408,18 @@ async function installOnlineWallpaper(item, button) {
         const relPath = await window.LvBin.uploadImage(
             file, sectionWallpaperDir(), state.meta.screen_w, state.meta.screen_h,
             note, saveAs);
+        // Artwork published with a layout brings it along: the preset is filed
+        // for this .bin before the screen switches to it, so the regular
+        // "apply the saved preset?" offer picks it up on the way in.
+        if (item.layout) {
+            try {
+                await installCatalogLayout(await fetchThemeLayout(item.layout),
+                                           SD_MOUNT + relPath);
+            } catch (err) {
+                note('Wallpaper installed; its published layout was skipped (' +
+                     err.message + ').');
+            }
+        }
         await selectWallpaper(relPath);
         setOnlineWallpaperGalleryOpen(false);
     } catch (err) {
@@ -2404,6 +2428,385 @@ async function installOnlineWallpaper(item, button) {
         button.disabled = false;
         button.textContent = oldLabel;
     }
+}
+
+// ── Online themes (Themes tab) ──────────────────────────────────────────────
+// A theme is one named set on atlascube.net: artwork for every screen, the
+// layouts drawn against it, and the knob it was drawn with. Installing one walks
+// the screens in order — convert the artwork to this panel's .bin on SD, file
+// the published layout as that wallpaper's preset, repoint the paths inside it
+// at this card, then push the section to the device. Deliberately sequential:
+// the card is also feeding the music, and seven parallel uploads is how a stall
+// starts. A screen that fails is reported and the rest still install.
+//
+// It gets its own tab rather than a panel under the preview because it dresses
+// every screen at once — nothing about it belongs to the screen being edited.
+
+async function loadThemeGallery() {
+    const panel = document.getElementById('layout_theme_gallery');
+    if (!panel) return;
+    const w = Number(state.meta.screen_w);
+    const h = Number(state.meta.screen_h);
+    onlineWallpaperMessage(panel, `Loading themes for ${w} × ${h}...`);
+    try {
+        const endpoint = new URL(ONLINE_WALLPAPER_CATALOG);
+        endpoint.searchParams.set('type', 'themes');
+        endpoint.searchParams.set('resolution', `${w}x${h}`);
+        const response = await fetch(endpoint.toString(),
+                                     { cache: 'no-store', mode: 'cors' });
+        if (response.status === 400)
+            throw new Error('the gallery publishes nothing for a ' + w + '×' + h + ' panel');
+        if (!response.ok) throw new Error('catalog HTTP ' + response.status);
+        const catalog = await response.json();
+        if (catalog.type !== 'themes' || !Array.isArray(catalog.themes))
+            throw new Error('invalid catalog response');
+        renderThemeGallery(catalog);
+    } catch (err) {
+        onlineWallpaperMessage(panel, 'Could not load the theme list: ' + err.message);
+    }
+}
+
+function renderThemeGallery(catalog) {
+    const panel = document.getElementById('layout_theme_gallery');
+    panel.replaceChildren();
+
+    const heading = document.createElement('div');
+    heading.className = 'online-wallpaper-heading';
+    const title = document.createElement('span');
+    title.textContent = `${catalog.resolution} · themes`;
+    const count = document.createElement('span');
+    count.textContent = `${catalog.themes.length} available`;
+    heading.append(title, count);
+    panel.appendChild(heading);
+
+    if (!catalog.themes.length) {
+        const note = document.createElement('div');
+        note.className = 'online-wallpaper-message';
+        note.textContent = 'No themes published for this panel yet.';
+        panel.appendChild(note);
+        return;
+    }
+
+    // Thumbnails keep the panel's aspect so a theme reads as the set it is.
+    const [rw, rh] = String(catalog.resolution || '').split('x').map(Number);
+    if (rw > 0 && rh > 0)
+        panel.style.setProperty('--online-wallpaper-ratio', `${rw} / ${rh}`);
+
+    for (const theme of catalog.themes) panel.appendChild(buildThemeCard(theme));
+
+    const status = document.createElement('div');
+    status.id = 'layout_theme_status';
+    status.className = 'online-wallpaper-message';
+    status.style.textAlign = 'left';
+    status.hidden = true;
+    panel.appendChild(status);
+}
+
+function buildThemeCard(theme) {
+    const screens = (theme.screens || []).filter(s => SECTIONS[s.screen]);
+    const card = document.createElement('article');
+    card.className = 'online-wallpaper-card theme-card';
+
+    const strip = document.createElement('div');
+    strip.className = 'theme-strip';
+    for (const screen of screens) {
+        let imageUrl;
+        try { imageUrl = trustedOnlineWallpaperUrl(screen.image); }
+        catch { continue; }
+        const figure = document.createElement('figure');
+        const image = document.createElement('img');
+        image.src = imageUrl;
+        image.loading = 'lazy';
+        image.alt = `${theme.title} — ${screen.screenLabel}`;
+        const caption = document.createElement('figcaption');
+        // A screen without a published layout still gets the artwork; saying so
+        // here beats a surprise when only some screens rearrange themselves.
+        caption.textContent = screen.screenLabel + (screen.layout ? '' : ' (art only)');
+        figure.append(image, caption);
+        strip.appendChild(figure);
+    }
+
+    const body = document.createElement('div');
+    body.className = 'online-wallpaper-body';
+    const cardTitle = document.createElement('div');
+    cardTitle.className = 'online-wallpaper-title';
+    cardTitle.textContent = String(theme.title || theme.id);
+    const meta = document.createElement('div');
+    meta.className = 'online-wallpaper-meta';
+    const files = new Set(screens.map(s => s.category + '/' + s.filename));
+    const layouts = screens.filter(s => s.layout).length;
+    meta.textContent =
+        `${screens.length} screens · ${files.size} wallpapers · ${layouts} layouts` +
+        ((theme.assets || []).length ? ` · ${theme.assets.length} knob asset(s)` : '') +
+        (theme.aiGenerated ? ' · AI-generated artwork' : '');
+
+    const actions = document.createElement('div');
+    actions.className = 'online-wallpaper-actions';
+    const install = document.createElement('button');
+    install.type = 'button';
+    install.textContent = 'Install theme';
+    install.title = 'Download every screen of this theme onto the SD card and apply it';
+    install.addEventListener('click', () => installTheme(theme, install));
+    actions.appendChild(install);
+
+    body.append(cardTitle, meta, actions);
+    card.append(strip, body);
+    return card;
+}
+
+async function installTheme(theme, button) {
+    const status = document.getElementById('layout_theme_status');
+    const note = message => {
+        if (!status) return;
+        status.hidden = false;
+        status.textContent = message;
+    };
+    const screens = (theme.screens || []).filter(s => SECTIONS[s.screen]);
+    if (!screens.length) {
+        note('This theme has nothing this firmware knows how to dress.');
+        return;
+    }
+    const layoutCount = screens.filter(s => s.layout).length;
+    if (!confirm(
+            `Install "${theme.title}"?\n\n` +
+            `${screens.length} screen(s) get a new wallpaper on the SD card` +
+            (layoutCount ? `, ${layoutCount} of them a new layout as well` : '') +
+            '.\nThe layouts you have now for those screens are replaced.')) {
+        return;
+    }
+
+    const oldLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Installing...';
+    const problems = [];
+    try {
+        await ensureLvBin();
+        const knobs = await reserveThemeAssets(theme, note, problems);
+
+        const artwork = new Map();   // category/filename → /sdcard path (one upload each)
+        const layouts = new Map();   // layout URL → parsed preset (one fetch each)
+        const planned = [];          // { name, data, wallpaperPath, fromLayout }
+
+        let step = 0;
+        for (const screen of screens) {
+            step++;
+            const label = `(${step}/${screens.length}) ${screen.screenLabel}`;
+            try {
+                const key = screen.category + '/' + screen.filename;
+                if (!artwork.has(key)) {
+                    artwork.set(key, SD_MOUNT + await installThemeArtwork(
+                        screen, message => note(`${label}: ${message}`)));
+                }
+                const wallpaperPath = artwork.get(key);
+
+                let section = null;
+                if (screen.layout) {
+                    if (!layouts.has(screen.layout)) {
+                        note(`${label}: fetching the published layout...`);
+                        layouts.set(screen.layout, await fetchThemeLayout(screen.layout));
+                    }
+                    const preset = layouts.get(screen.layout);
+                    section = (preset.sections || {})[screen.screen] || null;
+                    if (!section) {
+                        problems.push(`${screen.screenLabel}: the published layout carries no ` +
+                                      `"${screen.screen}" section — wallpaper only`);
+                    }
+                }
+                planned.push({
+                    name: screen.screen,
+                    data: retargetThemeSection(screen.screen, section, wallpaperPath, knobs),
+                    wallpaperPath,
+                    fromLayout: !!section,
+                });
+            } catch (err) {
+                problems.push(`${screen.screenLabel}: ${err.message}`);
+            }
+        }
+
+        // File what came with a layout as that wallpaper's preset, so the Load
+        // button and the switch-wallpaper offer find it later like any other.
+        for (const entry of planned) {
+            if (!entry.fromLayout) continue;
+            try {
+                await storePresetSection(entry.wallpaperPath, entry.name, entry.data);
+            } catch (err) {
+                problems.push(`${SECTIONS[entry.name].title}: preset not saved (${err.message})`);
+            }
+        }
+
+        note('Applying to the device...');
+        let applied = 0;
+        for (const entry of planned) {
+            try {
+                await applyThemeSection(entry.name, entry.data);
+                applied++;
+            } catch (err) {
+                problems.push(`${SECTIONS[entry.name].title}: ${err.message}`);
+            }
+        }
+
+        buildForm();
+        await loadWallpaperPreview();
+        renderSvg();
+        note(problems.length
+            ? `${applied} screen(s) applied, ${problems.length} problem(s): ` +
+              problems.join('; ')
+            : `"${theme.title}" installed — ${applied} screen(s) rebuilt on the device.`);
+    } catch (err) {
+        note('Theme install failed: ' + err.message);
+    } finally {
+        button.disabled = false;
+        button.textContent = oldLabel;
+    }
+}
+
+// Download one screen's artwork and store it as this panel's .bin, in the same
+// per-category folder the single-wallpaper install uses. The stem is kept as
+// published so the preset lands under the name the catalog paired it with.
+async function installThemeArtwork(screen, note) {
+    const imageUrl = trustedOnlineWallpaperUrl(screen.image);
+    note('downloading ' + screen.filename + '...');
+    const response = await fetch(imageUrl, { cache: 'no-store', mode: 'cors' });
+    if (!response.ok) throw new Error('image HTTP ' + response.status);
+    const blob = await response.blob();
+    if (blob.size > ONLINE_WALLPAPER_MAX_BYTES) throw new Error('image is too large');
+    if (!/^image\/(png|jpeg|webp)$/i.test(blob.type))
+        throw new Error('unsupported image format');
+    const directory = `${WALLPAPERS_DIR}/${state.meta.screen_w}x${state.meta.screen_h}/` +
+                      screen.category;
+    const file = new File([blob], screen.filename, { type: blob.type });
+    return await window.LvBin.uploadImage(
+        file, directory, state.meta.screen_w, state.meta.screen_h, note,
+        window.LvBin.fileStem(screen.filename));
+}
+
+// A published layout is a preset file like any other, so it carries a resolution
+// stamp — and a theme install is exactly when a mismatched one would quietly
+// wreck a screen.
+async function fetchThemeLayout(url) {
+    const response = await fetch(trustedOnlineWallpaperUrl(url),
+                                 { cache: 'no-store', mode: 'cors' });
+    if (!response.ok) throw new Error('layout HTTP ' + response.status);
+    const preset = await response.json();
+    if (preset.w !== state.meta.screen_w || preset.h !== state.meta.screen_h)
+        throw new Error(`layout was drawn for a ${preset.w}×${preset.h} panel`);
+    return preset;
+}
+
+// The published layout holds the paths of the card it was drawn on. Repoint it
+// at this one: the wallpaper where this install just put it, and the knob at the
+// internet slot reserved for it. An EMPTY knob field is a decision — that screen
+// was meant to keep the plain themed knob — so it stays empty.
+function retargetThemeSection(name, section, wallpaperPath, knobs) {
+    const data = section ? Object.assign({}, section) : {};
+    data[name + '_wallpaper'] = wallpaperPath;
+    for (const key of Object.keys(data)) {
+        if (!/knob_image$/.test(key) || !data[key]) continue;
+        const ref = key === 'eq_knob_image' ? (knobs.eq || knobs.vol) : knobs.vol;
+        if (ref) data[key] = ref;
+    }
+    return data;
+}
+
+async function applyThemeSection(name, data) {
+    if (name === 'eq') migrateLegacyEqSection(data);
+    Object.assign(state[name], data);
+    const response = await fetch(`/api/ui/profile/${name}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(state[name]),
+    });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+}
+
+// Merge one section into the preset file belonging to `wallpaperPath`, keeping
+// whatever other screens already stored there (the two list screens share a
+// wallpaper, and therefore a file).
+async function storePresetSection(wallpaperPath, name, data) {
+    const path = presetPathFor(wallpaperPath);
+    if (!path) return;
+    const preset = {
+        w: state.meta.screen_w,
+        h: state.meta.screen_h,
+        wallpaper: wallpaperPath.split('/').pop(),
+        sections: {},
+    };
+    const existing = await readPresetJson(path);
+    if (existing && existing.w === preset.w && existing.h === preset.h &&
+        existing.sections) {
+        preset.sections = existing.sections;
+    }
+    preset.sections[name] = data;
+    const response = await fetch('/api/sd/file?path=' + encodeURIComponent(path), {
+        method: 'POST',
+        body: JSON.stringify(preset),
+    });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+}
+
+// Layout published alongside a SINGLE wallpaper: file every section it carries
+// for that .bin. No knob slots here — one wallpaper is not a theme, so a knob
+// path inside it is left as published and simply falls back to the plain knob
+// when this card has no such file.
+async function installCatalogLayout(preset, wallpaperPath) {
+    for (const [name, section] of Object.entries(preset.sections || {})) {
+        if (!SECTIONS[name]) continue;
+        await storePresetSection(
+            wallpaperPath, name,
+            retargetThemeSection(name, section, wallpaperPath, {}));
+    }
+}
+
+// Park the theme's knob artwork in an internet asset slot and answer with the
+// "asset<N>" references the sections should use. PNG with alpha goes to the
+// device untouched — no SD card, no conversion, no baked-in background — but the
+// slots are a shared, finite resource, so an occupied set is reported rather
+// than overwritten. Roles come from the catalog: "eq_knob" dresses the bands,
+// anything else dresses the volume sliders.
+async function reserveThemeAssets(theme, note, problems) {
+    const wanted = (theme.assets || []).filter(asset => asset && asset.image);
+    if (!wanted.length) return {};
+
+    note('Reserving an internet asset slot for the knob artwork...');
+    await loadNetAssets();   // real slot count, and what the device already holds
+    const urls = netAssetUrls.slice(0, netAssetSlotCount);
+    while (urls.length < netAssetSlotCount) urls.push('');
+
+    const refs = {};
+    let changed = false;
+    for (const asset of wanted) {
+        let url;
+        try { url = trustedOnlineWallpaperUrl(asset.image); }
+        catch { problems.push(`knob ${asset.filename}: untrusted URL, skipped`); continue; }
+        let slot = urls.indexOf(url);
+        if (slot < 0) slot = urls.indexOf('');
+        if (slot < 0) {
+            problems.push(`knob ${asset.filename}: every internet asset slot is taken — ` +
+                          'free one on the Assets tab and install again');
+            continue;
+        }
+        if (urls[slot] !== url) { urls[slot] = url; changed = true; }
+        refs[asset.role === 'eq_knob' ? 'eq' : 'vol'] = 'asset' + slot;
+    }
+
+    if (changed) {
+        netAssetUrls = urls.slice();
+        await postDisplay({ asset_urls: urls });
+        buildNetAssetRows();
+        // There is no per-asset fetch: the batch pulls wallpapers and assets in
+        // one radio-stop window, the same as a boot fetch.
+        note('Fetching the knob artwork (the radio pauses for a moment)...');
+        try {
+            await fetch('/api/wallpaper/fetch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ all: true }),
+            });
+        } catch (err) {
+            problems.push('knob artwork fetch could not be started: ' + err.message);
+        }
+    }
+    return refs;
 }
 
 // Store `value` ("", "none" or an fopen path) as the active section's
@@ -2552,7 +2955,8 @@ function selectSection(name) {
     const isGeneral  = name === 'general';
     const isInternet = name === 'internet';
     const isAssets   = name === 'assets';
-    const isSpecial  = isPresets || isGeneral || isInternet || isAssets;
+    const isThemes   = name === 'themes';
+    const isSpecial  = isPresets || isGeneral || isInternet || isAssets || isThemes;
     if (!isSpecial && !SECTIONS[name]) return;
 
     for (const tab of document.querySelectorAll('.section-tab')) {
@@ -2563,6 +2967,8 @@ function selectSection(name) {
     document.getElementById('general_card').style.display  = isGeneral  ? '' : 'none';
     document.getElementById('internet_card').style.display = isInternet ? '' : 'none';
     document.getElementById('assets_card').style.display   = isAssets   ? '' : 'none';
+    document.getElementById('themes_card').style.display   = isThemes   ? '' : 'none';
+    if (isThemes)               { loadThemeGallery(); return; }
     if (isAssets)               { loadNetAssets(); browseAssets(); return; }
     if (isPresets)              { checkOrphanPresets(); return; }
     if (isGeneral || isInternet) {
