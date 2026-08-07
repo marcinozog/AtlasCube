@@ -1232,9 +1232,9 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
 }
 
 .wifi-banner.connected {
-    border-color: var(--green);
-    background: rgba(0,230,118,.08);
-    color: var(--green);
+    border-color: var(--accent);
+    background: rgba(0,170,255,.10);
+    color: var(--accent);
 }
 
 .wifi-banner.hidden { display: none; }
@@ -1242,21 +1242,21 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
 .wifi-save-btn {
     width: 100%;
     padding: 11px;
-    border: none;
     border-radius: var(--radius-sm);
-    background: #1a5c1a;
+    background: var(--accent);
     color: #fff;
     font-family: 'Chakra Petch', sans-serif;
     font-size: 13px;
     font-weight: 700;
     letter-spacing: .04em;
     cursor: pointer;
-    border: 1px solid var(--green);
-    transition: background .15s;
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 14px var(--accent-glow);
+    transition: background .15s, box-shadow .15s;
 }
 
-.wifi-save-btn:hover:not(:disabled) { background: #226622; }
-.wifi-save-btn:disabled { opacity: .5; cursor: not-allowed; }
+.wifi-save-btn:hover:not(:disabled) { background: var(--accent-dim); }
+.wifi-save-btn:disabled { opacity: .5; cursor: not-allowed; box-shadow: none; }
 
 .pw-row {
     display: flex;
@@ -1309,8 +1309,9 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
     cursor: pointer;
 }
 
-.scan-row:hover    { border-color: var(--green); }
-.scan-row.current  { border-color: var(--accent); }
+.scan-row:hover    { border-color: var(--accent); }
+/* Hover is now the same accent, so the picked row needs a fill to stand apart. */
+.scan-row.current  { border-color: var(--accent); background: rgba(0,170,255,.10); color: var(--text); }
 
 .scan-name {
     flex: 1;
