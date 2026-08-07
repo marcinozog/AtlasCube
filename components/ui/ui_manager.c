@@ -1,6 +1,7 @@
 #include "ui_manager.h"
 #include "ui_screen.h"
 #include "ui_events.h"
+#include "ui_nav.h"
 #include "ui_background.h"
 #include "theme.h"
 #include "app_state.h"
@@ -124,6 +125,59 @@ static bool can_auto_screensaver_from(ui_screen_id_t id)
     return true;
 }
 
+// Follow-source (display.follow_source): when a source starts playing, surface
+// its player screen — whatever started it (touch, encoder, web, WS, MQTT, voice,
+// pilot, schedule, boot resume) lands here through app_state.
+//
+// Rising edge only, so a next-track inside an already active SD queue does not
+// re-navigate, while stop → play does. The edges are tracked even when the
+// option is off, so switching it on mid-playback doesn't fire on the next
+// unrelated state update.
+//
+// BT has two triggers: the phone starting playback (bt_playing, from the
+// module's AVRCP play event) and BT simply becoming the source (bt_enable).
+// Not every module dialect reports play/pause, so the bt_enable edge is what
+// makes the BT screen reachable there — and "the source switched to BT" is the
+// same intent anyway.
+static void apply_follow_source(const app_state_t *s)
+{
+    static bool s_prev_radio_play = false;
+    static bool s_prev_sd_active  = false;
+    static bool s_prev_bt_play    = false;
+    static bool s_prev_bt_on      = false;
+
+    bool radio_play = (s->radio_state == RADIO_STATE_PLAYING ||
+                       s->radio_state == RADIO_STATE_BUFFERING);
+    bool radio_edge = radio_play    && !s_prev_radio_play;
+    bool sd_edge    = s->sd_active  && !s_prev_sd_active;
+    bool bt_edge    = (s->bt_playing && !s_prev_bt_play) ||
+                      (s->bt_enable  && !s_prev_bt_on);
+
+    s_prev_radio_play = radio_play;
+    s_prev_sd_active  = s->sd_active;
+    s_prev_bt_play    = s->bt_playing;
+    s_prev_bt_on      = s->bt_enable;
+
+    if (!s->follow_source)                    return;
+    if (!radio_edge && !sd_edge && !bt_edge)  return;
+    if (s_ss_overlay)                         return;   // don't navigate under a screensaver
+
+    // Only between home-ring screens: never yank the user out of settings, a
+    // picker, the splash, or an update prompt.
+    if (!ui_nav_is_ring(s_active_id)) return;
+
+    // On a same-update tie the source that takes the output over wins: BT
+    // supersedes SD music, SD supersedes the radio.
+    ui_screen_id_t target = bt_edge ? SCREEN_BT :
+                            sd_edge ? SCREEN_SD : SCREEN_RADIO;
+    if (target == s_active_id)   return;
+    if (!ui_nav_is_ring(target)) return;   // hidden in the ring → nothing to show
+
+    ESP_LOGI(TAG, "follow source → %s",
+             target == SCREEN_BT ? "BT" : target == SCREEN_SD ? "SD" : "RADIO");
+    ui_navigate(target);
+}
+
 // --------------------------------------------------------------------------
 // app_state callback — invoked from a foreign task, only pushes an event
 // --------------------------------------------------------------------------
@@ -131,6 +185,10 @@ static bool can_auto_screensaver_from(ui_screen_id_t id)
 static void on_state_change(void)
 {
     app_state_t *s = app_state_get();
+
+    // Before the early returns below — a theme/background update in the same
+    // batch must not swallow the source edge.
+    apply_follow_source(s);
 
     if (s->theme != s_prev_theme) {
         ESP_LOGI("UI_MGR", "Theme change: %d → %d", (int)s_prev_theme, (int)s->theme);

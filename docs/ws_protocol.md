@@ -199,7 +199,7 @@ wallpaper, UI profiles) is registered in
 
 | Method + path | Purpose |
 |---|---|
-| `GET /api/state` | HTTP snapshot for reachability probes and fields absent from the WS state: `theme`, `radio_state` (**numeric enum here, unlike the WS string**), `station`, `title`, `volume`, `bt_enable`, `bt_auto_switch`, `bt_show_screen`, `sd_show_screen`, `radio_show_screen`, `time_synced`, `wifi_mode` (`sta`\|`ap`), `version` (git describe), `www_outdated`, `www_version`, `www_expected` |
+| `GET /api/state` | HTTP snapshot for reachability probes and fields absent from the WS state: `theme`, `radio_state` (**numeric enum here, unlike the WS string**), `station`, `title`, `volume`, `bt_enable`, `bt_auto_switch`, `bt_show_screen`, `sd_show_screen`, `radio_show_screen`, `follow_source`, `time_synced`, `wifi_mode` (`sta`\|`ap`), `version` (git describe), `www_outdated`, `www_version`, `www_expected` |
 | `GET /api/playlist` | `[{name,url,favorite,stationuuid,icon}, …]` in stored order |
 | `POST /api/playlist` | Same array; **overwrites** the whole playlist file and reloads it. Max 512 entries, body ≤ 32 KB. Per entry: `name` < 64, `url` < 256, `stationuuid` < 37, `icon` < 128 chars; entries missing `name`/`url` or violating a limit are **skipped silently**, not rejected. `icon` is an SD-relative path starting with `/`, no `..`. Written atomically (tmp → rename). |
 | `GET /api/playlist.csv` | The on-disk format: `name\turl\t<0\|1>\tstationuuid\ticon_path\n` (three-column legacy files still load) |

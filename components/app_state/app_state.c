@@ -198,6 +198,7 @@ void app_state_update(const app_state_patch_t *patch)
     if (patch->has_sd_repeat)  s_state.sd_repeat  = patch->sd_repeat;
     if (patch->has_sd_show_screen) s_state.sd_show_screen = patch->sd_show_screen;
     if (patch->has_radio_show_screen) s_state.radio_show_screen = patch->radio_show_screen;
+    if (patch->has_follow_source)  s_state.follow_source  = patch->follow_source;
 
     notify();
 
@@ -241,6 +242,7 @@ void app_state_update(const app_state_patch_t *patch)
     if (patch->has_sd_count)          n = buf_append(buf, sizeof(buf), n, " sd_count=%d", s_state.sd_count);
     if (patch->has_sd_track)          n = buf_append(buf, sizeof(buf), n, " sd_track=%s", s_state.sd_track);
     if (patch->has_sd_show_screen)    n = buf_append(buf, sizeof(buf), n, " sd_show_screen=%d", s_state.sd_show_screen);
+    if (patch->has_follow_source)     n = buf_append(buf, sizeof(buf), n, " follow_source=%d", s_state.follow_source);
 
     if (n > 0) {
         ESP_LOGI("STATE", "Updated:%s", buf);

@@ -112,6 +112,43 @@ by the encoder cycle and by swipe):
 HOME is always visible, so the ring can never be empty — hide every other screen
 and you still have a working hub.
 
+## Follow the playing source
+
+With `display.follow_source` on (Settings → Screens → "Follow Source", or the
+same toggle on the web settings page; **off by default**), the device jumps to
+the player screen of whichever source starts playing — RADIO, SD or BT. The
+check lives in `apply_follow_source()` in
+[ui_manager.c](../components/ui/ui_manager.c), driven by `app_state`, so every
+trigger path reaches it: touch, encoder, web, WS, MQTT, voice, the ESP-NOW
+pilot, a schedule, or a resume after boot.
+
+It only fires on a **rising edge**:
+
+| Source | Edge |
+|---|---|
+| RADIO | `radio_state` → playing/buffering |
+| SD | `sd_active` false → true |
+| BT | `bt_playing` false → true **or** `bt_enable` false → true |
+
+Skipping to the next track inside an active SD queue therefore doesn't
+re-navigate, while stop → play does. BT gets the second trigger because not
+every module dialect reports AVRCP play/pause — "BT became the source" carries
+the same intent and is what makes the screen reachable on those modules. On a
+tie inside one state update the source that takes the output over wins: BT
+supersedes SD, SD supersedes the radio. Four guards keep it from being
+intrusive:
+
+- the current screen must be a **visible ring entry** — settings, pickers, the
+  splash, the WiFi/OTA/update screens are never interrupted,
+- the target must be a visible ring entry too (hidden → nothing to show),
+- no jump while a screensaver is up,
+- no jump when already on the target screen.
+
+The jump is not persisted (`ui_navigate`, not `settings_set_screen`), so the
+saved boot screen stays whatever the user chose. A scheduled `EV_SCHEDULE`
+playback still surfaces its player screen regardless of this option — that one
+is an explicit user request, see `on_event_fired()`.
+
 ## Return targets for sub-screens
 
 The playlist, SD browser, and settings screens navigate back to a **settable

@@ -79,6 +79,7 @@ esp_err_t settings_init(void)
         s_settings.display.show_boot_info   = true;
         s_settings.display.sd_show_screen   = true;
         s_settings.display.radio_show_screen = true;
+        s_settings.display.follow_source    = false;
         s_settings.display.show_fps         = false;
         s_settings.display.dim_schedule.enabled        = false;
         s_settings.display.dim_schedule.dim_hour       = 22;
@@ -325,6 +326,8 @@ static esp_err_t load_from_file(void)
         s_settings.display.sd_show_screen = cJSON_IsBool(sds) ? cJSON_IsTrue(sds) : true;
         cJSON *rds = cJSON_GetObjectItem(display, "radio_show_screen");
         s_settings.display.radio_show_screen = cJSON_IsBool(rds) ? cJSON_IsTrue(rds) : true;
+        cJSON *fls = cJSON_GetObjectItem(display, "follow_source");
+        s_settings.display.follow_source = cJSON_IsBool(fls) ? cJSON_IsTrue(fls) : false;
         cJSON *sfp = cJSON_GetObjectItem(display, "show_fps");
         s_settings.display.show_fps = cJSON_IsBool(sfp) ? cJSON_IsTrue(sfp) : false;
 
@@ -637,6 +640,7 @@ static esp_err_t save_to_file_locked(void)
     cJSON_AddBoolToObject(display, "show_boot_info", s_settings.display.show_boot_info);
     cJSON_AddBoolToObject(display, "sd_show_screen", s_settings.display.sd_show_screen);
     cJSON_AddBoolToObject(display, "radio_show_screen", s_settings.display.radio_show_screen);
+    cJSON_AddBoolToObject(display, "follow_source", s_settings.display.follow_source);
     cJSON_AddBoolToObject(display, "show_fps", s_settings.display.show_fps);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s_settings.display.dim_schedule.enabled);
@@ -801,6 +805,7 @@ void settings_apply(void)
         .has_wallpaper_on       = true, .wallpaper_on = s_settings.display.wallpaper_on,
         .has_sd_show_screen     = true, .sd_show_screen = s_settings.display.sd_show_screen,
         .has_radio_show_screen  = true, .radio_show_screen = s_settings.display.radio_show_screen,
+        .has_follow_source      = true, .follow_source = s_settings.display.follow_source,
         .has_scrsaver_delay     = true, .scrsaver_delay  = s_settings.scrsaver.delay,
         .has_scrsaver_id        = true, .scrsaver_id     = s_settings.scrsaver.screensaver_id,
         .has_scrsaver_block_play = true, .scrsaver_block_play = s_settings.scrsaver.block_when_playing != 0,
@@ -978,6 +983,15 @@ void settings_set_radio_show_screen(bool show)
     if(s_settings.display.radio_show_screen != show) {
         s_settings.display.radio_show_screen = show;
         app_state_update(&(app_state_patch_t){ .has_radio_show_screen = true, .radio_show_screen = show });
+        save_to_file();
+    }
+}
+
+void settings_set_follow_source(bool enable)
+{
+    if(s_settings.display.follow_source != enable) {
+        s_settings.display.follow_source = enable;
+        app_state_update(&(app_state_patch_t){ .has_follow_source = true, .follow_source = enable });
         save_to_file();
     }
 }

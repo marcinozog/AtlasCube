@@ -102,6 +102,7 @@ static bool get_bt_enable(void)  { return app_state_get()->bt_enable; }
 static bool get_bt_show(void)    { return app_state_get()->bt_show_screen; }
 static bool get_sd_show(void)    { return app_state_get()->sd_show_screen; }
 static bool get_radio_show(void) { return app_state_get()->radio_show_screen; }
+static bool get_follow_src(void) { return app_state_get()->follow_source; }
 static bool get_bt_auto(void)    { return app_state_get()->bt_auto_switch; }
 static bool get_eq(void)         { return app_state_get()->eq_enabled; }
 static bool get_mono(void)       { return app_state_get()->mono; }
@@ -151,6 +152,8 @@ static const row_desc_t SEC_SCREENS[] = {
       .on_txt = "<    Show    >", .off_txt = "<    Hide    >" },
     { .title = "Radio Screen", .kind = RK_TOGGLE, .tget = get_radio_show, .tset = settings_set_radio_show_screen,
       .on_txt = "<    Show    >", .off_txt = "<    Hide    >" },
+    { .title = "Follow Source", .kind = RK_TOGGLE, .tget = get_follow_src, .tset = settings_set_follow_source,
+      .on_txt = "<    On    >", .off_txt = "<    Off    >" },
 #if !CONFIG_TOUCH_NONE
     { .title = "Radio Layout", .kind = RK_ACTION, .action = act_radio_layout, .on_txt = "Open >" },
 #endif

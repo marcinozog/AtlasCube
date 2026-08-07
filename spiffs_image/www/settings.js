@@ -451,6 +451,19 @@ function setDeviceRadioScreen(t) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Follow the playing source (display)
+// ─────────────────────────────────────────────────────────────────────────────
+function setDeviceFollowSource(t) {
+    document.getElementById('settingsBtnFollowOn') ?.classList.toggle('active', t);
+    document.getElementById('settingsBtnFollowOff')?.classList.toggle('active', !t);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { follow_source: t } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Audio — DSP / EQ on/off
 // ─────────────────────────────────────────────────────────────────────────────
 function setDeviceEqEnabled(t) {
@@ -978,6 +991,10 @@ function populateForm(s) {
         const radioScr = s.display.radio_show_screen !== false;   // default on
         document.getElementById('settingsBtnRadioShow')?.classList.toggle('active', radioScr);
         document.getElementById('settingsBtnRadioHide')?.classList.toggle('active', !radioScr);
+
+        const followSrc = s.display.follow_source === true;   // default off
+        document.getElementById('settingsBtnFollowOn') ?.classList.toggle('active', followSrc);
+        document.getElementById('settingsBtnFollowOff')?.classList.toggle('active', !followSrc);
 
         const logoEl = document.getElementById('logoPath');
         if (logoEl) logoEl.textContent = s.display.logo_path || '(built-in)';

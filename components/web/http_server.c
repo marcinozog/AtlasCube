@@ -192,6 +192,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddBoolToObject(display, "show_boot_info", s->display.show_boot_info);
     cJSON_AddBoolToObject(display, "sd_show_screen", s->display.sd_show_screen);
     cJSON_AddBoolToObject(display, "radio_show_screen", s->display.radio_show_screen);
+    cJSON_AddBoolToObject(display, "follow_source", s->display.follow_source);
     cJSON_AddBoolToObject(display, "show_fps", s->display.show_fps);
     cJSON *dim = cJSON_CreateObject();
     cJSON_AddBoolToObject  (dim, "enabled",        s->display.dim_schedule.enabled);
@@ -535,6 +536,11 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             ESP_LOGI("HTTP", "POST radio_show_screen: %d", cJSON_IsTrue(rds));
             settings_set_radio_show_screen(cJSON_IsTrue(rds));
         }
+        cJSON *fls = cJSON_GetObjectItem(display, "follow_source");
+        if (cJSON_IsBool(fls)) {
+            ESP_LOGI("HTTP", "POST follow_source: %d", cJSON_IsTrue(fls));
+            settings_set_follow_source(cJSON_IsTrue(fls));
+        }
         cJSON *scr = cJSON_GetObjectItem(display, "screen");
         if (cJSON_IsString(scr)) {
             ESP_LOGI("HTTP", "POST screen: %s", scr->valuestring);
@@ -769,6 +775,7 @@ static esp_err_t api_state_get_handler(httpd_req_t *req)
     cJSON_AddBoolToObject  (json, "bt_show_screen", s->bt_show_screen);
     cJSON_AddBoolToObject  (json, "sd_show_screen", s->sd_show_screen);
     cJSON_AddBoolToObject  (json, "radio_show_screen", s->radio_show_screen);
+    cJSON_AddBoolToObject  (json, "follow_source",  s->follow_source);
     cJSON_AddBoolToObject  (json, "time_synced",    s->time_synced);
     // WiFi mode — useful for the settings page UI
     cJSON_AddStringToObject(json, "wifi_mode",

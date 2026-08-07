@@ -148,6 +148,14 @@
                     <button class="theme-btn" id="settingsBtnBThide" onclick="setDeviceBTScreen(false)">❌ Hide</button>
                 </div>
             </div>
+            <div class="field-group">
+                <label class="field-label">Follow the playing source</label>
+                <div class="field-hint">When a source starts playing, the device jumps to its screen (radio, SD player or Bluetooth). Hidden screens are never shown, and screens outside the cycle (settings, pickers) are never interrupted.</div>
+                <div class="theme-toggle wide" id="followSourceToggle" style="width:fit-content">
+                    <button class="theme-btn" id="settingsBtnFollowOn"  onclick="setDeviceFollowSource(true)">✅ On</button>
+                    <button class="theme-btn" id="settingsBtnFollowOff" onclick="setDeviceFollowSource(false)">🚫 Off</button>
+                </div>
+            </div>
         </div>
 
         <div class="panel">
