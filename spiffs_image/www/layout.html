@@ -497,6 +497,38 @@
             background-position: 0 0, 0 6px, 6px -6px, -6px 0;
             background-size: 12px 12px;
         }
+        /* Shown next to every internet-slot control while auto refresh is off:
+           a slot filled by hand is gone after the next reboot. */
+        .net-wp-manual-hint {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 6px;
+            padding: 7px 9px;
+            border: 1px solid var(--orange);
+            border-radius: var(--radius-sm);
+            background: rgba(255,170,0,.10);
+            color: var(--orange);
+            font-size: 11px;
+            line-height: 1.45;
+        }
+        .net-wp-manual-hint span { flex: 1; min-width: 200px; }
+        .net-wp-manual-hint button {
+            padding: 4px 9px;
+            border: 1px solid var(--orange);
+            border-radius: 4px;
+            background: transparent;
+            color: var(--orange);
+            font-family: 'Chakra Petch', sans-serif;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .net-wp-manual-hint button:hover:not(:disabled) {
+            background: var(--orange);
+            color: #001019;
+        }
+        .net-wp-manual-hint button:disabled { opacity: .55; cursor: wait; }
     </style>
 </head>
 <body>
@@ -696,6 +728,8 @@
             <div class="field-hint">Each filled slot costs one screen-sized image in RAM and is
                 re-downloaded after every reboot. Assign a slot to a screen in that screen's
                 <strong>Background</strong> source.</div>
+            <!-- Filled by updateNetWpAutoHints() — visible only while Auto refresh is Off. -->
+            <div id="netWpManualHintHost" hidden></div>
             <select id="netWpPreset" class="field-input" style="width:100%;margin-top:6px"
                     onchange="netWpPresetChanged()">
                 <option value="https://api.nasa.gov/planetary/apod?api_key=DEMO_KEY">NASA — Astronomy Picture of the Day</option>

@@ -657,6 +657,11 @@ let netWpSlotCount = 1;
 let netWpSlotKnown = false;      // the count has been read from the device
 let netWpUrls      = [];         // index = slot, mirrors display.wallpaper_urls
 let netWpCurSlot   = 0;          // slot the Background tab is editing
+// display.wallpaper_fetch_mode as last seen: null = not read yet, 0 = manual
+// only, 1 = once after boot, 2 = boot + daily. Slots live in RAM, so with 0 a
+// slot filled by hand comes back empty after a reboot and the screens pinned to
+// it fall back to the gradient — hence the warning strips. See netWpManualHint.
+let netWpFetchMode = null;
 let keyboardSelection = null;
 const ONLINE_WALLPAPER_CATALOG = 'https://atlascube.net/wallpapers/catalog.php';
 const ONLINE_WALLPAPER_ORIGIN = 'https://atlascube.net';
@@ -827,6 +832,7 @@ function updateWallpaperPickerLabel() {
     const preset = document.getElementById('layout_preset_name');
     if (preset) preset.textContent = presetPath() || '(select a wallpaper first)';
     updateLabelPlateControl();
+    updateNetWpAutoHints();   // the strip follows the screen's Internet/SD mode
 }
 
 function buildWallpaperPicker() {
@@ -1001,9 +1007,16 @@ function buildWallpaperPicker() {
     status.id = 'layout_wallpaper_status';
     status.style.cssText = 'min-height:14px;margin-top:5px;font-size:11px;color:var(--text-dim)';
 
-    picker.append(row, nameRow, plateRow, browser, onlineGallery, presetRow, status);
+    // Warning strip for a screen pinned to an internet slot while auto refresh
+    // is off — filled and toggled by updateNetWpAutoHints().
+    const manualHint = document.createElement('div');
+    manualHint.id = 'layout_wp_manual_hint_host';
+    manualHint.hidden = true;
+
+    picker.append(row, manualHint, nameRow, plateRow, browser, onlineGallery, presetRow, status);
     frame.insertAdjacentElement('afterend', picker);
     updateLabelPlateControl();
+    updateNetWpAutoHints();
 }
 
 // ── Per-wallpaper layout presets on SD ─────────────────────────────────────
@@ -1979,6 +1992,7 @@ function setOnlineWallpaperGalleryOpen(open) {
         button.style.background = open ? '#e5484d' : '';
         button.style.color = open ? '#fff' : '#ff6b6f';
     }
+    updateNetWpAutoHints();   // the open gallery carries its own copy of the strip
 }
 
 async function toggleOnlineWallpaperGallery() {
@@ -2085,6 +2099,14 @@ function renderOnlineWallpaperGallery(catalog, category) {
     slotHint.textContent = 'the device downloads it itself — no SD card needed';
     slotRow.append(slotLabel, slotSel, slotHint);
     panel.appendChild(slotRow);
+
+    // Same "auto refresh is off" strip as the other slot controls: this gallery
+    // is the one place a slot gets filled without ever opening the Internet tab.
+    const slotWarn = document.createElement('div');
+    slotWarn.id = 'online_wp_manual_hint_host';
+    slotWarn.hidden = true;
+    panel.appendChild(slotWarn);
+    updateNetWpAutoHints();
 
     const grid = document.createElement('div');
     grid.className = 'online-wallpaper-grid';
@@ -2287,6 +2309,7 @@ async function loadWallpaperPreview() {
         if (!response.ok) throw new Error('settings HTTP ' + response.status);
         const settings = await response.json();
         const display = settings.display || {};
+        setNetWpFetchMode(display.wallpaper_fetch_mode || 0);
         const path = effectiveWallpaperPath();
         currentWallpaperPath = path;
         updateWallpaperPickerLabel();
@@ -2438,6 +2461,74 @@ function postDisplay(patch) {
     }).catch(console.error);
 }
 
+// ── "Auto refresh is off" warning ──────────────────────────────────────────
+// Every place that fills or assigns an internet slot carries the same strip, so
+// the RAM-only nature of the slots is stated where the user acts, not only on
+// the Internet tab where the schedule lives. Hosts are empty divs in the markup
+// (or added by the builders); this fills them once and toggles them.
+const NET_WP_MANUAL_HINT_HOSTS = [
+    'netWpManualHintHost',          // Internet tab, under the slot picker
+    'layout_wp_manual_hint_host',   // per-screen wallpaper picker
+    'online_wp_manual_hint_host',   // "Use in slot" row of the online gallery
+];
+
+function buildNetWpManualHint() {
+    const box = document.createElement('div');
+    box.className = 'net-wp-manual-hint';
+    const text = document.createElement('span');
+    text.textContent = '⚠ Auto refresh is "Off (manual only)" — a slot filled here lives in ' +
+                       'RAM until the next reboot, then comes back empty until you fetch it again.';
+    const fix = document.createElement('button');
+    fix.type = 'button';
+    fix.textContent = 'Fetch after every boot';
+    fix.title = 'Set Auto refresh to "Once after boot"';
+    fix.addEventListener('click', () => enableNetWpBootFetch(fix));
+    box.append(text, fix);
+    return box;
+}
+
+// Remember the mode and re-run the strips. Called from every place that already
+// reads /api/settings, so no extra request is spent on the warning.
+function setNetWpFetchMode(mode) {
+    const n = parseInt(mode, 10);
+    netWpFetchMode = Number.isNaN(n) ? 0 : n;
+    updateNetWpAutoHints();
+}
+
+function updateNetWpAutoHints() {
+    const manual = netWpFetchMode === 0;   // null (not read yet) warns about nothing
+    // The online gallery lives INSIDE the per-screen picker, so with both strips
+    // enabled the same warning appeared twice in one card. While the gallery is
+    // open it owns the message — it sits right at the "Use in slot" control.
+    const galleryOpen =
+        document.getElementById('layout_online_wallpaper_gallery')?.hidden === false;
+    for (const id of NET_WP_MANUAL_HINT_HOSTS) {
+        const host = document.getElementById(id);
+        if (!host) continue;
+        if (!host.firstChild) host.appendChild(buildNetWpManualHint());
+        // The per-screen strip only concerns a screen actually pinned to a slot.
+        const relevant = id !== 'layout_wp_manual_hint_host' ||
+                         (!galleryOpen && netSlotOf(sectionWallpaperValue()) >= 0);
+        host.hidden = !(manual && relevant);
+    }
+}
+
+// The quick fix: switch to "once after boot" without walking over to the
+// Internet tab. Patches the mode alone — going through saveNetWpSchedule() would
+// also write the URL field, which still holds its markup default when that tab
+// was never opened.
+async function enableNetWpBootFetch(button) {
+    button.disabled = true;
+    try {
+        await postDisplay({ wallpaper_fetch_mode: 1 });
+        const sel = document.getElementById('netWpMode');
+        if (sel) sel.value = '1';
+        setNetWpFetchMode(1);
+    } finally {
+        button.disabled = false;
+    }
+}
+
 // Populate the tab's controls from the current settings.
 // Fill the slot <select> once the count is known. Rebuilt rather than patched:
 // the firmware's NET_WP_SLOTS is the authority and arrives with the status poll.
@@ -2513,6 +2604,7 @@ async function ensureNetWpSlotCount() {
                 const d = (await r.json()).display || {};
                 netWpUrls = Array.isArray(d.wallpaper_urls) ? d.wallpaper_urls.slice()
                                                             : [d.wallpaper_url || ''];
+                setNetWpFetchMode(d.wallpaper_fetch_mode || 0);
             }
         } catch { /* leave it empty — the caller pads and only writes its own slot */ }
     }
@@ -2543,6 +2635,7 @@ async function loadBackgroundTab() {
         syncNetWpPreset();
         const mode = d.wallpaper_fetch_mode || 0;
         document.getElementById('netWpMode').value = String(mode);
+        setNetWpFetchMode(mode);
         const timeEl = document.getElementById('netWpTime');
         timeEl.style.display = (mode === 2) ? '' : 'none';
         const p2 = n => String(n === undefined ? 0 : n).padStart(2, '0');
@@ -2611,6 +2704,7 @@ function saveNetWpSchedule() {
     const timeEl = document.getElementById('netWpTime');
     timeEl.style.display = (mode === 2) ? '' : 'none';
     const [h, m] = (timeEl.value || '04:00').split(':').map(Number);
+    setNetWpFetchMode(mode);
     netWpCaptureUrl();
     postDisplay({
         wallpaper_urls:       netWpUrls.slice(0, netWpSlotCount),
