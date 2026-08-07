@@ -1605,10 +1605,11 @@ function askWallpaperSaveAs(suggestedFilename) {
 }
 
 // ── Assets tab ────────────────────────────────────────────────────────────────
-// Generic image → RGB565 .bin uploader for small UI artwork (knob images, …).
-// Unlike the wallpaper uploader it takes an explicit size and folder and does
-// not touch any screen's background — the resulting .bin is just parked on SD
-// for a widget field to reference.
+// Generic image → .bin uploader for small UI artwork (knob images, …). Unlike
+// the wallpaper uploader it takes an explicit size and folder, does not touch
+// any screen's background — the resulting .bin is just parked on SD for a widget
+// field to reference — and asks the encoder to keep transparency, so a PNG knob
+// lands as RGB565A8 rather than a solid rectangle.
 
 function assetDir() {
     const raw = (document.getElementById('asset_dir').value || '/assets/knobs').trim();
@@ -1686,7 +1687,7 @@ async function uploadAsset() {
         if (stem === null) { note('Upload cancelled.'); return; }
         const saveAs = window.LvBin.fileStem(stem.trim() || file.name);
         const relPath = await window.LvBin.uploadImage(
-            file, dir, dimensions.w, dimensions.h, note, saveAs);
+            file, dir, dimensions.w, dimensions.h, note, saveAs, true);
         input.value = '';
         assetFilePicked();   // reset the "chosen file" label
         // Widgets reference the fopen-ready "/sdcard/..." path (the 📂 SD picker
@@ -2006,10 +2007,11 @@ function renderOnlineAssetGallery(catalog) {
         const install = document.createElement('button');
         install.type = 'button';
         install.textContent = 'Install';
-        install.title = 'Convert here and store on the SD card';
+        install.title = 'Convert here and store on the SD card (transparency kept)';
         install.addEventListener('click', () => installOnlineAsset(item, install, image));
         // The device-side route: hand the slot this PNG's URL and let the radio
-        // download it. No SD card, and the alpha channel survives.
+        // download it. Needs no SD card, but the slot lives in RAM only, so the
+        // artwork is downloaded again after every reboot.
         const useSlot = document.createElement('button');
         useSlot.type = 'button';
         useSlot.textContent = 'Use in slot';
@@ -2069,7 +2071,7 @@ async function installOnlineAsset(item, button, previewImage) {
         const file = new File([blob], filename, { type: blob.type });
         const saveAs = window.LvBin.fileStem(entered.trim() || suggested);
         const relPath = await window.LvBin.uploadImage(
-            file, assetDir(), dimensions.w, dimensions.h, note, saveAs);
+            file, assetDir(), dimensions.w, dimensions.h, note, saveAs, true);
         note('Saved. Reference as /sdcard' + relPath +
              ` (${dimensions.w}×${dimensions.h}).`);
         browseAssets();

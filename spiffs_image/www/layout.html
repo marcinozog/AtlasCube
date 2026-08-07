@@ -753,10 +753,12 @@
 
         <div class="panel">
             <label class="field-label">Upload image asset</label>
-            <div class="field-hint">Convert a PNG/JPG to an LVGL RGB565 <code>.bin</code> and store it on the
+            <div class="field-hint">Convert a PNG/JPG to an LVGL <code>.bin</code> and store it on the
                 SD card, then point a widget at it (e.g. a volume-slider <b>Knob image</b>). The image is
                 scaled to the size selected during upload — for a knob, that is its on-screen size.
-                No transparency: the image is a solid rectangle.</div>
+                <b>PNG transparency is preserved</b> (the file becomes <code>RGB565A8</code>); a JPEG or a
+                fully opaque PNG stays the smaller <code>RGB565</code>. Unlike an asset slot this lives on
+                the card, so it survives a reboot with nothing to re-download.</div>
 
             <div class="asset-row" style="margin-top:10px">
                 <label>Folder</label>

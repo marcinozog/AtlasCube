@@ -7,8 +7,13 @@
 static const char *TAG = "LV_BIN";
 
 // LVGL v9 binary image header (little-endian, 12 bytes) — see scripts/img2lvgl.py.
-#define LV_BIN_MAGIC   0x19
-#define LV_BIN_RGB565  0x12
+// Two colour formats: RGB565 for wallpapers and slides, RGB565A8 for artwork
+// that needs transparency (slider knobs, written by the Assets-tab uploader in
+// www/lvbin.js). RGB565A8 stores the full colour plane first, then the alpha
+// plane at half the stride — the same layout net_asset.c decodes a PNG into.
+#define LV_BIN_MAGIC     0x19
+#define LV_BIN_RGB565    0x12
+#define LV_BIN_RGB565A8  0x14
 
 typedef struct __attribute__((packed)) {
     uint8_t  magic;
@@ -29,15 +34,17 @@ lv_image_dsc_t *lv_bin_image_load(const char *path, int require_w, int require_h
 
     bin_header_t h;
     if (fread(&h, sizeof(h), 1, fp) != 1 ||
-        h.magic != LV_BIN_MAGIC || h.cf != LV_BIN_RGB565 ||
+        h.magic != LV_BIN_MAGIC ||
+        (h.cf != LV_BIN_RGB565 && h.cf != LV_BIN_RGB565A8) ||
         (require_w && h.w != require_w) || (require_h && h.h != require_h)) {
         ESP_LOGW(TAG, "%s: bad header or size %ux%u", path, h.w, h.h);
         fclose(fp);
         return NULL;
     }
 
-    const size_t px = (size_t)h.w * h.h * 2;
-    uint16_t *buf = heap_caps_malloc(px, MALLOC_CAP_SPIRAM);
+    const bool alpha = (h.cf == LV_BIN_RGB565A8);
+    const size_t px  = (size_t)h.w * h.h * (alpha ? 3 : 2);
+    uint8_t *buf = heap_caps_malloc(px, MALLOC_CAP_SPIRAM);
     lv_image_dsc_t *dsc = buf ? calloc(1, sizeof(*dsc)) : NULL;
     if (!buf || !dsc) {
         ESP_LOGE(TAG, "%s: alloc failed (%u B)", path, (unsigned)px);
@@ -46,7 +53,9 @@ lv_image_dsc_t *lv_bin_image_load(const char *path, int require_w, int require_h
         return NULL;
     }
 
-    const size_t got = fread(buf, (size_t)h.w * 2, h.h, fp);
+    size_t got = fread(buf, (size_t)h.w * 2, h.h, fp);
+    if (got == h.h && alpha)                        // the alpha plane follows
+        got = fread(buf + (size_t)h.w * h.h * 2, h.w, h.h, fp);
     fclose(fp);
     if (got != h.h) {
         ESP_LOGW(TAG, "%s: short read (%u/%u rows)", path, (unsigned)got, h.h);
@@ -56,13 +65,14 @@ lv_image_dsc_t *lv_bin_image_load(const char *path, int require_w, int require_h
     }
 
     dsc->header.magic  = LV_IMAGE_HEADER_MAGIC;
-    dsc->header.cf     = LV_COLOR_FORMAT_RGB565;
+    dsc->header.cf     = alpha ? LV_COLOR_FORMAT_RGB565A8 : LV_COLOR_FORMAT_RGB565;
     dsc->header.w      = h.w;
     dsc->header.h      = h.h;
-    dsc->header.stride = h.w * 2;
+    dsc->header.stride = h.w * 2;   // colour plane; LVGL takes the alpha stride
+                                    // as half of this
     dsc->data_size     = (uint32_t)px;
-    dsc->data          = (const uint8_t *)buf;
-    ESP_LOGI(TAG, "loaded %s (%ux%u)", path, h.w, h.h);
+    dsc->data          = buf;
+    ESP_LOGI(TAG, "loaded %s (%ux%u%s)", path, h.w, h.h, alpha ? ", with alpha" : "");
     return dsc;
 }
 
@@ -78,10 +88,11 @@ lv_image_dsc_t *lv_bin_image_load_scaled(const char *path, int dst_w, int dst_h)
 }
 
 // Bilinear resample into a fresh descriptor, leaving `src` untouched. Handles
-// both formats a knob can arrive in: RGB565 (an SD .bin) and RGB565A8 (an
-// internet asset, where LVGL's layout is the colour plane followed by the alpha
-// plane, so the alpha is resampled with the same weights). The output keeps the
-// source's colour format. Returns NULL on a bad format or a failed allocation.
+// both formats a knob can arrive in — RGB565 and RGB565A8, from an SD .bin or
+// an internet asset alike; in RGB565A8 LVGL's layout is the colour plane
+// followed by the alpha plane, so the alpha is resampled with the same weights.
+// The output keeps the source's colour format. Returns NULL on a bad format or
+// a failed allocation.
 static lv_image_dsc_t *scale_copy(const lv_image_dsc_t *src, int dst_w, int dst_h)
 {
     if (!src || dst_w <= 0 || dst_h <= 0) return NULL;

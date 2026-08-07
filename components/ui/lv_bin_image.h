@@ -6,8 +6,10 @@
 extern "C" {
 #endif
 
-// Load an LVGL v9 RGB565 .bin (the scripts/img2lvgl.py format) from `path` into
-// a newly allocated PSRAM-backed image descriptor. Returns NULL on any error
+// Load an LVGL v9 .bin (the scripts/img2lvgl.py format) from `path` into a
+// newly allocated PSRAM-backed image descriptor. Both RGB565 and RGB565A8 are
+// accepted — the latter is what the Assets-tab uploader writes for artwork with
+// transparency, and the descriptor keeps that format. Returns NULL on any error
 // (missing file, bad header, wrong colour format, alloc fail, or — when
 // require_w/require_h are non-zero — a size mismatch). The caller owns the
 // result and frees it with lv_bin_image_free(). Does not mount the SD card;

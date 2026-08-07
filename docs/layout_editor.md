@@ -435,11 +435,21 @@ Differences from wallpapers, all deliberate:
   auto-refresh Off, *Fetch now* on the Assets tab posts the same
   `{all:true}` batch.
 
-The Assets tab still keeps the browser-side uploader (convert here, store on
-SD) next to the slots; it stays the right tool for artwork you author
-yourself, at the cost of flattening transparency onto black. Gallery cards
-offer both: *Install* (convert + SD) and *Use in slot* (hand the URL to the
-device).
+The Assets tab keeps the browser-side uploader (convert here, store on SD)
+next to the slots, and it is the better default for a knob: the browser
+converts a PNG to an `RGB565A8` `.bin` — colour plane, then alpha plane, the
+same layout a slot decodes into — so transparency survives *and* the artwork
+lives on the card instead of being re-downloaded after every reboot. A JPEG
+or a fully opaque PNG still comes out as plain `RGB565`; the encoder only
+spends the extra plane when the source actually has transparent pixels. A
+canvas zeroes the colour of fully transparent pixels, so `lvbin.js` bleeds
+the nearest opaque colour one step outwards before writing, otherwise the
+device's bilinear scaler would drag black into the sprite's edge.
+
+Gallery cards offer both: *Install* (convert + SD) and *Use in slot* (hand
+the URL to the device). Slots keep two jobs the card cannot do — a device
+with **no SD card at all**, and artwork the publisher wants to be able to
+change under an already-installed theme.
 
 Both tabs read their state from `/api/settings` via `loadBackgroundTab()`
 and write on every change; the device repaints itself. Like *Presets*,
