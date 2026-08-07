@@ -667,6 +667,18 @@
 
     <!-- ── Themes tab: whole sets from atlascube.net, all screens at once ── -->
     <div id="themes_card" style="display:none">
+        <!-- Installing files the theme on the card, so coming back to it later
+             is a local operation — this panel is the offline half of the tab. -->
+        <div class="panel">
+            <label class="field-label">Installed on this card</label>
+            <div class="field-hint">Every theme you install is filed on the SD card together with the
+                layouts it applied, so switching back to one needs no internet at all. Applying
+                rewrites the layout of every screen that theme covers; <b>Forget</b> drops only the
+                entry, never the artwork.</div>
+            <div id="local_theme_list" style="margin-top:10px"></div>
+            <div id="local_theme_status" class="field-hint" style="margin-top:8px"></div>
+        </div>
+
         <div class="panel">
             <label class="field-label">Themes</label>
             <div class="field-hint">A theme is one published set: a wallpaper for every screen, the

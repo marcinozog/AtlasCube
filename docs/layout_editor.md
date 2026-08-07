@@ -575,10 +575,40 @@ card is also feeding the music):
 5. `POST /api/ui/profile/<section>` per screen. A screen whose artwork or layout
    failed is collected into the final report and the rest still install; a screen
    the theme has artwork but no layout for gets the wallpaper only.
+6. File a manifest of what actually reached the device (see below), so the theme
+   can be applied again without the network.
 
 Still **frontend-only** — the firmware sees ordinary section POSTs and SD file
 writes. An install no longer touches `display.asset_urls` and no longer pauses
 the radio for a fetch: everything it needs ends up on the card.
+
+### Themes installed on this card
+
+Wallpapers, layouts and knobs all live on SD after an install, but nothing there
+says which of them belong together — presets are keyed by *wallpaper*, not by
+theme. So step 6 files a manifest at
+`/wallpapers/themes/<WxH>/<theme id>.json`:
+
+```json
+{ "v": 1, "id": "japan", "title": "Japan", "w": 480, "h": 320,
+  "installed": "2026-08-07T…", "sections": { "radio": { … }, "sd": { … } } }
+```
+
+`sections` holds the sections **exactly as they were pushed to the device** —
+already retargeted at this card's paths. Applying one is therefore pure local
+work: a `POST /api/ui/profile/<section>` each, no catalog, no downloads, not
+even a read of the per-wallpaper presets. Only screens that actually applied are
+written, so a partly failed install cannot resurrect a broken screen later.
+
+The Themes tab lists them above the online gallery, with **Apply** and
+**Forget**. Forget drops the manifest alone: the artwork it points at is shared
+with the per-screen pickers and the presets, so deleting it there would be a
+nasty surprise. The per-resolution folder is what keeps a card moved between two
+devices from offering a 320×240 theme to a 480×320 panel; the `w`/`h` stamp
+inside is checked anyway and a mismatched entry is listed but not applicable.
+
+A theme installed before this existed has no manifest — install it once more and
+it registers.
 
 ## End-to-end: what is stored where
 

@@ -2639,13 +2639,25 @@ async function installTheme(theme, button) {
         }
 
         note('Applying to the device...');
-        let applied = 0;
+        const installed = [];
         for (const entry of planned) {
             try {
                 await applyThemeSection(entry.name, entry.data);
-                applied++;
+                installed.push(entry);
             } catch (err) {
                 problems.push(`${SECTIONS[entry.name].title}: ${err.message}`);
+            }
+        }
+
+        // File the result on the card so this theme can be applied again with no
+        // network. Only what actually reached the device goes in — a screen that
+        // failed here must not come back on a later offline apply.
+        if (installed.length) {
+            try {
+                await storeThemeManifest(theme, installed);
+                await loadLocalThemes();
+            } catch (err) {
+                problems.push(`theme not filed for offline use (${err.message})`);
             }
         }
 
@@ -2653,9 +2665,9 @@ async function installTheme(theme, button) {
         await loadWallpaperPreview();
         renderSvg();
         note(problems.length
-            ? `${applied} screen(s) applied, ${problems.length} problem(s): ` +
+            ? `${installed.length} screen(s) applied, ${problems.length} problem(s): ` +
               problems.join('; ')
-            : `"${theme.title}" installed — ${applied} screen(s) rebuilt on the device.`);
+            : `"${theme.title}" installed — ${installed.length} screen(s) rebuilt on the device.`);
     } catch (err) {
         note('Theme install failed: ' + err.message);
     } finally {
@@ -2808,6 +2820,174 @@ async function installThemeKnobs(theme, note, problems) {
         }
     }
     return refs;
+}
+
+// ── Themes installed on this card ────────────────────────────────────────────
+// Wallpapers, layouts and knobs all land on SD, but nothing there says which of
+// them belong together — presets are keyed by wallpaper, not by theme. So an
+// install also files a manifest: the sections exactly as they were pushed to the
+// device. Applying one is then pure local work — no catalog, no downloads, not
+// even a read of the per-wallpaper presets.
+//
+// Filed per panel resolution, because a card moved between two devices must not
+// offer a 320x240 theme to a 480x320 panel.
+
+const THEMES_DIR = '/wallpapers/themes';
+
+function localThemesDir() {
+    return `${THEMES_DIR}/${state.meta.screen_w}x${state.meta.screen_h}`;
+}
+
+function localThemeNote(message) {
+    const status = document.getElementById('local_theme_status');
+    if (status) status.textContent = message;
+}
+
+async function storeThemeManifest(theme, entries) {
+    const id = window.LvBin.fileStem(theme.id || theme.title || 'theme');
+    const manifest = {
+        v: 1,
+        id,
+        title: theme.title || theme.id || 'Theme',
+        w: state.meta.screen_w,
+        h: state.meta.screen_h,
+        installed: new Date().toISOString(),
+        sections: {},
+    };
+    for (const entry of entries) manifest.sections[entry.name] = entry.data;
+
+    const response = await fetch(
+        '/api/sd/file?path=' + encodeURIComponent(`${localThemesDir()}/${id}.json`),
+        { method: 'POST', body: JSON.stringify(manifest) });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+}
+
+async function loadLocalThemes() {
+    const panel = document.getElementById('local_theme_list');
+    if (!panel) return;
+    panel.replaceChildren();
+    localThemeNote('');
+
+    const dir = localThemesDir();
+    const files = (await listSdEntries(dir))
+        .filter(entry => !entry.dir && /\.json$/i.test(entry.name));
+    if (!files.length) {
+        const hint = document.createElement('div');
+        hint.className = 'field-hint';
+        hint.style.marginTop = '0';
+        hint.textContent =
+            `Nothing filed here yet for a ${state.meta.screen_w}×${state.meta.screen_h} panel — ` +
+            'install a theme below and it lands here for offline use.';
+        panel.appendChild(hint);
+        return;
+    }
+
+    for (const file of files) {
+        const path = `${dir}/${file.name}`;
+        let manifest = null;
+        try { manifest = await readPresetJson(path); }
+        catch { /* unreadable — the row says so and offers Delete */ }
+        panel.appendChild(buildLocalThemeRow(path, file.name, manifest));
+    }
+}
+
+function buildLocalThemeRow(path, filename, manifest) {
+    const row = document.createElement('div');
+    row.className = 'asset-row';
+    row.style.marginTop = '6px';
+
+    const sections = manifest && manifest.sections
+        ? Object.keys(manifest.sections).filter(name => SECTIONS[name])
+        : [];
+    const usable = sections.length > 0 &&
+                   manifest.w === state.meta.screen_w && manifest.h === state.meta.screen_h;
+
+    const label = document.createElement('span');
+    label.style.flex = '1';
+    const title = document.createElement('b');
+    title.textContent = (manifest && manifest.title) || filename.replace(/\.json$/i, '');
+    const detail = document.createElement('span');
+    detail.className = 'field-hint';
+    detail.style.margin = '0 0 0 8px';
+    detail.textContent = usable
+        ? `${sections.length} screen(s)` +
+          (manifest.installed ? ` · installed ${manifest.installed.slice(0, 10)}` : '')
+        : (manifest ? `drawn for ${manifest.w}×${manifest.h} — not for this panel`
+                    : 'unreadable manifest');
+    label.append(title, detail);
+
+    const apply = document.createElement('button');
+    apply.type = 'button';
+    apply.className = 'btn-apply';
+    apply.textContent = '🎨 Apply';
+    apply.title = 'Rebuild every screen this theme covers, straight from the card';
+    apply.disabled = !usable;
+    apply.addEventListener('click', () => applyLocalTheme(manifest, apply));
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'btn-secondary';
+    remove.textContent = '🗑 Forget';
+    remove.title = 'Remove this entry (wallpapers and knobs stay on the card)';
+    remove.addEventListener('click', () => forgetLocalTheme(path, title.textContent));
+
+    row.append(label, apply, remove);
+    return row;
+}
+
+async function applyLocalTheme(manifest, button) {
+    const names = Object.keys(manifest.sections).filter(name => SECTIONS[name]);
+    if (!confirm(`Apply "${manifest.title}"?\n\n` +
+                 `${names.length} screen(s) get their layout rewritten from the card.\n` +
+                 'The layouts you have now for those screens are replaced.')) {
+        return;
+    }
+
+    const oldLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Applying...';
+    const problems = [];
+    let applied = 0;
+    try {
+        for (const name of names) {
+            try {
+                // The manifest holds the sections as they were pushed, so this is
+                // the same call the online install makes — just with no download
+                // in front of it.
+                await applyThemeSection(name, manifest.sections[name]);
+                applied++;
+            } catch (err) {
+                problems.push(`${SECTIONS[name].title}: ${err.message}`);
+            }
+        }
+        buildForm();
+        await loadWallpaperPreview();
+        renderSvg();
+        localThemeNote(problems.length
+            ? `${applied} screen(s) applied, ${problems.length} problem(s): ` + problems.join('; ')
+            : `"${manifest.title}" applied — ${applied} screen(s) rebuilt, nothing downloaded.`);
+    } finally {
+        button.disabled = false;
+        button.textContent = oldLabel;
+    }
+}
+
+// Drops the manifest only. The artwork it points at is shared with the per-screen
+// pickers and the presets, so deleting that here would be a nasty surprise.
+async function forgetLocalTheme(path, title) {
+    if (!confirm(`Forget "${title}"?\n\n` +
+                 'Only this entry goes; the wallpapers, layouts and knobs stay on the card.')) {
+        return;
+    }
+    try {
+        const response = await fetch('/api/sd/file?path=' + encodeURIComponent(path),
+                                     { method: 'DELETE' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        await loadLocalThemes();
+        localThemeNote(`"${title}" forgotten.`);
+    } catch (err) {
+        localThemeNote('Could not forget it: ' + err.message);
+    }
 }
 
 // Store `value` ("", "none" or an fopen path) as the active section's
@@ -2969,7 +3149,7 @@ function selectSection(name) {
     document.getElementById('internet_card').style.display = isInternet ? '' : 'none';
     document.getElementById('assets_card').style.display   = isAssets   ? '' : 'none';
     document.getElementById('themes_card').style.display   = isThemes   ? '' : 'none';
-    if (isThemes)               { loadThemeGallery(); return; }
+    if (isThemes)               { loadLocalThemes(); loadThemeGallery(); return; }
     if (isAssets)               { loadNetAssets(); browseAssets(); return; }
     if (isPresets)              { checkOrphanPresets(); return; }
     if (isGeneral || isInternet) {
