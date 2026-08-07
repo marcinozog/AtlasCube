@@ -1,15 +1,15 @@
 #include "xpt2046.h"
 
 #include "esp_log.h"
-#include "esp_timer.h"
+#include "trace.h"
 #include <string.h>
 
 static const char *TAG = "XPT2046";
 
-// Temporary HW-bring-up diagnostics: throttled dump of raw Z / X / Y so testers
-// can report actual controller readings (this variant was never HW-calibrated).
-// Set to 1 to re-enable while tuning TOUCH_RAW_* / XPT_Z_THRESHOLD.
-#define XPT_DEBUG 0
+// Raw Z / X / Y dumps live behind the runtime "touch" trace flag (Settings →
+// System → Diagnostic logging): this variant was never HW-calibrated, so a
+// tester on a stock release binary has to be able to report actual controller
+// readings without rebuilding.
 
 // Control bytes: start bit set, 12-bit conversion, differential mode.
 // A2..A0 select the channel (see datasheet table).
@@ -71,20 +71,13 @@ bool xpt2046_read(uint16_t *x, uint16_t *y)
     // z=4095 → a latched ghost touch at (0,0). Force "released" instead.
     if (z1 == 0) z = 0;
 
-#if XPT_DEBUG
-    static int64_t s_last_log_us = 0;
-    int64_t now = esp_timer_get_time();
-    bool log_now = (now - s_last_log_us) > 500000;   // throttle to ~2 Hz
-#endif
-
     if (z < XPT_Z_THRESHOLD) {
-#if XPT_DEBUG
-        if (log_now) {
-            s_last_log_us = now;
-            ESP_LOGI(TAG, "z1=%u z2=%u z=%d (< thr %d) -> released",
-                     z1, z2, z, XPT_Z_THRESHOLD);
-        }
-#endif
+        // ~2 Hz: this branch runs on every LVGL poll, so an unthrottled line
+        // would be a wall of text. A z that wanders instead of sitting near 0
+        // is the signature of a noisy or contended MISO.
+        TRACE_EVERY_MS(TRACE_TOUCH, TAG, 500,
+                       "z1=%u z2=%u z=%d (< thr %d) -> released",
+                       z1, z2, z, XPT_Z_THRESHOLD);
         return false;
     }
 
@@ -96,12 +89,9 @@ bool xpt2046_read(uint16_t *x, uint16_t *y)
     uint16_t rx = (uint16_t)(sx / XPT_SAMPLES);
     uint16_t ry = (uint16_t)(sy / XPT_SAMPLES);
 
-#if XPT_DEBUG
-    if (log_now) {
-        s_last_log_us = now;
-        ESP_LOGI(TAG, "z1=%u z2=%u z=%d PRESSED  raw x=%u y=%u", z1, z2, z, rx, ry);
-    }
-#endif
+    // Raw corner readings from a real finger are what TOUCH_RAW_* is tuned to.
+    TRACE_EVERY_MS(TRACE_TOUCH, TAG, 500,
+                   "z1=%u z2=%u z=%d PRESSED  raw x=%u y=%u", z1, z2, z, rx, ry);
 
     if (x) *x = rx;
     if (y) *y = ry;

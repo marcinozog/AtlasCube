@@ -24,4 +24,5 @@ idf_component_register(
         lvgl
         ui
         board_pins
+        trace
 )

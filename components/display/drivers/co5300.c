@@ -6,6 +6,7 @@
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
+#include "trace.h"
 #include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -326,7 +327,9 @@ static void co5300_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *
     int h = y2 - y1 + 1;
     int pixels = w * h;
 
-    // ESP_LOGD(TAG, "Flush: x:%d-%d, y:%d-%d, w:%d", area->x1, area->x2, area->y1, area->y2, w);
+    // ~1 Hz sample of what the panel is actually being asked to repaint.
+    TRACE_EVERY_MS(TRACE_DISPLAY, TAG, 1000, "flush x:%d-%d y:%d-%d (%d px)",
+                   x1, x2, y1, y2, pixels);
 
     // RGB565 LE → BE in place. The buffer was allocated MALLOC_CAP_DMA so
     // it's fine to hand directly to the QSPI bulk write.

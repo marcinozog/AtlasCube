@@ -29,4 +29,5 @@ idf_component_register(
         diag                # /api/diag — snapshot shared with the Diagnostics screen
         net_wallpaper       # /api/wallpaper endpoints
         weather
+        trace               # /api/settings "trace" — runtime diagnostic-log flags
 )

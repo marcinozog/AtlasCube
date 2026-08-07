@@ -1,5 +1,6 @@
 #include "metadata.h"
 #include "esp_log.h"
+#include "trace.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -152,7 +153,7 @@ bool id3_read_title(const char *path, char *out, size_t out_size)
 
 done:
     fclose(f);
-    if (ok) ESP_LOGD(TAG, "%s → \"%s\"", path, out);
+    if (ok) TRACE(TRACE_AUDIO, TAG, "%s → \"%s\"", path, out);
     return ok;
 }
 

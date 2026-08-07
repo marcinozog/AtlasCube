@@ -13,6 +13,7 @@ idf_component_register(
         # esp-adf-libs
         esp_http_client
         app_state
+        trace
     # The prebuilt audio libs (below) call back into these open sources
     # (heap_report, audio_levels). WHOLE_ARCHIVE force-links them so those
     # symbols are always defined regardless of link order.

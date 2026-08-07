@@ -38,4 +38,5 @@ idf_component_register(
         esp_lcd
         ui
         board_pins
+        trace
 )

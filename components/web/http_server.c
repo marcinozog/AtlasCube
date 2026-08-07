@@ -1,4 +1,6 @@
+#include <inttypes.h>
 #include "esp_log.h"
+#include "trace.h"
 #include "esp_heap_caps.h"
 #include "esp_http_server.h"
 #include "esp_http_client.h"
@@ -247,6 +249,15 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON *update_obj = cJSON_CreateObject();
     cJSON_AddBoolToObject(update_obj, "enable", s->update.enable);
     cJSON_AddItemToObject(json, "update", update_obj);
+
+    // trace — runtime diagnostic-log flags, emitted straight from the flag table
+    // so a new flag reaches the web UI without an edit here
+    cJSON *trace_obj = cJSON_CreateObject();
+    for (int i = 0; i < trace_flag_count(); i++) {
+        cJSON_AddBoolToObject(trace_obj, trace_flag_name(i),
+                              (s->trace.mask & trace_flag_bit(i)) != 0);
+    }
+    cJSON_AddItemToObject(json, "trace", trace_obj);
 
     // screensaver
     cJSON *scrs = cJSON_CreateObject();
@@ -730,6 +741,23 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
             ESP_LOGI("HTTP", "POST update.enable: %d", cJSON_IsTrue(en));
             settings_set_update_enable(cJSON_IsTrue(en));
         }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // ── TRACE ─────────────────────────────────────────────────────────────────
+    // Patch semantics like the rest of this endpoint: only the flags actually
+    // present in the body move, the others keep their state.
+    cJSON *trace_obj = cJSON_GetObjectItem(json, "trace");
+    if (cJSON_IsObject(trace_obj)) {
+        uint32_t mask = settings_get()->trace.mask;
+        for (int i = 0; i < trace_flag_count(); i++) {
+            cJSON *f = cJSON_GetObjectItem(trace_obj, trace_flag_name(i));
+            if (!cJSON_IsBool(f)) continue;
+            if (cJSON_IsTrue(f)) mask |=  trace_flag_bit(i);
+            else                 mask &= ~trace_flag_bit(i);
+        }
+        ESP_LOGI("HTTP", "POST trace mask: 0x%02" PRIx32, mask);
+        settings_set_trace_mask(mask);
     }
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -3273,12 +3301,12 @@ static esp_err_t file_handler(httpd_req_t *req)
 
     // DIAG: internal DRAM is where lwIP keeps TCP send buffers. Serving a large
     // (gzipped) asset while the radio pipeline runs once stalled the socket send
-    // (errno 11 / EWOULDBLOCK) when the internal heap ran dry. Kept at LOGD to
-    // inspect headroom on demand without spamming the normal log.
-    ESP_LOGD("HTTP", "serve %s: int free=%u largest=%u",
-             served,
-             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
-             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
+    // (errno 11 / EWOULDBLOCK) when the internal heap ran dry. Behind the "web"
+    // trace flag to inspect headroom on demand without spamming the normal log.
+    TRACE(TRACE_WEB, "HTTP", "serve %s: int free=%u largest=%u",
+          served,
+          (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+          (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
 
     size_t read_bytes;
     esp_err_t ret = ESP_OK;

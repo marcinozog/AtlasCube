@@ -3,6 +3,7 @@
 #include "driver/gpio.h"
 #include "driver/ledc.h"
 #include "esp_log.h"
+#include "trace.h"
 #include "esp_heap_caps.h"
 #include "defines.h"
 #include "board_pins.h"
@@ -228,6 +229,11 @@ static void my_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_m
     int y1 = area->y1, y2 = area->y2;
     int w = x2 - x1 + 1;
     int h = y2 - y1 + 1;
+
+    // ~1 Hz sample of what the panel is actually being asked to repaint — the
+    // reference point when a shared SPI bus starts misbehaving.
+    TRACE_EVERY_MS(TRACE_DISPLAY, TAG, 1000, "flush x:%d-%d y:%d-%d (%d px)",
+                   x1, x2, y1, y2, w * h);
 
     uint8_t col_data[4] = { x1>>8, x1&0xFF, x2>>8, x2&0xFF };
     lcd_cmd(0x2A); lcd_data(col_data, 4);

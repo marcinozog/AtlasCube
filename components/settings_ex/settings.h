@@ -4,6 +4,7 @@
 #include "ui_events.h"
 #include "app_state.h"
 #include <stdbool.h>
+#include <stdint.h>
 
 // Internet-wallpaper slots held in PSRAM (net_wallpaper mirrors this as
 // NET_WP_SLOTS). Owned here because the persisted shape is settings' business —
@@ -124,6 +125,13 @@ typedef struct {
                          // web-UI files stale); the boot checks always run regardless
 } update_settings_t;
 
+typedef struct {
+    // trace_flag_t bits (component `trace`); 0 = quiet, which is the default.
+    // Stored as a plain integer so this header stays free of the dependency —
+    // the persisted form is one boolean per flag name, see settings.c.
+    uint32_t mask;
+} trace_settings_t;
+
 typedef struct
 {
     int  delay;            // seconds of idle before activating (0 = off)
@@ -184,6 +192,7 @@ typedef struct {
     dashboard_settings_t dashboard;
     device_settings_t    device;
     update_settings_t    update;
+    trace_settings_t     trace;
 } app_settings_t;
 
 esp_err_t settings_init(void);
@@ -238,6 +247,10 @@ void settings_set_follow_source(bool enable);
 void settings_set_wifi(const char *ssid, const char *password);
 void settings_set_hostname(const char *hostname);
 void settings_set_update_enable(bool enable);
+// Diagnostic-log flags — the whole mask at once (trace_flag_t bits). Applied
+// live to the running firmware and persisted, so an armed flag survives the
+// restart a tester needs to capture the boot sequence.
+void settings_set_trace_mask(uint32_t mask);
 void settings_set_scrsaver_delay(int delay);
 void settings_set_scrsaver_id(int id);
 void settings_set_scrsaver_block_play(int on);

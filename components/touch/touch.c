@@ -7,6 +7,7 @@
 #include "driver/gpio.h"
 #include "driver/i2c_master.h"
 #include "esp_log.h"
+#include "trace.h"
 #include "lvgl.h"
 
 #if CONFIG_TOUCH_CST816D
@@ -110,6 +111,12 @@ static void touch_lvgl_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
         // pixels straight away), so the mirrors are the same either way.
         if (invert_x) x = DISPLAY_WIDTH  - 1 - x;
         if (invert_y) y = DISPLAY_HEIGHT - 1 - y;
+
+        // The other half of the calibration story: the driver's trace prints the
+        // raw reading, this one the pixel it lands on after swap/scale/mirror.
+        TRACE_EVERY_MS(TRACE_TOUCH, TAG, 500,
+                       "press -> x=%u y=%u (swap=%d invx=%d invy=%d)",
+                       x, y, swap_xy, invert_x, invert_y);
 
         data->point.x = x;
         data->point.y = y;

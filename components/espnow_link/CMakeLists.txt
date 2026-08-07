@@ -13,4 +13,5 @@ idf_component_register(
         network
         audio
         diag                # diag_collect() for t:"diag" — same snapshot as /api/diag
+        trace
 )

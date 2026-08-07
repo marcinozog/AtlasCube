@@ -8,4 +8,5 @@ idf_component_register(
         bt_module
         display
         secrets
+        trace
 )

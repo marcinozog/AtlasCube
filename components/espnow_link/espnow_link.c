@@ -12,6 +12,7 @@
 #include "freertos/queue.h"
 
 #include "esp_log.h"
+#include "trace.h"
 #include "esp_now.h"
 #include "esp_wifi.h"
 #include "esp_mac.h"
@@ -671,7 +672,7 @@ static void handle_frame(const rx_frame_t *f)
     //    MAC ACK and retried something we already did. next/prev/volp are not
     //    idempotent, so the repeat is dropped.
     if ((int)f->seq == s_last_seq) {
-        ESP_LOGD(TAG, "duplicate seq %u dropped: %s", f->seq, cmd);
+        TRACE(TRACE_ESPNOW, TAG, "duplicate seq %u dropped: %s", f->seq, cmd);
         return;
     }
     s_last_seq = f->seq;

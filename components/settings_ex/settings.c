@@ -16,6 +16,7 @@
 #include "ui_manager.h"
 #include "screensavers.h"
 #include "secrets.h"
+#include "trace.h"
 #include "defines.h"
 
 static esp_err_t load_from_file(void);
@@ -139,9 +140,16 @@ esp_err_t settings_init(void)
         s_settings.dashboard.notify_str_eq[0]   = '\0';
         s_settings.dashboard.notify_str_ne_en   = false;
         s_settings.dashboard.notify_str_ne[0]   = '\0';
+        // Diagnostic logging — off, the only sane default for a shipped device
+        s_settings.trace.mask                   = 0;
 
         save_to_file();
     }
+
+    // Arm the diagnostic-log flags before anything else boots: settings_init()
+    // runs ahead of display/touch/wifi, so a flag armed by a tester covers their
+    // init logs too. Anything logged before this point cannot be gated.
+    trace_set_mask(s_settings.trace.mask);
 
     return ESP_OK;
 }
@@ -578,6 +586,19 @@ static esp_err_t load_from_file(void)
         if (cJSON_IsBool(en)) s_settings.update.enable = cJSON_IsTrue(en);
     }
 
+    // ── TRACE ─────────────────────────────────────────────────────────────────
+    // One boolean per flag name rather than a raw number: the file stays
+    // readable, and a flag that is renamed or dropped simply stops matching
+    // instead of silently arming whatever now sits on that bit.
+    s_settings.trace.mask = 0;   // quiet, incl. files predating this section
+    cJSON *trace_obj = cJSON_GetObjectItem(json, "trace");
+    if (cJSON_IsObject(trace_obj)) {
+        for (int i = 0; i < trace_flag_count(); i++) {
+            cJSON *f = cJSON_GetObjectItem(trace_obj, trace_flag_name(i));
+            if (cJSON_IsTrue(f)) s_settings.trace.mask |= trace_flag_bit(i);
+        }
+    }
+
     // DEBUG
     ESP_LOGI("SETTINGS", "WiFi SSID: \"%s\"", s_settings.wifi.ssid);
     ESP_LOGI("SETTINGS", "Volume: %d  BT: %d  curr_index: %d",
@@ -705,6 +726,14 @@ static esp_err_t save_to_file_locked(void)
     cJSON *update_obj = cJSON_CreateObject();
     cJSON_AddBoolToObject(update_obj, "enable", s_settings.update.enable);
     cJSON_AddItemToObject(json, "update", update_obj);
+
+    // trace — diagnostic-log flags, written by name (see the loader)
+    cJSON *trace_obj = cJSON_CreateObject();
+    for (int i = 0; i < trace_flag_count(); i++) {
+        cJSON_AddBoolToObject(trace_obj, trace_flag_name(i),
+                              (s_settings.trace.mask & trace_flag_bit(i)) != 0);
+    }
+    cJSON_AddItemToObject(json, "trace", trace_obj);
 
     // screensaver
     cJSON *scrs = cJSON_CreateObject();
@@ -1252,6 +1281,14 @@ void settings_set_update_enable(bool enable)
     s_settings.update.enable = enable;
     save_to_file();   // read once at next boot by app_main before updater_start
     ESP_LOGI("SETTINGS", "Auto-update: %s", enable ? "on" : "off");
+}
+
+void settings_set_trace_mask(uint32_t mask)
+{
+    if (s_settings.trace.mask == mask) return;
+    s_settings.trace.mask = mask;
+    trace_set_mask(mask);   // live — the next TRACE() already obeys it
+    save_to_file();
 }
 
 void settings_set_wifi(const char *ssid, const char *password)

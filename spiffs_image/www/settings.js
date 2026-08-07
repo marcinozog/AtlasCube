@@ -212,6 +212,74 @@ function setUpdateEnable(on) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Diagnostic logging — one runtime flag per subsystem (firmware component
+// `trace`). The rows are built from whatever the device reports, so firmware
+// that gains a flag shows it here without a web-UI update; TRACE_HINTS only
+// adds prose for the flags we already know about.
+// ─────────────────────────────────────────────────────────────────────────────
+const TRACE_HINTS = {
+    touch:   'Raw touch-controller readings and the pixel they land on (about twice a second while polled) — for calibrating a resistive panel or spotting a noisy wire.',
+    display: 'Area and pixel count of each LVGL flush, sampled once a second.',
+    audio:   'Track metadata parsed out of media files.',
+    web:     'Every file served by this web UI, with the internal-heap headroom left.',
+    espnow:  'ESP-NOW frames dropped as duplicate retries.',
+};
+
+function renderTraceFlags(trace) {
+    const box = document.getElementById('trace_flags');
+    if (!box) return;
+    const names = Object.keys(trace || {});
+    if (!names.length) {
+        box.textContent = 'This firmware has no diagnostic-log flags.';
+        return;
+    }
+    box.innerHTML = '';
+    names.forEach(name => {
+        const on  = trace[name] === true;
+        const row = document.createElement('div');
+        row.className = 'trace-row';
+
+        const text = document.createElement('div');
+        text.className = 'trace-row-text';
+        const label = document.createElement('div');
+        label.className = 'trace-row-name';
+        label.textContent = name;
+        text.appendChild(label);
+        if (TRACE_HINTS[name]) {
+            const hint = document.createElement('div');
+            hint.className = 'field-hint';
+            hint.textContent = TRACE_HINTS[name];
+            text.appendChild(hint);
+        }
+
+        const toggle = document.createElement('div');
+        toggle.className = 'theme-toggle';
+        [['1', '✅ On', on], ['0', '🚫 Off', !on]].forEach(([val, caption, active]) => {
+            const btn = document.createElement('button');
+            btn.className = 'theme-btn' + (active ? ' active' : '');
+            btn.dataset.on = val;
+            btn.textContent = caption;
+            btn.onclick = () => setTraceFlag(name, val === '1', row);
+            toggle.appendChild(btn);
+        });
+
+        row.appendChild(text);
+        row.appendChild(toggle);
+        box.appendChild(row);
+    });
+}
+
+function setTraceFlag(name, on, row) {
+    row.querySelectorAll('.theme-btn').forEach(btn =>
+        btn.classList.toggle('active', (btn.dataset.on === '1') === on));
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trace: { [name]: on } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Flip display 180° (applied live — no restart)
 // ─────────────────────────────────────────────────────────────────────────────
 function setFlip(on) {
@@ -983,6 +1051,8 @@ function populateForm(s) {
         const updEnable = s.update?.enable !== false;   // default on
         document.getElementById('settingsBtnUpdateOn') ?.classList.toggle('active', updEnable);
         document.getElementById('settingsBtnUpdateOff')?.classList.toggle('active', !updEnable);
+
+        renderTraceFlags(s.trace);   // rows come from the device's own flag table
 
         const sdScr = s.display.sd_show_screen !== false;   // default on
         document.getElementById('settingsBtnSDshow')?.classList.toggle('active', sdScr);

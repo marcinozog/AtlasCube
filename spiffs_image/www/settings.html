@@ -849,6 +849,18 @@
             <div id="diag_status" class="save-status"></div>
         </div>
 
+        <div class="panel">
+            <label class="field-label">🐞 Diagnostic logging</label>
+            <div class="field-hint">
+                Extra log lines on the serial console (115200 baud), per subsystem —
+                for hunting a problem on a device that is already flashed, without a
+                debug build. Off by default; the choice is saved, so an armed flag
+                also covers the next boot. Leave it off in normal use: the busiest
+                flags print several lines per second.
+            </div>
+            <div id="trace_flags" class="trace-flags">Loading…</div>
+        </div>
+
         <div class="panel ota-panel">
             <label class="field-label">⬆️ Firmware update (OTA)</label>
             <div class="ota-version-row">

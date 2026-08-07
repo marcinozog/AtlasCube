@@ -954,6 +954,25 @@ select.field-input { font-family: 'Chakra Petch', sans-serif; cursor: pointer; }
 }
 
 .ota-warn { margin-bottom: 12px; }
+
+/* Diagnostic-log flags — one row per subsystem reported by the device */
+.trace-flags { margin-top: 10px; }
+.trace-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+}
+.trace-row:first-child { border-top: none; }
+.trace-row-text { min-width: 0; }
+.trace-row-name {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+}
+.trace-row .theme-toggle { flex: none; }
 .ota-warn strong { color: var(--red); font-weight: 600; }
 
 .www-outdated-warn {
