@@ -9,6 +9,26 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-08-07
+
+### Added
+- **www:** show elapsed time and motion while the SD card formats
+- **sdcard:** format the SD card from the web file manager
+- **www:** install full themes from the online gallery
+- **assets:** fetch knob artwork from the internet into PSRAM asset slots
+- **web:** warn about manual-only auto refresh where internet slots are assigned
+- **ui:** follow the playing source to its player screen
+- **espnow:** report pilot link activity and make the link opt-out
+- **web:** copy files in sd-editor and deep-link to it from sd-player
+- **web:** copy files in sd-editor and deep-link to it from sd-player
+- **espnow:** serve the pilot's settings and diagnostics over the link
+- **web:** show MQTT broker connection state in the diagnostics panel
+- **diag:** report chip temperature on the diagnostics panel and in /api/diag
+- **wallpaper:** fetch the boot batch before the radio autostart instead of after
+- **www:** assign a gallery wallpaper straight into an internet slot without SD
+- **wallpaper:** hold up to ten internet wallpapers in PSRAM slots, one per screen
+- **wallpaper:** hold up to six internet wallpapers in PSRAM slots, one per screen
+
 ## [0.48.0] - 2026-08-03
 
 ### Added
@@ -889,7 +909,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.48.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.49.0...HEAD
+[0.49.0]: https://github.com/marcinozog/AtlasCube/compare/v0.48.0...v0.49.0
 [0.48.0]: https://github.com/marcinozog/AtlasCube/compare/v0.47.1...v0.48.0
 [0.47.1]: https://github.com/marcinozog/AtlasCube/compare/v0.47.0...v0.47.1
 [0.47.0]: https://github.com/marcinozog/AtlasCube/compare/v0.46.0...v0.47.0
