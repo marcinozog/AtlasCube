@@ -2569,10 +2569,12 @@ async function installTheme(theme, button) {
         return;
     }
     const layoutCount = screens.filter(s => s.layout).length;
+    const knobCount = (theme.assets || []).filter(a => a && a.image).length;
     if (!confirm(
             `Install "${theme.title}"?\n\n` +
             `${screens.length} screen(s) get a new wallpaper on the SD card` +
             (layoutCount ? `, ${layoutCount} of them a new layout as well` : '') +
+            (knobCount ? `, plus ${knobCount} knob image(s)` : '') +
             '.\nThe layouts you have now for those screens are replaced.')) {
         return;
     }
@@ -2583,7 +2585,7 @@ async function installTheme(theme, button) {
     const problems = [];
     try {
         await ensureLvBin();
-        const knobs = await reserveThemeAssets(theme, note, problems);
+        const knobs = await installThemeKnobs(theme, note, problems);
 
         const artwork = new Map();   // category/filename → /sdcard path (one upload each)
         const layouts = new Map();   // layout URL → parsed preset (one fetch each)
@@ -2696,9 +2698,9 @@ async function fetchThemeLayout(url) {
 }
 
 // The published layout holds the paths of the card it was drawn on. Repoint it
-// at this one: the wallpaper where this install just put it, and the knob at the
-// internet slot reserved for it. An EMPTY knob field is a decision — that screen
-// was meant to keep the plain themed knob — so it stays empty.
+// at this one: the wallpaper and the knob where this install just put them. An
+// EMPTY knob field is a decision — that screen was meant to keep the plain
+// themed knob — so it stays empty.
 function retargetThemeSection(name, section, wallpaperPath, knobs) {
     const data = section ? Object.assign({}, section) : {};
     data[name + '_wallpaper'] = wallpaperPath;
@@ -2759,53 +2761,50 @@ async function installCatalogLayout(preset, wallpaperPath) {
     }
 }
 
-// Park the theme's knob artwork in an internet asset slot and answer with the
-// "asset<N>" references the sections should use. PNG with alpha goes to the
-// device untouched — no SD card, no conversion, no baked-in background — but the
-// slots are a shared, finite resource, so an occupied set is reported rather
-// than overwritten. Roles come from the catalog: "eq_knob" dresses the bands,
-// anything else dresses the volume sliders.
-async function reserveThemeAssets(theme, note, problems) {
+// Where a theme's knob artwork lands — the folder the Assets tab defaults to,
+// so an installed knob sits next to the hand-uploaded ones and the 📂 SD picker
+// on a Knob image field lists them together.
+const THEME_KNOBS_DIR = '/assets/knobs';
+
+// Download the theme's knob artwork, store it on the card as an LVGL .bin and
+// answer with the "/sdcard/..." references the sections should use. The
+// uploader is asked to keep transparency, so a PNG knob becomes RGB565A8 rather
+// than a solid rectangle. Assets carry no resolution — a widget rescales the
+// knob to the slider it sits on — so the file keeps its own pixel size (capped
+// like any hand-uploaded asset) and one file serves every panel. Roles come
+// from the catalog: "eq_knob" dresses the bands, anything else the volume
+// sliders.
+async function installThemeKnobs(theme, note, problems) {
     const wanted = (theme.assets || []).filter(asset => asset && asset.image);
     if (!wanted.length) return {};
 
-    note('Reserving an internet asset slot for the knob artwork...');
-    await loadNetAssets();   // real slot count, and what the device already holds
-    const urls = netAssetUrls.slice(0, netAssetSlotCount);
-    while (urls.length < netAssetSlotCount) urls.push('');
-
     const refs = {};
-    let changed = false;
     for (const asset of wanted) {
-        let url;
-        try { url = trustedOnlineWallpaperUrl(asset.image); }
-        catch { problems.push(`knob ${asset.filename}: untrusted URL, skipped`); continue; }
-        let slot = urls.indexOf(url);
-        if (slot < 0) slot = urls.indexOf('');
-        if (slot < 0) {
-            problems.push(`knob ${asset.filename}: every internet asset slot is taken — ` +
-                          'free one on the Assets tab and install again');
-            continue;
-        }
-        if (urls[slot] !== url) { urls[slot] = url; changed = true; }
-        refs[asset.role === 'eq_knob' ? 'eq' : 'vol'] = 'asset' + slot;
-    }
-
-    if (changed) {
-        netAssetUrls = urls.slice();
-        await postDisplay({ asset_urls: urls });
-        buildNetAssetRows();
-        // There is no per-asset fetch: the batch pulls wallpapers and assets in
-        // one radio-stop window, the same as a boot fetch.
-        note('Fetching the knob artwork (the radio pauses for a moment)...');
+        const label = `knob ${asset.filename}`;
         try {
-            await fetch('/api/wallpaper/fetch', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ all: true }),
-            });
+            const imageUrl = trustedOnlineWallpaperUrl(asset.image);
+            note(`${label}: downloading...`);
+            const response = await fetch(imageUrl, { cache: 'no-store', mode: 'cors' });
+            if (!response.ok) throw new Error('image HTTP ' + response.status);
+            const blob = await response.blob();
+            if (blob.size > ONLINE_WALLPAPER_MAX_BYTES) throw new Error('image is too large');
+            if (!/^image\/(png|jpeg|webp)$/i.test(blob.type))
+                throw new Error('unsupported image format');
+
+            const file = new File([blob], asset.filename, { type: blob.type });
+            const source = await imageFileDimensions(file);
+            const size = fittedAssetDimensions(source.width, source.height);
+            // Themes are published independently and two of them may well ship
+            // a knob under the same filename, so the theme id goes in the stem —
+            // a bare "knob.bin" would have them overwrite each other.
+            const stem = window.LvBin.fileStem(
+                `${theme.id || theme.title || 'theme'}-${asset.filename}`);
+            const relPath = await window.LvBin.uploadImage(
+                file, THEME_KNOBS_DIR, size.w, size.h,
+                message => note(`${label}: ${message}`), stem, true);
+            refs[asset.role === 'eq_knob' ? 'eq' : 'vol'] = SD_MOUNT + relPath;
         } catch (err) {
-            problems.push('knob artwork fetch could not be started: ' + err.message);
+            problems.push(`${label}: ${err.message}`);
         }
     }
     return refs;

@@ -447,9 +447,10 @@ the nearest opaque colour one step outwards before writing, otherwise the
 device's bilinear scaler would drag black into the sprite's edge.
 
 Gallery cards offer both: *Install* (convert + SD) and *Use in slot* (hand
-the URL to the device). Slots keep two jobs the card cannot do — a device
-with **no SD card at all**, and artwork the publisher wants to be able to
-change under an already-installed theme.
+the URL to the device). Since theme installs write knobs to the card too,
+what is left for the slots is the case the card cannot serve at all: a
+device with **no SD card**, which can still show an internet wallpaper and
+an internet knob.
 
 Both tabs read their state from `/api/settings` via `loadBackgroundTab()`
 and write on every change; the device repaints itself. Like *Presets*,
@@ -554,28 +555,30 @@ panel and all seven on another.
 **Installing** walks the screens in order and is deliberately sequential (the
 card is also feeding the music):
 
-1. Reserve an internet asset slot per knob asset — the URL goes into
-   `display.asset_urls[n]`, then one batch `POST /api/wallpaper/fetch {all:true}`
-   pulls it. PNG with alpha reaches the device untouched: no conversion, no SD
-   card, no background baked into the knob. An occupied slot set is **reported,
-   not overwritten**.
+1. Download each knob asset, convert it in the browser and store it under
+   `/assets/knobs/` as `<theme id>-<published stem>.bin` — the theme id is in
+   the name because two themes may well publish a knob under the same filename.
+   Transparency survives (`RGB565A8`), and the artwork keeps its own pixel size,
+   capped like any hand-uploaded asset: a widget rescales the knob to the slider
+   it sits on, so one file serves every panel.
 2. Per screen: download the artwork, convert it to this panel's `.bin` in the
    browser and store it under `/wallpapers/<WxH>/<category>/`, keeping the
    published stem so the preset lands under the name the catalog paired it with.
    Artwork shared by two screens is uploaded once.
 3. Fetch the published layout (once per file, `w`/`h` stamp checked) and
    **retarget** it: `<section>_wallpaper` gets the path this install just wrote,
-   and a non-empty `*_knob_image` gets the `asset<N>` reference from step 1. An
-   *empty* knob field is a decision — that screen was meant to keep the plain
-   themed knob — so it stays empty.
+   and a non-empty `*_knob_image` gets the knob path from step 1. An *empty*
+   knob field is a decision — that screen was meant to keep the plain themed
+   knob — so it stays empty.
 4. File the retargeted section as that wallpaper's preset on SD, so Load and the
    offer-on-switch find it later like any other.
 5. `POST /api/ui/profile/<section>` per screen. A screen whose artwork or layout
    failed is collected into the final report and the rest still install; a screen
    the theme has artwork but no layout for gets the wallpaper only.
 
-Still **frontend-only** — the firmware sees ordinary section POSTs, an
-`/api/settings` patch and the existing fetch endpoint.
+Still **frontend-only** — the firmware sees ordinary section POSTs and SD file
+writes. An install no longer touches `display.asset_urls` and no longer pauses
+the radio for a fetch: everything it needs ends up on the card.
 
 ## End-to-end: what is stored where
 
