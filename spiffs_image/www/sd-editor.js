@@ -259,6 +259,76 @@ async function delEntry(path, name, isDir) {
     } catch (e) { alert("Connection error."); }
 }
 
+// ── Format the card ─────────────────────────────────────────────────────────
+// The one irreversible action on this page, so it goes through a modal that
+// spells out what disappears and stays locked until the word is typed. The
+// device wants the same intent restated as a confirm token on the request.
+const fmtModal  = document.getElementById("fmt_modal");
+const fmtToken  = document.getElementById("fmt_token");
+const fmtGo     = document.getElementById("fmt_go");
+const fmtCancel = document.getElementById("fmt_cancel");
+const fmtStatus = document.getElementById("fmt_status");
+let fmtBusy = false;
+
+function openFormat() {
+    fmtToken.value = "";
+    fmtGo.disabled = true;
+    setFmtStatus("");
+    fmtModal.classList.remove("hidden");
+    fmtToken.focus();
+}
+
+function closeFormat() {
+    if (fmtBusy) return;                       // never leave a format unattended
+    fmtModal.classList.add("hidden");
+}
+
+function setFmtStatus(msg, isErr) {
+    fmtStatus.textContent = msg;
+    fmtStatus.classList.toggle("err", !!isErr);
+}
+
+fmtToken.addEventListener("input", () => {
+    fmtGo.disabled = fmtToken.value.trim().toUpperCase() !== "FORMAT";
+});
+
+fmtToken.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter" && !fmtGo.disabled) runFormat();
+});
+
+document.addEventListener("keydown", (ev) => {
+    if (ev.key === "Escape" && !fmtModal.classList.contains("hidden")) closeFormat();
+});
+
+fmtModal.addEventListener("click", (ev) => {
+    if (ev.target === fmtModal) closeFormat();  // click outside the card = cancel
+});
+
+async function runFormat() {
+    if (fmtBusy) return;
+    fmtBusy = true;
+    fmtGo.disabled = fmtCancel.disabled = fmtToken.disabled = true;
+    setFmtStatus("Formatting… do not power off");
+    metaEl.textContent = "formatting…";
+    try {
+        // No timeout on purpose: the device answers only once f_mkfs is done.
+        const r = await fetch("/api/sd/format?confirm=erase-everything", { method: "POST" });
+        if (r.status === 503) { setFmtStatus("No SD card.", true); }
+        else if (!r.ok)       { setFmtStatus(`Format failed (${r.status}).`, true); }
+        else {
+            fmtModal.classList.add("hidden");
+            currentPath = "/";                  // the old tree no longer exists
+        }
+    } catch (e) {
+        setFmtStatus("Connection lost — check the device.", true);
+    }
+    fmtBusy = false;
+    fmtGo.disabled = fmtCancel.disabled = fmtToken.disabled = false;
+    fmtToken.value = "";
+    fmtGo.disabled = true;
+    refresh();
+}
+
 // Upload the selected files one by one into the current folder, with a progress
 // bar (XHR gives us upload progress events that fetch() does not).
 document.getElementById("upload_input").addEventListener("change", async (ev) => {

@@ -18,3 +18,15 @@ esp_err_t sdcard_init(void);
 
 // True once the card is mounted and ready for filesystem access.
 bool sdcard_is_mounted(void);
+
+// Erases the card and lays down a fresh FAT/FAT32 filesystem, leaving it mounted
+// at SD_MOUNT_POINT. DESTROYS EVERY FILE ON THE CARD — callers must take an
+// explicit user confirmation first and stop whatever reads from the card (SD
+// playback), because the format invalidates every open file handle.
+// Also works on a card that never mounted for lack of a filesystem (fresh or
+// corrupt), which is the case a plain reformat cannot serve. Like sdcard_init()
+// it runs on a short-lived worker task, so shallow callers (httpd/WS, UI) are
+// safe. Returns ESP_OK on success, ESP_ERR_NOT_FOUND when no card responds at
+// all (nothing to format), ESP_ERR_NOT_SUPPORTED on a build without
+// HAS_SD_CARD, ESP_FAIL when the format itself failed.
+esp_err_t sdcard_format(void);

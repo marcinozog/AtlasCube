@@ -35,6 +35,7 @@
 #include "mqtt_config.h"
 #include "secrets.h"
 #include "sdcard.h"
+#include "sd_player.h"      // /api/sd/format — stop playback before the wipe
 #include "updater.h"
 #include "net_wallpaper.h"
 #include "net_asset.h"
@@ -3047,6 +3048,48 @@ static esp_err_t api_sd_delete_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+// POST /api/sd/format?confirm=erase-everything  → wipes the card and lays down a
+// fresh FAT filesystem. The exact token is required so no stray or mistyped
+// request can erase a card; the web UI only sends it from behind a typed
+// confirmation. Blocks for as long as the format takes (seconds to about a
+// minute on a large card), during which other web requests queue up.
+static esp_err_t api_sd_format_handler(httpd_req_t *req)
+{
+    char token[40];
+    token[0] = '\0';
+    size_t qlen = httpd_req_get_url_query_len(req) + 1;
+    if (qlen > 1 && qlen < 512) {
+        char *q = malloc(qlen);
+        if (q && httpd_req_get_url_query_str(req, q, qlen) == ESP_OK) {
+            if (httpd_query_key_value(q, "confirm", token, sizeof(token)) != ESP_OK) {
+                token[0] = '\0';
+            }
+        }
+        free(q);
+    }
+    if (strcmp(token, "erase-everything") != 0) {
+        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Missing confirmation");
+        return ESP_FAIL;
+    }
+
+    // Playback from the card holds an open file that the format invalidates —
+    // stop it and drop the queue before the filesystem goes away.
+    if (sd_player_is_active()) sd_player_stop();
+    sd_player_forget();
+
+    esp_err_t err = sdcard_format();
+    if (err == ESP_ERR_NOT_FOUND || err == ESP_ERR_NOT_SUPPORTED) {
+        return sd_send_no_card(req);
+    }
+    if (err != ESP_OK) {
+        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Format failed");
+        return ESP_FAIL;
+    }
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"ok\":true}");
+    return ESP_OK;
+}
+
 // POST /api/sd/mkdir?path=/dir  → creates a directory (no-op if it exists)
 static esp_err_t api_sd_mkdir_handler(httpd_req_t *req)
 {
@@ -3906,8 +3949,8 @@ void http_server_start(void)
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
     config.uri_match_fn      = httpd_uri_match_wildcard;
-    // 67 handlers are registered below and ws_register() adds one more before
-    // them — 68 in use. Keep real headroom: the two wildcards (/* OPTIONS and
+    // 69 handlers are registered below and ws_register() adds one more before
+    // them — 70 in use. Keep real headroom: the two wildcards (/* OPTIONS and
     // /* GET) register LAST, so an overflow drops exactly them and the symptom
     // is the whole web UI 404-ing, not the new endpoint going missing. Raise
     // this whenever you add an API handler.
@@ -4404,6 +4447,13 @@ void http_server_start(void)
         .handler = api_sd_rename_handler,
     };
     httpd_register_uri_handler(server, &api_sd_rename);
+
+    httpd_uri_t api_sd_format = {
+        .uri     = "/api/sd/format",
+        .method  = HTTP_POST,
+        .handler = api_sd_format_handler,
+    };
+    httpd_register_uri_handler(server, &api_sd_format);
 
     httpd_uri_t api_station_icon_proxy = {
         .uri     = "/api/station-icon/proxy",
