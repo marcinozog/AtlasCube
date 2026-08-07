@@ -9,6 +9,7 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 #include <ctype.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -47,6 +48,7 @@ static void config_normalize(weather_config_t *c)
     if (c->longitude > 180.0f) c->longitude = 180.0f;
     if (c->refresh_min < 5) c->refresh_min = 5;
     if (c->refresh_min > 240) c->refresh_min = 240;
+    if (c->units != WEATHER_UNITS_FAHRENHEIT) c->units = WEATHER_UNITS_CELSIUS;
 }
 
 static void config_load(void)
@@ -74,6 +76,8 @@ static void config_load(void)
     if (cJSON_IsNumber(v)) s_config.longitude = (float)v->valuedouble;
     v = cJSON_GetObjectItem(root, "refresh_min");
     if (cJSON_IsNumber(v)) s_config.refresh_min = v->valueint;
+    v = cJSON_GetObjectItem(root, "units");
+    if (cJSON_IsNumber(v)) s_config.units = v->valueint;
     config_normalize(&s_config);
     cJSON_Delete(root);
 }
@@ -82,9 +86,9 @@ static esp_err_t config_save(const weather_config_t *c)
 {
     FILE *f = fopen(WEATHER_CONFIG_FILE, "w");
     if (!f) return ESP_FAIL;
-    int n = fprintf(f, "{\"enabled\":%s,\"provider\":%d,\"api_key\":\"%s\",\"latitude\":%.5f,\"longitude\":%.5f,\"refresh_min\":%d}\n",
+    int n = fprintf(f, "{\"enabled\":%s,\"provider\":%d,\"api_key\":\"%s\",\"latitude\":%.5f,\"longitude\":%.5f,\"refresh_min\":%d,\"units\":%d}\n",
                     c->enabled ? "true" : "false", c->provider, c->api_key,
-                    c->latitude, c->longitude, c->refresh_min);
+                    c->latitude, c->longitude, c->refresh_min, c->units);
     fclose(f);
     return n > 0 ? ESP_OK : ESP_FAIL;
 }
@@ -263,6 +267,24 @@ void weather_get_config(weather_config_t *out)
     lock(); *out = s_config; unlock();
 }
 
+// True when both configs would fetch exactly the same data — units and the
+// refresh interval don't change what comes back, so the current reading stays
+// good across such an edit.
+static bool same_source(const weather_config_t *a, const weather_config_t *b)
+{
+    return a->enabled == b->enabled && a->provider == b->provider
+        && fabsf(a->latitude - b->latitude) < 1e-6f
+        && fabsf(a->longitude - b->longitude) < 1e-6f
+        && strcmp(a->api_key, b->api_key) == 0;
+}
+
+static void config_apply(const weather_config_t *c)
+{
+    if (!same_source(c, &s_config)) s_data.valid = false;
+    s_config = *c;
+    ++s_generation;
+}
+
 esp_err_t weather_set_config(const weather_config_t *config)
 {
     if (!config) return ESP_ERR_INVALID_ARG;
@@ -270,8 +292,8 @@ esp_err_t weather_set_config(const weather_config_t *config)
     config_normalize(&c);
     esp_err_t err = config_save(&c);
     if (err != ESP_OK) return err;
-    if (!s_lock) { s_config = c; s_data.valid = false; ++s_generation; return ESP_OK; }
-    lock(); s_config = c; s_data.valid = false; ++s_generation; unlock();
+    if (!s_lock) { config_apply(&c); return ESP_OK; }
+    lock(); config_apply(&c); unlock();
     return ESP_OK;
 }
 
@@ -286,4 +308,21 @@ void weather_set_update_cb(weather_update_cb_t cb)
 {
     if (!s_lock) { s_update_cb = cb; return; }
     lock(); s_update_cb = cb; unlock();
+}
+
+static int units_get(void)
+{
+    if (!s_lock) return s_config.units;
+    lock(); int units = s_config.units; unlock();
+    return units;
+}
+
+float weather_to_display(float celsius)
+{
+    return units_get() == WEATHER_UNITS_FAHRENHEIT ? celsius * 1.8f + 32.0f : celsius;
+}
+
+const char *weather_unit_label(void)
+{
+    return units_get() == WEATHER_UNITS_FAHRENHEIT ? "F" : "C";
 }

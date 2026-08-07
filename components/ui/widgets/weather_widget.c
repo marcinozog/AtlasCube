@@ -140,8 +140,9 @@ void weather_widget_update(void)
     lv_label_set_text(s_icon, icon_glyph(data.weather_code, data.is_day));
     // LVGL's built-in sprintf has no %f support (LV_SPRINTF_USE_FLOAT is off) —
     // a float here renders garbage, so round to a whole degree first.
-    lv_label_set_text_fmt(s_label, "%+d C  %s  %d%%",
-                          (int)lroundf(data.temperature_c),
+    lv_label_set_text_fmt(s_label, "%+d %s  %s  %d%%",
+                          (int)lroundf(weather_to_display(data.temperature_c)),
+                          weather_unit_label(),
                           condition(data.weather_code), data.humidity_pct);
 
     // Radio/SD profiles reserve a compact 120/160 px slot in the top-left

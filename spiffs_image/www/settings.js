@@ -1328,6 +1328,25 @@ function weatherCondition(code) {
     return 'Weather';
 }
 
+// Last /api/weather payload — kept so the readout can be re-rendered when the
+// unit select changes, without refetching (and without discarding edits).
+let _weatherLast = null;
+
+// The device always stores °C; the selected unit is a display choice.
+function renderWeatherNow() {
+    const now = document.getElementById('weather_now');
+    const c = _weatherLast;
+    if (!now || !c) return;
+    if (!c.valid) {
+        now.innerText = c.enabled ? 'No data yet — fetch pending or failed.' : 'Disabled.';
+        return;
+    }
+    const fahrenheit = document.getElementById('weather_units')?.value === '1';
+    const temp = fahrenheit ? c.temperature_c * 1.8 + 32 : c.temperature_c;
+    now.innerText = Math.round(temp) + (fahrenheit ? '°F, ' : '°C, ') +
+        weatherCondition(c.weather_code) + ', humidity ' + c.humidity_pct + '%';
+}
+
 async function loadWeather() {
     try {
         const r = await fetch('/api/weather', { cache: 'no-store' });
@@ -1339,12 +1358,10 @@ async function loadWeather() {
         onWeatherProvider();
         setVal('weather_lat',     c.latitude);
         setVal('weather_lon',     c.longitude);
+        setVal('weather_units',   c.units || 0);
         setVal('weather_refresh', c.refresh_min || 30);
-        const now = document.getElementById('weather_now');
-        if (now) now.innerText = c.valid
-            ? Math.round(c.temperature_c) + '°C, ' + weatherCondition(c.weather_code) +
-              ', humidity ' + c.humidity_pct + '%'
-            : (c.enabled ? 'No data yet — fetch pending or failed.' : 'Disabled.');
+        _weatherLast = c;
+        renderWeatherNow();
     } catch (e) {
         console.error('loadWeather', e);
     }
@@ -1397,6 +1414,7 @@ async function saveWeather() {
     const apiKey = get('weather_api_key').trim();
     const lat = parseFloat(get('weather_lat'));
     const lon = parseFloat(get('weather_lon'));
+    const units = parseInt(get('weather_units'), 10) || 0;
     let refresh = parseInt(get('weather_refresh'), 10);
     if (isNaN(refresh)) refresh = 30;
 
@@ -1411,7 +1429,7 @@ async function saveWeather() {
         return;
     }
 
-    const payload = { enabled, provider, api_key: apiKey, refresh_min: refresh };
+    const payload = { enabled, provider, api_key: apiKey, refresh_min: refresh, units };
     if (!isNaN(lat)) payload.latitude = lat;
     if (!isNaN(lon)) payload.longitude = lon;
 

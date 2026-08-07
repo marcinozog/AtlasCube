@@ -9,6 +9,11 @@ typedef enum {
     WEATHER_PROVIDER_OPENWEATHERMAP = 1,   // needs api_key
 } weather_provider_t;
 
+typedef enum {
+    WEATHER_UNITS_CELSIUS    = 0,
+    WEATHER_UNITS_FAHRENHEIT = 1,
+} weather_units_t;
+
 typedef struct {
     bool  enabled;
     int   provider;          // weather_provider_t
@@ -16,6 +21,7 @@ typedef struct {
     float latitude;
     float longitude;
     int   refresh_min;       // clamped to 5..240
+    int   units;             // weather_units_t — display only, data stays in °C
 } weather_config_t;
 
 typedef struct {
@@ -35,4 +41,8 @@ void weather_get_config(weather_config_t *out);
 esp_err_t weather_set_config(const weather_config_t *config);
 void weather_get(weather_data_t *out);
 void weather_set_update_cb(weather_update_cb_t cb);
+
+// Temperatures are always stored in °C; these convert for display only.
+float weather_to_display(float celsius);
+const char *weather_unit_label(void);   // "C" or "F"
 

@@ -4538,6 +4538,7 @@ static esp_err_t api_weather_get_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(json, "latitude", cfg.latitude);
     cJSON_AddNumberToObject(json, "longitude", cfg.longitude);
     cJSON_AddNumberToObject(json, "refresh_min", cfg.refresh_min);
+    cJSON_AddNumberToObject(json, "units", cfg.units);
     cJSON_AddBoolToObject(json, "valid", data.valid);
     if (data.valid) {
         cJSON_AddNumberToObject(json, "temperature_c", data.temperature_c);
@@ -4576,6 +4577,8 @@ static esp_err_t api_weather_post_handler(httpd_req_t *req)
     if (cJSON_IsNumber(v)) cfg.longitude = (float)v->valuedouble;
     v = cJSON_GetObjectItem(json, "refresh_min");
     if (cJSON_IsNumber(v)) cfg.refresh_min = v->valueint;
+    v = cJSON_GetObjectItem(json, "units");
+    if (cJSON_IsNumber(v)) cfg.units = v->valueint;
     cJSON_Delete(json);
     if (weather_set_config(&cfg) != ESP_OK) {
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Could not save weather settings");

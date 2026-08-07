@@ -792,6 +792,15 @@
             <div class="field-hint">Search powered by Open-Meteo, or enter coordinates manually. Saving remains a separate step.</div>
         </div>
         <div class="panel">
+            <label class="field-label">Temperature units</label>
+            <select id="weather_units" class="field-input" style="width:280px"
+                    onchange="renderWeatherNow()">
+                <option value="0">Celsius (°C)</option>
+                <option value="1">Fahrenheit (°F)</option>
+            </select>
+            <div class="field-hint">Display only — the device always fetches the data in °C.</div>
+        </div>
+        <div class="panel">
             <label class="field-label">Refresh interval (minutes)</label>
             <input type="number" id="weather_refresh" class="field-input" min="5" max="240"
                    placeholder="30" style="width:140px" />
