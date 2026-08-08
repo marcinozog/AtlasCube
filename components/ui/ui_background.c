@@ -332,6 +332,18 @@ void ui_background_apply(lv_obj_t *obj, ui_screen_id_t screen)
     const ui_theme_t t = theme_current();
     const app_settings_t *st = settings_get();
 
+    // System prompts get a plain background, never a wallpaper or gradient: they
+    // interrupt whatever was on screen and their text has to stay readable over
+    // an arbitrary photo. Clearing bg_image_src matters — the style lives on the
+    // shared lv_scr_act(), which lv_obj_clean() does not reset, so the previous
+    // screen's wallpaper would otherwise remain under the prompt.
+    if (screen == SCREEN_UPDATE || screen == SCREEN_OTA) {
+        lv_obj_set_style_bg_image_src(obj, NULL, LV_PART_MAIN);
+        lv_obj_set_style_bg_color(obj, lv_color_hex(theme_get()->bg_primary), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(obj, LV_OPA_COVER, LV_PART_MAIN);
+        return;
+    }
+
     // Per-screen wallpaper source (hub sections; NULL for screens without one):
     //   "net0".."net9" → Internet : that slot's fetched wallpaper, pinned here
     //   "net"          → Internet : slot 0 (the pre-slots spelling, still valid)
