@@ -310,6 +310,10 @@ typedef struct {
     int16_t          sd_bar_y;
     int16_t          sd_bar_w;
     int16_t          sd_bar_h;
+    bool             sd_show_cover;            // album cover ("cover.bin" in the track's folder)
+    int16_t          sd_cover_x;               // cover top-left position
+    int16_t          sd_cover_y;
+    int16_t          sd_cover_size;            // displayed square size, 16..240 px
 
     bool             sd_show_mode_indicator;
     bool             sd_show_clock;

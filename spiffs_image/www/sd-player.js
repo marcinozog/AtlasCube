@@ -132,6 +132,97 @@ function renderList() {
     }
 
     highlight();
+    refreshCover();   // the cover belongs to the browsed folder, not the track
+}
+
+// ── Album cover ─────────────────────────────────────────────────────────────
+// One optional cover.bin per music folder, which the device's SD player screen
+// shows while that folder plays. The name and the format are fixed so the
+// firmware never has to guess: the browser converts whatever image is picked
+// with the shared lvbin.js encoder (same crop-to-cover path as wallpapers) and
+// uploads the finished LVGL .bin.
+const COVER_SIZE = 240;   // stored size; the device rescales it to its layout
+let coverDir  = null;     // folder the shown preview belongs to
+let coverBusy = false;
+
+function coverPath(dir) {
+    return cardRelative(dir).replace(/\/+$/, '') + '/cover.bin';
+}
+
+function showCover(src, status) {
+    const canvas = document.getElementById('coverPreview');
+    const empty  = document.getElementById('coverEmpty');
+    const del    = document.getElementById('coverDelBtn');
+    document.getElementById('coverStatus').innerText = status;
+    if (src) {
+        canvas.width  = src.width;
+        canvas.height = src.height;
+        canvas.getContext('2d').drawImage(src, 0, 0);
+    }
+    canvas.hidden = !src;
+    empty.hidden  = !!src;
+    del.disabled  = !src;
+}
+
+// Read the browsed folder's cover into the preview. A folder without one is
+// the normal case, not an error.
+async function refreshCover() {
+    if (!document.getElementById('coverPreview')) return;
+    const dir = curDir || '/sdcard/music';
+    coverDir = dir;
+    showCover(null, 'Checking…');
+    try {
+        const r = await fetch('/api/sd/file?path=' + encodeURIComponent(coverPath(dir)),
+                              { cache: 'no-store' });
+        if (coverDir !== dir) return;          // browsed away while loading
+        if (!r.ok) {
+            showCover(null, r.status === 503 ? 'No SD card' : 'No cover in this folder');
+            return;
+        }
+        const img = LvBin.decodeToCanvas(await r.arrayBuffer());
+        if (coverDir !== dir) return;
+        showCover(img.canvas, `cover.bin · ${img.w}×${img.h}`);
+    } catch (e) {
+        if (coverDir === dir) showCover(null, '✗ ' + e.message);
+    }
+}
+
+function pickCover() { document.getElementById('coverFile').click(); }
+
+async function onCoverPicked(input) {
+    const file = input.files && input.files[0];
+    input.value = '';                          // let the same file be picked again
+    if (!file || coverBusy) return;
+    const dir = curDir || '/sdcard/music';
+    coverBusy = true;
+    document.getElementById('coverStatus').innerText = 'Converting…';
+    try {
+        const bin = await LvBin.encodeImage(file, COVER_SIZE, COVER_SIZE);
+        const r = await fetch('/api/sd/file?path=' + encodeURIComponent(coverPath(dir)),
+                              { method: 'POST', body: bin });
+        if (r.status === 503) throw new Error('no SD card');
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+    } catch (e) {
+        document.getElementById('coverStatus').innerText = '✗ ' + e.message;
+        return;
+    } finally {
+        coverBusy = false;
+    }
+    refreshCover();
+}
+
+async function removeCover() {
+    const dir = curDir || '/sdcard/music';
+    if (!confirm('Remove the cover of ' + dir + '?')) return;
+    try {
+        const r = await fetch('/api/sd/file?path=' + encodeURIComponent(coverPath(dir)),
+                              { method: 'DELETE' });
+        if (!r.ok && r.status !== 404) throw new Error('HTTP ' + r.status);
+    } catch (e) {
+        document.getElementById('coverStatus').innerText = '✗ ' + e.message;
+        return;
+    }
+    refreshCover();
 }
 
 function highlight() {

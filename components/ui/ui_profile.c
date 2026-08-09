@@ -125,6 +125,11 @@ static const ui_profile_t k_defaults = {
     .sd_bar_y                  = 0,
     .sd_bar_w                  = 0,
     .sd_bar_h                  = 0,
+    // No room for artwork next to the text on a 64px strip.
+    .sd_show_cover             = false,
+    .sd_cover_x                = 0,
+    .sd_cover_y                = 0,
+    .sd_cover_size             = 48,
     .sd_show_mode_indicator    = false,
     .sd_show_clock             = false,
     .sd_show_event_indicator   = false,
@@ -359,6 +364,11 @@ static const ui_profile_t k_defaults = {
     .sd_bar_y                  = 0,
     .sd_bar_w                  = 0,
     .sd_bar_h                  = 0,
+    // No room for artwork next to the text on a 64px strip.
+    .sd_show_cover             = false,
+    .sd_cover_x                = 0,
+    .sd_cover_y                = 0,
+    .sd_cover_size             = 56,
     .sd_show_mode_indicator    = false,
     .sd_show_clock             = false,
     .sd_show_event_indicator   = false,
@@ -644,6 +654,13 @@ static const ui_profile_t k_defaults = {
     .sd_bar_y                  = 208,
     .sd_bar_w                  = 200,
     .sd_bar_h                  = 6,
+    // Off by default — the artwork is opt-in, so a card without covers keeps
+    // the layout it has today. The geometry is a usable starting point for the
+    // layout editor: the free band between the title and the info row.
+    .sd_show_cover             = false,
+    .sd_cover_x                = 80,    // (240 - 80) / 2, centered
+    .sd_cover_y                = 85,
+    .sd_cover_size             = 80,
     .sd_show_mode_indicator    = true,
     .sd_show_clock             = true,
     .sd_show_event_indicator   = true,
@@ -991,6 +1008,12 @@ static const ui_profile_t k_defaults = {
     .sd_bar_y                  = 138,
     .sd_bar_w                  = 280,
     .sd_bar_h                  = 6,
+    // Off by default (see the 240x296 profile); parked in the free top-left
+    // corner, next to the centered clock.
+    .sd_show_cover             = false,
+    .sd_cover_x                = 10,
+    .sd_cover_y                = 30,
+    .sd_cover_size             = 64,
     .sd_show_mode_indicator    = true,
     .sd_show_clock             = true,
     .sd_show_event_indicator   = true,
@@ -1327,6 +1350,12 @@ static const ui_profile_t k_defaults = {
     .sd_bar_y                  = 182,
     .sd_bar_w                  = 420,
     .sd_bar_h                  = 8,
+    // Off by default (see the 240x296 profile); parked in the free top-left
+    // corner, next to the centered clock.
+    .sd_show_cover             = false,
+    .sd_cover_x                = 10,
+    .sd_cover_y                = 15,
+    .sd_cover_size             = 64,
     .sd_show_mode_indicator    = true,
     .sd_show_clock             = true,
     .sd_show_event_indicator   = true,
@@ -2076,6 +2105,12 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "sd_bar_y",                  &p->sd_bar_y);
     load_i16 (obj, "sd_bar_w",                  &p->sd_bar_w);
     load_i16 (obj, "sd_bar_h",                  &p->sd_bar_h);
+    load_bool(obj, "sd_show_cover",             &p->sd_show_cover);
+    load_i16 (obj, "sd_cover_x",                &p->sd_cover_x);
+    load_i16 (obj, "sd_cover_y",                &p->sd_cover_y);
+    load_i16 (obj, "sd_cover_size",             &p->sd_cover_size);
+    if (p->sd_cover_size < 16)  p->sd_cover_size = 16;
+    if (p->sd_cover_size > 240) p->sd_cover_size = 240;
     load_bool(obj, "sd_show_mode_indicator",    &p->sd_show_mode_indicator);
     load_bool(obj, "sd_show_clock",             &p->sd_show_clock);
     load_bool(obj, "sd_show_event_indicator",   &p->sd_show_event_indicator);
@@ -2188,6 +2223,10 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_bar_y",                  p->sd_bar_y);
     add_i16 (o, "sd_bar_w",                  p->sd_bar_w);
     add_i16 (o, "sd_bar_h",                  p->sd_bar_h);
+    add_bool(o, "sd_show_cover",             p->sd_show_cover);
+    add_i16 (o, "sd_cover_x",                p->sd_cover_x);
+    add_i16 (o, "sd_cover_y",                p->sd_cover_y);
+    add_i16 (o, "sd_cover_size",             p->sd_cover_size);
     add_bool(o, "sd_show_mode_indicator",    p->sd_show_mode_indicator);
     add_bool(o, "sd_show_clock",             p->sd_show_clock);
     add_bool(o, "sd_show_event_indicator",   p->sd_show_event_indicator);

@@ -329,6 +329,11 @@ const SD_FIELDS = [
     { key: 'sd_bar_w',                label: 'Bar W',             type: 'number' },
     { key: 'sd_bar_h',                label: 'Bar H',             type: 'number' },
 
+    { key: 'sd_show_cover',           label: 'Show album cover',  type: 'bool' },
+    { key: 'sd_cover_x',              label: 'Cover X',           type: 'number' },
+    { key: 'sd_cover_y',              label: 'Cover Y',           type: 'number' },
+    { key: 'sd_cover_size',           label: 'Cover size',        type: 'number', min: 16, max: 240 },
+
     { key: 'sd_show_mode_indicator',  label: 'Show mode indic.',  type: 'bool' },
     { key: 'sd_mode_indic_x',         label: 'Mode indic. X',     type: 'number' },
     { key: 'sd_mode_indic_y',         label: 'Mode indic. Y',     type: 'number' },
@@ -579,6 +584,7 @@ const FORM_GROUPS = {
         { heading: 'Playback' },
         { title: 'Playback time', enabledBy: 'sd_show_time', fields: ['sd_show_time', 'sd_time_x', 'sd_time_y'] },
         { title: 'Progress bar', enabledBy: 'sd_show_bar', fields: ['sd_show_bar', 'sd_bar_x', 'sd_bar_y', 'sd_bar_w', 'sd_bar_h'] },
+        { title: 'Album cover', enabledBy: 'sd_show_cover', fields: ['sd_show_cover', 'sd_cover_x', 'sd_cover_y', 'sd_cover_size'] },
         { title: 'VU meters', fields: [], subgroups: [
             { title: 'Bar VU', enabledBy: 'sd_show_vu', fields: ['sd_show_vu', 'sd_vu_x', 'sd_vu_y', 'sd_vu_w', 'sd_vu_h', 'sd_vu_transparent', 'sd_vu_bg_color', 'sd_vu_bar_color'] },
             { title: 'Needle VU', fields: ['sd_needle_transparent', 'sd_needle_bg_color', 'sd_needle_color', 'sd_needle_show_l', 'sd_needle_l_x', 'sd_needle_l_y', 'sd_needle_l_w', 'sd_needle_l_h', 'sd_needle_show_r', 'sd_needle_r_x', 'sd_needle_r_y', 'sd_needle_r_w', 'sd_needle_r_h'] },
@@ -4377,6 +4383,17 @@ function renderSd(svg) {
             x: s.sd_bar_x, y: s.sd_bar_y, w: s.sd_bar_w, h: s.sd_bar_h,
             label: 'bar', cls: 'label-rect',
             fields: { x: 'sd_bar_x', y: 'sd_bar_y', w: 'sd_bar_w', h: 'sd_bar_h' },
+        });
+    }
+
+    // Album cover — always square, so one field drives both width and height.
+    if (s.sd_show_cover) {
+        drawFreeElement(svg, {
+            x: s.sd_cover_x, y: s.sd_cover_y,
+            w: s.sd_cover_size, h: s.sd_cover_size,
+            label: 'cover', cls: 'label-rect',
+            fields: { x: 'sd_cover_x', y: 'sd_cover_y',
+                      w: 'sd_cover_size', h: 'sd_cover_size' },
         });
     }
 

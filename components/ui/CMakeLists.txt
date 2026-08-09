@@ -43,6 +43,7 @@ idf_component_register(
         "widgets/clock_widget.c"
         "widgets/now_playing_widget.c"
         "widgets/station_icon_widget.c"
+        "widgets/sd_cover_widget.c"
         "widgets/mode_indicator_widget.c"
         "widgets/event_indicator_widget.c"
         "widgets/calendar_widget.c"

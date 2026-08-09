@@ -14,6 +14,7 @@
 #include "mode_indicator_widget.h"
 #include "event_indicator_widget.h"
 #include "weather_widget.h"
+#include "sd_cover_widget.h"
 #include "vu_widget.h"
 #include "vu_needle_widget.h"
 #include "vu_stereo_widget.h"
@@ -155,6 +156,7 @@ static void refresh_from_state(void)
     }
 
     progress_update();            // snap the counter on track/source change
+    sd_cover_widget_update();     // artwork follows the folder, not the track
 
     vol_slider_widget_update();   // knob follows encoder/WS/Android changes
     controls_overlay_refresh();   // keep center play/stop in sync with external changes
@@ -298,6 +300,10 @@ static void sd_player_screen_create(lv_obj_t *parent)
                               p->sd_weather_w, p->sd_weather_font,
                               p->sd_label_bg_opa);
     }
+    // Before refresh_from_state(), which is what pulls the folder's artwork in.
+    if (p->sd_show_cover) {
+        sd_cover_widget_create(parent, p->sd_cover_x, p->sd_cover_y, p->sd_cover_size);
+    }
 
     refresh_from_state();
     progress_update();   // set/hide the time row now, before the 1 s tick
@@ -332,6 +338,7 @@ static void sd_player_screen_destroy(void)
     vu_stereo_widget_destroy();
     animated_wheels_widget_destroy();
     weather_widget_destroy();
+    sd_cover_widget_destroy();
     mode_indicator_destroy();
     event_indicator_destroy();
     clock_widget_destroy();

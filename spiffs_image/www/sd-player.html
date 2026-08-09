@@ -30,6 +30,18 @@
   .dir-link{flex:none;color:var(--accent,#377aff);text-decoration:none;
             font:600 .8rem 'Chakra Petch',sans-serif;letter-spacing:.5px}
   .dir-link:hover{text-decoration:underline}
+  .cover-row{display:flex;gap:.8rem;align-items:center;margin:.7rem 0 .3rem}
+  .cover-thumb{width:72px;height:72px;flex:none;border-radius:8px;
+               background:var(--panel-2,#1c2330);border:1px solid var(--border,#2a3340)}
+  .cover-thumb[hidden]{display:none}
+  .cover-empty{display:flex;align-items:center;justify-content:center;
+               font-size:1.7rem;color:var(--muted,#8b98a9)}
+  .cover-actions{display:flex;flex-direction:column;gap:.45rem;flex:1;min-width:0}
+  .cover-status{font:500 .78rem 'JetBrains Mono',monospace;color:var(--muted,#8b98a9);
+                overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cover-btns{display:flex;gap:.5rem}
+  .cover-btns .sdbtn{flex:0 1 auto;padding:.45rem .8rem;font-size:.85rem}
+  .cover-btns .sdbtn:disabled{opacity:.45;cursor:default;background:var(--panel-2,#1c2330);color:var(--muted,#8b98a9)}
 </style>
 </head>
 <body>
@@ -82,6 +94,22 @@
       <a class="dir-link" id="editorLink" href="/sd-editor.html"
          title="Manage the files in this folder">💾 FILES MANAGER</a>
     </div>
+    <!-- Album cover of the browsed folder: one cover.bin the device shows on
+         its SD player screen. Converted in the browser (lvbin.js), so the
+         device only ever reads the finished file. -->
+    <div class="cover-row">
+      <canvas id="coverPreview" class="cover-thumb" width="240" height="240" hidden></canvas>
+      <div id="coverEmpty" class="cover-thumb cover-empty">🖼</div>
+      <div class="cover-actions">
+        <div id="coverStatus" class="cover-status">—</div>
+        <div class="cover-btns">
+          <button class="sdbtn" onclick="pickCover()">⬆ Set cover</button>
+          <button class="sdbtn" id="coverDelBtn" onclick="removeCover()" disabled>🗑 Remove</button>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="coverFile" accept="image/*" hidden onchange="onCoverPicked(this)">
+
     <ul id="trackList"><li class="empty">Click "Scan"…</li></ul>
   </section>
 
@@ -118,6 +146,7 @@
   </div>
 </div>
 
+<script src="lvbin.js"></script>
 <script src="sd-player.js"></script>
 </body>
 </html>
