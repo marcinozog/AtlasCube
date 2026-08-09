@@ -1,8 +1,10 @@
 # Vendored IJG libjpeg 9f — decompression subset only (see README.md).
-# jmem_esp.c replaces jmemnobs.c to route all library memory to PSRAM.
+# jmem_esp.c replaces jmemnobs.c to route all library memory to PSRAM;
+# jpeg_rgb565.c is the project's shared decode-to-RGB565 wrapper.
 idf_component_register(
     SRCS
         "jmem_esp.c"
+        "jpeg_rgb565.c"
         "jpeg-9f/jaricom.c"
         "jpeg-9f/jcomapi.c"
         "jpeg-9f/jdapimin.c"
@@ -29,6 +31,7 @@ idf_component_register(
         "jpeg-9f/jquant2.c"
         "jpeg-9f/jutils.c"
     INCLUDE_DIRS
+        "."         # jpeg_rgb565.h — what the rest of the project includes
         "jpeg-9f"
 )
 

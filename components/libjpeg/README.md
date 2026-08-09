@@ -16,10 +16,14 @@ Layout:
 - `jpeg-9f/` — pristine upstream sources plus a hand-written `jconfig.h`
   (standard ANSI answers, see `jconfig.txt` upstream). Do not edit; a future
   upgrade should be a clean re-drop of the new release.
-- `jmem_esp.c` — the one ESP-specific file: the `jmemsys.h` backend (replaces
-  upstream `jmemnobs.c`), routing all library allocations to PSRAM. A
-  progressive decode buffers the whole image's DCT coefficients (~2.5 MB for a
-  ~1 MP photo), which must never come out of internal DRAM.
+- `jmem_esp.c` — the `jmemsys.h` backend (replaces upstream `jmemnobs.c`),
+  routing all library allocations to PSRAM. A progressive decode buffers the
+  whole image's DCT coefficients (~2.5 MB for a ~1 MP photo), which must never
+  come out of internal DRAM.
+- `jpeg_rgb565.{c,h}` — the project's own wrapper: decode a JPEG (from a file
+  or from memory) cover-cropped into a fixed-size RGB565 buffer in PSRAM.
+  Shared by net_wallpaper (photo onto the panel) and cover_art (album art into
+  a square), which are the only ways the library is used here.
 
 License: the IJG license (see `jpeg-9f/README.ijg`), free for commercial and
 non-commercial use. Its acknowledgment requirement:

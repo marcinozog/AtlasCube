@@ -18,8 +18,7 @@
 #include "freertos/semphr.h"
 #include <string.h>
 #include <stdio.h>
-#include <setjmp.h>
-#include "jpeglib.h"    // vendored IJG libjpeg (components/libjpeg) — handles progressive
+#include "jpeg_rgb565.h"   // shared decode-to-RGB565 (components/libjpeg, progressive-capable)
 
 static const char *TAG = "NET_WP";
 
@@ -106,131 +105,6 @@ static bool apod_resolve(const char *api_url, char *out, size_t cap)
     return ok;
 }
 
-// ── Decode ───────────────────────────────────────────────────────────────────
-// libjpeg reports errors by calling error_exit, which must not return —
-// longjmp back into decode_to_panel instead. format_message fills a printable
-// error string ("Unsupported JPEG data precision", …) for the status line.
-struct decode_err_mgr {
-    struct jpeg_error_mgr pub;
-    jmp_buf jb;
-};
-
-static void decode_error_exit(j_common_ptr cinfo)
-{
-    struct decode_err_mgr *e = (struct decode_err_mgr *)cinfo->err;
-    char msg[JMSG_LENGTH_MAX];
-    (*cinfo->err->format_message)(cinfo, msg);
-    net_fetch_set_err("jpeg: %s", msg);
-    longjmp(e->jb, 1);
-}
-
-// Decode a JPEG (baseline or progressive — vendored IJG libjpeg) into a
-// freshly allocated panel_w×panel_h RGB565 buffer in PSRAM (caller frees).
-// The library's DCT-domain scaling (N/8, N=1..16) brings the image close to
-// covering the panel; rows then stream through an RGB888 line buffer and are
-// cropped/centered into the panel buffer on the fly — no full-size
-// intermediate. Sources smaller than the panel get a black letterbox.
-static uint16_t *decode_to_panel(uint8_t *jpg, int len, int pw, int ph)
-{
-    struct jpeg_decompress_struct cinfo;
-    struct decode_err_mgr jerr;
-
-    // Anything freed after a longjmp must be reachable there: keep the
-    // pointers volatile so the setjmp return path sees their latest values.
-    uint16_t *volatile panel = NULL;
-    uint8_t  *volatile row   = NULL;
-
-    cinfo.err = jpeg_std_error(&jerr.pub);
-    jerr.pub.error_exit = decode_error_exit;
-    if (setjmp(jerr.jb)) {
-        jpeg_destroy_decompress(&cinfo);
-        if (row) heap_caps_free(row);
-        if (panel) heap_caps_free(panel);
-        return NULL;   // the status line was set in decode_error_exit
-    }
-
-    jpeg_create_decompress(&cinfo);
-    jpeg_mem_src(&cinfo, jpg, (unsigned long)len);
-    jpeg_read_header(&cinfo, TRUE);
-    ESP_LOGI(TAG, "JPEG %dx%d%s -> panel %dx%d", (int)cinfo.image_width,
-             (int)cinfo.image_height, cinfo.progressive_mode ? " progressive" : "",
-             pw, ph);
-
-    // A progressive (or any multi-scan) JPEG buffers the whole image's DCT
-    // coefficients across scans — the one hard size limit on this device
-    // (~1.5 MP with 8 MB PSRAM; baseline decodes line-by-line at any size).
-    // Estimate the need up front and fail with a readable message instead of
-    // jmemmgr's cryptic backing-store error.
-    if (jpeg_has_multiple_scans(&cinfo)) {
-        size_t coef = 0;
-        for (int c = 0; c < cinfo.num_components; c++) {
-            const jpeg_component_info *comp = &cinfo.comp_info[c];
-            size_t cols = ((size_t)cinfo.image_width  * comp->h_samp_factor
-                           / cinfo.max_h_samp_factor + 7) / 8 + 1;
-            size_t rows = ((size_t)cinfo.image_height * comp->v_samp_factor
-                           / cinfo.max_v_samp_factor + 7) / 8 + 1;
-            coef += cols * rows * (DCTSIZE2 * sizeof(JCOEF));
-        }
-        const size_t free_psram = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
-        if (coef + 1024 * 1024 > free_psram) {   // same 1 MB headroom as jmem_esp
-            net_fetch_set_err("progressive %ux%u too big: needs ~%u MB, ~%u MB free",
-                              (unsigned)cinfo.image_width, (unsigned)cinfo.image_height,
-                              (unsigned)((coef + 512 * 1024) / (1024 * 1024)),
-                              (unsigned)(free_psram / (1024 * 1024)));
-            longjmp(jerr.jb, 1);
-        }
-    }
-
-    // Pick the smallest N/8 whose output still covers the panel ("cover", not
-    // "fit"); N>8 upscales a source that is smaller than the panel, capped at
-    // the library's 2x so a tiny image degrades to a letterbox, not to mush.
-    int n = 1;
-    while (n < 16 &&
-           ((int)cinfo.image_width  * n / 8 < pw ||
-            (int)cinfo.image_height * n / 8 < ph)) {
-        n++;
-    }
-    cinfo.scale_num   = (unsigned)n;
-    cinfo.scale_denom = 8;
-    cinfo.out_color_space = JCS_RGB;
-
-    jpeg_start_decompress(&cinfo);
-    const int dw = (int)cinfo.output_width;
-    const int dh = (int)cinfo.output_height;
-
-    row = heap_caps_malloc((size_t)dw * 3, MALLOC_CAP_SPIRAM);
-    if (!row) { net_fetch_set_err("no PSRAM for row buffer"); longjmp(jerr.jb, 1); }
-    panel = heap_caps_calloc((size_t)pw * ph, 2, MALLOC_CAP_SPIRAM);   // zeroed → black letterbox
-    if (!panel) { net_fetch_set_err("no PSRAM for wallpaper buffer"); longjmp(jerr.jb, 1); }
-
-    // Centered crop window: source rows [sy, sy+ch) land on panel rows
-    // [dy, dy+ch), columns likewise.
-    const int cw = (dw < pw) ? dw : pw;
-    const int ch = (dh < ph) ? dh : ph;
-    const int sx = (dw - cw) / 2, sy = (dh - ch) / 2;
-    const int dx = (pw - cw) / 2, dy = (ph - ch) / 2;
-
-    while (cinfo.output_scanline < cinfo.output_height) {
-        JSAMPROW rows[1] = { (JSAMPROW)row };
-        jpeg_read_scanlines(&cinfo, rows, 1);
-        const int y = (int)cinfo.output_scanline - 1;
-        if (y < sy || y >= sy + ch) continue;
-
-        const uint8_t *src = row + (size_t)sx * 3;
-        uint16_t *dst = panel + (size_t)(dy + (y - sy)) * pw + dx;
-        for (int x = 0; x < cw; x++, src += 3) {
-            *dst++ = (uint16_t)(((src[0] >> 3) << 11) |
-                                ((src[1] >> 2) << 5)  |
-                                 (src[2] >> 3));
-        }
-    }
-
-    jpeg_finish_decompress(&cinfo);
-    jpeg_destroy_decompress(&cinfo);
-    heap_caps_free(row);
-    return panel;
-}
-
 // ── Fetch task ───────────────────────────────────────────────────────────────
 // Replace `{w}`/`{h}` in the URL with the panel size, so a single saved URL
 // (e.g. picsum.photos/{w}/{h}) fits every display variant.
@@ -263,9 +137,14 @@ static bool do_fetch(const char *url, int slot)
     if (!jpg) return false;
     ESP_LOGI(TAG, "slot %d: downloaded %d B", slot, len);
 
-    uint16_t *panel = decode_to_panel(jpg, len, s_panel_w, s_panel_h);
+    char err[96] = "";
+    uint16_t *panel = jpeg_mem_to_rgb565(jpg, (size_t)len, s_panel_w, s_panel_h,
+                                         err, sizeof(err));
     heap_caps_free(jpg);
-    if (!panel) return false;
+    if (!panel) {
+        net_fetch_set_err("%s", err[0] ? err : "decode failed");
+        return false;
+    }
 
     taskENTER_CRITICAL(&s_mux);
     uint16_t *stale = s_slot[slot].pending;   // unclaimed previous fetch, if any
