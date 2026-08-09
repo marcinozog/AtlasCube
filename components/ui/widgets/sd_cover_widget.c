@@ -1,6 +1,7 @@
 #include "sd_cover_widget.h"
 #include "lv_bin_image.h"
 #include "app_state.h"
+#include "cover_art.h"
 #include "sdcard.h"
 #include "esp_log.h"
 #include <stdio.h>
@@ -71,10 +72,15 @@ void sd_cover_widget_update(void)
     char path[sizeof(s_dir) + sizeof(SD_COVER_FILE) + 1];
     snprintf(path, sizeof(path), "%s/" SD_COVER_FILE, s_dir);
 
-    // A folder without a cover is the normal case, not an error — ask first so
-    // the loader doesn't log a warning for every such album.
+    // A folder without a converted cover is the normal case, not an error — ask
+    // first so the loader doesn't log a warning for every such album, and let
+    // the converter look for a plain cover.jpg to build one from. That runs off
+    // this task and reports back with UI_EVT_SD_COVER.
     struct stat st;
-    if (stat(path, &st) != 0) return;
+    if (stat(path, &st) != 0) {
+        cover_art_request(s_dir);
+        return;
+    }
 
     // Resampled at load, so the file on the card keeps one size (the uploader's
     // 240x240) whatever the layout asks for — moving the widget in the layout
@@ -87,6 +93,13 @@ void sd_cover_widget_update(void)
 
     lv_image_set_src(s_image, s_dsc);
     lv_obj_clear_flag(s_image, LV_OBJ_FLAG_HIDDEN);
+}
+
+void sd_cover_widget_reload(void)
+{
+    if (!s_image) return;
+    s_dir[0] = '\0';           // force the next update to look at the card again
+    sd_cover_widget_update();
 }
 
 void sd_cover_widget_destroy(void)

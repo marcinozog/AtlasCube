@@ -176,7 +176,11 @@ async function refreshCover() {
                               { cache: 'no-store' });
         if (coverDir !== dir) return;          // browsed away while loading
         if (!r.ok) {
-            showCover(null, r.status === 503 ? 'No SD card' : 'No cover in this folder');
+            // A cover.jpg left in the folder by whoever ripped the album is
+            // turned into cover.bin by the device itself on first play, so the
+            // absence of a cover.bin here does not mean "no artwork".
+            showCover(null, r.status === 503 ? 'No SD card'
+                                             : 'No cover.bin (a cover.jpg here is converted on the device)');
             return;
         }
         const img = LvBin.decodeToCanvas(await r.arrayBuffer());

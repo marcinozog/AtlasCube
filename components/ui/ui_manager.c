@@ -16,6 +16,7 @@
 #include "net_asset.h"
 #include "ui_asset.h"
 #include "weather.h"
+#include "cover_art.h"
 #include "net_fetch_overlay_widget.h"
 #include "display.h"
 #include "lvgl.h"
@@ -458,6 +459,13 @@ static void on_weather_update(void)
     ui_event_send(&ev);
 }
 
+// Fires on the cover_art worker task once a folder's cover.bin exists.
+static void on_cover_art_done(void)
+{
+    ui_event_t ev = { .type = UI_EVT_SD_COVER };
+    ui_event_send(&ev);
+}
+
 static void on_net_wallpaper_done(bool ok)
 {
     ui_event_t ev = { .type = UI_EVT_NET_WP, .net_wp_state = ok ? 0 : -1 };
@@ -483,6 +491,7 @@ void ui_manager_init(void)
     net_wallpaper_set_start_cb(on_net_wallpaper_started);
 
     weather_set_update_cb(on_weather_update);
+    cover_art_set_done_cb(on_cover_art_done);
     ESP_LOGI(TAG, "Initialized");
 }
 

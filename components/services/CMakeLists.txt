@@ -3,6 +3,7 @@ idf_component_register(
         "radio_service.c"
          "media_control.c"
          "sd_player.c"
+         "cover_art.c"
          "ntp_service.c"
          "dim_schedule.c"
     INCLUDE_DIRS
@@ -18,4 +19,5 @@ idf_component_register(
         settings_ex
         bt_module
         sdcard
+        libjpeg             # cover_art: vendored IJG decoder for folder artwork
 )

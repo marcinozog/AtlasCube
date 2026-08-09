@@ -16,6 +16,10 @@ void sd_cover_widget_create(lv_obj_t *parent, int x, int y, int size);
 // state change: the file is only touched when the folder is a different one.
 void sd_cover_widget_update(void);
 
+// Re-read the artwork of the folder on screen even though the folder itself did
+// not change — what a finished background conversion (cover_art) needs.
+void sd_cover_widget_reload(void);
+
 void sd_cover_widget_destroy(void);
 
 #ifdef __cplusplus

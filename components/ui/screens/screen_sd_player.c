@@ -367,6 +367,9 @@ static void sd_player_on_event(const ui_event_t *ev)
         case UI_EVT_WEATHER_UPDATE:
             weather_widget_update();
             break;
+        case UI_EVT_SD_COVER:
+            sd_cover_widget_reload();
+            break;
         default:
             break;
     }
