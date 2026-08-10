@@ -99,6 +99,8 @@ function evTypeChanged() {
     document.getElementById('ev_sdpath_group').style.display  = schedSd ? '' : 'none';
     document.getElementById('ev_volume_group').style.display  = (isVoice || sched) ? '' : 'none';
     document.getElementById('ev_sound_group').style.display   = isVoice ? '' : 'none';
+    // Schedules jump straight to the player screen — no notification, no artwork.
+    document.getElementById('ev_image_group').style.display   = sched ? 'none' : '';
     document.getElementById('ev_stop_toggle_group').style.display = sched ? '' : 'none';
     document.getElementById('ev_time_label').textContent = sched ? 'Start time' : 'Time';
 
@@ -165,10 +167,21 @@ async function evPlayClip() {
 // ─────────────────────────────────────────────────────────────────────────────
 const AUDIO_EXT = ['.mp3', '.wav', '.flac', '.aac', '.m4a', '.ogg'];
 let sdPickPath = '/';
+// Which field the picker fills: 'sdpath' (playback source — files or a whole
+// folder) or 'image' (event graphic — .bin files only).
+let sdPickTarget = 'sdpath';
 
 function isAudioFile(name) {
     const n = name.toLowerCase();
     return AUDIO_EXT.some(ext => n.endsWith(ext));
+}
+
+function isBinFile(name) {
+    return name.toLowerCase().endsWith('.bin');
+}
+
+function sdPickInputId() {
+    return sdPickTarget === 'image' ? 'ev_image' : 'ev_sdpath';
 }
 
 function parentPath(p) {
@@ -177,10 +190,19 @@ function parentPath(p) {
     return i <= 0 ? '/' : p.slice(0, i);
 }
 
-function sdPickOpen() {
-    // Start from the folder of the current path if one is set, else the root.
-    const cur = document.getElementById('ev_sdpath').value.trim();
-    sdPickPath = cur ? parentPath(cur) : '/';
+function sdPickOpen(target) {
+    sdPickTarget = target === 'image' ? 'image' : 'sdpath';
+    const image = sdPickTarget === 'image';
+
+    document.getElementById('sd_pick_title').textContent =
+        image ? '📂 Pick an image (.bin)' : '📂 Pick SD file or folder';
+    // A graphic is always one file — "use this folder" would have nothing to mean.
+    document.getElementById('sd_pick_use_folder').style.display = image ? 'none' : '';
+
+    // Start from the folder of the current path if one is set, else the root. An
+    // internet slot ("net3") isn't a path, so it starts from the root as well.
+    const cur = document.getElementById(sdPickInputId()).value.trim();
+    sdPickPath = cur.startsWith('/') ? parentPath(cur) : '/';
     document.getElementById('sd_pick').style.display = 'flex';
     sdPickLoad(sdPickPath);
 }
@@ -205,9 +227,11 @@ async function sdPickLoad(path) {
     sdPickPath = data.path || path || '/';
     document.getElementById('sd_pick_path').textContent = sdPickPath;
 
+    const image   = sdPickTarget === 'image';
     const entries = (data.entries || []);
     const folders = entries.filter(e => e.dir).sort((a, b) => a.name.localeCompare(b.name));
-    const files   = entries.filter(e => !e.dir && isAudioFile(e.name)).sort((a, b) => a.name.localeCompare(b.name));
+    const files   = entries.filter(e => !e.dir && (image ? isBinFile(e.name) : isAudioFile(e.name)))
+                           .sort((a, b) => a.name.localeCompare(b.name));
 
     listEl.innerHTML = '';
     if (sdPickPath !== '/') {
@@ -219,11 +243,14 @@ async function sdPickLoad(path) {
     });
     files.forEach(f => {
         const full = (sdPickPath === '/' ? '' : sdPickPath) + '/' + f.name;
-        listEl.appendChild(sdPickRow('🎵', f.name, () => sdPickChoose(full)));
+        listEl.appendChild(sdPickRow(image ? '🖼️' : '🎵', f.name, () => sdPickChoose(full)));
     });
     if (folders.length === 0 && files.length === 0) {
-        listEl.appendChild(Object.assign(document.createElement('div'),
-            { className: 'pl-hint', style: 'padding:12px', textContent: 'No subfolders or audio files here.' }));
+        listEl.appendChild(Object.assign(document.createElement('div'), {
+            className: 'pl-hint', style: 'padding:12px',
+            textContent: image ? 'No subfolders or .bin images here.'
+                               : 'No subfolders or audio files here.'
+        }));
     }
 }
 
@@ -237,12 +264,95 @@ function sdPickRow(icon, label, onClick) {
 }
 
 function sdPickChoose(path) {
-    document.getElementById('ev_sdpath').value = path;
+    document.getElementById(sdPickInputId()).value = path;
+    if (sdPickTarget === 'image') evImageStatus('');
     sdPickClose();
 }
 
 function sdPickUseFolder() {
     sdPickChoose(sdPickPath);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Event graphic — an SD .bin or an internet wallpaper slot, shown on the
+// notification screen in place of the bell
+// ─────────────────────────────────────────────────────────────────────────────
+const EVENT_IMAGE_DIR = '/events';
+
+// Panel size, so an uploaded picture is converted to exactly what the device
+// draws. Filled at page load; the fallback is the most common panel.
+let panelMeta = { screen_w: 320, screen_h: 240 };
+
+async function loadPanelMeta() {
+    try {
+        const res = await fetch('/api/ui/profile/meta', { cache: 'no-store' });
+        if (!res.ok) return;
+        const m = await res.json();
+        if (m.screen_w > 0 && m.screen_h > 0) panelMeta = m;
+    } catch (e) {
+        console.error('Panel meta load error', e);
+    }
+}
+
+// Offer only the internet slots that actually hold an image — an empty slot
+// would silently fall back to the bell on the device.
+async function loadImageSlots() {
+    const sel = document.getElementById('ev_image_net');
+    if (!sel) return;
+    let data;
+    try {
+        const res = await fetch('/api/wallpaper/status', { cache: 'no-store' });
+        if (!res.ok) return;
+        data = await res.json();
+    } catch (e) {
+        return;
+    }
+    const filled = data.filled || [];
+    for (let i = 0; i < (data.slots || 0); i++) {
+        if (!filled[i]) continue;
+        sel.appendChild(Object.assign(document.createElement('option'),
+            { value: 'net' + i, textContent: 'slot ' + (i + 1) }));
+    }
+}
+
+function evImageStatus(msg, cls) {
+    const el = document.getElementById('ev_image_status');
+    el.textContent = msg || '';
+    el.style.color = cls === 'error' ? '#e66' : '';
+}
+
+function evImageUseSlot(sel) {
+    if (!sel.value) return;
+    document.getElementById('ev_image').value = sel.value;
+    // The device names slots net0..net9; the UI counts them from 1, as everywhere else.
+    evImageStatus('Uses internet slot ' + (Number(sel.value.slice(3)) + 1) +
+                  ' — the device refetches it after every reboot.');
+    sel.value = '';
+}
+
+function evImageClear() {
+    document.getElementById('ev_image').value = '';
+    evImageStatus('');
+}
+
+// Convert whatever the user picked to a panel-sized .bin and drop it in
+// /events on the card. Named after the event title so the folder stays readable.
+async function evImageUpload(input) {
+    const file = input.files && input.files[0];
+    input.value = '';                          // let the same file be picked again
+    if (!file) return;
+    if (!window.LvBin) { evImageStatus('Image encoder not loaded', 'error'); return; }
+
+    try {
+        const path = await LvBin.uploadImage(
+            file, EVENT_IMAGE_DIR, panelMeta.screen_w, panelMeta.screen_h,
+            msg => evImageStatus(msg),
+            document.getElementById('ev_title').value || file.name);
+        document.getElementById('ev_image').value = path;
+        evImageStatus('Saved as ' + path);
+    } catch (e) {
+        evImageStatus('✗ ' + e.message, 'error');
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -450,6 +560,7 @@ function makeRow(ev) {
             extra = ` · 📻 ${escapeHtml(name)} · 🔊 ${ev.volume ?? 0}`;
         }
     }
+    if (ev.image) extra += ` · 🖼️ ${escapeHtml(ev.image)}`;
 
     row.innerHTML = `
         <div class="ev-icon">${TYPE_ICON[ev.type] || '•'}</div>
@@ -579,6 +690,7 @@ function evFormReset() {
     document.getElementById('ev_volume_val').textContent = '20';
     document.getElementById('ev_sound').value = '';
     document.getElementById('ev_sound_play').style.display = 'none';
+    evImageClear();
     resetClipAudio();
     evTypeChanged();
     setStatus('', '');
@@ -618,6 +730,8 @@ function evEdit(id, playback = false) {
     document.getElementById('ev_volume').value = String(vol);
     document.getElementById('ev_volume_val').textContent = String(vol);
     document.getElementById('ev_sound').value = ev.type === 'voice' ? (ev.sound || '') : '';
+    document.getElementById('ev_image').value = ev.image || '';
+    evImageStatus('');
     resetClipAudio();
     document.getElementById('ev_sound_play').style.display =
         (ev.type === 'voice' && ev.sound) ? '' : 'none';
@@ -658,6 +772,15 @@ function formToEvent() {
         if (sound[0] !== '/') sound = '/' + sound;
     }
 
+    // Notification artwork: an SD path (leading slash enforced like `sound`) or
+    // an "net<N>" slot reference, which is not a path. Schedules never reach the
+    // notification screen, so they never carry one.
+    let image = '';
+    if (type !== 'schedule') {
+        image = document.getElementById('ev_image').value.trim();
+        if (image && !/^net[0-9]$/.test(image) && image[0] !== '/') image = '/' + image;
+    }
+
     const needsStation = type === 'schedule' && source === 'radio';
     if (needsStation && stations.length === 0) {
         setStatus('Add at least one station to the playlist first', 'error');
@@ -677,6 +800,7 @@ function formToEvent() {
         station,
         volume,
         sound,
+        image,
     };
     if (sched) {
         payload.stop_enabled = document.getElementById('ev_stop_enabled').checked;
@@ -808,6 +932,8 @@ function escapeHtml(s) {
     audio.addEventListener('ended', () => btn.textContent = '▶ Play');
 
     await loadStations();
+    await loadPanelMeta();     // upload converts to this panel's size
+    await loadImageSlots();    // only slots that actually hold an image
     evFormReset();
     await evLoad();
 })();

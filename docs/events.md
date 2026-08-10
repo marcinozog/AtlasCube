@@ -48,6 +48,7 @@ only feeds the Home-screen calendar widget (see
 | `station` | int | `EV_SCHEDULE` with empty `sound`: 0-based playlist index to start at trigger time, or `EVENT_STATION_STOP` (-1) to stop playback instead |
 | `volume` | int | `EV_SCHEDULE` / `EV_VOICE`: 0..100, applied via `settings_set_volume()` at fire time so playback starts at a predictable level |
 | `sound` | `char[128]` | `EV_VOICE`: WAV filename under `/voice`. `EV_SCHEDULE`: SD file/folder path relative to the card root (empty → play `station`) |
+| `image` | `char[64]` | Artwork for the notification screen: an LVGL `.bin` on SD (path relative to the card root) or `"net0"`..`"net9"` — an internet wallpaper slot. Empty → the bell symbol. Unused by `EV_SCHEDULE` / `EV_CALENDAR`, which never show that screen |
 
 Maximum `EVENTS_MAX = 200` events (shared between user-managed and
 calendar-mirror events). Static array in PSRAM, guarded by a mutex against
@@ -185,11 +186,31 @@ registers itself via `events_service_set_fire_cb()`. Translation to
 [components/ui/screens/screen_event_notification.c](../components/ui/screens/screen_event_notification.c)
 — full screen implementing `ui_screen_t`. 320×240 layout:
 
-- Big 🔔 symbol (LV_SYMBOL_BELL) in 96 px font
+- The event's own `image`, if it has one and it loads, else a big 🔔 symbol
+  (LV_SYMBOL_BELL) in 96 px font — which `display.event_bell = false` removes
+  entirely, leaving the shared background bare behind the text
 - Type label (e.g. "REMINDER") in 14 px font
 - Event title in 18 px (scrolls when long)
 - HH:MM time in 14 px accent color
 - Bottom hint "✓ press encoder"
+
+The screen paints no background of its own: `ui_manager` re-applies the shared
+one (wallpaper / gradient / solid) right after `create()`, so an event's artwork
+and text sit on whatever background the device is showing.
+
+Artwork resolution (`load_event_image()`), all failures falling back to the bell:
+
+- `"net0"`..`"net9"` → `net_wallpaper_image(slot)`, copied with
+  `lv_bin_image_scale_copy()` because those pixels belong to the background and
+  are replaced by the next fetch. A slot is empty until the boot fetch lands.
+- anything else → an SD path, loaded with `lv_bin_image_load()` (RGB565 or
+  RGB565A8), the card mounted lazily.
+
+Either way the image is resampled to fit the panel and never enlarged, so a
+panel-sized photo fills the screen and a small picture sits where the bell was.
+Resampling rather than `lv_image_set_scale()` keeps LVGL off the transform path,
+which renders through a layer buffer. The descriptor is owned by the screen and
+freed in `destroy()`.
 
 Transition to the screen: when `UI_EVT_EVENT_FIRED` arrives, the
 `ui_manager_run()` dispatcher:

@@ -1,6 +1,10 @@
 #include "screen_event_notification.h"
 #include "ui_manager.h"
 #include "theme.h"
+#include "settings.h"
+#include "sdcard.h"
+#include "lv_bin_image.h"
+#include "net_wallpaper.h"
 #include "fonts/ui_fonts.h"
 #include "lvgl.h"
 #include "esp_log.h"
@@ -15,11 +19,16 @@ static const char *TAG = "SCR_EVENT";
 static ui_event_info_t s_pending_info;
 static ui_screen_id_t  s_return_to = SCREEN_RADIO;
 
-static lv_obj_t *s_icon        = NULL;
+static lv_obj_t *s_icon        = NULL;   // NULL when the event brought artwork,
+                                         // or when the bell is switched off
 static lv_obj_t *s_type_label  = NULL;
 static lv_obj_t *s_title_label = NULL;
 static lv_obj_t *s_time_label  = NULL;
 static lv_obj_t *s_hint_label  = NULL;
+
+// The event's own artwork, resampled to its on-screen size. Owned here, freed
+// in scr_destroy().
+static lv_image_dsc_t *s_img_dsc = NULL;
 
 void screen_event_notification_set_info(const ui_event_info_t *info)
 {
@@ -30,6 +39,67 @@ void screen_event_notification_set_info(const ui_event_info_t *info)
 void screen_event_notification_set_return(ui_screen_id_t return_to)
 {
     s_return_to = return_to;
+}
+
+// On-screen size of the artwork: shrink to fit the panel, never enlarge. A
+// panel-sized photo therefore fills the screen and a small picture keeps its own
+// pixels, sitting where the bell would have been. Resampling (rather than
+// lv_image_set_scale) keeps LVGL off the transform path, which renders through a
+// layer buffer and is slow for full-screen art.
+static void fit_to_panel(int w, int h, int *out_w, int *out_h)
+{
+    const int pw = lv_display_get_horizontal_resolution(NULL);
+    const int ph = lv_display_get_vertical_resolution(NULL);
+
+    if (w <= 0 || h <= 0) { *out_w = *out_h = 1; return; }
+    if (w <= pw && h <= ph) { *out_w = w; *out_h = h; return; }
+
+    const int sx = pw * 1024 / w;
+    const int sy = ph * 1024 / h;
+    const int s  = sx < sy ? sx : sy;
+    *out_w = w * s / 1024;
+    *out_h = h * s / 1024;
+    if (*out_w < 1) *out_w = 1;
+    if (*out_h < 1) *out_h = 1;
+}
+
+// Resolve the event's `image` reference. Returns NULL for every failure — an
+// empty reference, an absent card, a missing file, a slot nothing has been
+// fetched into yet — and the caller falls back to the bell.
+static lv_image_dsc_t *load_event_image(const char *ref)
+{
+    if (!ref || !ref[0]) return NULL;
+
+    int w, h;
+
+    // "net0".."net9": an internet wallpaper already decoded into PSRAM. Those
+    // pixels belong to the background and are replaced under us by the next
+    // fetch, so take a scaled copy rather than pointing at them.
+    if (strncmp(ref, "net", 3) == 0 &&
+        ref[3] >= '0' && ref[3] <= '9' && ref[4] == '\0') {
+        const lv_image_dsc_t *slot = net_wallpaper_image(ref[3] - '0');
+        if (!slot) {
+            ESP_LOGW(TAG, "%s holds no image yet", ref);
+            return NULL;
+        }
+        fit_to_panel(slot->header.w, slot->header.h, &w, &h);
+        return lv_bin_image_scale_copy(slot, w, h);
+    }
+
+    // Otherwise an SD path, spelled relative to the card root like `sound`.
+    if (sdcard_init() != ESP_OK || !sdcard_is_mounted()) {
+        ESP_LOGW(TAG, "SD not available — falling back to the bell");
+        return NULL;
+    }
+    char path[sizeof(s_pending_info.image) + sizeof(SD_MOUNT_POINT) + 1];
+    snprintf(path, sizeof(path), "%s%s%s",
+             SD_MOUNT_POINT, ref[0] == '/' ? "" : "/", ref);
+
+    lv_image_dsc_t *img = lv_bin_image_load(path, 0, 0);   // 0,0 = any size
+    if (!img) return NULL;
+
+    fit_to_panel(img->header.w, img->header.h, &w, &h);
+    return lv_bin_image_scale(img, w, h);   // consumes img; no-op when it fits
 }
 
 // Tap anywhere dismisses the notification. Labels aren't clickable and
@@ -45,15 +115,26 @@ static void scr_create(lv_obj_t *parent)
 {
     const ui_theme_colors_t *th = theme_get();
 
-    lv_obj_set_style_bg_color(parent, lv_color_hex(th->bg_primary), LV_PART_MAIN);
-    lv_obj_set_style_bg_opa(parent, LV_OPA_COVER, LV_PART_MAIN);
+    // No background of our own: ui_manager re-applies the shared one (wallpaper,
+    // gradient or solid) right after create(), so painting here would only be
+    // overwritten — and the artwork below is meant to sit on that background.
 
-    // Large BELL symbol
-    s_icon = lv_label_create(parent);
-    lv_label_set_text(s_icon, LV_SYMBOL_BELL);
-    lv_obj_set_style_text_font(s_icon, &lv_font_montserrat_96, LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_icon, lv_color_hex(th->accent), LV_PART_MAIN);
-    lv_obj_align(s_icon, LV_ALIGN_TOP_MID, 0, 10);
+    // The event's own artwork, if it has any and it loads. Built before the
+    // labels so they draw on top of it.
+    s_img_dsc = load_event_image(s_pending_info.image);
+    if (s_img_dsc) {
+        lv_obj_t *img = lv_image_create(parent);
+        lv_image_set_src(img, s_img_dsc);
+        lv_obj_align(img, LV_ALIGN_TOP_MID, 0, 0);
+    } else if (settings_get()->display.event_bell) {
+        // Large BELL symbol — the fallback, and switched off entirely by the
+        // setting so a wallpaper can show through untouched.
+        s_icon = lv_label_create(parent);
+        lv_label_set_text(s_icon, LV_SYMBOL_BELL);
+        lv_obj_set_style_text_font(s_icon, &lv_font_montserrat_96, LV_PART_MAIN);
+        lv_obj_set_style_text_color(s_icon, lv_color_hex(th->accent), LV_PART_MAIN);
+        lv_obj_align(s_icon, LV_ALIGN_TOP_MID, 0, 10);
+    }
 
     // Type
     s_type_label = lv_label_create(parent);
@@ -103,15 +184,21 @@ static void scr_create(lv_obj_t *parent)
 static void scr_destroy(void)
 {
     s_icon = s_type_label = s_title_label = s_time_label = s_hint_label = NULL;
+    // The lv_image referencing this is already gone (lv_obj_clean); dropping the
+    // descriptor here also drops LVGL's cache entry for it.
+    lv_bin_image_free(s_img_dsc);
+    s_img_dsc = NULL;
 }
 
 static void scr_apply_theme(void)
 {
-    if (!s_icon) return;
+    // s_icon is optional now (artwork or a switched-off bell), so the labels —
+    // always built — decide whether the screen is up.
+    if (!s_title_label) return;
     const ui_theme_colors_t *th = theme_get();
 
-    lv_obj_set_style_bg_color(lv_scr_act(),       lv_color_hex(th->bg_primary),     LV_PART_MAIN);
-    lv_obj_set_style_text_color(s_icon,           lv_color_hex(th->accent),         LV_PART_MAIN);
+    if (s_icon)
+        lv_obj_set_style_text_color(s_icon,       lv_color_hex(th->accent),         LV_PART_MAIN);
     lv_obj_set_style_text_color(s_type_label,     lv_color_hex(th->text_secondary), LV_PART_MAIN);
     lv_obj_set_style_text_color(s_title_label,    lv_color_hex(th->text_primary),   LV_PART_MAIN);
     lv_obj_set_style_text_color(s_time_label,     lv_color_hex(th->accent),         LV_PART_MAIN);

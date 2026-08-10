@@ -79,6 +79,7 @@ esp_err_t settings_init(void)
         s_settings.display.wallpaper_fetch_min  = 0;
         s_settings.display.logo_path[0]     = '\0';
         s_settings.display.show_boot_info   = true;
+        s_settings.display.event_bell       = true;
         s_settings.display.sd_show_screen   = true;
         s_settings.display.radio_show_screen = true;
         s_settings.display.follow_source    = false;
@@ -346,6 +347,8 @@ static esp_err_t load_from_file(void)
                     sizeof(s_settings.display.logo_path) - 1);
         cJSON *sbi = cJSON_GetObjectItem(display, "show_boot_info");
         s_settings.display.show_boot_info = cJSON_IsBool(sbi) ? cJSON_IsTrue(sbi) : true;
+        cJSON *evb = cJSON_GetObjectItem(display, "event_bell");
+        s_settings.display.event_bell = cJSON_IsBool(evb) ? cJSON_IsTrue(evb) : true;
         cJSON *sds = cJSON_GetObjectItem(display, "sd_show_screen");
         s_settings.display.sd_show_screen = cJSON_IsBool(sds) ? cJSON_IsTrue(sds) : true;
         cJSON *rds = cJSON_GetObjectItem(display, "radio_show_screen");
@@ -678,6 +681,7 @@ static esp_err_t save_to_file_locked(void)
     cJSON_AddNumberToObject(display, "wallpaper_fetch_min",  s_settings.display.wallpaper_fetch_min);
     cJSON_AddStringToObject(display, "logo_path", s_settings.display.logo_path);
     cJSON_AddBoolToObject(display, "show_boot_info", s_settings.display.show_boot_info);
+    cJSON_AddBoolToObject(display, "event_bell", s_settings.display.event_bell);
     cJSON_AddBoolToObject(display, "sd_show_screen", s_settings.display.sd_show_screen);
     cJSON_AddBoolToObject(display, "radio_show_screen", s_settings.display.radio_show_screen);
     cJSON_AddBoolToObject(display, "follow_source", s_settings.display.follow_source);
@@ -1273,6 +1277,13 @@ void settings_set_show_boot_info(bool enabled)
     if (s_settings.display.show_boot_info == enabled) return;
     s_settings.display.show_boot_info = enabled;
     save_to_file();   // read once at next boot by the splash — no live app_state push
+}
+
+void settings_set_event_bell(bool enabled)
+{
+    if (s_settings.display.event_bell == enabled) return;
+    s_settings.display.event_bell = enabled;
+    save_to_file();   // read by the notification screen at every fire — no live push
 }
 
 void settings_set_update_enable(bool enable)

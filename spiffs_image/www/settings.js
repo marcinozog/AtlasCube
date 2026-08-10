@@ -199,6 +199,15 @@ function setShowBootInfo(on) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Bell symbol on the event notification screen
+// ─────────────────────────────────────────────────────────────────────────────
+function setEventBell(on) {
+    document.getElementById('settingsBtnEventBellOn') ?.classList.toggle('active', on);
+    document.getElementById('settingsBtnEventBellOff')?.classList.toggle('active', !on);
+    postDisplay({ event_bell: on });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Auto-update on-screen prompt (the boot check always runs regardless)
 // ─────────────────────────────────────────────────────────────────────────────
 function setUpdateEnable(on) {
@@ -1043,6 +1052,10 @@ function populateForm(s) {
         const showFps = s.display.show_fps === true;   // default off
         document.getElementById('settingsBtnFpsOn') ?.classList.toggle('active', showFps);
         document.getElementById('settingsBtnFpsOff')?.classList.toggle('active', !showFps);
+
+        const evBell = s.display.event_bell !== false;   // default on
+        document.getElementById('settingsBtnEventBellOn') ?.classList.toggle('active', evBell);
+        document.getElementById('settingsBtnEventBellOff')?.classList.toggle('active', !evBell);
 
         const bootInfo = s.display.show_boot_info !== false;   // default on
         document.getElementById('settingsBtnBootInfoOn') ?.classList.toggle('active', bootInfo);

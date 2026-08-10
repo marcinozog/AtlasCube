@@ -66,6 +66,7 @@ typedef struct {
     char  id[9];            // matches EVENT_ID_LEN
     char  title[64];
     char  type_label[16];   // e.g. "BIRTHDAY", "REMINDER" — ready to display
+    char  image[64];        // matches EVENT_IMAGE_LEN — SD .bin path or "net0".."net9"
     int   hour;
     int   minute;
 } ui_event_info_t;

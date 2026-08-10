@@ -92,6 +92,30 @@
                 <audio id="ev_sound_audio" style="display:none"></audio>
             </div>
 
+            <div class="field-group" id="ev_image_group">
+                <label class="field-label">Graphic (shown instead of the bell)</label>
+                <div class="field-hint">
+                    An LVGL <code>.bin</code> on the SD card, or <code>net0</code>…<code>net9</code> —
+                    an internet wallpaper slot the device has already downloaded. Uploading converts
+                    any picture to the panel size for you. Empty = the bell symbol, or nothing
+                    at all when the bell is switched off in Settings.
+                </div>
+                <input type="text" id="ev_image" class="field-input"
+                       placeholder="/events/birthday.bin or net0" />
+                <div class="ev-image-actions">
+                    <button type="button" class="btn-secondary" onclick="sdPickOpen('image')">📂 Browse SD…</button>
+                    <button type="button" class="btn-secondary"
+                            onclick="document.getElementById('ev_image_file').click()">⬆️ Upload image…</button>
+                    <select id="ev_image_net" class="field-input" onchange="evImageUseSlot(this)">
+                        <option value="">🌐 Internet slot…</option>
+                    </select>
+                    <button type="button" class="btn-secondary" onclick="evImageClear()">✕ Clear</button>
+                </div>
+                <input type="file" id="ev_image_file" accept="image/*" style="display:none"
+                       onchange="evImageUpload(this)" />
+                <div id="ev_image_status" class="pl-hint"></div>
+            </div>
+
             <div class="field-group">
                 <label class="field-label">Recurrence</label>
                 <select id="ev_recurrence" class="field-input" onchange="evRecurrenceChanged()">
@@ -194,18 +218,19 @@
 <div id="sd_pick" class="sd-pick-overlay" style="display:none">
     <div class="sd-pick-box panel">
         <div class="ev-form-header">
-            <span>📂 Pick SD file or folder</span>
+            <span id="sd_pick_title">📂 Pick SD file or folder</span>
             <button class="btn-secondary" onclick="sdPickClose()">✕</button>
         </div>
         <div class="pl-hint" id="sd_pick_path" style="word-break:break-all">/</div>
         <div id="sd_pick_list" class="ev-list" style="max-height:50vh;overflow:auto"></div>
         <div class="ev-form-actions">
-            <button class="btn-primary" onclick="sdPickUseFolder()">✅ Use this folder</button>
+            <button class="btn-primary" id="sd_pick_use_folder" onclick="sdPickUseFolder()">✅ Use this folder</button>
             <button class="btn-secondary" onclick="sdPickClose()">Cancel</button>
         </div>
     </div>
 </div>
 
+<script src="lvbin.js"></script>
 <script src="events.js"></script>
 </body>
 </html>

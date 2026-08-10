@@ -200,6 +200,9 @@ static esp_err_t load_from_file(void)
         j = cJSON_GetObjectItem(it, "sound");
         if (cJSON_IsString(j)) strncpy(e.sound, j->valuestring, EVENT_SOUND_LEN - 1);
 
+        j = cJSON_GetObjectItem(it, "image");
+        if (cJSON_IsString(j)) strncpy(e.image, j->valuestring, EVENT_IMAGE_LEN - 1);
+
         s_events[s_count++] = e;
     }
 
@@ -230,6 +233,7 @@ static esp_err_t save_to_file(void)
         cJSON_AddNumberToObject(o, "station",            e->station);
         cJSON_AddNumberToObject(o, "volume",             e->volume);
         cJSON_AddStringToObject(o, "sound",              e->sound);
+        cJSON_AddStringToObject(o, "image",              e->image);
         cJSON_AddItemToArray(arr, o);
     }
 

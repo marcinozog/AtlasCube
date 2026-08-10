@@ -199,6 +199,7 @@ static esp_err_t api_settings_get_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(display, "wallpaper_fetch_min",  s->display.wallpaper_fetch_min);
     cJSON_AddStringToObject(display, "logo_path", s->display.logo_path);
     cJSON_AddBoolToObject(display, "show_boot_info", s->display.show_boot_info);
+    cJSON_AddBoolToObject(display, "event_bell", s->display.event_bell);
     cJSON_AddBoolToObject(display, "sd_show_screen", s->display.sd_show_screen);
     cJSON_AddBoolToObject(display, "radio_show_screen", s->display.radio_show_screen);
     cJSON_AddBoolToObject(display, "follow_source", s->display.follow_source);
@@ -556,6 +557,11 @@ static esp_err_t api_settings_post_handler(httpd_req_t *req)
         if (cJSON_IsBool(sbi)) {
             ESP_LOGI("HTTP", "POST show_boot_info: %d", cJSON_IsTrue(sbi));
             settings_set_show_boot_info(cJSON_IsTrue(sbi));
+        }
+        cJSON *evb = cJSON_GetObjectItem(display, "event_bell");
+        if (cJSON_IsBool(evb)) {
+            ESP_LOGI("HTTP", "POST event_bell: %d", cJSON_IsTrue(evb));
+            settings_set_event_bell(cJSON_IsTrue(evb));
         }
         cJSON *sds = cJSON_GetObjectItem(display, "sd_show_screen");
         if (cJSON_IsBool(sds)) {
@@ -1311,6 +1317,7 @@ static cJSON *event_to_json(const event_t *e)
     cJSON_AddNumberToObject(o, "station",           e->station);
     cJSON_AddNumberToObject(o, "volume",            e->volume);
     cJSON_AddStringToObject(o, "sound",             e->sound);
+    cJSON_AddStringToObject(o, "image",             e->image);
     return o;
 }
 
@@ -1351,6 +1358,12 @@ static void event_patch_from_json(event_t *e, const cJSON *obj)
     if (cJSON_IsString(j)) {
         strncpy(e->sound, j->valuestring, EVENT_SOUND_LEN - 1);
         e->sound[EVENT_SOUND_LEN - 1] = '\0';
+    }
+
+    j = cJSON_GetObjectItem(obj, "image");
+    if (cJSON_IsString(j)) {
+        strncpy(e->image, j->valuestring, EVENT_IMAGE_LEN - 1);
+        e->image[EVENT_IMAGE_LEN - 1] = '\0';
     }
 }
 

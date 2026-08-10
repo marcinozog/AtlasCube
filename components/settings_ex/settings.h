@@ -90,6 +90,9 @@ typedef struct {
     int             wallpaper_fetch_min;
     char            logo_path[64];      // full path to a splash logo .bin on SD ("" = built-in)
     bool            show_boot_info;  // version + IP overlay on the splash (STA only)
+    // Bell symbol on the event notification screen. Off leaves the wallpaper
+    // bare behind the text — an event with its own `image` shows that either way.
+    bool            event_bell;
     bool            sd_show_screen;  // show/hide SD player screen in the nav ring
     bool            radio_show_screen; // show/hide radio screen in the nav ring
     bool            follow_source;   // jump to the player screen of the source that starts playing
@@ -241,6 +244,7 @@ void settings_set_wallpaper_slot(int slot, const char *url);
 void settings_set_asset_slot(int slot, const char *url);
 void settings_set_logo_path(const char *path);
 void settings_set_show_boot_info(bool enabled);
+void settings_set_event_bell(bool enabled);
 void settings_set_sd_show_screen(bool show);
 void settings_set_radio_show_screen(bool show);
 void settings_set_follow_source(bool enable);

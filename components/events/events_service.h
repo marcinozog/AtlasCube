@@ -19,6 +19,7 @@ extern "C" {
 #define EVENT_PLAYBACK_ID_LEN   EVENT_ID_LEN
 #define EVENT_TITLE_LEN     64
 #define EVENT_SOUND_LEN     128     // SD path (rel. to card root) or /voice WAV, '\0' incl.
+#define EVENT_IMAGE_LEN     64      // SD path or "net0".."net9", '\0' incl.
 
 // EV_SCHEDULE `station` sentinel: with an empty `sound`, stop whatever is
 // playing at the scheduled time instead of starting a source.
@@ -82,6 +83,13 @@ typedef struct {
     // means the EV_SCHEDULE plays the playlist `station` instead. Empty for
     // every other type.
     char               sound[EVENT_SOUND_LEN];
+
+    // Artwork shown on the notification screen instead of the bell symbol:
+    // either an RGB565/RGB565A8 .bin on SD (path relative to the card root) or
+    // "net0".."net9" — an internet-wallpaper slot already fetched into PSRAM.
+    // Empty means the bell (or nothing, when display.event_bell is off). Never
+    // read by EV_SCHEDULE/EV_CALENDAR: neither shows the notification screen.
+    char               image[EVENT_IMAGE_LEN];
 } event_t;
 
 // --------------------------------------------------------------------------

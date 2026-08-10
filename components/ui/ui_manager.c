@@ -421,6 +421,7 @@ static void on_event_fired(const event_t *e)
     uie.event_info.minute   = e->minute;
     strncpy(uie.event_info.type_label, events_type_label(e->type),
             sizeof(uie.event_info.type_label) - 1);
+    strncpy(uie.event_info.image, e->image, sizeof(uie.event_info.image) - 1);
     ui_event_send(&uie);
 }
 
