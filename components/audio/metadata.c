@@ -164,8 +164,8 @@ done:
 static bool apic_jpeg_span(FILE *f, uint32_t fsize, uint8_t *type,
                            uint32_t *offset, uint32_t *len)
 Walk the variable-length head of an APIC frame body — text encoding byte, MIME
-string, picture type byte, description string — and leave *offset/*len on the
-image bytes that follow. The description's terminator depends on the encoding
+string, picture type byte, description string — and report where the image bytes
+that follow start and how many there are. The description's terminator depends on the encoding
 byte: one NUL for Latin-1/UTF-8, two for the UTF-16 encodings. Only image/jpeg
 is accepted (the old v2.2-style 3-character "JPG" spelling included, since some
 taggers still write it into v2.3 frames). The file position on entry is the

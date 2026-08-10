@@ -3128,6 +3128,12 @@ window.addEventListener('DOMContentLoaded', async () => {
         // first form the user opens. Fire and forget: two small GETs.
         loadNetAssets();
 
+        // The per-screen wallpaper slot picker was built before the count was
+        // known (it lives on the canvas card, built first), so it holds a lone
+        // "slot 1". Size it from the device now instead of waiting for a visit
+        // to the Internet tab. Fire and forget, like the assets above.
+        ensureNetWpSlotCount().then(buildNetWpSlotSelect);
+
         selectSection('clock');   // triggers the wallpaper preview load
     } catch (err) {
         setStatus('Failed to load profile: ' + err.message, true);
