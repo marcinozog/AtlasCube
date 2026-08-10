@@ -73,9 +73,11 @@ void sd_cover_widget_update(void)
     snprintf(path, sizeof(path), "%s/" SD_COVER_FILE, s_dir);
 
     // A folder without a converted cover is the normal case, not an error — ask
-    // first so the loader doesn't log a warning for every such album, and let
-    // the converter look for a plain cover.jpg to build one from. That runs off
-    // this task and reports back with UI_EVT_SD_COVER.
+    // first so the loader doesn't log a warning for every such album. The
+    // conversion of a plain cover.jpg is normally kicked off by sd_player when
+    // playback starts; asking again here is what makes the artwork appear
+    // without a restart when the widget is switched on mid-album. The converter
+    // runs off this task and reports back with UI_EVT_SD_COVER.
     struct stat st;
     if (stat(path, &st) != 0) {
         cover_art_request(s_dir);

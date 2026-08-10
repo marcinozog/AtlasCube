@@ -9,9 +9,11 @@
 // every later play of it is a plain file read.
 
 // Build <dir>/cover.bin from the first accepted JPEG in `dir` ("cover.jpg",
-// "cover.jpeg", "folder.jpg", "front.jpg"). No-op when a conversion is already
-// running, or when this folder was already tried and had nothing usable — the
-// caller may therefore ask on every folder change without thinking about it.
+// "cover.jpeg", "folder.jpg", "front.jpg"). Cheap and safe to call on every
+// folder change from any task: the checks that decide there is nothing to do
+// (already converted, no source, a source that failed to convert earlier) all
+// run in the caller's context, and a worker task is only started for a
+// conversion that will really happen.
 void cover_art_request(const char *dir);
 
 // Fired on the worker task once a cover.bin has been written, so the UI can

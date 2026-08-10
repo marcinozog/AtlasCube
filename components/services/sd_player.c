@@ -5,6 +5,8 @@
 #include "metadata.h"
 #include "app_state.h"
 #include "settings.h"
+#include "cover_art.h"
+#include "ui_profile.h"   // sd_show_cover — don't build artwork a layout won't show
 #include "radio_service.h"
 #include "bt.h"
 #include "esp_log.h"
@@ -258,6 +260,16 @@ const char *sd_player_root(void)        { return SD_MUSIC_DIR; }
 
 // ── Playback ─────────────────────────────────────────────────────────────────
 
+// Have the album art of the folder now playing built, if it isn't already.
+// Tied to playback rather than to the SD screen being drawn, so the
+// artwork is ready whatever the display happens to show — but only for a layout
+// that actually has the cover widget, so nobody else finds cover.bin files
+// appearing in their music folders.
+static void request_cover(void)
+{
+    if (ui_profile_get()->sd_show_cover) cover_art_request(s_play_dir);
+}
+
 void sd_player_play_path(const char *path)
 {
     if (!path) return;
@@ -285,6 +297,7 @@ void sd_player_play_path(const char *path)
         if (!strcmp(s_queue[i], name)) { idx = i; break; }
     }
     play_at(idx, n);
+    request_cover();   // after the pipeline has the card, so audio starts first
 }
 
 
@@ -299,6 +312,7 @@ void sd_player_play_folder(const char *dir)
         return;
     }
     play_at(0, n);
+    request_cover();   // after the pipeline has the card, so audio starts first
 }
 
 

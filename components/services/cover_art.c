@@ -25,9 +25,13 @@ static const char *k_sources[] = { "cover.jpg", "cover.jpeg", "folder.jpg", "fro
 #define COVER_DIR_LEN 192           // matches app_state's sd_dir
 #define COVER_PATH_LEN (COVER_DIR_LEN + 16)
 
-static char s_dir[COVER_DIR_LEN];   // folder being converted (owned by the task while busy)
-static char s_tried[COVER_DIR_LEN]; // last folder with no usable source — don't ask the card again
+// All three are owned by the task while it is busy; the requester only writes
+// them before starting it.
+static char s_dir[COVER_DIR_LEN];    // folder being converted
+static char s_src[COVER_PATH_LEN];   // the JPEG found in it
+static char s_failed[COVER_DIR_LEN]; // folder whose source would not convert — don't retry
 static volatile bool s_busy;
+static portMUX_TYPE  s_mux = portMUX_INITIALIZER_UNLOCKED;   // guards claiming s_busy
 static void (*s_done_cb)(void);
 
 void cover_art_set_done_cb(void (*cb)(void)) { s_done_cb = cb; }
@@ -80,28 +84,28 @@ static bool find_source(const char *dir, char *out, size_t cap)
 static void convert_task(void *arg)
 {
     (void)arg;
-    char src[COVER_PATH_LEN];
     char dst[COVER_PATH_LEN];
+    char err[96] = "";
     bool ok = false;
 
-    if (find_source(s_dir, src, sizeof(src))) {
-        ESP_LOGI(TAG, "converting %s", src);
-        char err[96] = "";
-        uint16_t *px = jpeg_file_to_rgb565(src, COVER_PX, COVER_PX, err, sizeof(err));
-        if (!px) {
-            ESP_LOGW(TAG, "%s: %s", src, err[0] ? err : "decode failed");
-        } else {
-            snprintf(dst, sizeof(dst), "%s/cover.bin", s_dir);
-            ok = write_bin(dst, px);
-            heap_caps_free(px);
-            if (ok) ESP_LOGI(TAG, "wrote %s", dst);
-            else    ESP_LOGW(TAG, "cannot write %s", dst);
-        }
+    ESP_LOGI(TAG, "converting %s", s_src);
+    uint16_t *px = jpeg_file_to_rgb565(s_src, COVER_PX, COVER_PX, err, sizeof(err));
+    if (!px) {
+        ESP_LOGW(TAG, "%s: %s", s_src, err[0] ? err : "decode failed");
+    } else {
+        snprintf(dst, sizeof(dst), "%s/cover.bin", s_dir);
+        ok = write_bin(dst, px);
+        heap_caps_free(px);
+        if (ok) ESP_LOGI(TAG, "wrote %s", dst);
+        else    ESP_LOGW(TAG, "cannot write %s", dst);
     }
 
-    // Remember a folder that yielded nothing, so browsing back and forth over
-    // an album without artwork doesn't hit the card again and again.
-    if (!ok) snprintf(s_tried, sizeof(s_tried), "%s", s_dir);
+    // A source that would not decode (or a card that would not take the file)
+    // will not fix itself, and retrying costs a full decode — so remember it.
+    // A folder with no source at all is NOT remembered: that one is four stat()
+    // calls to re-check, and dropping a cover.jpg into a folder has to work
+    // without a reboot.
+    if (!ok) snprintf(s_failed, sizeof(s_failed), "%s", s_dir);
 
     s_busy = false;
     if (ok && s_done_cb) s_done_cb();
@@ -111,11 +115,29 @@ static void convert_task(void *arg)
 void cover_art_request(const char *dir)
 {
     if (!dir || !dir[0] || s_busy) return;
-    if (strcmp(dir, s_tried) == 0) return;
+    if (strcmp(dir, s_failed) == 0) return;
     if (sdcard_init() != ESP_OK) return;
 
+    // Everything cheap happens in the caller's context, so the task is only
+    // ever created for work that will actually be done: already converted, or
+    // nothing to convert, and we are done here.
+    char path[COVER_PATH_LEN];
+    struct stat st;
+    snprintf(path, sizeof(path), "%s/cover.bin", dir);
+    if (stat(path, &st) == 0) return;
+    if (!find_source(dir, path, sizeof(path))) return;
+
+    // Two tasks reach this point for the same folder — playback start and the
+    // SD screen's own check. Claim the converter atomically so only one of them
+    // decodes, instead of both writing the same file over each other.
+    bool claimed = false;
+    taskENTER_CRITICAL(&s_mux);
+    if (!s_busy) { s_busy = true; claimed = true; }
+    taskEXIT_CRITICAL(&s_mux);
+    if (!claimed) return;
+
     snprintf(s_dir, sizeof(s_dir), "%s", dir);
-    s_busy = true;
+    snprintf(s_src, sizeof(s_src), "%s", path);
     // Short-lived: one album's worth of work, then the task is gone. libjpeg's
     // own allocations go to PSRAM (jmem_esp), so the stack only carries the
     // decoder's call frames.
