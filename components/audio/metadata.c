@@ -158,6 +158,131 @@ done:
 }
 
 
+// ── Embedded cover art ───────────────────────────────────────────────────────
+
+/*
+static bool apic_jpeg_span(FILE *f, uint32_t fsize, uint8_t *type,
+                           uint32_t *offset, uint32_t *len)
+Walk the variable-length head of an APIC frame body — text encoding byte, MIME
+string, picture type byte, description string — and leave *offset/*len on the
+image bytes that follow. The description's terminator depends on the encoding
+byte: one NUL for Latin-1/UTF-8, two for the UTF-16 encodings. Only image/jpeg
+is accepted (the old v2.2-style 3-character "JPG" spelling included, since some
+taggers still write it into v2.3 frames). The file position on entry is the
+first byte of the frame body; on return it is undefined — the caller seeks.
+*/
+static bool apic_jpeg_span(FILE *f, uint32_t fsize, uint8_t *type,
+                           uint32_t *offset, uint32_t *len)
+{
+    const long body = ftell(f);
+    if (fsize < 4) return false;
+
+    int enc = fgetc(f);
+    if (enc < 0) return false;
+
+    // MIME: NUL-terminated ASCII, read with a cap so a corrupt frame can't walk
+    // the whole file.
+    char mime[32];
+    uint32_t n = 0;
+    for (;;) {
+        int c = fgetc(f);
+        if (c < 0) return false;
+        if ((uint32_t)(ftell(f) - body) > fsize) return false;
+        if (c == 0) break;
+        if (n < sizeof(mime) - 1) mime[n++] = (char)c;
+    }
+    mime[n] = 0;
+    if (strcasecmp(mime, "image/jpeg") != 0 &&
+        strcasecmp(mime, "image/jpg")  != 0 &&
+        strcasecmp(mime, "JPG")        != 0) return false;
+
+    int pt = fgetc(f);
+    if (pt < 0) return false;
+    *type = (uint8_t)pt;
+
+    // Description, terminated by one NUL (enc 0/3) or two (the UTF-16 encs).
+    const bool wide = (enc == 1 || enc == 2);
+    for (;;) {
+        int c = fgetc(f);
+        if (c < 0) return false;
+        if ((uint32_t)(ftell(f) - body) > fsize) return false;
+        if (c != 0) continue;
+        if (!wide) break;
+        int c2 = fgetc(f);
+        if (c2 < 0) return false;
+        if (c2 == 0) break;
+    }
+
+    const long start = ftell(f);
+    const uint32_t used = (uint32_t)(start - body);
+    if (used >= fsize) return false;
+
+    *offset = (uint32_t)start;
+    *len    = fsize - used;
+    return true;
+}
+
+
+bool id3_find_cover(const char *path, uint32_t *offset, uint32_t *len)
+{
+    if (!path || !offset || !len) return false;
+    if (!strcasestr(path, ".mp3")) return false;
+
+    FILE *f = fopen(path, "rb");
+    if (!f) return false;
+
+    bool ok = false;
+
+    uint8_t hdr[10];
+    if (fread(hdr, 1, 10, f) != 10) goto done;
+    if (memcmp(hdr, "ID3", 3) != 0) goto done;
+
+    uint8_t ver = hdr[3];
+    if (ver != 3 && ver != 4) goto done;
+    if (hdr[5] & 0x80) goto done;   // unsynchronisation would corrupt the image bytes
+    if (hdr[5] & 0x40) goto done;   // extended header
+
+    long tag_end = 10 + (long)syncsafe(&hdr[6]);
+
+    while (ftell(f) + 10 <= tag_end) {
+        uint8_t fh[10];
+        if (fread(fh, 1, 10, f) != 10) break;
+        if (fh[0] == 0) break;                       // padding → end of frames
+
+        uint32_t fsize = (ver == 4)
+            ? syncsafe(&fh[4])
+            : ((uint32_t)fh[4] << 24 | (uint32_t)fh[5] << 16 |
+               (uint32_t)fh[6] << 8  | fh[7]);
+        if (fsize == 0 || ftell(f) + (long)fsize > tag_end) break;
+
+        const long next = ftell(f) + (long)fsize;
+        // fh[9] set means compressed/encrypted/length-prefixed body — not a
+        // plain JPEG, so leave it alone.
+        if (!memcmp(fh, "APIC", 4) && fh[9] == 0) {
+            uint8_t type = 0;
+            uint32_t off = 0, n = 0;
+            if (apic_jpeg_span(f, fsize, &type, &off, &n)) {
+                // Keep the first usable picture, but a front cover outranks it
+                // and ends the search.
+                if (!ok || type == 0x03) {
+                    *offset = off;
+                    *len    = n;
+                    ok      = true;
+                }
+                if (type == 0x03) break;
+            }
+        }
+        fseek(f, next, SEEK_SET);
+    }
+
+done:
+    fclose(f);
+    if (ok) TRACE(TRACE_AUDIO, TAG, "%s → cover %u B at %u", path,
+                  (unsigned)*len, (unsigned)*offset);
+    return ok;
+}
+
+
 // ── Track length ─────────────────────────────────────────────────────────────
 
 /*

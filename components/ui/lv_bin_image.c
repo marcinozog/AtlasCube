@@ -76,6 +76,22 @@ lv_image_dsc_t *lv_bin_image_load(const char *path, int require_w, int require_h
     return dsc;
 }
 
+lv_image_dsc_t *lv_bin_image_wrap_rgb565(uint16_t *buf, int w, int h)
+{
+    if (!buf || w <= 0 || h <= 0) return NULL;
+    lv_image_dsc_t *dsc = calloc(1, sizeof(*dsc));
+    if (!dsc) return NULL;
+
+    dsc->header.magic  = LV_IMAGE_HEADER_MAGIC;
+    dsc->header.cf     = LV_COLOR_FORMAT_RGB565;
+    dsc->header.w      = (uint32_t)w;
+    dsc->header.h      = (uint32_t)h;
+    dsc->header.stride = (uint32_t)w * 2;
+    dsc->data_size     = (uint32_t)((size_t)w * h * 2);
+    dsc->data          = (const uint8_t *)buf;
+    return dsc;
+}
+
 // RGB565 channel extract helpers (little-endian value already in a uint16_t).
 #define BIN_R5(p) (((p) >> 11) & 0x1F)
 #define BIN_G6(p) (((p) >>  5) & 0x3F)

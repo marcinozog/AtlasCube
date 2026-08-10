@@ -173,6 +173,16 @@ static void play_at(int idx, int n)
 Start the track at s_queue[idx] within s_play_dir. The caller must have just
 scanned s_play_dir into s_queue (so idx/n are consistent).
 */
+// Have the album art of the track now playing produced, if it isn't already —
+// a cover.jpg in the folder, or the picture in the file's own tag. Tied to
+// playback rather than to the SD screen being drawn, so the artwork is ready
+// whatever the display happens to show; only for a layout that has the cover
+// widget, so nobody else finds cover.bin files appearing in their music.
+static void request_cover(const char *track)
+{
+    if (ui_profile_get()->sd_show_cover) cover_art_request(s_play_dir, track);
+}
+
 static void play_at(int idx, int n)
 {
     s_play_index = idx;
@@ -213,6 +223,7 @@ static void play_at(int idx, int n)
 
     ESP_LOGI(TAG, "Play [%d/%d]: %s/%s", idx + 1, n, s_play_dir, s_queue[idx]);
     audio_file_player_play(path);
+    request_cover(path);   // after the pipeline has the card, so audio starts first
 }
 
 
@@ -260,16 +271,6 @@ const char *sd_player_root(void)        { return SD_MUSIC_DIR; }
 
 // ── Playback ─────────────────────────────────────────────────────────────────
 
-// Have the album art of the folder now playing built, if it isn't already.
-// Tied to playback rather than to the SD screen being drawn, so the
-// artwork is ready whatever the display happens to show — but only for a layout
-// that actually has the cover widget, so nobody else finds cover.bin files
-// appearing in their music folders.
-static void request_cover(void)
-{
-    if (ui_profile_get()->sd_show_cover) cover_art_request(s_play_dir);
-}
-
 void sd_player_play_path(const char *path)
 {
     if (!path) return;
@@ -297,7 +298,6 @@ void sd_player_play_path(const char *path)
         if (!strcmp(s_queue[i], name)) { idx = i; break; }
     }
     play_at(idx, n);
-    request_cover();   // after the pipeline has the card, so audio starts first
 }
 
 
@@ -312,7 +312,6 @@ void sd_player_play_folder(const char *dir)
         return;
     }
     play_at(0, n);
-    request_cover();   // after the pipeline has the card, so audio starts first
 }
 
 

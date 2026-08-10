@@ -22,6 +22,17 @@
 // the file name.
 bool id3_read_title(const char *path, char *out, size_t out_size);
 
+// Locate the cover art embedded in an MP3's ID3v2 tag: the byte offset and
+// length of the JPEG inside the APIC frame, which the caller then reads and
+// decodes. Nothing is read into memory here.
+//
+// Prefers picture type 0x03 (front cover) and falls back to the first APIC in
+// the tag. Only "image/jpeg" is reported — PNG artwork exists but the on-device
+// decoder cannot take it — and only the same tags id3_read_title() handles
+// (v2.3/v2.4, no unsynchronisation, plain frames). Returns false when the file
+// has no usable cover, which is the common case and not an error.
+bool id3_find_cover(const char *path, uint32_t *offset, uint32_t *len);
+
 // Exact play length of a local track, in milliseconds. MP3 (CBR via bitrate,
 // VBR via the Xing/Info/VBRI frame count) and WAV (PCM header) are supported;
 // other formats return 0. Reads only the file's head, so it's cheap to call at

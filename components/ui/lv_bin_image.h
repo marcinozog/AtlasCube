@@ -16,6 +16,14 @@ extern "C" {
 // call sdcard_init() first if the path lives on SD.
 lv_image_dsc_t *lv_bin_image_load(const char *path, int require_w, int require_h);
 
+// Wrap an RGB565 pixel buffer the caller allocated (heap_caps_malloc / the
+// libjpeg decoder's output) into a descriptor LVGL can draw. The descriptor
+// TAKES OWNERSHIP: release both with lv_bin_image_free(), exactly like a loaded
+// one, so a widget can hold artwork from a file and from a decoder without
+// caring which it got. Returns NULL on a bad size or an alloc failure (the
+// buffer is then the caller's to free).
+lv_image_dsc_t *lv_bin_image_wrap_rgb565(uint16_t *buf, int w, int h);
+
 // Like lv_bin_image_load() but bilinearly resamples the image to dst_w x dst_h
 // (RGB565). Use it when the on-screen size is driven by a widget's geometry
 // rather than the file's native pixels — e.g. a slider knob that scales with the
