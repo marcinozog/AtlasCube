@@ -266,8 +266,12 @@ function sdPickRow(icon, label, onClick) {
 }
 
 function sdPickChoose(path) {
-    document.getElementById(sdPickInputId()).value = path;
-    if (sdPickTarget === 'image') evImageStatus('');
+    if (sdPickTarget === 'image') {
+        evImageSet(path);
+        evImageStatus('');
+    } else {
+        document.getElementById('ev_sdpath').value = path;
+    }
     sdPickClose();
 }
 
@@ -312,10 +316,10 @@ async function loadImageSlots() {
     const filled = data.filled || [];
     for (let i = 0; i < (data.slots || 0); i++) {
         if (!filled[i]) continue;
-        // The device numbers slots from 0 and the web UI shows them from 1, so
-        // spell both out — the picked value lands in a field the user can see.
+        // Counted from 1 like everywhere else in the web UI; the device's own
+        // net<N> spelling never reaches the screen (see evImageSet).
         sel.appendChild(Object.assign(document.createElement('option'),
-            { value: 'net' + i, textContent: 'slot ' + (i + 1) + ' (net' + i + ')' }));
+            { value: 'net' + i, textContent: 'slot ' + (i + 1) }));
     }
 }
 
@@ -325,17 +329,36 @@ function evImageStatus(msg, cls) {
     el.style.color = cls === 'error' ? '#e66' : '';
 }
 
+function isSlotRef(value) {
+    return /^net[0-9]$/.test(value);
+}
+
+// How a stored reference reads in the UI: slots by their 1-based number, the way
+// the whole web UI counts them, never the device's own "net<N>" spelling.
+function evImageLabel(raw) {
+    if (!raw) return '';
+    return isSlotRef(raw) ? '🌐 Internet slot ' + (Number(raw.slice(3)) + 1) : '💾 ' + raw;
+}
+
+// The stored value ("/events/ania.bin" or "net0") lives in a hidden field and the
+// visible one is read-only. Everything that sets the graphic goes through here so
+// the two can't drift apart.
+function evImageSet(value) {
+    const raw = (value || '').trim();
+    document.getElementById('ev_image').value = raw;
+    document.getElementById('ev_image_display').value = evImageLabel(raw) || '(none)';
+}
+
 function evImageUseSlot(sel) {
     if (!sel.value) return;
-    document.getElementById('ev_image').value = sel.value;
-    // The device names slots net0..net9; the UI counts them from 1, as everywhere else.
-    evImageStatus('Internet slot ' + (Number(sel.value.slice(3)) + 1) + ' = ' + sel.value +
-                  ' — the device refetches it after every reboot.');
+    evImageSet(sel.value);
+    evImageStatus('The device refetches an internet slot after every reboot, ' +
+                  'so a very early event may still get the bell.');
     sel.value = '';
 }
 
 function evImageClear() {
-    document.getElementById('ev_image').value = '';
+    evImageSet('');
     evImageStatus('');
 }
 
@@ -352,7 +375,7 @@ async function evImageUpload(input) {
             file, EVENT_IMAGE_DIR, panelMeta.screen_w, panelMeta.screen_h,
             msg => evImageStatus(msg),
             document.getElementById('ev_title').value || file.name);
-        document.getElementById('ev_image').value = path;
+        evImageSet(path);
         evImageStatus('Saved as ' + path);
     } catch (e) {
         evImageStatus('✗ ' + e.message, 'error');
@@ -564,7 +587,7 @@ function makeRow(ev) {
             extra = ` · 📻 ${escapeHtml(name)} · 🔊 ${ev.volume ?? 0}`;
         }
     }
-    if (ev.image) extra += ` · 🖼️ ${escapeHtml(ev.image)}`;
+    if (ev.image) extra += ` · ${escapeHtml(evImageLabel(ev.image))}`;
     // Only worth saying when it isn't the default placement.
     if (ev.type !== 'schedule' && ev.text_pos && ev.text_pos !== 'center')
         extra += ev.text_pos === 'none' ? ' · 🚫 no text' : ` · 🔤 ${escapeHtml(ev.text_pos)}`;
@@ -738,7 +761,7 @@ function evEdit(id, playback = false) {
     document.getElementById('ev_volume').value = String(vol);
     document.getElementById('ev_volume_val').textContent = String(vol);
     document.getElementById('ev_sound').value = ev.type === 'voice' ? (ev.sound || '') : '';
-    document.getElementById('ev_image').value = ev.image || '';
+    evImageSet(ev.image || '');
     document.getElementById('ev_textpos').value = ev.text_pos || 'center';
     evImageStatus('');
     resetClipAudio();
@@ -781,13 +804,13 @@ function formToEvent() {
         if (sound[0] !== '/') sound = '/' + sound;
     }
 
-    // Notification artwork: an SD path (leading slash enforced like `sound`) or
-    // an "net<N>" slot reference, which is not a path. Schedules never reach the
-    // notification screen, so they never carry one.
+    // Notification artwork, as stored: an SD path (leading slash enforced like
+    // `sound`) or a "net<N>" slot reference, which is not a path. Schedules never
+    // reach the notification screen, so they never carry one.
     let image = '';
     if (type !== 'schedule') {
         image = document.getElementById('ev_image').value.trim();
-        if (image && !/^net[0-9]$/.test(image) && image[0] !== '/') image = '/' + image;
+        if (image && !isSlotRef(image) && image[0] !== '/') image = '/' + image;
     }
 
     const needsStation = type === 'schedule' && source === 'radio';

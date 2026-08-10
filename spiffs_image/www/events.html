@@ -95,13 +95,14 @@
             <div class="field-group" id="ev_image_group">
                 <label class="field-label">Graphic (shown instead of the bell)</label>
                 <div class="field-hint">
-                    An LVGL <code>.bin</code> on the SD card, or <code>net0</code>…<code>net9</code> —
-                    an internet wallpaper slot the device has already downloaded. Uploading converts
-                    any picture to the panel size for you. Empty = the bell symbol, or nothing
-                    at all when the bell is switched off in Settings.
+                    A picture from the SD card, or an internet wallpaper slot the device has
+                    already downloaded. Uploading converts any picture to the panel size for you.
+                    Empty = the bell symbol, or nothing at all when the bell is switched off in
+                    Settings.
                 </div>
-                <input type="text" id="ev_image" class="field-input"
-                       placeholder="/events/birthday.bin or net0" />
+                <input type="text" id="ev_image_display" class="field-input" readonly
+                       value="(none)" />
+                <input type="hidden" id="ev_image" />
                 <div class="ev-image-actions">
                     <button type="button" class="btn-secondary" onclick="sdPickOpen('image')">📂 Browse SD…</button>
                     <button type="button" class="btn-secondary"
