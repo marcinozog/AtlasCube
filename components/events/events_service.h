@@ -40,6 +40,16 @@ typedef enum {
     EV_TYPE_COUNT
 } event_type_t;
 
+// Where the notification screen puts the text block (type + title + time). The
+// bell rides along with it, so the two never collide. Default 0 = centred, which
+// is what every event loaded from an older events.json gets.
+typedef enum {
+    EV_TEXT_CENTER = 0,
+    EV_TEXT_TOP,
+    EV_TEXT_BOTTOM,
+    EV_TEXT_NONE,       // no text at all — for artwork with the words baked in
+} event_text_pos_t;
+
 typedef enum {
     EV_REC_NONE = 0,
     EV_REC_DAILY,
@@ -90,6 +100,11 @@ typedef struct {
     // Empty means the bell (or nothing, when display.event_bell is off). Never
     // read by EV_SCHEDULE/EV_CALENDAR: neither shows the notification screen.
     char               image[EVENT_IMAGE_LEN];
+
+    // Placement of the text block on the notification screen. Per event rather
+    // than per screen: the artwork differs from event to event, so no single
+    // layout fits them all.
+    event_text_pos_t   text_pos;
 } event_t;
 
 // --------------------------------------------------------------------------
@@ -107,6 +122,10 @@ void events_service_set_fire_cb(events_fire_cb_t cb);
 
 /** Static type label ready for display ("BIRTHDAY", "REMINDER", etc.). */
 const char *events_type_label(event_type_t t);
+
+/** Wire spelling of `text_pos` ("center", "top", "bottom", "none"), both ways. */
+const char *events_text_pos_str(event_text_pos_t p);
+event_text_pos_t events_text_pos_from_str(const char *s);
 
 // --------------------------------------------------------------------------
 // Lifecycle

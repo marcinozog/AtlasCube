@@ -116,6 +116,21 @@
                 <div id="ev_image_status" class="pl-hint"></div>
             </div>
 
+            <div class="field-group" id="ev_textpos_group">
+                <label class="field-label">Text placement</label>
+                <div class="field-hint">
+                    Where the type, title and time sit on the notification screen — the bell moves
+                    with them. Over a picture they get a dark backing so they stay readable.
+                    <em>No text</em> is for artwork that already has the words on it.
+                </div>
+                <select id="ev_textpos" class="field-input">
+                    <option value="center" selected>⬛ Center</option>
+                    <option value="top">⬆️ Top</option>
+                    <option value="bottom">⬇️ Bottom</option>
+                    <option value="none">🚫 No text</option>
+                </select>
+            </div>
+
             <div class="field-group">
                 <label class="field-label">Recurrence</label>
                 <select id="ev_recurrence" class="field-input" onchange="evRecurrenceChanged()">

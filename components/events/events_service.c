@@ -129,6 +129,28 @@ static event_recurrence_t rec_from_str(const char *s)
     return EV_REC_NONE;
 }
 
+// Shared with the REST layer (http_server) so both spell the wire values the
+// same way — unlike type/recurrence, which predate that and map twice.
+const char *events_text_pos_str(event_text_pos_t p)
+{
+    switch (p) {
+        case EV_TEXT_TOP:    return "top";
+        case EV_TEXT_BOTTOM: return "bottom";
+        case EV_TEXT_NONE:   return "none";
+        case EV_TEXT_CENTER:
+        default:             return "center";
+    }
+}
+
+event_text_pos_t events_text_pos_from_str(const char *s)
+{
+    if (!s) return EV_TEXT_CENTER;
+    if (strcmp(s, "top")    == 0) return EV_TEXT_TOP;
+    if (strcmp(s, "bottom") == 0) return EV_TEXT_BOTTOM;
+    if (strcmp(s, "none")   == 0) return EV_TEXT_NONE;
+    return EV_TEXT_CENTER;
+}
+
 // --------------------------------------------------------------------------
 // JSON — load / save (atomic write via .tmp + rename)
 // --------------------------------------------------------------------------
@@ -203,6 +225,9 @@ static esp_err_t load_from_file(void)
         j = cJSON_GetObjectItem(it, "image");
         if (cJSON_IsString(j)) strncpy(e.image, j->valuestring, EVENT_IMAGE_LEN - 1);
 
+        j = cJSON_GetObjectItem(it, "text_pos");
+        e.text_pos = events_text_pos_from_str(cJSON_IsString(j) ? j->valuestring : NULL);
+
         s_events[s_count++] = e;
     }
 
@@ -234,6 +259,7 @@ static esp_err_t save_to_file(void)
         cJSON_AddNumberToObject(o, "volume",             e->volume);
         cJSON_AddStringToObject(o, "sound",              e->sound);
         cJSON_AddStringToObject(o, "image",              e->image);
+        cJSON_AddStringToObject(o, "text_pos",           events_text_pos_str(e->text_pos));
         cJSON_AddItemToArray(arr, o);
     }
 

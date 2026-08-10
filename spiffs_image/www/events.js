@@ -99,8 +99,10 @@ function evTypeChanged() {
     document.getElementById('ev_sdpath_group').style.display  = schedSd ? '' : 'none';
     document.getElementById('ev_volume_group').style.display  = (isVoice || sched) ? '' : 'none';
     document.getElementById('ev_sound_group').style.display   = isVoice ? '' : 'none';
-    // Schedules jump straight to the player screen — no notification, no artwork.
+    // Schedules jump straight to the player screen — no notification, so neither
+    // the artwork nor the text placement means anything for them.
     document.getElementById('ev_image_group').style.display   = sched ? 'none' : '';
+    document.getElementById('ev_textpos_group').style.display = sched ? 'none' : '';
     document.getElementById('ev_stop_toggle_group').style.display = sched ? '' : 'none';
     document.getElementById('ev_time_label').textContent = sched ? 'Start time' : 'Time';
 
@@ -310,8 +312,10 @@ async function loadImageSlots() {
     const filled = data.filled || [];
     for (let i = 0; i < (data.slots || 0); i++) {
         if (!filled[i]) continue;
+        // The device numbers slots from 0 and the web UI shows them from 1, so
+        // spell both out — the picked value lands in a field the user can see.
         sel.appendChild(Object.assign(document.createElement('option'),
-            { value: 'net' + i, textContent: 'slot ' + (i + 1) }));
+            { value: 'net' + i, textContent: 'slot ' + (i + 1) + ' (net' + i + ')' }));
     }
 }
 
@@ -325,7 +329,7 @@ function evImageUseSlot(sel) {
     if (!sel.value) return;
     document.getElementById('ev_image').value = sel.value;
     // The device names slots net0..net9; the UI counts them from 1, as everywhere else.
-    evImageStatus('Uses internet slot ' + (Number(sel.value.slice(3)) + 1) +
+    evImageStatus('Internet slot ' + (Number(sel.value.slice(3)) + 1) + ' = ' + sel.value +
                   ' — the device refetches it after every reboot.');
     sel.value = '';
 }
@@ -561,6 +565,9 @@ function makeRow(ev) {
         }
     }
     if (ev.image) extra += ` · 🖼️ ${escapeHtml(ev.image)}`;
+    // Only worth saying when it isn't the default placement.
+    if (ev.type !== 'schedule' && ev.text_pos && ev.text_pos !== 'center')
+        extra += ev.text_pos === 'none' ? ' · 🚫 no text' : ` · 🔤 ${escapeHtml(ev.text_pos)}`;
 
     row.innerHTML = `
         <div class="ev-icon">${TYPE_ICON[ev.type] || '•'}</div>
@@ -691,6 +698,7 @@ function evFormReset() {
     document.getElementById('ev_sound').value = '';
     document.getElementById('ev_sound_play').style.display = 'none';
     evImageClear();
+    document.getElementById('ev_textpos').value = 'center';
     resetClipAudio();
     evTypeChanged();
     setStatus('', '');
@@ -731,6 +739,7 @@ function evEdit(id, playback = false) {
     document.getElementById('ev_volume_val').textContent = String(vol);
     document.getElementById('ev_sound').value = ev.type === 'voice' ? (ev.sound || '') : '';
     document.getElementById('ev_image').value = ev.image || '';
+    document.getElementById('ev_textpos').value = ev.text_pos || 'center';
     evImageStatus('');
     resetClipAudio();
     document.getElementById('ev_sound_play').style.display =
@@ -801,6 +810,8 @@ function formToEvent() {
         volume,
         sound,
         image,
+        text_pos: type === 'schedule'
+            ? 'center' : document.getElementById('ev_textpos').value,
     };
     if (sched) {
         payload.stop_enabled = document.getElementById('ev_stop_enabled').checked;

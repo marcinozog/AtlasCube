@@ -49,6 +49,7 @@ only feeds the Home-screen calendar widget (see
 | `volume` | int | `EV_SCHEDULE` / `EV_VOICE`: 0..100, applied via `settings_set_volume()` at fire time so playback starts at a predictable level |
 | `sound` | `char[128]` | `EV_VOICE`: WAV filename under `/voice`. `EV_SCHEDULE`: SD file/folder path relative to the card root (empty → play `station`) |
 | `image` | `char[64]` | Artwork for the notification screen: an LVGL `.bin` on SD (path relative to the card root) or `"net0"`..`"net9"` — an internet wallpaper slot. Empty → the bell symbol. Unused by `EV_SCHEDULE` / `EV_CALENDAR`, which never show that screen |
+| `text_pos` | enum | Placement of the text block on that screen: `center` (default) / `top` / `bottom` / `none`. Per event, because the artwork differs per event — there is deliberately no ui_profile section for this screen |
 
 Maximum `EVENTS_MAX = 200` events (shared between user-managed and
 calendar-mirror events). Static array in PSRAM, guarded by a mutex against
@@ -186,13 +187,23 @@ registers itself via `events_service_set_fire_cb()`. Translation to
 [components/ui/screens/screen_event_notification.c](../components/ui/screens/screen_event_notification.c)
 — full screen implementing `ui_screen_t`. 320×240 layout:
 
-- The event's own `image`, if it has one and it loads, else a big 🔔 symbol
-  (LV_SYMBOL_BELL) in 96 px font — which `display.event_bell = false` removes
-  entirely, leaving the shared background bare behind the text
-- Type label (e.g. "REMINDER") in 14 px font
-- Event title in 18 px (scrolls when long)
-- HH:MM time in 14 px accent color
+- The event's own `image`, if it has one and it loads, drawn first as the
+  backdrop
+- A flex column holding the bell and the text, placed by the event's `text_pos`
+  (`center` / `top` / `bottom`; `none` drops the text and the hint). Bell and
+  text share the column so they move together and can never overlap:
+  - big 🔔 symbol (LV_SYMBOL_BELL) in 96 px font — only when the event brought
+    no artwork, and `display.event_bell = false` removes it entirely
+  - type label (e.g. "REMINDER") in 14 px font
+  - event title in 18 px (scrolls when long), width from the column so it fits
+    narrow panels
+  - HH:MM time in 14 px accent color
 - Bottom hint "✓ press encoder"
+
+Over a picture — the event's artwork, or the wallpaper this screen inherits —
+the column gets a dark translucent card (`background_has_image()`), because text
+on an arbitrary photo is otherwise a coin flip. Over a gradient or a solid theme
+colour there is no card.
 
 The screen paints no background of its own: `ui_manager` re-applies the shared
 one (wallpaper / gradient / solid) right after `create()`, so an event's artwork

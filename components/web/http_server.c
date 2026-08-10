@@ -1318,6 +1318,7 @@ static cJSON *event_to_json(const event_t *e)
     cJSON_AddNumberToObject(o, "volume",            e->volume);
     cJSON_AddStringToObject(o, "sound",             e->sound);
     cJSON_AddStringToObject(o, "image",             e->image);
+    cJSON_AddStringToObject(o, "text_pos",          events_text_pos_str(e->text_pos));
     return o;
 }
 
@@ -1365,6 +1366,9 @@ static void event_patch_from_json(event_t *e, const cJSON *obj)
         strncpy(e->image, j->valuestring, EVENT_IMAGE_LEN - 1);
         e->image[EVENT_IMAGE_LEN - 1] = '\0';
     }
+
+    j = cJSON_GetObjectItem(obj, "text_pos");
+    if (cJSON_IsString(j)) e->text_pos = events_text_pos_from_str(j->valuestring);
 }
 
 // Validates field by field. Returns NULL if ok, otherwise an error message.
