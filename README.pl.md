@@ -416,7 +416,7 @@ esptool.py write_flash 0x0 AtlasCube.bin
 
 ### Własne czcionki
 
-Czcionki leżą w [`components/ui/fonts/`](components/ui/fonts/) jako tablice C dla LVGL. Rozmiary nie są żadnym standardem — dobierane są pod panel. `_NN` w nazwie to `--size` (wysokość linii w px); duże pliki `_72/_80/_96` zawierają **tylko cyfry** (`--range 0x30-0x3A` plus jedna ikona), a pliki `_NN_pl` mają pełen polski zestaw znaków.
+Czcionki leżą w [`components/ui/fonts/`](components/ui/fonts/) jako tablice C dla LVGL. Rozmiary nie są żadnym standardem — dobierane są pod panel. `_NN` w nazwie to `--size` (wysokość linii w px); duże pliki `_72/_80/_96` zawierają **tylko cyfry** (`--range 0x30-0x3A` plus jedna ikona), a pliki `_NN_eu` obejmują wszystkie europejskie alfabety łacińskie: ASCII plus Latin-1 Supplement (`0x00A0-0x00FF`), Latin Extended-A (`0x0100-0x017F`) i rumuńskie formy z przecinkiem (`0x0218-0x021B`). Wszystkie regenerujesz skryptem [`scripts/gen_fonts.ps1`](scripts/gen_fonts.ps1).
 
 Aby dodać nową czcionkę (np. większą `montserrat_120`):
 

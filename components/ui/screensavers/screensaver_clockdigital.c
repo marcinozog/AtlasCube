@@ -23,24 +23,24 @@ static bool        s_blink   = true;   // colon visible this tick?
 
 // Big time font. The custom _72/_96/_120 fonts are digit-only (0x30-0x3A =
 // digits + colon), which is exactly what HH:MM needs. Short/mono panels fall
-// back to the built-in montserrat_48 (full glyphs, fits a 64px-tall display).
+// back to montserrat_48_eu (full glyphs, fits a 64px-tall display).
 static const lv_font_t *time_font(void)
 {
     int h = DISPLAY_HEIGHT;
     if (h >= 460) return &lv_font_montserrat_120;
     if (h >= 280) return &lv_font_montserrat_96;
     if (h >= 150) return &lv_font_montserrat_72;
-    return &lv_font_montserrat_48;
+    return &lv_font_montserrat_48_eu;
 }
 
-// Date line uses _pl fonts (full glyphs). Only shown when the panel is tall
+// Date line uses _eu fonts (full glyphs). Only shown when the panel is tall
 // enough for a second line under the clock.
 static const lv_font_t *date_font(void)
 {
     int h = DISPLAY_HEIGHT;
-    if (h >= 460) return &lv_font_montserrat_24_pl;
-    if (h >= 280) return &lv_font_montserrat_18_pl;
-    return &lv_font_montserrat_14_pl;
+    if (h >= 460) return &lv_font_montserrat_24_eu;
+    if (h >= 280) return &lv_font_montserrat_18_eu;
+    return &lv_font_montserrat_14_eu;
 }
 
 static void update_clock(void)

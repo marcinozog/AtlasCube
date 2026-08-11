@@ -72,15 +72,15 @@ static void on_ss_state(const char *value)
 
 static const lv_font_t *title_font(void)
 {
-    return (DISPLAY_WIDTH >= 240) ? &lv_font_montserrat_18_pl : &lv_font_montserrat_14_pl;
+    return (DISPLAY_WIDTH >= 240) ? &lv_font_montserrat_18_eu : &lv_font_montserrat_14_eu;
 }
 
 static const lv_font_t *value_font(void)
 {
-    // Built-in lv_font_montserrat_48 — full ASCII. Custom _72/_80/_96 in this
+    // lv_font_montserrat_48_eu — full text coverage. Custom _72/_80/_96 in this
     // project are digits-only (generated for the clock screensaver) and can't
     // render arbitrary MQTT payloads like "ON"/"OFF".
-    return &lv_font_montserrat_48;
+    return &lv_font_montserrat_48_eu;
 }
 
 static void mqtt_ss_create(lv_obj_t *parent)
@@ -121,7 +121,7 @@ static void mqtt_ss_create(lv_obj_t *parent)
 
     s_status_label = lv_label_create(s_root);
     lv_label_set_text(s_status_label, "");
-    lv_obj_set_style_text_font(s_status_label, &lv_font_montserrat_12_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(s_status_label, &lv_font_montserrat_12_eu, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_status_label, lv_color_hex(th->text_muted), LV_PART_MAIN);
 
     mqtt_svc_set_ss_state_cb(on_ss_state);

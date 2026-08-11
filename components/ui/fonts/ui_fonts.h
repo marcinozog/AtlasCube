@@ -6,14 +6,22 @@ extern "C" {
 #endif
 
 // Custom fonts shipped in components/ui/fonts/*.c.
-// Built-in LVGL fonts (e.g. lv_font_montserrat_48) are declared by lvgl.h
+// Built-in LVGL fonts (e.g. lv_font_montserrat_28) are declared by lvgl.h
 // when enabled via Kconfig (CONFIG_LV_FONT_MONTSERRAT_*).
-LV_FONT_DECLARE(lv_font_montserrat_8_pl);
-LV_FONT_DECLARE(lv_font_montserrat_10_pl);
-LV_FONT_DECLARE(lv_font_montserrat_12_pl);
-LV_FONT_DECLARE(lv_font_montserrat_14_pl);
-LV_FONT_DECLARE(lv_font_montserrat_18_pl);
-LV_FONT_DECLARE(lv_font_montserrat_24_pl);
+//
+// The _eu text fonts cover ASCII plus Latin-1 Supplement (0x00A0-0x00FF),
+// Latin Extended-A (0x0100-0x017F) and the Romanian comma-below forms
+// (0x0218-0x021B) — i.e. every language written in Latin script in Europe,
+// not just Polish. Regenerate them with scripts/gen_fonts.ps1.
+LV_FONT_DECLARE(lv_font_montserrat_8_eu);
+LV_FONT_DECLARE(lv_font_montserrat_10_eu);
+LV_FONT_DECLARE(lv_font_montserrat_12_eu);
+LV_FONT_DECLARE(lv_font_montserrat_14_eu);
+LV_FONT_DECLARE(lv_font_montserrat_18_eu);
+LV_FONT_DECLARE(lv_font_montserrat_24_eu);
+// Replaces LVGL's built-in montserrat_48 and therefore also carries the full
+// LV_SYMBOL_* FontAwesome set — the overlays render their button glyphs at 48.
+LV_FONT_DECLARE(lv_font_montserrat_48_eu);
 LV_FONT_DECLARE(lv_font_montserrat_72);
 LV_FONT_DECLARE(lv_font_montserrat_80);
 LV_FONT_DECLARE(lv_font_montserrat_96);

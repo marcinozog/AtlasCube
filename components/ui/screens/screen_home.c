@@ -180,7 +180,7 @@ static void netinfo_update(void)
         s_netinfo_label = ui_anchored_label(s_root, p->clock_netinfo_x,
                                             p->clock_netinfo_y, UI_ALIGN_CENTER);
         lv_obj_set_style_text_font(s_netinfo_label,
-            p->clock_netinfo_font ? p->clock_netinfo_font : &lv_font_montserrat_12_pl,
+            p->clock_netinfo_font ? p->clock_netinfo_font : &lv_font_montserrat_12_eu,
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_netinfo_label,
             lv_color_hex(p->clock_netinfo_color ? p->clock_netinfo_color
@@ -211,7 +211,7 @@ static void home_create(lv_obj_t *parent)
                                          UI_ALIGN_CENTER);
         lv_label_set_text(s_time_label, "--:--");
         lv_obj_set_style_text_font(s_time_label,
-            p->clock_time_font ? p->clock_time_font : &lv_font_montserrat_18_pl,
+            p->clock_time_font ? p->clock_time_font : &lv_font_montserrat_18_eu,
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_time_label,
             lv_color_hex(p->clock_time_color ? p->clock_time_color
@@ -222,9 +222,9 @@ static void home_create(lv_obj_t *parent)
         // digit-only, so letters must use a text-capable (date) font. Hidden
         // in 24h mode; positioned relative to the time label on every update.
         const lv_font_t *tf = p->clock_time_font ? p->clock_time_font
-                                                 : &lv_font_montserrat_18_pl;
+                                                 : &lv_font_montserrat_18_eu;
         const lv_font_t *af = p->clock_date_font ? p->clock_date_font
-                                                 : &lv_font_montserrat_18_pl;
+                                                 : &lv_font_montserrat_18_eu;
         s_ampm_label = lv_label_create(parent);
         lv_label_set_text(s_ampm_label, "");
         lv_obj_add_flag(s_ampm_label, LV_OBJ_FLAG_HIDDEN);
@@ -242,7 +242,7 @@ static void home_create(lv_obj_t *parent)
                                          UI_ALIGN_CENTER);
         lv_label_set_text(s_date_label, "");
         lv_obj_set_style_text_font(s_date_label,
-            p->clock_date_font ? p->clock_date_font : &lv_font_montserrat_18_pl,
+            p->clock_date_font ? p->clock_date_font : &lv_font_montserrat_18_eu,
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_date_label,
             lv_color_hex(p->clock_date_color ? p->clock_date_color

@@ -45,7 +45,7 @@ static void ota_create(lv_obj_t *parent)
 
     lv_obj_t *title = lv_label_create(col);
     lv_label_set_text(title, "FIRMWARE UPDATE");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_18_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_18_eu, LV_PART_MAIN);
     lv_obj_set_style_text_color(title, lv_color_hex(th->text_primary), LV_PART_MAIN);
 
     s_bar = lv_bar_create(col);
@@ -60,12 +60,12 @@ static void ota_create(lv_obj_t *parent)
 
     s_pct = lv_label_create(col);
     lv_label_set_text(s_pct, "0%");
-    lv_obj_set_style_text_font(s_pct, &lv_font_montserrat_24_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(s_pct, &lv_font_montserrat_24_eu, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_pct, lv_color_hex(th->accent), LV_PART_MAIN);
 
     s_status = lv_label_create(col);
     lv_label_set_text(s_status, "Do not power off");
-    lv_obj_set_style_text_font(s_status, &lv_font_montserrat_12_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(s_status, &lv_font_montserrat_12_eu, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_status, lv_color_hex(th->text_muted), LV_PART_MAIN);
 
     ESP_LOGI(TAG, "Created");

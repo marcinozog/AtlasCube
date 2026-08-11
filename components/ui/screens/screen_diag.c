@@ -24,7 +24,7 @@ static lv_timer_t *s_timer  = NULL;
 static diag_cpu_state_t s_cpu;        // this screen's own CPU baseline
 
 /* ── formatting helpers ─────────────────────────────────────────────────────
-   Integer-only: the montserrat_*_pl fonts and LVGL's own formatter make %f a
+   Integer-only: the montserrat_*_eu fonts and LVGL's own formatter make %f a
    liability, and KB/MB resolution is plenty for a diagnostics readout. */
 
 static inline unsigned kb(size_t bytes) { return (unsigned)(bytes / 1024); }
@@ -104,7 +104,8 @@ static void refresh(void)
 
     p = append(buf, sizeof(buf), p, "\nChip  %s rev%d x%d\n", d.chip, d.chip_rev, d.chip_cores);
     // Die temperature, one decimal, sign handled by hand so -0.4 doesn't print
-    // as "0.4". No "°": the montserrat_*_pl fonts carry no such glyph.
+    // as "0.4". Plain "C", no "°" — the degree sign is available in the _eu
+    // fonts now, but this readout is deliberately pure ASCII.
     if (d.temp_valid) {
         int t = d.temp_c10;
         p = append(buf, sizeof(buf), p, "Temp  %s%d.%d C\n",

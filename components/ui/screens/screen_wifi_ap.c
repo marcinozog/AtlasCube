@@ -297,7 +297,7 @@ static void open_password_overlay(const char *ssid, bool secure)
     lv_obj_update_layout(ta);   // resolve field height before aligning the toggle
 
     // Show/hide-password toggle to the right of the field. Text label (not an
-    // LV_SYMBOL) because the _pl fonts carry no FontAwesome glyph range.
+    // LV_SYMBOL) because the _eu fonts carry no FontAwesome glyph range.
     lv_obj_t *eye = lv_button_create(s_overlay);
     lv_obj_set_style_bg_color(eye, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
     lv_obj_set_style_radius(eye, 6, LV_PART_MAIN);
@@ -320,9 +320,10 @@ static void open_password_overlay(const char *ssid, bool secure)
     // Bigger keyboard + gaps + font → larger, easier-to-hit targets.
     lv_obj_set_size(kb, LV_PCT(100), LV_PCT(64));
     lv_obj_align(kb, LV_ALIGN_BOTTOM_MID, 0, 0);
-    // Builtin montserrat (not a _pl font) so the backspace/OK LV_SYMBOL glyphs
-    // actually render — the _pl fonts carry no FontAwesome range. The keyboard
-    // only shows ASCII, so losing the Polish glyphs here is irrelevant.
+    // Builtin montserrat (not a _eu font) so the backspace/OK LV_SYMBOL glyphs
+    // actually render — the small _eu fonts carry no FontAwesome range. The
+    // keyboard map is ASCII-only, so losing the accented glyphs here costs
+    // nothing.
     lv_obj_set_style_text_font(kb, &lv_font_montserrat_14, LV_PART_ITEMS);
     lv_obj_set_style_pad_all(kb, 3, LV_PART_MAIN);
     lv_obj_set_style_pad_row(kb, 5, LV_PART_MAIN);
@@ -387,7 +388,7 @@ static void rebuild_list(void)
         lv_obj_add_event_cb(row, net_row_cb, LV_EVENT_CLICKED, NULL);
 
         // Mark open networks explicitly; the rest are assumed secured (the common
-        // case) and get a password prompt. No LV_SYMBOL — _pl fonts lack glyphs.
+        // case) and get a password prompt. No LV_SYMBOL — _eu fonts lack glyphs.
         lv_obj_t *name = lv_label_create(row);
         lv_label_set_text_fmt(name, "%s%s",
                               s_aps[i].ssid, s_aps[i].secure ? "" : "  (open)");
@@ -399,7 +400,7 @@ static void rebuild_list(void)
         lv_obj_set_style_text_color(name, lv_color_hex(th->text_primary), LV_PART_MAIN);
         lv_obj_align(name, LV_ALIGN_LEFT_MID, 0, 0);
 
-        // Signal strength as a number, not a bar glyph: the _pl fonts carry
+        // Signal strength as a number, not a bar glyph: the _eu fonts carry
         // neither the FontAwesome nor the block-drawing range, so any icon here
         // would render blank.
         lv_obj_t *sig = lv_label_create(row);

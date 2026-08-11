@@ -168,9 +168,9 @@ static bool *bool_field_ptr(size_t off)
 
 static const lv_font_t *font_field(size_t off)
 {
-    if (off == OFF_NONE) return &lv_font_montserrat_10_pl;
+    if (off == OFF_NONE) return &lv_font_montserrat_10_eu;
     const lv_font_t *font = *(const lv_font_t **)((uint8_t *)&s_work + off);
-    return font ? font : &lv_font_montserrat_10_pl;
+    return font ? font : &lv_font_montserrat_10_eu;
 }
 
 static ui_touch_hotspot_t *hotspot_for(const editor_element_t *d)
@@ -548,7 +548,7 @@ static lv_obj_t *dialog_button(lv_obj_t *parent, int x, int y, int w,
                         (void *)(intptr_t)action);
     lv_obj_t *label = lv_label_create(btn);
     lv_label_set_text(label, text);
-    lv_obj_set_style_text_font(label, &lv_font_montserrat_10_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_10_eu, LV_PART_MAIN);
     lv_obj_center(label);
     return btn;
 }
@@ -567,7 +567,7 @@ static void show_exit_dialog(void)
 
     s_exit_title = lv_label_create(s_exit_overlay);
     lv_label_set_text(s_exit_title, "Finish Radio layout?");
-    lv_obj_set_style_text_font(s_exit_title, &lv_font_montserrat_14_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(s_exit_title, &lv_font_montserrat_14_eu, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_exit_title, lv_color_white(), LV_PART_MAIN);
     lv_obj_align(s_exit_title, LV_ALIGN_CENTER, 0, -30);
 
@@ -604,7 +604,7 @@ static void layout_create(lv_obj_t *parent)
     restack_boxes();
 
     s_status = lv_label_create(parent);
-    lv_obj_set_style_text_font(s_status, &lv_font_montserrat_10_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(s_status, &lv_font_montserrat_10_eu, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_status, lv_color_white(), LV_PART_MAIN);
     lv_obj_set_style_bg_color(s_status, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(s_status, LV_OPA_60, LV_PART_MAIN);
@@ -622,13 +622,13 @@ static void layout_create(lv_obj_t *parent)
     lv_obj_align(s_visibility_btn, LV_ALIGN_TOP_RIGHT, -2, 2);
     lv_obj_add_event_cb(s_visibility_btn, visibility_clicked_cb, LV_EVENT_CLICKED, NULL);
     s_visibility_label = lv_label_create(s_visibility_btn);
-    lv_obj_set_style_text_font(s_visibility_label, &lv_font_montserrat_10_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(s_visibility_label, &lv_font_montserrat_10_eu, LV_PART_MAIN);
     lv_obj_center(s_visibility_label);
     lv_obj_add_flag(s_visibility_btn, LV_OBJ_FLAG_HIDDEN);
 
     s_hint = lv_label_create(parent);
     lv_label_set_text(s_hint, "drag | tap title:next | side:finish");
-    lv_obj_set_style_text_font(s_hint, &lv_font_montserrat_8_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(s_hint, &lv_font_montserrat_8_eu, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_hint, lv_color_white(), LV_PART_MAIN);
     lv_obj_set_style_bg_color(s_hint, lv_color_black(), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(s_hint, LV_OPA_60, LV_PART_MAIN);

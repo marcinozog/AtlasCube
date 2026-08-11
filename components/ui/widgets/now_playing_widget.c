@@ -45,8 +45,8 @@ void now_playing_widget_create(lv_obj_t *parent,
     s_station_color = station_color;
     s_title_color   = title_color;
 
-    if (!station_font) station_font = &lv_font_montserrat_18_pl;
-    if (!title_font)   title_font   = &lv_font_montserrat_14_pl;
+    if (!station_font) station_font = &lv_font_montserrat_18_eu;
+    if (!title_font)   title_font   = &lv_font_montserrat_14_eu;
     s_station_w = station_w < 8 ? 8 : station_w;
     s_title_w   = title_w   < 8 ? 8 : title_w;
 

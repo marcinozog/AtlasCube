@@ -99,7 +99,7 @@ static lv_obj_t *make_button(lv_obj_t *parent, const char *text, int act, uint32
 
     lv_obj_t *lbl = lv_label_create(btn);
     lv_label_set_text(lbl, text);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_18_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_18_eu, LV_PART_MAIN);
     lv_obj_center(lbl);
     return btn;
 }
@@ -129,13 +129,13 @@ static void update_create(lv_obj_t *parent)
 
     lv_obj_t *title = lv_label_create(col);
     lv_label_set_text(title, s_fw_mode ? "NEW FIRMWARE" : "WEB UI OUTDATED");
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_24_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_24_eu, LV_PART_MAIN);
     lv_obj_set_style_text_color(title, lv_color_hex(th->text_primary), LV_PART_MAIN);
 
     lv_obj_t *ver = lv_label_create(col);
     if (s_fw_mode) lv_label_set_text_fmt(ver, "%s available", updater_latest_version());
     else           lv_label_set_text(ver, "older than firmware");
-    lv_obj_set_style_text_font(ver, &lv_font_montserrat_18_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(ver, &lv_font_montserrat_18_eu, LV_PART_MAIN);
     lv_obj_set_style_text_color(ver, lv_color_hex(th->accent), LV_PART_MAIN);
 
     const char *cur = esp_app_get_description()->version;
@@ -143,7 +143,7 @@ static void update_create(lv_obj_t *parent)
     s_hint = lv_label_create(col);
     if (s_fw_mode) lv_label_set_text_fmt(s_hint, "current %s", cur);
     else           lv_label_set_text(s_hint, "downloads from atlascube.net");
-    lv_obj_set_style_text_font(s_hint, &lv_font_montserrat_12_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(s_hint, &lv_font_montserrat_12_eu, LV_PART_MAIN);
     lv_obj_set_style_text_color(s_hint, lv_color_hex(th->text_muted), LV_PART_MAIN);
 
     // A git-describe suffix ("-dirty", "-N-g<hash>") means the running firmware
@@ -152,7 +152,7 @@ static void update_create(lv_obj_t *parent)
     if (s_fw_mode && strchr(cur, '-')) {
         lv_obj_t *warn = lv_label_create(col);
         lv_label_set_text(warn, "self-built firmware\nupdate will replace your changes");
-        lv_obj_set_style_text_font(warn, &lv_font_montserrat_12_pl, LV_PART_MAIN);
+        lv_obj_set_style_text_font(warn, &lv_font_montserrat_12_eu, LV_PART_MAIN);
         lv_obj_set_style_text_color(warn, lv_color_hex(th->accent), LV_PART_MAIN);
         lv_obj_set_style_text_align(warn, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     }

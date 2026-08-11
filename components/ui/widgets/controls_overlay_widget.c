@@ -1,4 +1,5 @@
 #include "controls_overlay_widget.h"
+#include "fonts/ui_fonts.h"
 #include "ui_profile.h"
 #include "ui_manager.h"
 #include "theme.h"
@@ -246,7 +247,7 @@ static lv_obj_t *make_btn(lv_obj_t *parent, const char *symbol, const intptr_t i
 
     lv_obj_t *lbl = lv_label_create(btn);
     lv_label_set_text(lbl, symbol);
-    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_48, LV_PART_MAIN);
+    lv_obj_set_style_text_font(lbl, &lv_font_montserrat_48_eu, LV_PART_MAIN);
     lv_obj_set_style_text_color(lbl, lv_color_white(), LV_PART_MAIN);
     lv_obj_center(lbl);
     if (label_scale != 256) {

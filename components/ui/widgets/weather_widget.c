@@ -108,7 +108,7 @@ void weather_widget_create(lv_obj_t *parent, int16_t x, int16_t y, int16_t w,
     lv_obj_set_style_text_font(s_icon, &lv_font_weather_20, LV_PART_MAIN);
 
     s_label = lv_label_create(s_pill);
-    lv_obj_set_style_text_font(s_label, font ? font : &lv_font_montserrat_12_pl,
+    lv_obj_set_style_text_font(s_label, font ? font : &lv_font_montserrat_12_eu,
                                LV_PART_MAIN);
 
     weather_widget_update();

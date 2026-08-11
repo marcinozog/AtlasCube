@@ -92,7 +92,7 @@ static void splash_create(lv_obj_t *parent)
     // theme/panel. Overlap with the logo is accepted (diagnostic, disableable).
     if (settings_get()->display.show_boot_info) {
         s_info_label = lv_label_create(parent);
-        lv_obj_set_style_text_font(s_info_label, &lv_font_montserrat_14_pl, LV_PART_MAIN);
+        lv_obj_set_style_text_font(s_info_label, &lv_font_montserrat_14_eu, LV_PART_MAIN);
         lv_obj_set_style_text_color(s_info_label, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
         lv_obj_set_style_text_align(s_info_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
         lv_obj_set_style_bg_color(s_info_label, lv_color_hex(0x000000), LV_PART_MAIN);

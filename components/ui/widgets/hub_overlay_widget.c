@@ -293,7 +293,7 @@ static lv_obj_t *make_btn(lv_obj_t *parent, const char *symbol, intptr_t id,
     lv_label_set_text(lbl, symbol);
     // 48 px glyph fits a >=72 px circle (inscribed square ~51 px); smaller
     // buttons (48-64 px) take the 28 px font — same ~0.55*size as before.
-    lv_obj_set_style_text_font(lbl, (size >= 72) ? &lv_font_montserrat_48
+    lv_obj_set_style_text_font(lbl, (size >= 72) ? &lv_font_montserrat_48_eu
                                                  : &lv_font_montserrat_28, LV_PART_MAIN);
     lv_obj_set_style_text_color(lbl, lv_color_white(), LV_PART_MAIN);
     lv_obj_center(lbl);

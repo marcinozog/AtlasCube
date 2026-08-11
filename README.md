@@ -422,7 +422,7 @@ esptool.py write_flash 0x0 AtlasCube.bin
 
 ### Custom fonts
 
-Fonts live in [`components/ui/fonts/`](components/ui/fonts/) as LVGL C arrays. The sizes are not a standard — they are chosen per panel. The `_NN` in a name is the `--size` (line height in px); the large `_72/_80/_96` files are **digit-only** (`--range 0x30-0x3A` plus one icon), while the `_NN_pl` files carry the full Polish character set.
+Fonts live in [`components/ui/fonts/`](components/ui/fonts/) as LVGL C arrays. The sizes are not a standard — they are chosen per panel. The `_NN` in a name is the `--size` (line height in px); the large `_72/_80/_96` files are **digit-only** (`--range 0x30-0x3A` plus one icon), while the `_NN_eu` files carry every Latin-script European alphabet: ASCII plus Latin-1 Supplement (`0x00A0-0x00FF`), Latin Extended-A (`0x0100-0x017F`) and the Romanian comma-below forms (`0x0218-0x021B`). Regenerate them all with [`scripts/gen_fonts.ps1`](scripts/gen_fonts.ps1).
 
 To add a new font (e.g. a larger `montserrat_120`):
 

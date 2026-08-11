@@ -24,7 +24,7 @@ static void timer_cb(lv_timer_t *t)
 void event_indicator_create(lv_obj_t *parent, int x, int y)
 {
     s_label = lv_label_create(parent);
-    lv_obj_set_style_text_font(s_label, &lv_font_montserrat_14_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(s_label, &lv_font_montserrat_14_eu, LV_PART_MAIN);
     lv_obj_set_pos(s_label, x, y);
     event_indicator_update();
 

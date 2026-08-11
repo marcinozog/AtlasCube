@@ -433,7 +433,7 @@ static void refresh_cb(lv_timer_t *t)
 
 static const lv_font_t *big_font_for_display(void)
 {
-    return (DISPLAY_WIDTH >= 400) ? &lv_font_montserrat_72 : &lv_font_montserrat_48;
+    return (DISPLAY_WIDTH >= 400) ? &lv_font_montserrat_72 : &lv_font_montserrat_48_eu;
 }
 
 static void build_widget(lv_obj_t *parent, int i)
@@ -452,14 +452,14 @@ static void build_widget(lv_obj_t *parent, int i)
 
     lv_obj_t *title = lv_label_create(card);
     lv_label_set_text(title, w->title);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_18_pl, LV_PART_MAIN);
+    lv_obj_set_style_text_font(title, &lv_font_montserrat_18_eu, LV_PART_MAIN);
     lv_obj_set_style_text_color(title, lv_color_hex(th->text_muted), LV_PART_MAIN);
 
     lv_obj_t *value = lv_label_create(card);
     lv_label_set_text(value, "—");
     const lv_font_t *font = (w->type == WIDGET_BIG_NUMBER)
                             ? big_font_for_display()
-                            : &lv_font_montserrat_18_pl;
+                            : &lv_font_montserrat_18_eu;
     lv_obj_set_style_text_font(value, font, LV_PART_MAIN);
     lv_obj_set_style_text_color(value, lv_color_hex(th->text_primary), LV_PART_MAIN);
 

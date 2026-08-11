@@ -5099,7 +5099,7 @@ async function resetProfile() {
 // placement — use the metrics below for that.
 function fontHeight(id) {
     if (!id) return 14;
-    const m = id.match(/_(\d+)(_pl)?$/);
+    const m = id.match(/_(\d+)(_eu)?$/);
     return m ? parseInt(m[1], 10) : 14;
 }
 

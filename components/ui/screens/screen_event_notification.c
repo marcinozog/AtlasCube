@@ -183,7 +183,7 @@ static void scr_create(lv_obj_t *parent)
         s_type_label = lv_label_create(col);
         lv_label_set_text(s_type_label,
             s_pending_info.type_label[0] ? s_pending_info.type_label : "EVENT");
-        lv_obj_set_style_text_font(s_type_label, &lv_font_montserrat_14_pl, LV_PART_MAIN);
+        lv_obj_set_style_text_font(s_type_label, &lv_font_montserrat_14_eu, LV_PART_MAIN);
         lv_obj_set_style_text_color(s_type_label, lv_color_hex(th->text_secondary), LV_PART_MAIN);
 
         // Title — width follows the column (and so the panel), not a fixed 300 px
@@ -193,7 +193,7 @@ static void scr_create(lv_obj_t *parent)
         lv_label_set_long_mode(s_title_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
         lv_obj_set_width(s_title_label, LV_PCT(100));
         lv_obj_set_style_text_align(s_title_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
-        lv_obj_set_style_text_font(s_title_label, &lv_font_montserrat_18_pl, LV_PART_MAIN);
+        lv_obj_set_style_text_font(s_title_label, &lv_font_montserrat_18_eu, LV_PART_MAIN);
         lv_obj_set_style_text_color(s_title_label, lv_color_hex(th->text_primary), LV_PART_MAIN);
 
         // Time
@@ -201,7 +201,7 @@ static void scr_create(lv_obj_t *parent)
         snprintf(buf, sizeof(buf), "%02d:%02d", s_pending_info.hour, s_pending_info.minute);
         s_time_label = lv_label_create(col);
         lv_label_set_text(s_time_label, buf);
-        lv_obj_set_style_text_font(s_time_label, &lv_font_montserrat_14_pl, LV_PART_MAIN);
+        lv_obj_set_style_text_font(s_time_label, &lv_font_montserrat_14_eu, LV_PART_MAIN);
         lv_obj_set_style_text_color(s_time_label, lv_color_hex(th->accent), LV_PART_MAIN);
     }
 
@@ -221,7 +221,7 @@ static void scr_create(lv_obj_t *parent)
     if (pos != EV_TEXT_NONE) {
         s_hint_label = lv_label_create(parent);
         lv_label_set_text(s_hint_label, LV_SYMBOL_OK "  press encoder");
-        lv_obj_set_style_text_font(s_hint_label, &lv_font_montserrat_12_pl, LV_PART_MAIN);
+        lv_obj_set_style_text_font(s_hint_label, &lv_font_montserrat_12_eu, LV_PART_MAIN);
         lv_obj_set_style_text_color(s_hint_label, lv_color_hex(th->text_muted), LV_PART_MAIN);
         lv_obj_align(s_hint_label, LV_ALIGN_BOTTOM_MID, 0, -8);
     }

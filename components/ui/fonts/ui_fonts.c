@@ -9,13 +9,13 @@ typedef struct {
 // Order matters only insofar as index = position in the UI dropdown.
 // To add a new font: 1) LV_FONT_DECLARE in ui_fonts.h, 2) entry here.
 static const font_entry_t k_fonts[] = {
-    { "montserrat_8_pl",  &lv_font_montserrat_8_pl  },
-    { "montserrat_10_pl", &lv_font_montserrat_10_pl },
-    { "montserrat_12_pl", &lv_font_montserrat_12_pl },
-    { "montserrat_14_pl", &lv_font_montserrat_14_pl },
-    { "montserrat_18_pl", &lv_font_montserrat_18_pl },
-    { "montserrat_24_pl", &lv_font_montserrat_24_pl },
-    { "montserrat_48",    &lv_font_montserrat_48    },
+    { "montserrat_8_eu",  &lv_font_montserrat_8_eu  },
+    { "montserrat_10_eu", &lv_font_montserrat_10_eu },
+    { "montserrat_12_eu", &lv_font_montserrat_12_eu },
+    { "montserrat_14_eu", &lv_font_montserrat_14_eu },
+    { "montserrat_18_eu", &lv_font_montserrat_18_eu },
+    { "montserrat_24_eu", &lv_font_montserrat_24_eu },
+    { "montserrat_48_eu", &lv_font_montserrat_48_eu },
     { "montserrat_72",    &lv_font_montserrat_72    },
     { "montserrat_80",    &lv_font_montserrat_80    },
     { "montserrat_96",    &lv_font_montserrat_96    },

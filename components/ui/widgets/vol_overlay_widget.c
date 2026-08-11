@@ -63,7 +63,7 @@ void vol_overlay_show(lv_obj_t *parent, int vol, bool large)
 
         s_label = lv_label_create(s_overlay);
         lv_obj_set_style_text_font(s_label,
-            large ? &lv_font_montserrat_72 : &lv_font_montserrat_12_pl,
+            large ? &lv_font_montserrat_72 : &lv_font_montserrat_12_eu,
             LV_PART_MAIN);
         lv_obj_set_style_text_color(s_label, lv_color_hex(th->accent), LV_PART_MAIN);
     }

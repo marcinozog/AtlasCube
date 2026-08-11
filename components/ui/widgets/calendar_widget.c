@@ -29,7 +29,7 @@ void calendar_widget_create(lv_obj_t *parent, int16_t x, int16_t y,
     lv_label_set_long_mode(s_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_width(s_label, w > 0 ? w : DISPLAY_WIDTH);
     lv_obj_set_style_text_font(s_label,
-        font ? font : &lv_font_montserrat_14_pl, LV_PART_MAIN);
+        font ? font : &lv_font_montserrat_14_eu, LV_PART_MAIN);
     lv_obj_set_style_text_align(s_label, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_pos(s_label, x, y);
 

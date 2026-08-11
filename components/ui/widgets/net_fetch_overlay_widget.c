@@ -87,7 +87,7 @@ void net_fetch_overlay_show(void)
         lv_obj_clear_flag(s_pill, LV_OBJ_FLAG_SCROLLABLE);
 
         s_label = lv_label_create(s_pill);
-        lv_obj_set_style_text_font(s_label, &lv_font_montserrat_18_pl, LV_PART_MAIN);
+        lv_obj_set_style_text_font(s_label, &lv_font_montserrat_18_eu, LV_PART_MAIN);
         lv_obj_set_style_text_color(s_label, lv_color_hex(th->accent), LV_PART_MAIN);
         // Narrow panels (240 px): wrap instead of overflowing the screen.
         lv_obj_set_style_max_width(s_label, LV_HOR_RES - 56, LV_PART_MAIN);

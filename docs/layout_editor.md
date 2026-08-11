@@ -83,13 +83,13 @@ Fonts are pointers — they can't be serialized directly. So we keep a
 
 ```c
 static const font_entry_t k_fonts[] = {
-    { "montserrat_12_pl", &lv_font_montserrat_12_pl },
-    { "montserrat_14_pl", &lv_font_montserrat_14_pl },
+    { "montserrat_12_eu", &lv_font_montserrat_12_eu },
+    { "montserrat_14_eu", &lv_font_montserrat_14_eu },
     // ...
 };
 ```
 
-JSON stores strings (`"montserrat_14_pl"`), `ui_font_by_id()` maps
+JSON stores strings (`"montserrat_14_eu"`), `ui_font_by_id()` maps
 string → `lv_font_t*`, `ui_font_id()` does the reverse.
 
 **To add a font:** add `LV_FONT_DECLARE(...)` in `ui_fonts.h`, append a
@@ -108,13 +108,13 @@ holding the struct field names.
     "clock_strip_station_w": 296, "clock_strip_title_w": 296,
     "clock_strip_station_x": 0, "clock_strip_station_y": 8,
     "clock_strip_title_x": 0, "clock_strip_title_y": 32,
-    "clock_strip_station_font": "montserrat_14_pl",
-    "clock_strip_title_font": "montserrat_12_pl",
+    "clock_strip_station_font": "montserrat_14_eu",
+    "clock_strip_title_font": "montserrat_12_eu",
     "clock_time_x": 40, "clock_time_y": 25,
     "clock_time_font": "montserrat_96",
     "clock_show_time": true,
     "clock_date_x": 80, "clock_date_y": 130,
-    "clock_date_font": "montserrat_18_pl",
+    "clock_date_font": "montserrat_18_eu",
     "clock_show_date": true,
     "clock_show_strip": true,
     "clock_show_mode_indicator": true,
@@ -210,7 +210,7 @@ shared `state.clock` object.
 
 Time/date labels are rendered with a placeholder ("88:88",
 "Mon 2026-05-01") sized roughly to the font name — `fontHeight()` parses
-the `_NN[_pl]` suffix from the font id (e.g. `montserrat_96` → 96 px).
+the `_NN[_eu]` suffix from the font id (e.g. `montserrat_96` → 96 px).
 This is just a preview — the actual width on the LCD depends on
 LVGL font metrics.
 
