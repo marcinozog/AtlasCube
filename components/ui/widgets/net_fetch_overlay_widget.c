@@ -7,9 +7,8 @@
 
 #define FAIL_HIDE_MS 3000
 #define PROGRESS_MS  500
-#define BACKDROP_OPA LV_OPA_90   // wallpaper stays visible, but only just
 
-static lv_obj_t   *s_backdrop = NULL;   // dims the whole screen behind the pill
+static lv_obj_t   *s_backdrop = NULL;   // covers the whole screen behind the pill
 static lv_obj_t   *s_pill  = NULL;
 static lv_obj_t   *s_label = NULL;
 static lv_timer_t *s_timer = NULL;   // one-shot for the fail message; exists only while it lingers
@@ -77,16 +76,16 @@ void net_fetch_overlay_show(void)
         s_timer = NULL;
     }
 
-    // A translucent full-screen wash so the message reads over any wallpaper
-    // instead of floating on top of the widgets. The alpha costs a reblend of
-    // everything under it on every frame, which is affordable only because the
-    // radio (and with it the VU meter) is stopped for the whole batch.
+    // A full-screen plate in the theme background colour: the message reads on
+    // a plain surface instead of floating over the wallpaper and the widgets.
+    // Opaque, not translucent — an alpha wash would force a per-frame reblend
+    // of everything under it (the VU lesson).
     if (!s_backdrop) {
         s_backdrop = lv_obj_create(lv_layer_top());
         lv_obj_remove_style_all(s_backdrop);
         lv_obj_set_size(s_backdrop, LV_PCT(100), LV_PCT(100));
         lv_obj_set_style_bg_color(s_backdrop, lv_color_hex(th->bg_primary), LV_PART_MAIN);
-        lv_obj_set_style_bg_opa(s_backdrop, BACKDROP_OPA, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(s_backdrop, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_clear_flag(s_backdrop, LV_OBJ_FLAG_SCROLLABLE);
         // Covers the panel edge to edge — must not swallow taps meant for the
         // screen underneath.
@@ -97,8 +96,7 @@ void net_fetch_overlay_show(void)
         s_pill = lv_obj_create(lv_layer_top());
         lv_obj_remove_style_all(s_pill);
         lv_obj_set_style_bg_color(s_pill, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
-        // The pill itself stays solid: the text must not pick up the wallpaper
-        // showing through the backdrop.
+        // Solid too, so the pill still reads as a card on the backdrop.
         lv_obj_set_style_bg_opa(s_pill, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_set_style_border_color(s_pill, lv_color_hex(th->accent), LV_PART_MAIN);
         lv_obj_set_style_border_width(s_pill, 1, LV_PART_MAIN);

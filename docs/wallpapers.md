@@ -79,9 +79,9 @@ The setting is **shared by all slots**. With it off, the web UI shows a
 warning strip next to every slot control, with a one-click
 **Fetch after every boot** button — that is the fix.
 
-All slots are refreshed in one batch, and the device dims the screen and shows
-a pill ("Updating wallpapers 2/5") while it runs. The radio starts after the
-batch finishes rather than being cut off mid-song.
+All slots are refreshed in one batch, and the device covers the screen with a
+plain background and a pill ("Updating wallpapers 2/5") while it runs. The
+radio starts after the batch finishes rather than being cut off mid-song.
 
 ## Route C — a file from the SD card
 
