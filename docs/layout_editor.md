@@ -302,6 +302,11 @@ They last until the next reboot or an explicit background change
 boot. A screen set to an SD file keeps it; a screen set to Internet
 always shows its slot.
 
+**Clear slot** on the Internet tab empties the selected one for good: the
+stored URL goes with the settings patch and the fetched image with
+`POST /api/wallpaper/clear?slot=N`, so the screens using it fall back to
+their own background right away instead of at the next reboot.
+
 The boot refresh fetches every configured slot in **one** batch, stopping
 the radio once for the whole run rather than once per slot — the on-screen
 pill counts the slots ("Updating wallpapers 2/5") so the silence is
@@ -397,7 +402,8 @@ tabs — it used to be in Settings → Display → Wallpapers, now removed:
   (`POST /api/wallpaper/save?slot=N`) and a thumbnail
   (`GET /api/wallpaper/image?slot=N`, shown on tab open and refreshed
   after a fetch). *Refresh all slots* posts `{all:true}` — the same batch
-  the boot fetch runs. The auto-refresh schedule
+  the boot fetch runs; *Clear slot* empties the selected one (URL plus
+  `POST /api/wallpaper/clear?slot=N` for the image). The auto-refresh schedule
   (`wallpaper_fetch_mode` / `_hour` / `_min`) is shared by every slot;
   the URLs persist as `display.wallpaper_urls` (array, index = slot).
   See `net_wallpaper.c` for the fetch/decode path.

@@ -3493,6 +3493,31 @@ function fetchAllNetWallpapers() {
     }).catch(() => { st.textContent = 'request failed'; });
 }
 
+// Empty the selected slot: the stored URL goes with the settings patch, the
+// fetched image with /api/wallpaper/clear — without the second half the picture
+// would keep outranking the screens' own backgrounds until the next reboot.
+function clearNetWpSlot() {
+    const n = netWpCurSlot;
+    if (!confirm('Clear slot ' + (n + 1) + '? The stored URL and the fetched image are dropped.'))
+        return;
+    const st = document.getElementById('netWpStatus');
+    document.getElementById('netWpUrl').value = '';
+    netWpUrls[n] = '';
+    syncNetWpPreset();
+    postDisplay({ wallpaper_urls: netWpUrls.slice(0, netWpSlotCount) });
+    st.textContent = 'clearing…';
+    fetch('/api/wallpaper/clear?slot=' + n, { method: 'POST' })
+        .then(r => r.json())
+        .then(j => {
+            st.textContent = (j.result === 'ok') ? 'cleared' : (j.result || 'clear failed');
+            buildNetWpSlotSelect();     // the label picks up the "(empty)" suffix
+            const img = document.getElementById('netWpPreviewImg');
+            if (img) img.style.display = 'none';
+            loadWallpaperPreview().then(renderSvg);   // screens fall back to their own background
+        })
+        .catch(() => { st.textContent = 'request failed'; });
+}
+
 // Persist the fetched wallpaper on the SD card so it shows up in the per-screen
 // SD picker. Background settings are untouched — this only collects the image.
 function saveNetWallpaper() {

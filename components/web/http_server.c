@@ -3754,6 +3754,20 @@ static esp_err_t api_wallpaper_save_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+// POST /api/wallpaper/clear?slot=N — drop that slot's fetched image so the
+// screens using it fall back to their configured background. Only the RAM image
+// goes; the slot's URL lives in the settings and is cleared separately by the
+// caller that wants the slot emptied for good.
+static esp_err_t api_wallpaper_clear_handler(httpd_req_t *req)
+{
+    net_wallpaper_dismiss(wallpaper_slot_query(req));
+    ui_event_t ev = { .type = UI_EVT_BG_CHANGED };   // the free itself happens there
+    ui_event_send(&ev);
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"result\":\"ok\"}");
+    return ESP_OK;
+}
+
 static esp_err_t api_restart_handler(httpd_req_t *req)
 {
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
@@ -4182,6 +4196,13 @@ void http_server_start(void)
         .handler = api_wallpaper_save_handler,
     };
     httpd_register_uri_handler(server, &api_wallpaper_save);
+
+    httpd_uri_t api_wallpaper_clear = {
+        .uri     = "/api/wallpaper/clear",
+        .method  = HTTP_POST,
+        .handler = api_wallpaper_clear_handler,
+    };
+    httpd_register_uri_handler(server, &api_wallpaper_clear);
 
     httpd_uri_t api_theme_get = {
         .uri     = "/api/theme",
