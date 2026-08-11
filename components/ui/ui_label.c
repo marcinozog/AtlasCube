@@ -1,6 +1,7 @@
 #include "ui_label.h"
 #include "theme.h"
 #include "ui_profile.h"   // UI_PROFILE_MONO_* selection (via defines.h)
+#include <string.h>
 
 typedef struct {
     int16_t x;
@@ -66,7 +67,34 @@ void ui_label_set_text(lv_obj_t *lbl, const char *txt)
 {
     if (!lbl) return;
     txt = txt ? txt : "";
-    lv_label_set_text(lbl, txt);
+
+    // Skip an unchanged string: lv_label_set_text() restarts the scroll
+    // animation, so a label refreshed on every state change would otherwise
+    // stay stuck at the first frame of its scroll.
+    if (strcmp(lv_label_get_text(lbl), txt) != 0) lv_label_set_text(lbl, txt);
+
     if (txt[0]) lv_obj_clear_flag(lbl, LV_OBJ_FLAG_HIDDEN);
     else        lv_obj_add_flag(lbl, LV_OBJ_FLAG_HIDDEN);
+}
+
+void ui_label_set_text_boxed(lv_obj_t *lbl, const char *txt, int box_w)
+{
+    if (!lbl) return;
+    txt = txt ? txt : "";
+    if (box_w < 8) box_w = 8;
+
+    if (strcmp(lv_label_get_text(lbl), txt) != 0) {
+        // Size the label to its text, capped at the box width — the anchored
+        // label re-centers itself on every width change, so the box centre stays
+        // put. The scrim plate's horizontal padding counts into the object width,
+        // so add it on top: otherwise the content area ends up narrower than the
+        // text and SCROLL_CIRCULAR kicks in even for text that fits the box.
+        lv_point_t size;
+        const lv_font_t *font = lv_obj_get_style_text_font(lbl, LV_PART_MAIN);
+        lv_text_get_size(&size, txt, font, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+        lv_coord_t pad = lv_obj_get_style_pad_left(lbl, LV_PART_MAIN)
+                       + lv_obj_get_style_pad_right(lbl, LV_PART_MAIN);
+        lv_obj_set_width(lbl, LV_CLAMP(1, size.x + pad, box_w + pad));
+    }
+    ui_label_set_text(lbl, txt);
 }

@@ -307,6 +307,7 @@ const SD_FIELDS = [
     { key: 'sd_show_folder', label: 'Show folder',     type: 'bool'   },
     { key: 'sd_folder_x',    label: 'Folder X',        type: 'number' },
     { key: 'sd_folder_y',    label: 'Folder Y',        type: 'number' },
+    { key: 'sd_folder_w',    label: 'Folder W',        type: 'number' },
     { key: 'sd_folder_font', label: 'Folder font',     type: 'font'   },
     { key: 'sd_folder_color', label: 'Folder colour',  type: 'color'  },
 
@@ -575,7 +576,7 @@ const FORM_GROUPS = {
     sd: [
         { heading: 'Text & labels' },
         { title: 'Track title', fields: ['sd_title_x', 'sd_title_y', 'sd_title_w', 'sd_title_font', 'sd_title_color'] },
-        { title: 'Folder', enabledBy: 'sd_show_folder', fields: ['sd_show_folder', 'sd_folder_x', 'sd_folder_y', 'sd_folder_font', 'sd_folder_color'] },
+        { title: 'Folder', enabledBy: 'sd_show_folder', fields: ['sd_show_folder', 'sd_folder_x', 'sd_folder_y', 'sd_folder_w', 'sd_folder_font', 'sd_folder_color'] },
         { title: 'Weather', enabledBy: 'sd_show_weather', fields: ['sd_show_weather', 'sd_weather_x', 'sd_weather_y', 'sd_weather_w', 'sd_weather_font'] },
         { title: 'Playback info', fields: ['sd_info_font', 'sd_info_color'], subgroups: [
             { title: 'Volume', enabledBy: 'sd_volume_show', fields: ['sd_volume_show', 'sd_volume_x', 'sd_volume_y'] },
@@ -4387,9 +4388,16 @@ function renderSd(svg) {
         textFill: s.sd_title_color ? numToHex(s.sd_title_color) : null,
     });
     if (s.sd_show_folder) {
-        drawLabel(svg, s.sd_folder_x, s.sd_folder_y, s.sd_folder_font, 'Folder   3/12',
-                  'folder', { x: 'sd_folder_x', y: 'sd_folder_y' }, true,
-                  s.sd_folder_color ? numToHex(s.sd_folder_color) : null);
+        // Folder — fixed-width box like the title above it.
+        const sdFolderFh = fontHeight(s.sd_folder_font);
+        drawFreeElement(svg, {
+            x: s.sd_folder_x, y: s.sd_folder_y, w: s.sd_folder_w, h: sdFolderFh,
+            label: 'folder', cls: 'label-rect',
+            fields: { x: 'sd_folder_x', y: 'sd_folder_y', w: 'sd_folder_w' },
+            font: s.sd_folder_font,
+            text: 'Folder   3/12', textSize: sdFolderFh,
+            textFill: s.sd_folder_color ? numToHex(s.sd_folder_color) : null,
+        });
     }
     // Info row split — volume, status flags and the counter are independent
     // labels sharing one font and one colour override.

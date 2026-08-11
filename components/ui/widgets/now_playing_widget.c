@@ -73,36 +73,18 @@ void now_playing_widget_destroy(void)
     ESP_LOGI(TAG, "Destroyed");
 }
 
-// Size the label to its text, capped at the box width — the anchored label
-// re-centers itself on every width change, so the box centre stays put.
-// The scrim plate's horizontal padding counts into the object width, so add
-// it on top: otherwise the content area ends up narrower than the text and
-// SCROLL_CIRCULAR kicks in even for text that fits the box.
-static void set_single_line_text(lv_obj_t *label, const char *text, int box_w)
-{
-    lv_point_t size;
-    const lv_font_t *font = lv_obj_get_style_text_font(label, LV_PART_MAIN);
-    lv_text_get_size(&size, text, font, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
-    lv_coord_t pad = lv_obj_get_style_pad_left(label, LV_PART_MAIN)
-                   + lv_obj_get_style_pad_right(label, LV_PART_MAIN);
-    lv_obj_set_width(label, LV_CLAMP(1, size.x + pad, box_w + pad));
-    lv_label_set_text(label, text);
-}
-
 void now_playing_widget_update(void)
 {
     if (!s_label_station) return;
     app_state_t *s = app_state_get();
-    set_single_line_text(s_label_station,
+    ui_label_set_text_boxed(s_label_station,
         s->station_name[0] ? s->station_name : "Atlas Radio", s_station_w);
     // Show the title only while radio is the active source — otherwise the
     // shared app_state.title holds the SD track and would leak onto this screen.
-    // Hide (not just empty) the title label so no empty plate shows.
+    // An empty string hides the label, so no empty plate shows.
     if (s_label_title) {
         bool has_title = !s->sd_active && s->title[0];
-        set_single_line_text(s_label_title, has_title ? s->title : "", s_title_w);
-        if (has_title) lv_obj_clear_flag(s_label_title, LV_OBJ_FLAG_HIDDEN);
-        else           lv_obj_add_flag(s_label_title, LV_OBJ_FLAG_HIDDEN);
+        ui_label_set_text_boxed(s_label_title, has_title ? s->title : "", s_title_w);
     }
 }
 

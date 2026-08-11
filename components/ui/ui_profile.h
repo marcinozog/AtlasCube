@@ -279,16 +279,17 @@ typedef struct {
     char             radio_wallpaper[128];      // see clock_wallpaper
 
     // screen_sd_player — absolute LCD coordinates (top-left origin). The title
-    // is a fixed-width box (text centered inside, capped at the box width, like
-    // bt_title); the other text rows are horizontally centered (Y only).
-    // Mirrors screen_radio.
+    // and the folder row are fixed-width boxes (text centered inside, capped at
+    // the box width, like bt_title); the other text rows are horizontally
+    // centered (Y only). Mirrors screen_radio.
     int16_t          sd_title_x;               // track title (ID3 / file name) box: left edge
     int16_t          sd_title_y;
     int16_t          sd_title_w;               // box width
     const lv_font_t *sd_title_font;
     uint32_t         sd_title_color;           // track-title colour, 0 = inherit theme text_primary
-    int16_t          sd_folder_x;              // "<folder>   idx/count" (center-anchored)
+    int16_t          sd_folder_x;              // "<folder>   idx/count" box: left edge
     int16_t          sd_folder_y;
+    int16_t          sd_folder_w;              // box width
     const lv_font_t *sd_folder_font;
     uint32_t         sd_folder_color;          // folder/index colour, 0 = inherit theme accent
     bool             sd_show_folder;           // folder/index row

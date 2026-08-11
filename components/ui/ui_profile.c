@@ -105,8 +105,9 @@ static const ui_profile_t k_defaults = {
     .sd_title_y                = 35,
     .sd_title_w                = 108,
     .sd_title_font             = &lv_font_montserrat_14_eu,
-    .sd_folder_x               = DISPLAY_WIDTH / 2,  // centered
+    .sd_folder_x               = 10,    // full width minus margins
     .sd_folder_y               = 16,
+    .sd_folder_w               = DISPLAY_WIDTH - 20,
     .sd_folder_font            = &lv_font_montserrat_12_eu,
     // Only volume fits the 128px mono strip — status flags off by default.
     .sd_volume_show            = true,
@@ -345,8 +346,9 @@ static const ui_profile_t k_defaults = {
     .sd_title_y                = 1,
     .sd_title_w                = 236,
     .sd_title_font             = &lv_font_montserrat_14_eu,
-    .sd_folder_x               = DISPLAY_WIDTH / 2,  // centered
+    .sd_folder_x               = 10,    // full width minus margins
     .sd_folder_y               = 44,
+    .sd_folder_w               = DISPLAY_WIDTH - 20,
     .sd_folder_font            = &lv_font_montserrat_12_eu,
     .sd_volume_show            = true,
     .sd_volume_x               = 64,
@@ -634,8 +636,9 @@ static const ui_profile_t k_defaults = {
     .sd_title_y                = 60,
     .sd_title_w                = 220,
     .sd_title_font             = &lv_font_montserrat_14_eu,
-    .sd_folder_x               = DISPLAY_WIDTH / 2,  // centered
+    .sd_folder_x               = 10,    // full width minus margins
     .sd_folder_y               = 216,
+    .sd_folder_w               = DISPLAY_WIDTH - 20,
     .sd_folder_font            = &lv_font_montserrat_14_eu,
     // Info row split; y raised so the "elapsed/total" line fits above the VU.
     .sd_volume_show            = true,
@@ -988,8 +991,9 @@ static const ui_profile_t k_defaults = {
     .sd_title_y                = 64,
     .sd_title_w                = 300,
     .sd_title_font             = &lv_font_montserrat_14_eu,
-    .sd_folder_x               = DISPLAY_WIDTH / 2,  // centered
+    .sd_folder_x               = 10,    // full width minus margins
     .sd_folder_y               = 160,
+    .sd_folder_w               = DISPLAY_WIDTH - 20,
     .sd_folder_font            = &lv_font_montserrat_14_eu,
     // Info row split; y raised so the "elapsed/total" line fits above the VU.
     .sd_volume_show            = true,
@@ -1330,8 +1334,9 @@ static const ui_profile_t k_defaults = {
     .sd_title_y                = 85,
     .sd_title_w                = 460,
     .sd_title_font             = &lv_font_montserrat_14_eu,
-    .sd_folder_x               = DISPLAY_WIDTH / 2,  // centered
+    .sd_folder_x               = 10,    // full width minus margins
     .sd_folder_y               = 226,
+    .sd_folder_w               = DISPLAY_WIDTH - 20,
     .sd_folder_font            = &lv_font_montserrat_14_eu,
     // Info row split; y raised so the "elapsed/total" line fits above the VU.
     .sd_volume_show            = true,
@@ -2086,6 +2091,15 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_u32 (obj, "sd_title_color",            &p->sd_title_color);
     load_i16 (obj, "sd_folder_x",               &p->sd_folder_x);
     load_i16 (obj, "sd_folder_y",               &p->sd_folder_y);
+    // sd_folder_x used to be the label's centre; it is now the left edge of a
+    // sd_folder_w-wide box, like sd_title. A layout saved before the change has
+    // no sd_folder_w — convert its centre to a left edge so the row does not
+    // jump to the right after an update.
+    if (cJSON_GetObjectItem(obj, "sd_folder_w")) {
+        load_i16(obj, "sd_folder_w",            &p->sd_folder_w);
+    } else if (cJSON_GetObjectItem(obj, "sd_folder_x")) {
+        p->sd_folder_x -= p->sd_folder_w / 2;
+    }
     load_font(obj, "sd_folder_font",            &p->sd_folder_font);
     load_u32 (obj, "sd_folder_color",           &p->sd_folder_color);
     load_bool(obj, "sd_volume_show",            &p->sd_volume_show);
@@ -2204,6 +2218,7 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_u32 (o, "sd_title_color",            p->sd_title_color);
     add_i16 (o, "sd_folder_x",               p->sd_folder_x);
     add_i16 (o, "sd_folder_y",               p->sd_folder_y);
+    add_i16 (o, "sd_folder_w",               p->sd_folder_w);
     add_font(o, "sd_folder_font",            p->sd_folder_font);
     add_u32 (o, "sd_folder_color",           p->sd_folder_color);
     add_bool(o, "sd_volume_show",            p->sd_volume_show);

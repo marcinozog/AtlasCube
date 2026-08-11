@@ -37,6 +37,10 @@
 
 static const char *TAG = "SCR_SD";
 
+// Box width for the rows that have no ui_profile width of their own (volume,
+// status flags, playback counter) — full panel minus the side margins.
+#define SD_INFO_BOX_W  (DISPLAY_WIDTH - 20)
+
 static lv_obj_t   *s_root   = NULL;
 static lv_obj_t   *s_title  = NULL;   // track title (ID3 or file name)
 static lv_obj_t   *s_folder = NULL;   // "<folder>   idx/count"
@@ -71,7 +75,11 @@ static void bar_hide(void)
 static void progress_update(void)
 {
     if (!s_time && !s_bar) return;
-    if (!app_state_get()->sd_active) { ui_label_set_text(s_time, ""); bar_hide(); return; }
+    if (!app_state_get()->sd_active) {
+        ui_label_set_text_boxed(s_time, "", SD_INFO_BOX_W);
+        bar_hide();
+        return;
+    }
 
     uint32_t pos = sd_player_position_ms();
     uint32_t dur = sd_player_duration_ms();
@@ -84,7 +92,7 @@ static void progress_update(void)
     } else {
         snprintf(out, sizeof(out), "%s", p);
     }
-    ui_label_set_text(s_time, out);
+    ui_label_set_text_boxed(s_time, out, SD_INFO_BOX_W);
 
     // The bar needs a known length; formats without one (VBR w/o Xing, streams)
     // keep it hidden and show the elapsed counter alone.
@@ -113,7 +121,8 @@ static const char *repeat_str(int r)
 static void refresh_from_state(void)
 {
     if (!s_title) return;
-    app_state_t *s = app_state_get();
+    app_state_t        *s = app_state_get();
+    const ui_profile_t *p = ui_profile_get();
 
     animated_wheels_widget_set_running(s->sd_active && !s->sd_paused);
 
@@ -124,21 +133,24 @@ static void refresh_from_state(void)
     if (s->sd_active) {
         t = s->title[0] ? s->title : (s->sd_track[0] ? s->sd_track : "—");
     }
-    ui_label_set_text(s_title, t);
+    ui_label_set_text_boxed(s_title, t, p->sd_title_w);
 
     if (s_folder) {
+        char folder[sizeof(s->sd_dir) + 16];
         if (s->sd_active && s->sd_count > 0) {
-            lv_label_set_text_fmt(s_folder, "%s   %d/%d",
-                                  basename_of(s->sd_dir), s->sd_index + 1, s->sd_count);
+            snprintf(folder, sizeof(folder), "%s   %d/%d",
+                     basename_of(s->sd_dir), s->sd_index + 1, s->sd_count);
         } else {
-            lv_label_set_text(s_folder, s->sd_active ? basename_of(s->sd_dir) : "Nothing playing");
+            snprintf(folder, sizeof(folder), "%s",
+                     s->sd_active ? basename_of(s->sd_dir) : "Nothing playing");
         }
+        ui_label_set_text_boxed(s_folder, folder, p->sd_folder_w);
     }
 
     if (s_volume) {
         char vol[16];
         snprintf(vol, sizeof(vol), "VOL: %d%%", s->volume);
-        lv_label_set_text(s_volume, vol);
+        ui_label_set_text_boxed(s_volume, vol, SD_INFO_BOX_W);
     }
 
     if (s_status) {
@@ -152,7 +164,7 @@ static void refresh_from_state(void)
         const char *r = repeat_str(s->sd_repeat);
         if (r[0])          n += snprintf(flags + n, sizeof(flags) - n, "%s%s",
                                          n ? "   " : "", r);
-        ui_label_set_text(s_status, flags);
+        ui_label_set_text_boxed(s_status, flags, SD_INFO_BOX_W);
     }
 
     progress_update();            // snap the counter on track/source change
@@ -163,15 +175,15 @@ static void refresh_from_state(void)
 }
 
 // Center-anchored, content-hugging label (so the label_bg plate tracks the
-// text, not the full width) — mirrors the home clock labels. Long text is
-// capped at max_w (title uses LONG_DOT to ellipsize at the cap).
+// text, not the full width) — mirrors the home clock labels. The width is set
+// per update by ui_label_set_text_boxed(): text that fits its box sits still,
+// overlong text scrolls inside the box instead of wrapping to a second line.
 static lv_obj_t *make_centered_label(lv_obj_t *parent, const lv_font_t *font,
-                                     uint32_t color, int16_t x, int16_t y,
-                                     int16_t max_w)
+                                     uint32_t color, int16_t x, int16_t y)
 {
     lv_obj_t *lbl = ui_anchored_label(parent, x, y, UI_ALIGN_CENTER);
+    lv_label_set_long_mode(lbl, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_text(lbl, "");
-    lv_obj_set_style_max_width(lbl, max_w, LV_PART_MAIN);
     lv_obj_set_style_text_align(lbl, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN);
     lv_obj_set_style_text_font(lbl, font, LV_PART_MAIN);
     lv_obj_set_style_text_color(lbl, lv_color_hex(color), LV_PART_MAIN);
@@ -198,31 +210,27 @@ static void sd_player_screen_create(lv_obj_t *parent)
                                       p->sd_cassette_r_x, p->sd_cassette_r_y, p->sd_cassette_r_size);
     }
 
-    // Title is a fixed-width box (like bt_title): text centered on the box
-    // centre and capped at the box width, so it never spills off the box.
+    // Title and folder are fixed-width boxes (like bt_title): text centered on
+    // the box centre and capped at the box width, so neither spills off its box.
     s_title = make_centered_label(parent, p->sd_title_font,
                                   p->sd_title_color ? p->sd_title_color : th->text_primary,
-                                  p->sd_title_x + p->sd_title_w / 2, p->sd_title_y,
-                                  p->sd_title_w);
+                                  p->sd_title_x + p->sd_title_w / 2, p->sd_title_y);
 
     if (p->sd_show_folder) {
         s_folder = make_centered_label(parent, p->sd_folder_font,
                                        p->sd_folder_color ? p->sd_folder_color : th->accent,
-                                       p->sd_folder_x, p->sd_folder_y,
-                                       DISPLAY_WIDTH - 20);
+                                       p->sd_folder_x + p->sd_folder_w / 2, p->sd_folder_y);
     }
     // Info row split: volume and status flags are independent elements.
     if (p->sd_volume_show) {
         s_volume = make_centered_label(parent, p->sd_info_font,
                                        p->sd_info_color ? p->sd_info_color : th->text_muted,
-                                       p->sd_volume_x, p->sd_volume_y,
-                                       DISPLAY_WIDTH - 20);
+                                       p->sd_volume_x, p->sd_volume_y);
     }
     if (p->sd_status_show) {
         s_status = make_centered_label(parent, p->sd_info_font,
                                        p->sd_info_color ? p->sd_info_color : th->text_muted,
-                                       p->sd_status_x, p->sd_status_y,
-                                       DISPLAY_WIDTH - 20);
+                                       p->sd_status_x, p->sd_status_y);
     }
 
     // Playback counter at its own profile-driven position. Skipped on panels
@@ -230,8 +238,7 @@ static void sd_player_screen_create(lv_obj_t *parent)
     if (p->sd_show_time) {
         s_time = make_centered_label(parent, p->sd_info_font,
                                      p->sd_info_color ? p->sd_info_color : th->text_muted,
-                                     p->sd_time_x, p->sd_time_y,
-                                     DISPLAY_WIDTH - 20);
+                                     p->sd_time_x, p->sd_time_y);
     }
 
     // Read-only progress bar, an independent element at its own profile-driven

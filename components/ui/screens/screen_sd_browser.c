@@ -3,6 +3,7 @@
 #include "ui_screen.h"
 #include "ui_manager.h"
 #include "ui_list_widget.h"
+#include "ui_label.h"
 #include "sd_player.h"
 #include "app_state.h"
 #include "theme.h"
@@ -29,6 +30,7 @@ static const char *TAG = "SCR_SD_BR";
 static lv_obj_t *s_root         = NULL;
 static lv_obj_t *s_list         = NULL;   // ui_list_widget viewport
 static lv_obj_t *s_header_label = NULL;
+static int       s_header_w     = 0;     // space left for the header text beside the hint
 static char      s_dir[SD_BR_DIR_MAX];   // current browse dir (persists between visits)
 static int       s_count        = 0;     // number of rows
 static ui_screen_id_t s_return  = SCREEN_SD;   // where to go after pick/exit
@@ -119,8 +121,7 @@ static void populate(void)
     if (!s_entries) {
         ESP_LOGW(TAG, "No entries / alloc failed for %s", s_dir);
         ui_list_set_count(0);
-        if (s_header_label)
-            lv_label_set_text(s_header_label, "SD: (empty)");
+        ui_label_set_text_boxed(s_header_label, "SD: (empty)", s_header_w);
         return;
     }
 
@@ -150,9 +151,10 @@ static void populate(void)
     // Resets the scroll to the top and re-binds every row from s_entries.
     ui_list_set_count(s_count);
 
-    if (s_header_label)
-        lv_label_set_text_fmt(s_header_label, "SD: %s",
-                              basename_of(s_dir)[0] ? basename_of(s_dir) : "music");
+    char header[SD_BR_DIR_MAX + 8];
+    snprintf(header, sizeof(header), "SD: %s",
+             basename_of(s_dir)[0] ? basename_of(s_dir) : "music");
+    ui_label_set_text_boxed(s_header_label, header, s_header_w);
 
     ESP_LOGI(TAG, "%s → %d folders, %d tracks", s_dir, nf, nt);
 }
@@ -222,19 +224,29 @@ static void sd_browser_create(lv_obj_t *parent)
         lv_obj_set_style_pad_all(header, 0, LV_PART_MAIN);
         lv_obj_remove_flag(header, LV_OBJ_FLAG_SCROLLABLE);
 
-        s_header_label = lv_label_create(header);
-        lv_label_set_text(s_header_label, "SD");
-        lv_obj_set_style_text_font(s_header_label, p->browser_header_font, LV_PART_MAIN);
-        lv_obj_set_style_text_color(s_header_label, lv_color_hex(th->accent), LV_PART_MAIN);
-        lv_obj_align(s_header_label, LV_ALIGN_LEFT_MID, p->browser_label_x, p->browser_label_y);
-
+        // The hint comes first so its measured width can be subtracted from the
+        // space left for the folder name.
+        int hint_w = 0;
         if (!p->browser_hint_hide) {
             lv_obj_t *hint = lv_label_create(header);
             lv_label_set_text(hint, "press - open   swipe<>/long - back");
             lv_obj_set_style_text_font(hint, p->browser_row_font, LV_PART_MAIN);
             lv_obj_set_style_text_color(hint, lv_color_hex(th->text_muted), LV_PART_MAIN);
             lv_obj_align(hint, LV_ALIGN_RIGHT_MID, p->browser_hint_x, p->browser_hint_y);
+            lv_obj_update_layout(hint);
+            hint_w = lv_obj_get_width(hint) - p->browser_hint_x;   // hint_x is a left shift
         }
+
+        s_header_label = lv_label_create(header);
+        lv_label_set_text(s_header_label, "SD");
+        lv_label_set_long_mode(s_header_label, LV_LABEL_LONG_SCROLL_CIRCULAR);
+        // A long folder name scrolls in the space left of the hint instead of
+        // wrapping into a second (clipped) line running under it.
+        s_header_w = DISPLAY_WIDTH - p->browser_label_x - hint_w - 8;
+        if (s_header_w < 24) s_header_w = 24;
+        lv_obj_set_style_text_font(s_header_label, p->browser_header_font, LV_PART_MAIN);
+        lv_obj_set_style_text_color(s_header_label, lv_color_hex(th->accent), LV_PART_MAIN);
+        lv_obj_align(s_header_label, LV_ALIGN_LEFT_MID, p->browser_label_x, p->browser_label_y);
     }
 
     // List — populate() fills in the count once the folder has been scanned.
@@ -267,6 +279,7 @@ static void sd_browser_destroy(void)
     s_root         = NULL;
     s_list         = NULL;
     s_header_label = NULL;
+    s_header_w     = 0;
     ESP_LOGI(TAG, "Destroyed");
 }
 

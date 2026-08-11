@@ -33,7 +33,19 @@ void ui_label_scrim(lv_obj_t *obj, int opa_pct);
 // Set a label's text, hiding the whole label when the text is empty — so a
 // scrim plate is never left showing behind nothing. Use for fields that go
 // blank (track title, playback time, audio info) instead of lv_label_set_text.
+// Re-setting the same string is a no-op, so a periodic refresh does not restart
+// a scrolling label's animation.
 void ui_label_set_text(lv_obj_t *lbl, const char *txt);
+
+// Same, for a single-line label that must stay inside a `box_w`-wide box: the
+// label hugs its text, capped at the box width. Pair with a label created as
+//
+//     lbl = ui_anchored_label(parent, box_x + box_w / 2, y, UI_ALIGN_CENTER);
+//     lv_label_set_long_mode(lbl, LV_LABEL_LONG_SCROLL_CIRCULAR);
+//
+// so text that fits sits still and only overlong text scrolls — instead of
+// wrapping into a second line.
+void ui_label_set_text_boxed(lv_obj_t *lbl, const char *txt, int box_w);
 
 #ifdef __cplusplus
 }

@@ -159,7 +159,9 @@ static void strip_update(void)
         station = s->station_name[0] ? s->station_name : "Atlas Radio";
         title   = s->title;
     }
-    lv_label_set_text(s_strip_station, station);
+    // ui_label_set_text() skips an unchanged string — without that, every state
+    // change would restart the scroll animation of an overlong station/title.
+    ui_label_set_text(s_strip_station, station);
     ui_label_set_text(s_strip_title, title);
 }
 
