@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AtlasCube — Radio screen preview</title>
+<link rel="icon" href="favicon.ico">
+<style>
+/* The panel typeface: the very same Montserrat-Medium.ttf that scripts/gen_fonts.ps1
+   feeds to lv_font_conv, subset to the same code-point ranges (ASCII, Latin-1
+   Supplement, Latin Extended-A, Romanian comma-below) and kept with kerning, so a
+   glyph drawn here is the glyph the device draws. */
+@font-face {
+    font-family: 'AtlasMontserrat';
+    src: url('montserrat-medium-eu.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: block;
+}
+
+:root {
+    --page-bg:   #14161a;
+    --panel-bg:  #1c1f26;
+    --line:      #2c313b;
+    --fg:        #d8dde5;
+    --fg-dim:    #8b94a3;
+    --accent:    #4c9aff;
+    --warn:      #ffb454;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 20px;
+    background: var(--page-bg);
+    color: var(--fg);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+h1 {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.sub {
+    margin: 0 0 18px;
+    color: var(--fg-dim);
+    font-size: 13px;
+}
+
+.bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.bar label { color: var(--fg-dim); }
+
+select, button {
+    background: var(--panel-bg);
+    color: var(--fg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font: inherit;
+    cursor: pointer;
+}
+
+button:hover, select:hover { border-color: var(--accent); }
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--fg-dim);
+}
+
+.badge::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--fg-dim);
+}
+
+.badge.live { color: #7ee08a; border-color: #2f5b38; }
+.badge.live::before { background: #7ee08a; }
+.badge.down { color: var(--warn); border-color: #5b482f; }
+.badge.down::before { background: var(--warn); }
+
+/* Device frame — #screen is sized in real LCD pixels and scaled as a whole, so
+   every coordinate inside it is a device coordinate with no conversion. */
+.frame {
+    display: inline-block;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px;
+    background: var(--panel-bg);
+}
+
+#stage {
+    position: relative;
+    overflow: hidden;
+}
+
+#screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: top left;
+    overflow: hidden;
+    font-family: 'AtlasMontserrat', sans-serif;
+    font-weight: 500;
+    /* LVGL blits glyph bitmaps; keep the browser from adding its own flourishes. */
+    font-kerning: normal;
+    font-variant-ligatures: none;
+    text-rendering: geometricPrecision;
+}
+
+/* Touch hotspots. Invisible at rest, exactly as the widget leaves them — the
+   wallpaper is what draws the button. Hovering applies the real LV_STATE_PRESSED
+   styling (white bg at OPA_40, white 1 px border at OPA_60), so you can point at a
+   button painted into the wallpaper and see whether the touch area covers it.
+   border-box keeps the border inside the object bounds, as LVGL draws it. */
+.hotspot {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+    background: transparent;
+}
+
+.hotspot:hover {
+    background: rgba(255, 255, 255, .4);
+    border-color: rgba(255, 255, 255, .6);
+}
+
+/* Preview aid, not something the panel ever shows. */
+#screen.show-hotspots .hotspot {
+    outline: 1px dashed rgba(120, 200, 255, .8);
+    outline-offset: -1px;
+}
+
+/* Elements the preview does not draw for real yet: outlined so it is always
+   obvious which parts of the screen are honest pixels and which are stand-ins. */
+.stub {
+    position: absolute;
+    border: 1px dashed rgba(255, 255, 255, .45);
+    background: rgba(255, 255, 255, .06);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.stub span {
+    position: absolute;
+    left: 2px;
+    top: 1px;
+    font: 9px/1.2 system-ui, sans-serif;
+    color: rgba(255, 255, 255, .75);
+    white-space: nowrap;
+}
+
+.note {
+    margin-top: 16px;
+    max-width: 780px;
+    color: var(--fg-dim);
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+.note code {
+    background: var(--panel-bg);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0 4px;
+}
+
+#err {
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    border: 1px solid #6b3b3b;
+    border-radius: 6px;
+    background: #2a1c1c;
+    color: #ffb0b0;
+    display: none;
+}
+</style>
+</head>
+<body>
+
+<h1>Radio screen — live preview</h1>
+<p class="sub">
+    Rendered from the device's own data: <code>/api/ui/profile/radio</code> geometry,
+    real LVGL font metrics, the active theme palette and the WebSocket state feed.
+    Read-only — nothing here writes to the device.
+</p>
+
+<div id="err"></div>
+
+<div class="bar">
+    <label for="zoom">Zoom</label>
+    <select id="zoom">
+        <option value="fit">Fit width</option>
+        <option value="1">1:1</option>
+        <option value="2" selected>2×</option>
+        <option value="3">3×</option>
+    </select>
+    <button id="reload" type="button">Reload profile</button>
+    <label><input type="checkbox" id="show_hotspots"> Show touch areas</label>
+    <span class="badge" id="ws_badge">connecting…</span>
+    <span class="badge" id="dim_badge">—</span>
+</div>
+
+<div class="frame">
+    <div id="stage"><div id="screen"></div></div>
+</div>
+
+<p class="note">
+    Dashed boxes are placeholders, not drawn artwork: the bar VU, stereo bars,
+    cassette wheels and the mode/event indicators. Everything else — text, background
+    plates, wallpaper, volume slider, station icon — is drawn the way the firmware
+    draws it. The clock reads this browser's time, the weather row shows sample text,
+    and long station/title text is clipped here instead of scrolling.
+</p>
+<p class="note">
+    Touch hotspots draw nothing at rest, because that is what the panel does — the
+    wallpaper is the button, the hotspot is only the touch area over it. Hover one to
+    see its real pressed highlight, or tick <em>Show touch areas</em> to outline them
+    all. Hovering does not send anything to the device.
+</p>
+<p class="note">
+    The needle meters are real geometry — pivot, needle length and plate come straight
+    out of <code>vu_needle_widget.c</code> — but their <em>deflection</em> is staged.
+    The RMS levels driving them are tapped inside the DSP element on the device and are
+    not published to any client, so the needles are parked at a representative reading
+    instead of following the music.
+</p>
+
+<script src="lvbin.js"></script>
+<script src="radio-preview.js"></script>
+</body>
+</html>

@@ -26,7 +26,9 @@ DST_DIR    = Path(__file__).parent.parent / "web"
 EXTENSIONS = {".html", ".css", ".js", ".svg", ".ico"}
 # Shipped verbatim (uncompressed): the firmware opens these with a plain fopen,
 # so they must not be gzip'd. Served over HTTP straight from the www partition.
-COPY_EXTENSIONS = {".csv"}
+# .woff2 is here for a different reason — it is already Brotli-compressed inside,
+# so gzipping it again would only cost CPU on both ends for a byte or two.
+COPY_EXTENSIONS = {".csv", ".woff2"}
 
 # www version stamp — lets the firmware detect a www partition left stale by an
 # app-only OTA (OTA never rewrites www). Lands on the partition as

@@ -3255,6 +3255,7 @@ static esp_err_t file_handler(httpd_req_t *req)
     else if (strstr(relpath, ".json")) content_type = "application/json"; // must come before js
     else if (strstr(relpath, ".js"))   content_type = "application/javascript";
     else if (strstr(relpath, ".ico"))  content_type = "image/x-icon";
+    else if (strstr(relpath, ".woff2")) content_type = "font/woff2";
 
     // Look under the www root first, then the config root (settings JSON lives on
     // /config but is fetched by the browser through this handler).
