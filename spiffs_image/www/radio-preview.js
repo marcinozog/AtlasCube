@@ -347,6 +347,56 @@ const HOTSPOT_ACTIONS = [
     'Stop', 'Play / pause', 'Open playlist', 'Open SD browser', 'Open equalizer',
 ];
 
+// What to send for a hotspot press, or null when the action cannot be driven
+// remotely. Returns a JSON command from docs/ws_protocol.md.
+//
+// The obvious mapping — the semantic plain-text frames (`toggle`, `next`, `volp`)
+// — is deliberately NOT used, for two reasons:
+//
+//   * they act on whatever source is playing, resolved by media_source_current(),
+//     while a radio hotspot always drives the radio (control_action_execute passes
+//     CONTROL_SOURCE_RADIO). With SD playing, `next` would skip a track instead of
+//     a station.
+//   * `volp`/`volm` step by 5, whereas the hotspot path steps by 2
+//     (media_control.c, MEDIA_ACTION_VOLUME_UP).
+//
+// So each action is expressed as the explicit radio command that reproduces what
+// media_control_execute(MEDIA_SOURCE_RADIO, …) does, arithmetic included.
+function hotspotCommand(action) {
+    const L = S.live;
+    const n = S.playlist.length;
+    const idx = L.curr_index | 0;
+    const playing = L.radio === 'playing';       // BUFFERING is not PLAYING, as in C
+
+    switch (action) {
+        case 0:   // PLAY_TOGGLE
+        case 6:   // PLAY_PAUSE — "a stream can't pause; same as play/stop"
+            return playing ? { cmd: 'stop' } : { cmd: 'play_index', index: idx };
+        case 1:   // PREVIOUS
+            return n > 0 ? { cmd: 'play_index', index: (idx - 1 + n) % n } : null;
+        case 2:   // NEXT
+            return n > 0 ? { cmd: 'play_index', index: (idx + 1) % n } : null;
+        case 3:   // VOLUME_DOWN
+            return { cmd: 'set_volume', value: clamp((L.volume | 0) - 2, 0, 100) };
+        case 4:   // VOLUME_UP
+            return { cmd: 'set_volume', value: clamp((L.volume | 0) + 2, 0, 100) };
+        case 5:   // STOP — the JSON form stops the radio specifically
+            return { cmd: 'stop' };
+        default:
+            // OPEN_PLAYLIST / OPEN_SD_BROWSER / OPEN_EQUALIZER navigate the panel's
+            // own UI. `set_screen` only reaches radio/home/bt, so there is no frame
+            // that can do this — the hotspot stays inert rather than doing something
+            // almost-but-not-quite right.
+            return null;
+    }
+}
+
+function wsSend(obj) {
+    if (!S.ws || S.ws.readyState !== 1) return false;
+    S.ws.send(JSON.stringify(obj));
+    return true;
+}
+
 // The hotspots draw nothing at rest — the wallpaper supplies the artwork and the
 // button is a bare touch area over it. They are still built here, because their
 // pressed highlight is real: hovering shows exactly what a finger sees, which is
@@ -367,7 +417,22 @@ function renderHotspots(frag) {
         // (min(w, h) * clamp(radius, 0, 100)) / 200, integer division included.
         el.style.borderRadius =
             Math.floor((Math.min(w, h) * clamp(p[`${key}_radius`] | 0, 0, 100)) / 200) + 'px';
-        el.title = `hotspot ${i}: ${HOTSPOT_ACTIONS[action]}`;
+        // Navigation actions have no wire equivalent: shown, but not clickable.
+        const inert = hotspotCommand(action) === null && action >= 7;
+        if (inert) {
+            el.classList.add('inert');
+            el.title = `hotspot ${i}: ${HOTSPOT_ACTIONS[action]} — panel-only, ` +
+                       `no WebSocket command can trigger it`;
+        } else {
+            el.title = `hotspot ${i}: ${HOTSPOT_ACTIONS[action]}`;
+            el.addEventListener('click', () => {
+                // Re-resolved at click time: the command depends on live state
+                // (what is playing, current index, current volume).
+                const frame = hotspotCommand(action);
+                if (!frame) return;          // empty playlist — the device no-ops too
+                if (!wsSend(frame)) setWsBadge('down', 'not sent — no connection');
+            });
+        }
         frag.appendChild(el);
     }
 }

@@ -30,24 +30,20 @@
 
 * { box-sizing: border-box; }
 
+/* The screen is the point of the page, so it starts at the very top: everything
+   explanatory lives below it, folded away until asked for. */
 body {
     margin: 0;
-    padding: 20px;
+    padding: 14px 20px 28px;
     background: var(--page-bg);
     color: var(--fg);
     font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 h1 {
-    margin: 0 0 4px;
+    margin: 0 0 10px;
     font-size: 18px;
     font-weight: 600;
-}
-
-.sub {
-    margin: 0 0 18px;
-    color: var(--fg-dim);
-    font-size: 13px;
 }
 
 .bar {
@@ -55,7 +51,7 @@ h1 {
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
-    margin-bottom: 16px;
+    margin-top: 14px;
 }
 
 .bar label { color: var(--fg-dim); }
@@ -135,17 +131,31 @@ button:hover, select:hover { border-color: var(--accent); }
     box-sizing: border-box;
     border: 1px solid transparent;
     background: transparent;
+    cursor: pointer;
 }
 
-.hotspot:hover {
+/* Actions that only exist inside the panel's own UI — shown, but nothing to send. */
+.hotspot.inert { cursor: not-allowed; }
+
+/* Only while the button is actually held, which is what LV_STATE_PRESSED means.
+   Hover must NOT light it up: the cursor stays on the button after a click, so the
+   highlight would linger and read as a stuck press. */
+.hotspot:active {
     background: rgba(255, 255, 255, .4);
     border-color: rgba(255, 255, 255, .6);
 }
 
-/* Preview aid, not something the panel ever shows. */
+/* Preview aid, not something the panel ever shows. Alignment against the button
+   painted into the wallpaper is checked here, in this mode — where a lingering
+   highlight is the point rather than a distraction. */
 #screen.show-hotspots .hotspot {
     outline: 1px dashed rgba(120, 200, 255, .8);
     outline-offset: -1px;
+}
+
+#screen.show-hotspots .hotspot:hover {
+    background: rgba(255, 255, 255, .4);
+    border-color: rgba(255, 255, 255, .6);
 }
 
 /* Elements the preview does not draw for real yet: outlined so it is always
@@ -167,9 +177,48 @@ button:hover, select:hover { border-color: var(--accent); }
     white-space: nowrap;
 }
 
+/* Collapsed by default — the same details/summary idiom the layout editor uses,
+   down to the accent chevron that rotates when it opens. */
+.info {
+    margin-top: 18px;
+    max-width: 820px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-bg);
+    overflow: hidden;
+}
+
+.info > summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    font-size: 12.5px;
+    color: var(--fg-dim);
+    transition: background .15s, color .15s;
+}
+
+.info > summary::-webkit-details-marker { display: none; }
+
+.info > summary::before {
+    content: '›';
+    color: var(--accent);
+    font-size: 18px;
+    line-height: 12px;
+    transition: transform .15s;
+}
+
+.info[open] > summary::before { transform: rotate(90deg); }
+.info > summary:hover { background: var(--page-bg); color: var(--fg); }
+.info[open] > summary { border-bottom: 1px solid var(--line); color: var(--fg); }
+
+.info-body { padding: 14px 16px 4px; }
+
 .note {
-    margin-top: 16px;
-    max-width: 780px;
+    margin: 0 0 14px;
     color: var(--fg-dim);
     font-size: 12.5px;
     line-height: 1.6;
@@ -195,14 +244,11 @@ button:hover, select:hover { border-color: var(--accent); }
 </head>
 <body>
 
-<h1>Radio screen — live preview</h1>
-<p class="sub">
-    Rendered from the device's own data: <code>/api/ui/profile/radio</code> geometry,
-    real LVGL font metrics, the active theme palette and the WebSocket state feed.
-    Read-only — nothing here writes to the device.
-</p>
-
 <div id="err"></div>
+
+<div class="frame">
+    <div id="stage"><div id="screen"></div></div>
+</div>
 
 <div class="bar">
     <label for="zoom">Zoom</label>
@@ -218,30 +264,49 @@ button:hover, select:hover { border-color: var(--accent); }
     <span class="badge" id="dim_badge">—</span>
 </div>
 
-<div class="frame">
-    <div id="stage"><div id="screen"></div></div>
-</div>
-
-<p class="note">
-    Dashed boxes are placeholders, not drawn artwork: the bar VU, stereo bars,
-    cassette wheels and the mode/event indicators. Everything else — text, background
-    plates, wallpaper, volume slider, station icon — is drawn the way the firmware
-    draws it. The clock reads this browser's time, the weather row shows sample text,
-    and long station/title text is clipped here instead of scrolling.
-</p>
-<p class="note">
-    Touch hotspots draw nothing at rest, because that is what the panel does — the
-    wallpaper is the button, the hotspot is only the touch area over it. Hover one to
-    see its real pressed highlight, or tick <em>Show touch areas</em> to outline them
-    all. Hovering does not send anything to the device.
-</p>
-<p class="note">
-    The needle meters are real geometry — pivot, needle length and plate come straight
-    out of <code>vu_needle_widget.c</code> — but their <em>deflection</em> is staged.
-    The RMS levels driving them are tapped inside the DSP element on the device and are
-    not published to any client, so the needles are parked at a representative reading
-    instead of following the music.
-</p>
+<details class="info">
+    <summary><span>About this preview</span></summary>
+    <div class="info-body">
+        <h1>Radio screen — live preview</h1>
+        <p class="note">
+            Rendered from the device's own data: <code>/api/ui/profile/radio</code>
+            geometry, real LVGL font metrics, the active theme palette and the
+            WebSocket state feed. <strong>The touch hotspots are live</strong> —
+            clicking one drives the radio for real, exactly as pressing the panel
+            would. Nothing else on this page writes to the device.
+        </p>
+        <p class="note">
+            Dashed boxes are placeholders, not drawn artwork: the bar VU, stereo bars,
+            cassette wheels and the mode/event indicators. Everything else — text,
+            background plates, wallpaper, volume slider, station icon — is drawn the
+            way the firmware draws it. The clock reads this browser's time, the weather
+            row shows sample text, and long station/title text is clipped here instead
+            of scrolling.
+        </p>
+        <p class="note">
+            Touch hotspots draw nothing at rest, because that is what the panel does —
+            the wallpaper is the button, the hotspot is only the touch area over it.
+            Holding one down shows its real pressed highlight, and only then — the
+            panel lights the button while the finger is on it, not after. To check a
+            hotspot against the artwork painted into the wallpaper, tick <em>Show touch
+            areas</em>: that outlines them all and lights them on hover.
+            <strong>Clicking sends the command.</strong>
+            Play/stop, next, previous and volume reproduce what the panel's own hotspot
+            does, arithmetic included — volume steps by 2, not by the 5 of the semantic
+            <code>volp</code> frame. The three navigation actions (playlist, SD browser,
+            equalizer) move the panel's own UI and have no equivalent on the wire, so
+            those hotspots are shown but inert.
+        </p>
+        <p class="note">
+            The needle meters are real geometry — pivot, needle length and plate come
+            straight out of <code>vu_needle_widget.c</code> — but their
+            <em>deflection</em> is staged. The RMS levels driving them are tapped inside
+            the DSP element on the device and are not published to any client, so the
+            needles are parked at a representative reading instead of following the
+            music.
+        </p>
+    </div>
+</details>
 
 <script src="lvbin.js"></script>
 <script src="radio-preview.js"></script>
