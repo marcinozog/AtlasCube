@@ -7,7 +7,9 @@
 
 #define FAIL_HIDE_MS 3000
 #define PROGRESS_MS  500
+#define BACKDROP_OPA LV_OPA_90   // wallpaper stays visible, but only just
 
+static lv_obj_t   *s_backdrop = NULL;   // dims the whole screen behind the pill
 static lv_obj_t   *s_pill  = NULL;
 static lv_obj_t   *s_label = NULL;
 static lv_timer_t *s_timer = NULL;   // one-shot for the fail message; exists only while it lingers
@@ -19,6 +21,10 @@ static void hide(void)
         lv_obj_del(s_pill);
         s_pill  = NULL;
         s_label = NULL;
+    }
+    if (s_backdrop) {
+        lv_obj_del(s_backdrop);
+        s_backdrop = NULL;
     }
     if (s_timer) {
         lv_timer_del(s_timer);
@@ -71,12 +77,28 @@ void net_fetch_overlay_show(void)
         s_timer = NULL;
     }
 
+    // A translucent full-screen wash so the message reads over any wallpaper
+    // instead of floating on top of the widgets. The alpha costs a reblend of
+    // everything under it on every frame, which is affordable only because the
+    // radio (and with it the VU meter) is stopped for the whole batch.
+    if (!s_backdrop) {
+        s_backdrop = lv_obj_create(lv_layer_top());
+        lv_obj_remove_style_all(s_backdrop);
+        lv_obj_set_size(s_backdrop, LV_PCT(100), LV_PCT(100));
+        lv_obj_set_style_bg_color(s_backdrop, lv_color_hex(th->bg_primary), LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(s_backdrop, BACKDROP_OPA, LV_PART_MAIN);
+        lv_obj_clear_flag(s_backdrop, LV_OBJ_FLAG_SCROLLABLE);
+        // Covers the panel edge to edge — must not swallow taps meant for the
+        // screen underneath.
+        lv_obj_clear_flag(s_backdrop, LV_OBJ_FLAG_CLICKABLE);
+    }
+
     if (!s_pill) {
         s_pill = lv_obj_create(lv_layer_top());
         lv_obj_remove_style_all(s_pill);
         lv_obj_set_style_bg_color(s_pill, lv_color_hex(th->bg_secondary), LV_PART_MAIN);
-        // Solid, not translucent: an alpha overlay would force a per-frame
-        // reblend of everything under it (the VU lesson).
+        // The pill itself stays solid: the text must not pick up the wallpaper
+        // showing through the backdrop.
         lv_obj_set_style_bg_opa(s_pill, LV_OPA_COVER, LV_PART_MAIN);
         lv_obj_set_style_border_color(s_pill, lv_color_hex(th->accent), LV_PART_MAIN);
         lv_obj_set_style_border_width(s_pill, 1, LV_PART_MAIN);
@@ -96,6 +118,7 @@ void net_fetch_overlay_show(void)
 
     set_progress_text();
     if (!s_prog) s_prog = lv_timer_create(progress_cb, PROGRESS_MS, NULL);
+    lv_obj_move_background(s_backdrop);   // …but still above the screen itself
     lv_obj_move_foreground(s_pill);
 }
 
