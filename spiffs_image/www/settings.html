@@ -541,12 +541,12 @@
         </div>
 
         <div class="panel">
-            <label class="field-label">Auto-switch source (Radio ⇄ Bluetooth)</label>
+            <label class="field-label">Auto-switch source (Bluetooth ⇄ Radio / SD)</label>
             <div class="theme-toggle" id="btAutoToggle" style="width:fit-content">
                 <button class="theme-btn" id="settingsBtnAutoSwitchOn"  onclick="setBtAutoSwitch(true)">✅ On</button>
                 <button class="theme-btn" id="settingsBtnAutoSwitchOff" onclick="setBtAutoSwitch(false)">❌ Off</button>
             </div>
-            <div class="field-hint">When on, starting Bluetooth playback stops the radio and starting the radio pauses the phone, switching the audio source automatically.</div>
+            <div class="field-hint">When on, starting playback on the phone takes over the output — it stops the radio or the SD player — and starting the radio pauses the phone. Starting SD playback always pauses the phone, regardless of this setting.</div>
         </div>
 
         <div class="panel">
