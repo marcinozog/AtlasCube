@@ -60,7 +60,19 @@ static uint8_t ili9341_madctl(void)
 static spi_transaction_t s_color_trans;
 static volatile bool     s_color_inflight = false;
 
-static void spi_post_cb(spi_transaction_t *t)
+// Every wait on this path is bounded, because LVGL's wait_for_flushing() is a
+// bare `while(disp->flushing);` spin with no timeout: a flush_ready that never
+// arrives hangs the LVGL task forever at prio 5 while audio keeps playing, and
+// with ESP_TASK_WDT_PANIC off nothing resets the device. A lost completion must
+// degrade to a dropped frame, never to that. One 20-line buffer at 40 MHz takes
+// ~2.6 ms, so this is ~80x headroom over any legitimate transfer.
+#define FLUSH_SPI_TIMEOUT_MS 200
+
+// IRAM: CONFIG_SPI_MASTER_ISR_IN_IRAM=y, so this runs from an ISR that stays
+// live while the flash cache is disabled (settings save, SPIFFS write, NVS
+// commit). A flash-resident callback would fault there. lv_display_flush_ready()
+// is pulled into IRAM too — see LV_ATTRIBUTE_FLUSH_READY in the root CMakeLists.
+static void IRAM_ATTR spi_post_cb(spi_transaction_t *t)
 {
     if (t->user) lv_display_flush_ready((lv_display_t *)t->user);
 }
@@ -236,7 +248,15 @@ static void my_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_m
 {
     if (s_color_inflight) {          // reclaim the previous async transfer (already done)
         spi_transaction_t *rtrans;
-        spi_device_get_trans_result(spi, &rtrans, portMAX_DELAY);
+        if (spi_device_get_trans_result(spi, &rtrans,
+                                        pdMS_TO_TICKS(FLUSH_SPI_TIMEOUT_MS)) != ESP_OK) {
+            // The descriptor is still owned by the driver, so s_color_trans must
+            // not be reused — skip this frame, hand LVGL its flush_ready back so
+            // the UI loop keeps running, and retry the reclaim on the next flush.
+            ESP_LOGW(TAG, "flush reclaim timed out — frame dropped");
+            lv_display_flush_ready(disp);
+            return;
+        }
         s_color_inflight = false;
     }
 
@@ -280,7 +300,15 @@ static void my_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_m
         .tx_buffer = px_map,
         .user      = disp,              // tags this trans → post_cb calls flush_ready
     };
-    spi_device_queue_trans(spi, &s_color_trans, portMAX_DELAY);  // returns immediately
+    esp_err_t err = spi_device_queue_trans(spi, &s_color_trans,
+                                           pdMS_TO_TICKS(FLUSH_SPI_TIMEOUT_MS));
+    if (err != ESP_OK) {
+        // Nothing was queued, so spi_post_cb will never fire for this frame —
+        // without signalling here, LVGL spins on disp->flushing forever.
+        ESP_LOGE(TAG, "queue_trans failed: %s — frame dropped", esp_err_to_name(err));
+        lv_display_flush_ready(disp);
+        return;
+    }
     s_color_inflight = true;
     // NOTE: do NOT call lv_display_flush_ready() here — spi_post_cb does it.
 }

@@ -90,6 +90,18 @@ idf_component_get_property(_lvgl_lib lvgl__lvgl COMPONENT_LIB)
 target_compile_options(${_lvgl_lib} PRIVATE -include esp_attr.h)
 target_compile_definitions(${_lvgl_lib} PRIVATE LV_ATTRIBUTE_LARGE_RAM_ARRAY=EXT_RAM_BSS_ATTR)
 
+# ── lv_display_flush_ready() → IRAM ───────────────────────────────────────────
+# The ILI9341 and ST7789V drivers flush asynchronously and call flush_ready from
+# the SPI done-ISR. CONFIG_SPI_MASTER_ISR_IN_IRAM=y, so that ISR keeps running
+# while the flash cache is disabled (settings save, SPIFFS write, NVS commit) —
+# and IDF 5.5 does not validate that a device's post_cb is IRAM-safe, so the
+# fault would only show up as a rare crash under exactly that overlap. LVGL
+# exposes LV_ATTRIBUTE_FLUSH_READY for this; Kconfig has no knob for it, hence
+# the -D (both lv_display.h and lv_conf_internal.h guard it with #ifndef). The
+# two functions it covers are one-line flag accessors, so the IRAM cost is a
+# handful of bytes.
+target_compile_definitions(${_lvgl_lib} PRIVATE LV_ATTRIBUTE_FLUSH_READY=IRAM_ATTR)
+
 # Build both SPIFFS partition images so the merged release .bin (and a full
 # `idf.py flash`) ships a working device:
 #   www    — the compressed web UI. Run spiffs_image/tools/compress_web.py first;
