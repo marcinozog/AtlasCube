@@ -23,19 +23,37 @@ static const char *TAG = "XPT2046";
 
 static spi_device_handle_t s_dev = NULL;
 
-// One 12-bit conversion: a 3-byte full-duplex frame [cmd, 0, 0]. The result
-// arrives MSB-first in bytes 1..2, left-aligned by 3 bits (so >> 3 → 12-bit).
+// Transfer buffers for one conversion. Four bytes and static rather than three
+// on the stack, because when the XPT2046 shares the LCD bus that bus has DMA
+// enabled, and GDMA on the S3 needs an RX buffer that is word-aligned *and* a
+// multiple of 4 bytes long (GDMA_LL_AHB_RX_BURST_NEEDS_ALIGNMENT). A 3-byte
+// stack buffer misses both, so IDF silently falls back to a
+// heap_caps_aligned_alloc(DMA|INTERNAL) + free on *every* conversion — 2 per
+// idle poll, 10 per touched poll, at up to 200 polls/s. That is constant churn
+// on the scarcest heap in this firmware. Static .bss is DMA-capable whatever
+// happens to task stack placement; safe as static because conversions only ever
+// run from the LVGL indev read_cb, i.e. one task.
+static WORD_ALIGNED_ATTR uint8_t s_tx[4];
+static WORD_ALIGNED_ATTR uint8_t s_rx[4];
+
+// One 12-bit conversion: a 4-byte full-duplex frame [cmd, 0, 0, 0]. The result
+// arrives MSB-first in bytes 1..2, left-aligned by 3 bits (so >> 3 → 12-bit);
+// the 4th byte is padding the controller shifts out as zeros, which costs 8
+// extra clocks at 2 MHz and changes nothing about the reading.
 static uint16_t xpt_xfer(uint8_t cmd)
 {
-    uint8_t tx[3] = { cmd, 0, 0 };
-    uint8_t rx[3] = { 0 };
+    memset(s_tx, 0, sizeof(s_tx));
+    memset(s_rx, 0, sizeof(s_rx));
+    s_tx[0] = cmd;
+
     spi_transaction_t t = {
-        .length    = 3 * 8,
-        .tx_buffer = tx,
-        .rx_buffer = rx,
+        .length    = sizeof(s_tx) * 8,
+        .rxlength  = sizeof(s_rx) * 8,
+        .tx_buffer = s_tx,
+        .rx_buffer = s_rx,
     };
     if (spi_device_polling_transmit(s_dev, &t) != ESP_OK) return 0;
-    return ((uint16_t)((rx[1] << 8) | rx[2])) >> 3;
+    return ((uint16_t)((s_rx[1] << 8) | s_rx[2])) >> 3;
 }
 
 void xpt2046_init(spi_host_device_t host, int cs_gpio)
