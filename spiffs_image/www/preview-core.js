@@ -903,10 +903,9 @@ function toggleFullscreen() {
     }
 }
 
+// The one button toggles both ways, and it rides inside the fullscreen element,
+// so it is still there to get back out — Esc is not the only exit.
 fullscreenBtn.addEventListener('click', toggleFullscreen);
-// The in-viewer twin: the toolbar button is outside the fullscreen element and so
-// is not rendered there, which would leave Esc as the only way out.
-document.getElementById('exit_fs').addEventListener('click', toggleFullscreen);
 
 let listHiddenBeforeFs = null;
 
@@ -949,14 +948,21 @@ function setListVisible(show) {
 
 toggleListBtn.addEventListener('click', () => setListVisible(listWrapEl.hidden));
 
-document.getElementById('mode').addEventListener('change', async (e) => {
-    S.mode = e.target.value;
+// One control, which is why it lives inside #viewer: it has to keep working in
+// fullscreen, and a second copy would need syncing (and would go stale silently —
+// re-picking an option a select already shows fires no change event).
+const modeEl = document.getElementById('mode');
+
+async function setMode(value) {
+    S.mode = value;
     listCapEl.textContent = modeCfg().listCaption;
     toggleListBtn.textContent = listButtonLabel();
     // The browser's rows come from the device, one folder at a time.
     if (S.mode === 'sd' && !S.sdList) requestSdList();
     await renderEverything();
-});
+}
+
+modeEl.addEventListener('change', (e) => setMode(e.target.value));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Orchestration

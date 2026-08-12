@@ -163,19 +163,22 @@ button:hover, select:hover { border-color: var(--accent); }
 #viewer:fullscreen #list_wrap { margin-top: 0; }
 #viewer:fullscreen .screen-caption { display: none; }
 
-/* Only reachable in fullscreen — outside it the toolbar button does the job. */
-.exit-fs { display: none; }
-
-#viewer:fullscreen .exit-fs {
-    display: block;
+/* The same bar, relocated: above the panel on the page, floating over the corner
+   on the wall. position:fixed takes it out of the flex column, so it does not eat
+   into the height the panels are fitted to. Faded until pointed at (or focused,
+   so it is reachable from the keyboard) — it should not compete with what is
+   being shown. */
+#viewer:fullscreen .topbar {
     position: fixed;
     top: 16px;
-    right: 16px;
-    opacity: .45;
+    left: 16px;
+    margin: 0;
+    opacity: .35;
     transition: opacity .15s;
 }
 
-#viewer:fullscreen .exit-fs:hover { opacity: 1; }
+#viewer:fullscreen .topbar:hover,
+#viewer:fullscreen .topbar:focus-within { opacity: 1; }
 
 /* Sits directly under the panel and is widened to match it (see applyZoom), so it
    reads as belonging to the device rather than to the page chrome. */
@@ -365,18 +368,22 @@ button:hover, select:hover { border-color: var(--accent); }
 
 <div id="err"></div>
 
-<div class="topbar">
-    <label for="mode">Source</label>
-    <select id="mode">
-        <option value="radio" selected>Radio</option>
-        <option value="sd">SD card</option>
-    </select>
-    <button id="fullscreen" type="button" title="Fill the browser window (Esc to leave)">
-        ⛶ Fullscreen
-    </button>
-</div>
-
 <div id="viewer">
+    <!-- Inside the viewer on purpose: a fullscreen element is the only thing
+         rendered, so these two are the controls that have to survive up there.
+         In fullscreen the bar floats over the corner instead of sitting above
+         the panel — same controls, no duplicates to keep in sync. -->
+    <div class="topbar">
+        <label for="mode">Source</label>
+        <select id="mode">
+            <option value="radio" selected>Radio</option>
+            <option value="sd">SD card</option>
+        </select>
+        <button id="fullscreen" type="button" title="Fill the browser window (Esc to leave)">
+            ⛶ Fullscreen
+        </button>
+    </div>
+
     <div class="frame">
         <div id="stage"><div id="screen"></div></div>
     </div>
@@ -395,9 +402,6 @@ button:hover, select:hover { border-color: var(--accent); }
         </div>
     </div>
 
-    <button id="exit_fs" class="exit-fs" type="button" title="Leave fullscreen (Esc)">
-        ✕ Exit
-    </button>
 </div>
 
 <div class="bar">
