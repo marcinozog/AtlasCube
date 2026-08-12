@@ -9,6 +9,44 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.50.0] - 2026-08-12
+
+### Added
+- **www:** show live SD playback progress in the preview
+- **ws:** publish SD playback position and duration
+- **www:** rework the screen preview into a multi-source page
+- **www:** add playlist screen, fullscreen and volume to radio preview
+- **www:** add a live radio-screen preview with working touch hotspots
+- **www:** add a faithful radio-screen preview page
+- **ui:** make the wallpaper-fetch backdrop opaque
+- **ui:** dim the whole screen behind the wallpaper-fetch pill
+- **wallpaper:** add a Clear slot button that drops the URL and the fetched image
+- **fonts:** replace the _pl fonts with pan-European Latin _eu fonts
+- **events:** place the notification text per event and back it on a card
+- **events:** show a per-event graphic on the notification screen
+- **sd:** show the album art embedded in an MP3 tag
+- **sd:** build the album cover from a folder's cover.jpg
+- **sd:** show a per-folder album cover on the SD player
+- **themes:** apply installed themes from SD without the network
+- **assets:** save knob artwork to SD as RGB565A8 with transparency
+- **assets:** keep PNG transparency in SD .bin artwork
+- **weather:** add Celsius/Fahrenheit unit selection
+- **trace:** add runtime diagnostic-log flags
+
+### Changed
+- **www:** show the event graphic by name, not its net<N> spelling
+- **libjpeg:** share one JPEG-to-RGB565 decoder
+- **www:** move diagnostics into its own settings tab
+
+### Fixed
+- **www:** make the preview fit narrow screens and survive fullscreen exit
+- **ui:** scroll overlong SD, BT and browser labels instead of wrapping
+- **touch:** use word-aligned 4-byte SPI buffers for XPT2046 conversions
+- **display:** bound the async flush waits and move flush_ready into IRAM
+- **www:** size the per-screen wallpaper slot picker at page load
+- **sd:** convert folder artwork at playback start, retry when a JPEG appears
+- **ui:** keep the update and OTA prompts on a plain background
+
 ## [0.49.0] - 2026-08-07
 
 ### Added
@@ -909,7 +947,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.49.0...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.50.0...HEAD
+[0.50.0]: https://github.com/marcinozog/AtlasCube/compare/v0.49.0...v0.50.0
 [0.49.0]: https://github.com/marcinozog/AtlasCube/compare/v0.48.0...v0.49.0
 [0.48.0]: https://github.com/marcinozog/AtlasCube/compare/v0.47.1...v0.48.0
 [0.47.1]: https://github.com/marcinozog/AtlasCube/compare/v0.47.0...v0.47.1
