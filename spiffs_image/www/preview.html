@@ -40,6 +40,13 @@ body {
     font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
+/* A phone has no pixels to donate to page margins, and the fit calculation
+   subtracts this padding from the width available to the panel. */
+@media (max-width: 620px) {
+    body { padding: 10px 8px 20px; }
+    .info { max-width: none; }
+}
+
 h1 { margin: 0 0 10px; font-size: 18px; font-weight: 600; }
 
 .topbar, .bar {

@@ -819,9 +819,46 @@ function requestSdList(dir) {
 // Zoom / fullscreen
 // ─────────────────────────────────────────────────────────────────────────────
 
+// On a phone the layout viewport and the visible one part company — the address
+// bar collapses, the keyboard opens, a pinch changes the visual viewport alone.
+// visualViewport is the one that says how much screen there actually is.
+function viewportSize() {
+    const vv = window.visualViewport;
+    return {
+        w: vv ? vv.width  : window.innerWidth,
+        h: vv ? vv.height : window.innerHeight,
+    };
+}
+
+// Fit may go BELOW 1:1. It used to be clamped there to keep glyphs crisp, which
+// silently broke every screen narrower than its panel: a 480 px panel on a 390 px
+// phone was pinned to 1:1 and simply hung off the side. A slightly soft panel that
+// fits beats a sharp one you cannot see.
+const MIN_FIT_SCALE = 0.2;
+
+// Everything between the viewport edge and the panel: the page's own padding plus
+// the frame's padding and border. Read from the computed styles rather than
+// hard-coded, because the narrow-screen media query changes the page padding — a
+// baked-in number would quietly mis-size the fit on exactly the device that has no
+// pixels to spare.
+function frameChrome() {
+    const b = getComputedStyle(document.body);
+    const f = getComputedStyle(frameEl);
+    const n = (v) => parseFloat(v) || 0;
+    return {
+        w: n(b.paddingLeft) + n(b.paddingRight)
+         + n(f.paddingLeft) + n(f.paddingRight)
+         + n(f.borderLeftWidth) + n(f.borderRightWidth),
+        h: n(f.paddingTop) + n(f.paddingBottom)
+         + n(f.borderTopWidth) + n(f.borderBottomWidth)
+         + n(b.paddingBottom),
+    };
+}
+
 function applyZoom() {
     const mode = document.getElementById('zoom').value;
     const w = S.meta.screen_w, h = S.meta.screen_h;
+    const vp = viewportSize();
     let k;
 
     if (document.fullscreenElement === viewerEl) {
@@ -831,15 +868,18 @@ function applyZoom() {
         // the gaps come off the top, the rest divides between the panels.
         const panels  = listWrapEl.hidden ? 1 : 2;
         const gaps    = 18 * (panels === 2 ? 2 : 1) + 16;
-        const usableH = Math.max(window.innerHeight - volbarEl.offsetHeight - gaps, 40);
-        k = Math.min(window.innerWidth / w, usableH / (h * panels));
+        const usableH = Math.max(vp.h - volbarEl.offsetHeight - gaps, 40);
+        k = Math.min(vp.w / w, usableH / (h * panels));
     } else if (mode === 'fit') {
         // Fit the WINDOW, not just its width. Measure the page, never the frame:
         // the frame is inline-block and sized BY the stage, so asking it how wide
         // it is would just echo the last zoom back. offsetTop is scroll-independent.
-        const availW = document.body.clientWidth - 62;
-        const availH = window.innerHeight - frameEl.offsetTop - volbarEl.offsetHeight - 44;
-        k = clamp(Math.min(availW / w, availH / h), 1, 4);
+        // Take the smaller of the two widths: while the page still overflows from a
+        // previous (too large) zoom, body.clientWidth can be the wider one.
+        const chrome = frameChrome();
+        const availW = Math.min(document.body.clientWidth, vp.w) - chrome.w;
+        const availH = vp.h - frameEl.offsetTop - volbarEl.offsetHeight - chrome.h;
+        k = clamp(Math.min(availW / w, availH / h), MIN_FIT_SCALE, 4);
     } else {
         k = parseFloat(mode);
     }
@@ -884,7 +924,10 @@ document.addEventListener('fullscreenchange', () => {
         setListVisible(!listHiddenBeforeFs);
         listHiddenBeforeFs = null;
     }
-    if (S.meta) applyZoom();
+    // Measured on the next frame, not now: leaving fullscreen fires this event
+    // before the page is back at its normal size, so measuring here would size the
+    // panels against the fullscreen viewport and leave them overflowing.
+    if (S.meta) requestAnimationFrame(applyZoom);
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -999,6 +1042,15 @@ document.getElementById('show_hotspots').addEventListener('change', (e) => {
     screenEl.classList.toggle('show-hotspots', e.target.checked);
 });
 window.addEventListener('resize', () => { if (S.meta) applyZoom(); });
+window.addEventListener('orientationchange', () => {
+    // The new size is not in yet when this fires.
+    if (S.meta) requestAnimationFrame(applyZoom);
+});
+// A phone's address bar collapsing changes the visible height without a resize
+// event, so the fit would stay sized against the taller viewport.
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => { if (S.meta) applyZoom(); });
+}
 document.getElementById('reload').addEventListener('click', async () => {
     try {
         await loadAll();
