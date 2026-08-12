@@ -1,0 +1,1007 @@
+'use strict';
+
+// Browser rendering of the device's LVGL screens, as the panel actually shows them.
+//
+// Every number comes from the device, none of it is duplicated here:
+//   /api/ui/profile/meta      — panel size + real LVGL line_height/base_line per font
+//   /api/ui/profile/<section> — the geometry each screen_*.c builds from
+//   /api/theme                — active palette (a profile colour of 0 inherits it)
+//   /api/settings             — background tier (wallpaper / gradient / solid) + dim
+//   /api/playlist             — station list (names, favourites, icons)
+//   ws://<host>/ws            — live state, and the channel controls write back on
+//
+// What IS restated here are the firmware's drawing rules — where a centre-anchored
+// label lands, how the scrim plate pads it, how the background tiers resolve. Each
+// of those names the C function it mirrors, so the two can be checked against each
+// other when a layout rule changes.
+//
+// This file holds everything screen-independent plus the widgets that several
+// screens share (they take a profile section prefix): needle VU, volume slider,
+// touch hotspots, clock, indicators, placeholders. The per-screen renderers live in
+// preview-radio.js, preview-sd.js and preview-list.js.
+
+// ─────────────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────────────
+
+const S = {
+    meta:     null,   // /api/ui/profile/meta
+    prof:     {},     // section name → /api/ui/profile/<section>
+    settings: null,
+    pal:      null,   // active palette from /api/theme
+    playlist: [],     // /api/playlist
+    sdList:   null,   // last type:"sd_list" broadcast
+    mode:     'radio',
+    scale:    1,      // current zoom; drag-scroll converts page px back through it
+    gotState: false,
+    live: {
+        radio: 'stopped', station_name: '', title: '', volume: 0,
+        sr: 0, ch: 2, br: 0, curr_index: -1,
+        sd_active: false, sd_index: 0, sd_count: 0, sd_track: '', sd_dir: '',
+        sd_paused: false, sd_shuffle: false, sd_repeat: 0,
+    },
+    els: {},          // live-updating nodes of the primary screen
+    ws: null,
+    wsRetry: 250,
+};
+
+// The two modes pair a "what is playing" screen with the list you pick from —
+// the same pairing the device makes between a source and its browser.
+const MODES = {
+    radio: { primary: 'radio', list: 'playlist', listCaption: 'Playlist screen' },
+    sd:    { primary: 'sd',    list: 'browser',  listCaption: 'SD browser screen' },
+};
+
+const screenEl   = document.getElementById('screen');
+const stageEl    = document.getElementById('stage');
+const frameEl    = document.querySelector('.frame');
+const viewerEl   = document.getElementById('viewer');
+const volbarEl   = document.getElementById('volbar');
+const listWrapEl = document.getElementById('list_wrap');
+const listStage  = document.getElementById('list_stage');
+const listScreen = document.getElementById('list_screen');
+const listCapEl  = document.getElementById('list_caption');
+
+function modeCfg() { return MODES[S.mode]; }
+function primaryProfile() { return S.prof[modeCfg().primary]; }
+function listProfile() { return S.prof[modeCfg().list]; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Colours
+// ─────────────────────────────────────────────────────────────────────────────
+
+// A ui_profile colour field is a packed RGB integer where 0 means "inherit the
+// theme", exactly as every `p->..._color ? … : th->…` in the screens reads it.
+function col(value, fallbackHex) {
+    const v = value | 0;
+    if (!v) return fallbackHex;
+    return '#' + (v & 0xFFFFFF).toString(16).padStart(6, '0');
+}
+
+function hexToRgb(hex) {
+    const v = parseInt(String(hex).replace('#', ''), 16) || 0;
+    return [(v >> 16) & 0xFF, (v >> 8) & 0xFF, v & 0xFF];
+}
+
+function rgba(hex, alpha) {
+    const [r, g, b] = hexToRgb(hex);
+    return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fonts
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Nominal pixel size out of the font id ("montserrat_18_eu" → 18). It is the em
+// size lv_font_conv was given, which is also what CSS font-size means, so the
+// glyphs come out at the same scale. The suffix is matched loosely on purpose:
+// older firmware ships the same fonts as "_pl".
+function fontPx(id) {
+    const m = String(id || '').match(/_(\d+)(_[a-z]+)?$/);
+    return m ? parseInt(m[1], 10) : 14;
+}
+
+// Box height and baseline the device uses. api_ui_profile_meta_get_handler sends
+// the real lv_font_t line_height/base_line; the fallbacks are the ratios they
+// average out to, for firmware predating the field.
+function lvMetrics(id) {
+    const px = fontPx(id);
+    const m  = (S.meta.font_metrics || {})[id];
+    const lh = m ? m.h : Math.round(px * 1.09);
+    const baseFromTop = m ? m.h - m.b : Math.round(lh * 0.82);
+    return { px, lh, baseFromTop };
+}
+
+// Where the browser would put the baseline inside a line box of `lh` px: CSS
+// splits the leftover leading evenly above and below the font's ascent+descent.
+const measureCtx = document.createElement('canvas').getContext('2d');
+
+function browserBaseline(px, lh) {
+    measureCtx.font = `500 ${px}px AtlasMontserrat`;
+    const tm = measureCtx.measureText('Hxg');
+    const a = tm.fontBoundingBoxAscent, d = tm.fontBoundingBoxDescent;
+    if (!(a > 0)) return lh * 0.82;
+    return (lh - (a + d)) / 2 + a;
+}
+
+// Per-font nudge that lands the browser's baseline exactly on the device's.
+// Measured rather than assumed — without it the text sits a pixel or two off and
+// every judgement about the layout would be made against a lie.
+const baselineFix = new Map();
+
+function baselineOffset(id) {
+    if (!baselineFix.has(id)) {
+        const { px, lh, baseFromTop } = lvMetrics(id);
+        baselineFix.set(id, baseFromTop - browserBaseline(px, lh));
+    }
+    return baselineFix.get(id);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Primitives
+// ─────────────────────────────────────────────────────────────────────────────
+
+function box(x, y, w, h, css) {
+    const el = document.createElement('div');
+    el.style.position = 'absolute';
+    el.style.left   = x + 'px';
+    el.style.top    = y + 'px';
+    el.style.width  = w + 'px';
+    el.style.height = h + 'px';
+    Object.assign(el.style, css || {});
+    return el;
+}
+
+// One label as ui_anchored_label() + ui_label_scrim() produce it.
+//
+//   align 'center' → x is the horizontal middle of the object (ui_label.c
+//                    on_size_changed: x -= w / 2, width including padding, which
+//                    is what translateX(-50%) does over the border box)
+//   boxW           → ui_label_set_text_boxed(): the label hugs its text but never
+//                    grows past the box; text centred inside it
+//   plate          → the section's label_bg_opa. ui_label_scrim() returns early at
+//                    0, so at 0 there is no padding either.
+function makeLabel({ x, y, fontId, text, color, align = 'center', boxW = 0, plate = 0 }) {
+    const { px, lh } = lvMetrics(fontId);
+    const el = document.createElement('div');
+
+    el.style.position   = 'absolute';
+    el.style.boxSizing  = 'content-box';
+    el.style.whiteSpace = 'nowrap';
+    el.style.overflow   = 'hidden';
+    el.style.fontSize   = px + 'px';
+    el.style.height     = lh + 'px';
+    el.style.lineHeight = lh + 'px';
+    el.style.color      = color;
+    el.style.left       = x + 'px';
+    el.style.top        = y + 'px';
+    el.style.textAlign  = 'center';
+
+    if (plate > 0) {
+        // ui_label_scrim(): theme bg_primary at opa_pct, radius 8, pad 6 / 1.
+        el.style.background   = rgba(S.pal.bg_primary, clamp(plate, 0, 100) / 100);
+        el.style.borderRadius = '8px';
+        el.style.padding      = '1px 6px';
+    }
+    if (boxW > 0) el.style.maxWidth = boxW + 'px';
+    if (align === 'center') el.style.transform = 'translateX(-50%)';
+
+    const span = document.createElement('span');
+    span.style.position = 'relative';
+    span.style.top      = baselineOffset(fontId).toFixed(2) + 'px';
+    span.textContent    = text;
+    el.appendChild(span);
+    el._span = span;
+    return el;
+}
+
+// ui_label_set_text(): empty text hides the whole label, so no empty plate shows.
+function setLabelText(el, text) {
+    if (!el) return;
+    el._span.textContent = text;
+    el.style.display = text ? '' : 'none';
+}
+
+// A left- or right-positioned single line, used where a label sits inside a strip
+// or a list row rather than being centre-anchored on a point.
+function alignedText({ text, fontId, color, left, top }) {
+    const { px, lh } = lvMetrics(fontId);
+    const el = document.createElement('div');
+    el.style.position   = 'absolute';
+    el.style.top        = top + 'px';
+    if (left !== undefined) el.style.left = left + 'px';
+    el.style.fontSize   = px + 'px';
+    el.style.lineHeight = lh + 'px';
+    el.style.height     = lh + 'px';
+    el.style.color      = color;
+    el.style.whiteSpace = 'pre';    // list rows are column-aligned with spaces
+    el.style.overflow   = 'hidden';
+
+    const span = document.createElement('span');
+    span.style.position = 'relative';
+    span.style.top      = baselineOffset(fontId).toFixed(2) + 'px';
+    span.textContent    = text;
+    el.appendChild(span);
+    return el;
+}
+
+// A widget this preview does not draw for real yet.
+function stub(x, y, w, h, label) {
+    const el = document.createElement('div');
+    el.className = 'stub';
+    el.style.left   = x + 'px';
+    el.style.top    = y + 'px';
+    el.style.width  = Math.max(w | 0, 8) + 'px';
+    el.style.height = Math.max(h | 0, 8) + 'px';
+    const tag = document.createElement('span');
+    tag.textContent = label;
+    el.appendChild(tag);
+    return el;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Background — mirrors ui_background_apply()
+// ─────────────────────────────────────────────────────────────────────────────
+
+// net_slot_of(): "net0".."net9" name a slot, bare "net" is the pre-slots spelling
+// for slot 0; a path or "none" is not an internet override.
+function netSlotOf(ovr) {
+    if (!ovr || ovr.slice(0, 3) !== 'net') return -1;
+    if (ovr.length === 3) return 0;
+    if (ovr.length !== 4) return -1;
+    const n = ovr.charCodeAt(3) - 48;
+    return (n >= 0 && n <= 9) ? n : -1;
+}
+
+// Baked-in dim: the firmware multiplies the pixels by (100 - dim)% at load time,
+// which is the same result as compositing black over them at dim% opacity.
+function dimLayer(dimPct) {
+    return dimPct > 0
+        ? `linear-gradient(rgba(0,0,0,${dimPct / 100}), rgba(0,0,0,${dimPct / 100}))` : '';
+}
+
+// `ovr` is the screen's own wallpaper field — every hub screen has one, and they
+// resolve identically; only the field and the element painted differ.
+async function applyBackground(targetEl, ovr, badge) {
+    const display = S.settings.display || {};
+    const dim     = clamp(display.wallpaper_dim || 0, 0, 100);
+    ovr           = String(ovr || '');
+    const slot    = netSlotOf(ovr);
+    const isPath  = ovr && ovr !== 'none' && slot < 0;
+
+    const paint = (image, what) => {
+        const layers = [dimLayer(dim), image].filter(Boolean).join(', ');
+        targetEl.style.background     = layers || S.pal.bg_primary;
+        targetEl.style.backgroundSize = 'cover';
+        if (badge) badge.textContent = dim > 0 ? `${what} · dim ${dim}%` : what;
+    };
+
+    // 1. Internet wallpaper — only when this screen is not pinned to an SD file.
+    if (!isPath) {
+        try {
+            const st   = await fetch('/api/wallpaper/status', { cache: 'no-store' });
+            const info = st.ok ? await st.json() : null;
+            if (info && info.active) {
+                const img = await fetch('/api/wallpaper/image?slot=' + (slot >= 0 ? slot : 0),
+                                        { cache: 'no-store' });
+                if (img.ok) {
+                    const dec = window.LvBin.decodeToCanvas(await img.arrayBuffer());
+                    paint(`url("${dec.canvas.toDataURL('image/png')}")`,
+                          'internet wallpaper' + (slot >= 0 ? ` (slot ${slot})` : ''));
+                    return;
+                }
+            }
+        } catch { /* no fetched wallpaper — fall through to the tiers below */ }
+    }
+
+    // 2. An explicit per-screen SD .bin. Note there is no global-wallpaper tier
+    //    for the hub screens: screen_wp_override() returns their own field (never
+    //    NULL), so the firmware's `!ovr` fallback to display.wallpaper_path cannot
+    //    apply here.
+    if (isPath) {
+        try {
+            const rel = ovr.startsWith('/sdcard/') ? ovr.slice('/sdcard'.length) : ovr;
+            const f = await fetch('/api/sd/file?path=' + encodeURIComponent(rel),
+                                  { cache: 'no-store' });
+            if (f.ok) {
+                const dec = window.LvBin.decodeToCanvas(await f.arrayBuffer());
+                paint(`url("${dec.canvas.toDataURL('image/png')}")`, 'SD wallpaper');
+                return;
+            }
+        } catch { /* unreadable file — the device falls back to the gradient too */ }
+    }
+
+    // 3. Solid, when the gradient is switched off.
+    if (!display.bg_gradient) {
+        targetEl.style.background = S.pal.bg_primary;
+        if (badge) badge.textContent = 'solid background';
+        return;
+    }
+
+    // 4. Vertical palette gradient (the device dithers it into RGB565; the browser
+    //    renders it in full colour, so banding differs — the colours do not).
+    targetEl.style.background =
+        `linear-gradient(${S.pal.bg_grad_top}, ${S.pal.bg_grad_bottom})`;
+    if (badge) badge.textContent = 'theme gradient';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared widgets — all take the profile section prefix
+// ─────────────────────────────────────────────────────────────────────────────
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const NEEDLE_SWEEP_DEG = 90;   // full deflection arc: -45° (rest) … +45°
+
+// The needle position is the one thing here that cannot be truthful: the RMS tap
+// feeding it lives in the DSP element on the device and is not published anywhere
+// a browser could read. So the meters are drawn at a representative deflection —
+// around two thirds of the arc, which is where the widget's own comment says the
+// gamma curve parks the operating point on normal programme. L and R differ
+// slightly because on real stereo material they always do.
+const NEEDLE_DEMO_LEVEL = { l: 0.66, r: 0.58 };
+
+// meter_create() + tip_for_level(), including their integer truncation.
+function needleGeometry(w, h, level) {
+    w = Math.max(w | 0, 20);
+    h = Math.max(h | 0, 20);
+
+    const pivX = Math.floor(w / 2);
+    const pivY = h - 3;
+    const lenH = pivY - 3;
+    const lenW = Math.trunc((pivX - 3) / Math.sin(NEEDLE_SWEEP_DEG * 0.5 * Math.PI / 180));
+    const len  = Math.max(Math.min(lenH, lenW), 4);
+
+    // C truncates after adding 0.5f rather than rounding, which differs for the
+    // negative x of a needle left of its pivot — so truncate here too.
+    const a    = (level - 0.5) * NEEDLE_SWEEP_DEG * (Math.PI / 180);
+    const tipX = pivX + Math.trunc(Math.sin(a) * len + 0.5);
+    const tipY = pivY - Math.trunc(Math.cos(a) * len + 0.5);
+
+    return { w, h, pivX, pivY, len, tipX, tipY };
+}
+
+function needleMeter(p, pre, x, y, w, h, level) {
+    const g = needleGeometry(w, h, level);
+    const needle = col(p[`${pre}_needle_color`], S.pal.accent);
+
+    const el = box(x | 0, y | 0, g.w, g.h, {});
+    // An opaque plate unless the meter is transparent, in which case the wallpaper
+    // shows through and IS the meter face — scale, markings and all.
+    if (!p[`${pre}_needle_transparent`]) {
+        el.style.background = col(p[`${pre}_needle_bg_color`], S.pal.bg_primary);
+    }
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('width', g.w);
+    svg.setAttribute('height', g.h);
+    svg.setAttribute('viewBox', `0 0 ${g.w} ${g.h}`);
+    svg.style.display = 'block';
+
+    // needle_draw_cb(): a 2 px line with rounded ends, plus a 7 px round cap over
+    // the pivot. Nothing else — no dial, no ticks.
+    const line = document.createElementNS(SVG_NS, 'line');
+    line.setAttribute('x1', g.pivX); line.setAttribute('y1', g.pivY);
+    line.setAttribute('x2', g.tipX); line.setAttribute('y2', g.tipY);
+    line.setAttribute('stroke', needle);
+    line.setAttribute('stroke-width', 2);
+    line.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(line);
+
+    const cap = document.createElementNS(SVG_NS, 'circle');
+    cap.setAttribute('cx', g.pivX); cap.setAttribute('cy', g.pivY);
+    cap.setAttribute('r', 3.5);
+    cap.setAttribute('fill', needle);
+    svg.appendChild(cap);
+
+    el.appendChild(svg);
+    return el;
+}
+
+// Cassette reel / car rim. Unlike every other widget here this one CANNOT be
+// mirrored: animated_wheels_widget.c is a thin adapter over a prebuilt static
+// library, so the drawing code is not readable. What is known from the ABI is the
+// geometry (a square of `size`) and the four palette entries it is handed — so the
+// mark below is an approximation built from those, not a copy of the artwork.
+// Kept deliberately faint: it says "a wheel belongs here", it does not claim to be
+// the wheel. Style 1 (car rims) gets more spokes than style 0 (cassette reels).
+function wheelMark(p, pre, x, y, size) {
+    size = Math.max(size | 0, 16);
+    const c = size / 2;
+    const el = box(x | 0, y | 0, size, size, { opacity: '.7' });
+
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('width', size);
+    svg.setAttribute('height', size);
+    svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
+    svg.style.display = 'block';
+
+    const circle = (r, fill, stroke, width) => {
+        const el = document.createElementNS(SVG_NS, 'circle');
+        el.setAttribute('cx', c); el.setAttribute('cy', c); el.setAttribute('r', r);
+        el.setAttribute('fill', fill || 'none');
+        if (stroke) { el.setAttribute('stroke', stroke); el.setAttribute('stroke-width', width); }
+        return el;
+    };
+
+    const rim = c - 1.5;
+    svg.appendChild(circle(rim, null, S.pal.text_muted, 2));
+
+    const spokes = (p[`${pre}_animation_style`] | 0) === 1 ? 5 : 3;
+    const hubR   = Math.max(size * 0.18, 3);
+    for (let i = 0; i < spokes; i++) {
+        const a = (i / spokes) * Math.PI * 2 - Math.PI / 2;
+        const line = document.createElementNS(SVG_NS, 'line');
+        line.setAttribute('x1', c + Math.cos(a) * hubR);
+        line.setAttribute('y1', c + Math.sin(a) * hubR);
+        line.setAttribute('x2', c + Math.cos(a) * (rim - 1));
+        line.setAttribute('y2', c + Math.sin(a) * (rim - 1));
+        line.setAttribute('stroke', S.pal.text_secondary);
+        line.setAttribute('stroke-width', 2);
+        line.setAttribute('stroke-linecap', 'round');
+        svg.appendChild(line);
+    }
+    svg.appendChild(circle(hubR, S.pal.accent, null, 0));
+
+    el.appendChild(svg);
+    return el;
+}
+
+// Spectrum VU, stereo bars, mode/event indicators — audio-driven or animated
+// artwork the preview does not draw — plus the wheels and the needle meters.
+function renderSharedStubs(frag, p, pre) {
+    if (p[`${pre}_show_cassette`]) {
+        if (p[`${pre}_show_wheel_left`])
+            frag.appendChild(wheelMark(p, pre, p[`${pre}_cassette_l_x`],
+                                       p[`${pre}_cassette_l_y`], p[`${pre}_cassette_l_size`]));
+        if (p[`${pre}_show_wheel_right`])
+            frag.appendChild(wheelMark(p, pre, p[`${pre}_cassette_r_x`],
+                                       p[`${pre}_cassette_r_y`], p[`${pre}_cassette_r_size`]));
+    }
+    if (p[`${pre}_show_mode_indicator`])
+        frag.appendChild(stub(p[`${pre}_mode_indic_x`], p[`${pre}_mode_indic_y`], 16, 16, 'mode'));
+    if (p[`${pre}_show_event_indicator`])
+        frag.appendChild(stub(p[`${pre}_event_indic_x`], p[`${pre}_event_indic_y`], 16, 16, 'event'));
+    if (p[`${pre}_show_vu`])
+        frag.appendChild(stub(p[`${pre}_vu_x`], p[`${pre}_vu_y`],
+                              p[`${pre}_vu_w`], p[`${pre}_vu_h`], 'VU'));
+    if (p[`${pre}_stereo_show_l`])
+        frag.appendChild(stub(p[`${pre}_stereo_l_x`], p[`${pre}_stereo_l_y`],
+                              p[`${pre}_stereo_l_w`], p[`${pre}_stereo_l_h`], 'bar L'));
+    if (p[`${pre}_stereo_show_r`])
+        frag.appendChild(stub(p[`${pre}_stereo_r_x`], p[`${pre}_stereo_r_y`],
+                              p[`${pre}_stereo_r_w`], p[`${pre}_stereo_r_h`], 'bar R'));
+
+    if (p[`${pre}_needle_show_l`])
+        frag.appendChild(needleMeter(p, pre, p[`${pre}_needle_l_x`], p[`${pre}_needle_l_y`],
+                                     p[`${pre}_needle_l_w`], p[`${pre}_needle_l_h`],
+                                     NEEDLE_DEMO_LEVEL.l));
+    if (p[`${pre}_needle_show_r`])
+        frag.appendChild(needleMeter(p, pre, p[`${pre}_needle_r_x`], p[`${pre}_needle_r_y`],
+                                     p[`${pre}_needle_r_w`], p[`${pre}_needle_r_h`],
+                                     NEEDLE_DEMO_LEVEL.r));
+}
+
+// clock_widget: an "HH:MM" label, centre-anchored, on the section's plate.
+function renderClockWidget(frag, p, pre) {
+    if (!p[`${pre}_show_clock`]) return;
+    S.els.clock = makeLabel({
+        x: p[`${pre}_clock_widget_x`] | 0, y: p[`${pre}_clock_widget_y`] | 0,
+        fontId: p[`${pre}_clock_font`], text: nowString(),
+        plate: clamp(p[`${pre}_label_bg_opa`] ?? 50, 0, 100),
+        color: S.pal.text_primary,
+    });
+    frag.appendChild(S.els.clock);
+}
+
+// ── Volume slider (the one drawn ON the screen) — vol_slider_widget.c ────────
+
+// vol_to_travel(): the LVGL range stays 0..100; <pre>_volslider_vol_max only
+// rescales what that travel means.
+function volToTravel(vol) {
+    const p = primaryProfile();
+    const raw = p ? p[`${modeCfg().primary}_volslider_vol_max`] : 100;
+    const max = (raw >= 1 && raw <= 100) ? raw : 100;
+    return clamp(Math.floor((vol * 100 + Math.floor(max / 2)) / max), 0, 100);
+}
+
+async function renderVolSlider(parent, p, pre) {
+    if (!p[`${pre}_volslider_show`]) return;
+
+    let x = p[`${pre}_volslider_x`] | 0, y = p[`${pre}_volslider_y`] | 0;
+    let w = p[`${pre}_volslider_w`] | 0, h = p[`${pre}_volslider_h`] | 0;
+    const vertical = !!p[`${pre}_volslider_vertical`];
+
+    // LVGL 9.2 takes the drag axis from w >= h regardless of the orientation call,
+    // so the firmware swaps a contradicting box (and nudges a square by 1 px).
+    if (vertical !== (h > w)) { const t = w; w = h; h = t; }
+    if (vertical && w >= h) w = h - 1;
+
+    const knobOnly = !!p[`${pre}_volslider_knob_only`];
+    const fill     = S.pal.accent;          // not the BT screen, so accent
+    const track    = S.pal.text_muted;
+
+    // radius 0 throughout — the firmware squares the corners deliberately (a
+    // CIRCLE-radius knob hangs the SW renderer at large sizes).
+    parent.appendChild(box(x, y, w, h, { background: knobOnly ? 'transparent' : track }));
+
+    const travel = volToTravel(S.live.volume | 0);
+    if (!knobOnly) {
+        const indEl = vertical
+            ? box(x, y + h - Math.round(h * travel / 100), w, Math.round(h * travel / 100),
+                  { background: fill })
+            : box(x, y, Math.round(w * travel / 100), h, { background: fill });
+        parent.appendChild(indEl);
+        S.els.volIndicator = indEl;
+    }
+
+    // Knob artwork, when the slot holds an SD .bin. build_knob_image() sizes it
+    // from the cross axis and lets the other axis follow the aspect ratio.
+    const ref = String(p[`${pre}_volslider_knob_image`] || '').trim();
+    let knobW = vertical ? w : h, knobH = vertical ? w : h, knobUrl = '';
+
+    if (ref && !/^asset\d$/.test(ref)) {
+        try {
+            const rel = ref.startsWith('/sdcard/') ? ref.slice('/sdcard'.length) : ref;
+            const f = await fetch('/api/sd/file?path=' + encodeURIComponent(rel),
+                                  { cache: 'no-store' });
+            if (f.ok) {
+                const dec = window.LvBin.decodeToCanvas(await f.arrayBuffer());
+                if (vertical) { knobW = w; knobH = Math.max(1, Math.floor(dec.h * knobW / dec.w)); }
+                else          { knobH = h; knobW = Math.max(1, Math.floor(dec.w * knobH / dec.h)); }
+                knobUrl = dec.canvas.toDataURL('image/png');
+            }
+        } catch { /* unreadable artwork — the device keeps its plain themed knob */ }
+    }
+
+    const knobEl = box(0, 0, knobW, knobH, knobUrl
+        ? { backgroundImage: `url("${knobUrl}")`, backgroundSize: '100% 100%' }
+        : { background: fill });
+    parent.appendChild(knobEl);
+
+    S.els.volKnob = knobEl;
+    S.els.volGeom = { x, y, w, h, knobW, knobH, vertical };
+    positionKnob();
+}
+
+// position_knob(): the knob travels inside the track, v=100 → right / top.
+function positionKnob() {
+    const g = S.els.volGeom;
+    if (!g || !S.els.volKnob) return;
+    const v  = volToTravel(S.live.volume | 0);
+    const tx = Math.max(g.w - g.knobW, 0);
+    const ty = Math.max(g.h - g.knobH, 0);
+    S.els.volKnob.style.left = (g.vertical ? g.x + Math.floor((g.w - g.knobW) / 2)
+                                           : g.x + Math.floor(tx * v / 100)) + 'px';
+    S.els.volKnob.style.top  = (g.vertical ? g.y + Math.floor(ty * (100 - v) / 100)
+                                           : g.y + Math.floor((g.h - g.knobH) / 2)) + 'px';
+
+    const ind = S.els.volIndicator;
+    if (ind) {
+        if (g.vertical) {
+            const hh = Math.round(g.h * v / 100);
+            ind.style.top = (g.y + g.h - hh) + 'px';
+            ind.style.height = hh + 'px';
+        } else {
+            ind.style.width = Math.round(g.w * v / 100) + 'px';
+        }
+    }
+}
+
+// ── Touch hotspots — touch_hotspots_widget.c ────────────────────────────────
+
+const HOTSPOT_COUNT = 8;   // UI_TOUCH_HOTSPOT_COUNT
+
+// control_action_t. The widget skips anything outside PLAY_TOGGLE..OPEN_EQUALIZER,
+// so the range doubles as the validity check.
+const HOTSPOT_ACTIONS = [
+    'Play / stop', 'Previous', 'Next', 'Volume −', 'Volume +',
+    'Stop', 'Play / pause', 'Open playlist', 'Open SD browser', 'Open equalizer',
+];
+
+// What to send for a hotspot press, or null when the action cannot be driven
+// remotely. `source` is the screen's control_source_t, which is what decides the
+// mapping — control_action_execute() passes the SCREEN's source, not whatever
+// happens to be playing.
+//
+// On the radio screen each action is expressed as the explicit radio command that
+// reproduces media_control_execute(MEDIA_SOURCE_RADIO, …), arithmetic included:
+// the semantic plain-text frames (`toggle`, `next`) would act on the active source
+// instead, and `volp`/`volm` step by 5 where the hotspot path steps by 2.
+//
+// On the SD screen the SD-specific frames are exact for next/prev/pause, but
+// PLAY_TOGGLE and STOP call sd_player_stop_keep(), which no JSON command exposes.
+// There the plain-text `toggle`/`stop` frames ARE the exact path — they route
+// through media_control_execute(media_source_current(), …) — but only while SD is
+// the active source, which is noted on the page.
+function hotspotCommand(action, source) {
+    const L = S.live;
+
+    // Volume is the same arithmetic on every source.
+    if (action === 3 || action === 4) {
+        return { cmd: 'set_volume',
+                 value: clamp((L.volume | 0) + (action === 4 ? 2 : -2), 0, 100) };
+    }
+
+    if (source === 'sd') {
+        switch (action) {
+            case 0: return 'toggle';        // stop_keep / resume — source-aware frame
+            case 1: return { cmd: 'sd_prev' };
+            case 2: return { cmd: 'sd_next' };
+            case 5: return 'stop';
+            case 6: return { cmd: 'sd_pause' };
+            default: return null;
+        }
+    }
+
+    const n = S.playlist.length;
+    const idx = L.curr_index | 0;
+    const playing = L.radio === 'playing';   // BUFFERING is not PLAYING, as in C
+
+    switch (action) {
+        case 0:   // PLAY_TOGGLE
+        case 6:   // PLAY_PAUSE — "a stream can't pause; same as play/stop"
+            return playing ? { cmd: 'stop' } : { cmd: 'play_index', index: idx };
+        case 1: return n > 0 ? { cmd: 'play_index', index: (idx - 1 + n) % n } : null;
+        case 2: return n > 0 ? { cmd: 'play_index', index: (idx + 1) % n } : null;
+        case 5: return { cmd: 'stop' };
+        default:
+            // OPEN_PLAYLIST / OPEN_SD_BROWSER / OPEN_EQUALIZER navigate the panel's
+            // own UI. `set_screen` only reaches radio/home/bt, so there is no frame
+            // that can do this — the hotspot stays inert rather than doing something
+            // almost-but-not-quite right.
+            return null;
+    }
+}
+
+// Frames whose first byte is not '{' are plain-text commands (see the dispatch
+// rule in docs/ws_protocol.md), so a string is sent as-is.
+function wsSend(frame) {
+    if (!S.ws || S.ws.readyState !== 1) return false;
+    S.ws.send(typeof frame === 'string' ? frame : JSON.stringify(frame));
+    return true;
+}
+
+// The hotspots draw nothing at rest — the wallpaper supplies the artwork and the
+// button is a bare touch area over it. They are still built, because their pressed
+// highlight is real: holding one shows exactly what a finger sees, which is the
+// only way to check a hotspot against the button painted into the wallpaper.
+function renderHotspots(frag, p, pre) {
+    for (let i = 1; i <= HOTSPOT_COUNT; i++) {
+        const key = `${pre}_hotspot_${i}`;
+        const w = p[`${key}_w`] | 0, h = p[`${key}_h`] | 0;
+        const action = p[`${key}_action`] | 0;
+        if (!p[`${key}_enabled`] || w <= 0 || h <= 0 ||
+            action < 0 || action >= HOTSPOT_ACTIONS.length) continue;
+
+        const el = box(p[`${key}_x`] | 0, p[`${key}_y`] | 0, w, h, {});
+        el.className = 'hotspot';
+        // (min(w, h) * clamp(radius, 0, 100)) / 200, integer division included.
+        el.style.borderRadius =
+            Math.floor((Math.min(w, h) * clamp(p[`${key}_radius`] | 0, 0, 100)) / 200) + 'px';
+
+        const inert = hotspotCommand(action, pre) === null;
+        if (inert) {
+            el.classList.add('inert');
+            el.title = `hotspot ${i}: ${HOTSPOT_ACTIONS[action]} — panel-only, ` +
+                       `no WebSocket command can trigger it`;
+        } else {
+            el.title = `hotspot ${i}: ${HOTSPOT_ACTIONS[action]}`;
+            el.addEventListener('click', () => {
+                // Re-resolved at click time: the command depends on live state.
+                const frame = hotspotCommand(action, pre);
+                if (!frame) return;
+                if (!wsSend(frame)) setWsBadge('down', 'not sent — no connection');
+            });
+        }
+        frag.appendChild(el);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Live data
+// ─────────────────────────────────────────────────────────────────────────────
+
+// The device clock is not in the state broadcast, so this is the browser's time —
+// same format (display.time_ampm), possibly a different second.
+function nowString() {
+    const d = new Date();
+    const ampm = !!(S.settings?.display?.time_ampm);
+    let h = d.getHours();
+    const m = String(d.getMinutes()).padStart(2, '0');
+    if (!ampm) return String(h).padStart(2, '0') + ':' + m;
+    const suffix = h >= 12 ? ' PM' : ' AM';
+    h = h % 12 || 12;
+    return h + ':' + m + suffix;
+}
+
+function refreshLive() {
+    if (S.mode === 'radio') refreshRadioLive();
+    else                    refreshSdLive();
+
+    if (S.els.clock) setLabelText(S.els.clock, nowString());
+    positionKnob();
+    refreshVolumeControl();
+    refreshListLive();
+}
+
+// ── Page volume slider ──────────────────────────────────────────────────────
+//
+// A page control, not part of the rendered screen — the panel's own slider is
+// drawn inside the screen from <pre>_volslider_*. This one is the plain 0..100
+// master volume, like the one on the main web UI, so <pre>_volslider_vol_max
+// (which only remaps the on-screen slider's travel) deliberately does not apply.
+
+const volEl    = document.getElementById('volume');
+const volValEl = document.getElementById('vol_value');
+let volDragging = false;
+let volTimeout  = null;
+
+// vol_slider_widget_update() refuses to move the knob while the slider is pressed;
+// the same guard is needed here, or an incoming state broadcast would fight the
+// finger mid-drag and snap the slider back.
+function refreshVolumeControl() {
+    // Until the first state broadcast lands, the device's volume is unknown — so
+    // the control stays inert rather than showing a confident 0 % that could be
+    // dragged and would overwrite the real level.
+    volEl.disabled = !S.gotState;
+    if (!S.gotState) { volValEl.textContent = '—'; return; }
+    if (volDragging) return;
+    volEl.value = clamp(S.live.volume | 0, 0, 100);
+    volValEl.textContent = (S.live.volume | 0) + '%';
+}
+
+volEl.addEventListener('input', () => {
+    const v = parseInt(volEl.value, 10);
+    volValEl.textContent = v + '%';
+    // Same 150 ms debounce the main web UI uses: dragging fires 'input' per pixel
+    // and every frame would otherwise be a settings write on the device.
+    clearTimeout(volTimeout);
+    volTimeout = setTimeout(() => {
+        if (!wsSend({ cmd: 'set_volume', value: v })) setWsBadge('down', 'not sent — no connection');
+    }, 150);
+});
+
+volEl.addEventListener('pointerdown',   () => { volDragging = true; });
+volEl.addEventListener('pointerup',     () => { volDragging = false; });
+volEl.addEventListener('pointercancel', () => { volDragging = false; });
+volEl.addEventListener('blur',          () => { volDragging = false; });
+
+// ── WebSocket ───────────────────────────────────────────────────────────────
+
+function setWsBadge(cls, text) {
+    const b = document.getElementById('ws_badge');
+    b.className = 'badge' + (cls ? ' ' + cls : '');
+    b.textContent = text;
+}
+
+function connectWs() {
+    S.ws = new WebSocket(`ws://${location.host}/ws`);
+
+    S.ws.onopen = () => {
+        S.wsRetry = 250;
+        setWsBadge('live', 'live');
+        if (S.mode === 'sd') requestSdList();
+    };
+    S.ws.onerror = () => setWsBadge('down', 'ws error');
+    S.ws.onclose = () => {
+        const delay = S.wsRetry;
+        S.wsRetry = Math.min(S.wsRetry * 2, 3000);
+        setWsBadge('down', 'reconnecting…');
+        setTimeout(connectWs, delay);
+    };
+    S.ws.onmessage = (msg) => {
+        let d;
+        try { d = JSON.parse(msg.data); } catch { return; }
+
+        if (d.type === 'sd_list') { S.sdList = d; renderListScreen(); return; }
+        if (d.type !== 'state') return;
+
+        for (const k of Object.keys(S.live)) {
+            if (d[k] !== undefined) S.live[k] = d[k];
+        }
+        S.gotState = true;
+        refreshLive();
+    };
+}
+
+function requestSdList(dir) {
+    wsSend(dir ? { cmd: 'sd_list', dir } : { cmd: 'sd_list' });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Zoom / fullscreen
+// ─────────────────────────────────────────────────────────────────────────────
+
+function applyZoom() {
+    const mode = document.getElementById('zoom').value;
+    const w = S.meta.screen_w, h = S.meta.screen_h;
+    let k;
+
+    if (document.fullscreenElement === viewerEl) {
+        // On the wall the panel should be as large as it goes, so the zoom picker
+        // is ignored and both axes are fitted. Both the volume bar and the list
+        // panel share the fullscreen column, so the height is split: the bar and
+        // the gaps come off the top, the rest divides between the panels.
+        const panels  = listWrapEl.hidden ? 1 : 2;
+        const gaps    = 18 * (panels === 2 ? 2 : 1) + 16;
+        const usableH = Math.max(window.innerHeight - volbarEl.offsetHeight - gaps, 40);
+        k = Math.min(window.innerWidth / w, usableH / (h * panels));
+    } else if (mode === 'fit') {
+        // Fit the WINDOW, not just its width. Measure the page, never the frame:
+        // the frame is inline-block and sized BY the stage, so asking it how wide
+        // it is would just echo the last zoom back. offsetTop is scroll-independent.
+        const availW = document.body.clientWidth - 62;
+        const availH = window.innerHeight - frameEl.offsetTop - volbarEl.offsetHeight - 44;
+        k = clamp(Math.min(availW / w, availH / h), 1, 4);
+    } else {
+        k = parseFloat(mode);
+    }
+
+    S.scale = k;
+    for (const [scr, stg] of [[screenEl, stageEl], [listScreen, listStage]]) {
+        scr.style.transform = `scale(${k})`;
+        stg.style.width  = Math.round(w * k) + 'px';
+        stg.style.height = Math.round(h * k) + 'px';
+    }
+    volbarEl.style.width = frameEl.offsetWidth + 'px';
+}
+
+const fullscreenBtn = document.getElementById('fullscreen');
+
+function toggleFullscreen() {
+    if (document.fullscreenElement) {
+        document.exitFullscreen();
+    } else {
+        viewerEl.requestFullscreen().catch(err => fail('Fullscreen refused: ' + err.message));
+    }
+}
+
+fullscreenBtn.addEventListener('click', toggleFullscreen);
+// The in-viewer twin: the toolbar button is outside the fullscreen element and so
+// is not rendered there, which would leave Esc as the only way out.
+document.getElementById('exit_fs').addEventListener('click', toggleFullscreen);
+
+let listHiddenBeforeFs = null;
+
+document.addEventListener('fullscreenchange', () => {
+    const on = document.fullscreenElement === viewerEl;
+    fullscreenBtn.textContent = on ? '⛶ Exit fullscreen' : '⛶ Fullscreen';
+
+    if (on) {
+        // The toggle lives in the toolbar, outside the fullscreen element and so
+        // not rendered — the list has to come up with the panel, or there would be
+        // no way to reveal it from the wall.
+        listHiddenBeforeFs = listWrapEl.hidden;
+        setListVisible(true);
+    } else if (listHiddenBeforeFs !== null) {
+        setListVisible(!listHiddenBeforeFs);
+        listHiddenBeforeFs = null;
+    }
+    if (S.meta) applyZoom();
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Mode + list toggle
+// ─────────────────────────────────────────────────────────────────────────────
+
+const toggleListBtn = document.getElementById('toggle_list');
+
+function listButtonLabel() {
+    const what = S.mode === 'radio' ? 'playlist' : 'browser';
+    return (listWrapEl.hidden ? 'Show ' : 'Hide ') + what + ' screen';
+}
+
+function setListVisible(show) {
+    listWrapEl.hidden = !show;
+    toggleListBtn.textContent = listButtonLabel();
+    if (S.meta) applyZoom();
+}
+
+toggleListBtn.addEventListener('click', () => setListVisible(listWrapEl.hidden));
+
+document.getElementById('mode').addEventListener('change', async (e) => {
+    S.mode = e.target.value;
+    listCapEl.textContent = modeCfg().listCaption;
+    toggleListBtn.textContent = listButtonLabel();
+    // The browser's rows come from the device, one folder at a time.
+    if (S.mode === 'sd' && !S.sdList) requestSdList();
+    await renderEverything();
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Orchestration
+// ─────────────────────────────────────────────────────────────────────────────
+
+function fail(msg) {
+    const el = document.getElementById('err');
+    el.textContent = msg;
+    el.style.display = 'block';
+}
+
+async function renderEverything() {
+    S.els = {};
+    const cfg = modeCfg();
+
+    if (S.mode === 'radio') await renderRadioScreen();
+    else                    await renderSdScreen();
+
+    await applyBackground(screenEl, primaryProfile()[`${cfg.primary}_wallpaper`],
+                          document.getElementById('dim_badge'));
+
+    renderListScreen();
+    await applyBackground(listScreen, listProfile()[`${cfg.list}_wallpaper`], null);
+    applyZoom();
+}
+
+async function loadAll() {
+    const get = async (url) => {
+        const r = await fetch(url, { cache: 'no-store' });
+        if (!r.ok) throw new Error(url + ' → HTTP ' + r.status);
+        return r.json();
+    };
+    const sections = ['radio', 'playlist', 'sd', 'browser'];
+    const [meta, settings, theme, ...profs] = await Promise.all([
+        get('/api/ui/profile/meta'),
+        get('/api/settings'),
+        get('/api/theme'),
+        ...sections.map(s => get('/api/ui/profile/' + s)),
+    ]);
+    S.meta     = meta;
+    S.settings = settings;
+    S.pal      = theme[theme.current] || theme.dark;
+    sections.forEach((s, i) => { S.prof[s] = profs[i]; });
+
+    for (const el of [screenEl, listScreen]) {
+        el.style.width  = meta.screen_w + 'px';
+        el.style.height = meta.screen_h + 'px';
+    }
+
+    // Kept out of the group above on purpose: the station list is only needed by
+    // the playlist screen and the station icon, so a playlist that fails to load
+    // must not take the screens with it.
+    try {
+        const pl = await get('/api/playlist');
+        S.playlist = Array.isArray(pl) ? pl : [];
+    } catch (err) {
+        S.playlist = [];
+        console.warn('Playlist unavailable:', err.message);
+    }
+}
+
+async function boot() {
+    try {
+        await loadAll();
+        // Measure the webfont, never the fallback: the baseline correction is only
+        // meaningful once the real glyph metrics are in.
+        await document.fonts.load('500 16px AtlasMontserrat');
+        await document.fonts.ready;
+        baselineFix.clear();
+
+        listCapEl.textContent = modeCfg().listCaption;
+        toggleListBtn.textContent = listButtonLabel();
+        await renderEverything();
+        connectWs();
+        setInterval(() => { if (S.els.clock) setLabelText(S.els.clock, nowString()); }, 10000);
+    } catch (err) {
+        fail('Could not load the screens: ' + err.message);
+    }
+}
+
+document.getElementById('zoom').addEventListener('change', applyZoom);
+document.getElementById('show_hotspots').addEventListener('change', (e) => {
+    screenEl.classList.toggle('show-hotspots', e.target.checked);
+});
+window.addEventListener('resize', () => { if (S.meta) applyZoom(); });
+document.getElementById('reload').addEventListener('click', async () => {
+    try {
+        await loadAll();
+        baselineFix.clear();
+        await renderEverything();
+    } catch (err) {
+        fail('Reload failed: ' + err.message);
+    }
+});
+
+window.addEventListener('DOMContentLoaded', boot);

@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AtlasCube — screen preview</title>
+<link rel="icon" href="favicon.ico">
+<style>
+/* The panel typeface: the very same Montserrat-Medium.ttf that scripts/gen_fonts.ps1
+   feeds to lv_font_conv, subset to the same code-point ranges (ASCII, Latin-1
+   Supplement, Latin Extended-A, Romanian comma-below) and kept with kerning, so a
+   glyph drawn here is the glyph the device draws. */
+@font-face {
+    font-family: 'AtlasMontserrat';
+    src: url('montserrat-medium-eu.woff2') format('woff2');
+    font-weight: 500;
+    font-style: normal;
+    font-display: block;
+}
+
+:root {
+    --page-bg:   #14161a;
+    --panel-bg:  #1c1f26;
+    --line:      #2c313b;
+    --fg:        #d8dde5;
+    --fg-dim:    #8b94a3;
+    --accent:    #4c9aff;
+    --warn:      #ffb454;
+}
+
+* { box-sizing: border-box; }
+
+/* The screens are the point of the page, so they start at the very top:
+   everything explanatory lives below, folded away until asked for. */
+body {
+    margin: 0;
+    padding: 14px 20px 28px;
+    background: var(--page-bg);
+    color: var(--fg);
+    font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+h1 { margin: 0 0 10px; font-size: 18px; font-weight: 600; }
+
+.topbar, .bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.topbar { margin-bottom: 10px; }
+.bar    { margin-top: 14px; }
+
+.bar label, .topbar label { color: var(--fg-dim); }
+
+select, button {
+    background: var(--panel-bg);
+    color: var(--fg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font: inherit;
+    cursor: pointer;
+}
+
+button:hover, select:hover { border-color: var(--accent); }
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--fg-dim);
+}
+
+.badge::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--fg-dim);
+}
+
+.badge.live { color: #7ee08a; border-color: #2f5b38; }
+.badge.live::before { background: #7ee08a; }
+.badge.down { color: var(--warn); border-color: #5b482f; }
+.badge.down::before { background: var(--warn); }
+
+/* Device frame — the screen elements are sized in real LCD pixels and scaled as a
+   whole, so every coordinate inside them is a device coordinate, no conversion. */
+#viewer { display: inline-block; }
+
+.frame {
+    display: inline-block;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px;
+    background: var(--panel-bg);
+}
+
+#stage, #list_stage { position: relative; overflow: hidden; }
+
+#screen, #list_screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: top left;
+    overflow: hidden;
+    font-family: 'AtlasMontserrat', sans-serif;
+    font-weight: 500;
+    /* LVGL blits glyph bitmaps; keep the browser from adding its own flourishes. */
+    font-kerning: normal;
+    font-variant-ligatures: none;
+    text-rendering: geometricPrecision;
+}
+
+#list_wrap { margin-top: 20px; }
+
+.screen-caption {
+    margin-bottom: 6px;
+    color: var(--fg-dim);
+    font-size: 12px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+/* Fullscreen is requested on #viewer, not on a frame alone: a fullscreen element
+   is the ONLY thing rendered, so anything the presenter still needs — the volume
+   bar, the list panel, a way out — has to live inside it. */
+#viewer:fullscreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    width: 100%;
+    height: 100%;
+    background: #000;
+}
+
+#viewer:fullscreen::backdrop { background: #000; }
+
+/* The device frame is chrome for the page, not for the wall. */
+#viewer:fullscreen .frame {
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+#viewer:fullscreen .volbar,
+#viewer:fullscreen #list_wrap { margin-top: 0; }
+#viewer:fullscreen .screen-caption { display: none; }
+
+/* Only reachable in fullscreen — outside it the toolbar button does the job. */
+.exit-fs { display: none; }
+
+#viewer:fullscreen .exit-fs {
+    display: block;
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    opacity: .45;
+    transition: opacity .15s;
+}
+
+#viewer:fullscreen .exit-fs:hover { opacity: 1; }
+
+/* Sits directly under the panel and is widened to match it (see applyZoom), so it
+   reads as belonging to the device rather than to the page chrome. */
+.volbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.vol-icon { font-size: 14px; opacity: .7; }
+
+.vol-value {
+    min-width: 42px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg-dim);
+    font-size: 13px;
+}
+
+.volbar input[type=range] {
+    flex: 1;
+    min-width: 120px;
+    height: 22px;
+    margin: 0;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+.volbar input[type=range]::-webkit-slider-runnable-track,
+.volbar input[type=range]::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+}
+
+.volbar input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+}
+
+.volbar input[type=range]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+}
+
+/* Touch hotspots. Invisible at rest, exactly as the widget leaves them — the
+   wallpaper is the button. border-box keeps the border inside the object bounds,
+   as LVGL draws it. */
+.hotspot {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+}
+
+/* Actions that only exist inside the panel's own UI — shown, nothing to send. */
+.hotspot.inert { cursor: not-allowed; }
+
+/* Only while the button is actually held, which is what LV_STATE_PRESSED means.
+   Hover must NOT light it up: the cursor stays on the button after a click, so
+   the highlight would linger and read as a stuck press. */
+.hotspot:active {
+    background: rgba(255, 255, 255, .4);
+    border-color: rgba(255, 255, 255, .6);
+}
+
+/* Preview aid, not something the panel ever shows. Alignment against the button
+   painted into the wallpaper is checked in this mode, where a lingering highlight
+   is the point rather than a distraction. */
+#screen.show-hotspots .hotspot {
+    outline: 1px dashed rgba(120, 200, 255, .8);
+    outline-offset: -1px;
+}
+
+#screen.show-hotspots .hotspot:hover {
+    background: rgba(255, 255, 255, .4);
+    border-color: rgba(255, 255, 255, .6);
+}
+
+/* Affordance only. The panel gives a row no pressed styling of its own — it acts
+   and leaves the screen — so nothing is painted here either. */
+.pl-row { cursor: pointer; }
+
+/* The device runs the list with LV_SCROLLBAR_MODE_OFF, so no bar is drawn over
+   the wallpaper here either. */
+.pl-view { scrollbar-width: none; }
+.pl-view::-webkit-scrollbar { display: none; }
+
+/* Elements the preview does not draw for real yet: outlined so it is always
+   obvious which parts of the screen are honest pixels and which are stand-ins. */
+.stub {
+    position: absolute;
+    border: 1px dashed rgba(255, 255, 255, .45);
+    background: rgba(255, 255, 255, .06);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.stub span {
+    position: absolute;
+    left: 2px;
+    top: 1px;
+    font: 9px/1.2 system-ui, sans-serif;
+    color: rgba(255, 255, 255, .75);
+    white-space: nowrap;
+}
+
+/* Collapsed by default — the same details/summary idiom the layout editor uses,
+   down to the accent chevron that rotates when it opens. */
+.info {
+    margin-top: 18px;
+    max-width: 820px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--panel-bg);
+    overflow: hidden;
+}
+
+.info > summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
+    font-size: 12.5px;
+    color: var(--fg-dim);
+    transition: background .15s, color .15s;
+}
+
+.info > summary::-webkit-details-marker { display: none; }
+
+.info > summary::before {
+    content: '›';
+    color: var(--accent);
+    font-size: 18px;
+    line-height: 12px;
+    transition: transform .15s;
+}
+
+.info[open] > summary::before { transform: rotate(90deg); }
+.info > summary:hover { background: var(--page-bg); color: var(--fg); }
+.info[open] > summary { border-bottom: 1px solid var(--line); color: var(--fg); }
+
+.info-body { padding: 14px 16px 4px; }
+
+.note {
+    margin: 0 0 14px;
+    color: var(--fg-dim);
+    font-size: 12.5px;
+    line-height: 1.6;
+}
+
+.note code {
+    background: var(--panel-bg);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0 4px;
+}
+
+#err {
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    border: 1px solid #6b3b3b;
+    border-radius: 6px;
+    background: #2a1c1c;
+    color: #ffb0b0;
+    display: none;
+}
+</style>
+</head>
+<body>
+
+<div id="err"></div>
+
+<div class="topbar">
+    <label for="mode">Source</label>
+    <select id="mode">
+        <option value="radio" selected>Radio</option>
+        <option value="sd">SD card</option>
+    </select>
+    <button id="fullscreen" type="button" title="Fill the browser window (Esc to leave)">
+        ⛶ Fullscreen
+    </button>
+</div>
+
+<div id="viewer">
+    <div class="frame">
+        <div id="stage"><div id="screen"></div></div>
+    </div>
+
+    <div class="volbar" id="volbar">
+        <span class="vol-icon">🔈</span>
+        <input type="range" id="volume" min="0" max="100" value="0" step="1"
+               aria-label="Volume">
+        <span class="vol-value" id="vol_value">—</span>
+    </div>
+
+    <div id="list_wrap" hidden>
+        <div class="screen-caption" id="list_caption">Playlist screen</div>
+        <div class="frame">
+            <div id="list_stage"><div id="list_screen"></div></div>
+        </div>
+    </div>
+
+    <button id="exit_fs" class="exit-fs" type="button" title="Leave fullscreen (Esc)">
+        ✕ Exit
+    </button>
+</div>
+
+<div class="bar">
+    <label for="zoom">Zoom</label>
+    <select id="zoom">
+        <option value="fit" selected>Fit window</option>
+        <option value="1">1:1</option>
+        <option value="2">2×</option>
+        <option value="3">3×</option>
+    </select>
+    <button id="reload" type="button">Reload profile</button>
+    <button id="toggle_list" type="button">Show playlist screen</button>
+    <label><input type="checkbox" id="show_hotspots"> Show touch areas</label>
+    <span class="badge" id="ws_badge">connecting…</span>
+    <span class="badge" id="dim_badge">—</span>
+</div>
+
+<details class="info">
+    <summary><span>About this preview</span></summary>
+    <div class="info-body">
+        <h1>Screen preview</h1>
+        <p class="note">
+            Rendered from the device's own data: <code>/api/ui/profile/&lt;section&gt;</code>
+            geometry, real LVGL font metrics, the active theme palette and the
+            WebSocket state feed. <em>Source</em> switches between the radio pair
+            (radio + playlist) and the SD pair (player + browser), the same pairing
+            the device makes between a source and its browser.
+        </p>
+        <p class="note">
+            <strong>The page writes to the device.</strong> Touch hotspots drive the
+            radio or the SD player exactly as pressing the panel would; list rows play
+            their station or file; the volume bar under the panel sets the plain 0–100
+            master volume, so <code>&lt;screen&gt;_volslider_vol_max</code> (which only
+            remaps the on-screen slider's travel) does not apply to it. Nothing else
+            here writes.
+        </p>
+        <p class="note">
+            Touch hotspots draw nothing at rest, because that is what the panel does —
+            the wallpaper is the button, the hotspot is only the touch area over it.
+            Holding one down shows its real pressed highlight, and only then. To check
+            a hotspot against artwork painted into the wallpaper, tick <em>Show touch
+            areas</em>. Radio hotspots use explicit radio commands so they cannot act
+            on the wrong source, and volume steps by 2 like the panel's own path, not
+            by the 5 of the semantic <code>volp</code> frame. On the SD screen
+            play/stop routes through the source-aware <code>toggle</code>/<code>stop</code>
+            frames, because <code>sd_player_stop_keep()</code> has no JSON command of
+            its own — exact while SD is the active source. The three navigation actions
+            (playlist, SD browser, equalizer) move the panel's own UI and have no
+            equivalent on the wire, so those hotspots are shown but inert.
+        </p>
+        <p class="note">
+            Lists scroll — wheel, or drag them like a finger; a drag that turns into a
+            scroll cancels the pick, exactly as a swipe off a row does on the panel.
+            Rows are ordered as the device orders them: favourites first in the
+            playlist, and up-entry then folders then tracks in the browser. The
+            browser's row icons are stand-ins — <code>LV_SYMBOL_*</code> are FontAwesome
+            glyphs that are not in the Montserrat subset this page ships.
+        </p>
+        <p class="note">
+            Dashed boxes are placeholders, not drawn artwork: the bar VU, stereo bars
+            and the mode/event indicators. The cassette reels are a faint stand-in
+            rather than a mirror — <code>animated_wheels_widget.c</code> is a thin
+            adapter over a prebuilt static library, so the drawing code cannot be read;
+            only the square geometry and the four palette entries it is handed are
+            known, and the mark is built from those. Everything else — text,
+            background plates, wallpaper, volume slider, station icon, album cover — is
+            drawn the way the firmware draws it. Each screen uses its own wallpaper
+            field, not the radio's.
+        </p>
+        <p class="note">
+            Three things cannot be truthful, and are staged rather than omitted so the
+            layout still reads: the needle meters' <em>deflection</em> (the RMS levels
+            are tapped inside the DSP element and are not published to any client), and
+            the SD player's progress bar and elapsed counter (the position lives in
+            <code>sd_player_position_ms()</code>, also unpublished). Their geometry,
+            colours and visibility rules are real. The clock reads this browser's time,
+            the weather row shows sample text, and long text is clipped here instead of
+            scrolling.
+        </p>
+    </div>
+</details>
+
+<script src="lvbin.js"></script>
+<script src="preview-core.js"></script>
+<script src="preview-list.js"></script>
+<script src="preview-radio.js"></script>
+<script src="preview-sd.js"></script>
+</body>
+</html>
