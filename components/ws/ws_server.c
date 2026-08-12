@@ -445,6 +445,16 @@ static void send_full_state(void)
     cJSON_AddBoolToObject(json, "sd_paused", s->sd_paused);
     cJSON_AddBoolToObject(json, "sd_shuffle", s->sd_shuffle);
     cJSON_AddNumberToObject(json, "sd_repeat", s->sd_repeat);
+    // Playback progress of the current SD track. Both are read straight from
+    // sd_player (a stored duration and a wall-clock delta), so neither blocks.
+    //
+    // The snapshot is pushed on state changes, not on a timer — a client that
+    // wants a ticking counter extrapolates from these exactly as the device's own
+    // screen does: add the time elapsed locally since the frame arrived, and
+    // freeze that while sd_paused. Broadcasting once a second instead would cost
+    // every connected client a frame per second for a number they can derive.
+    cJSON_AddNumberToObject(json, "sd_position_ms", sd_player_position_ms());
+    cJSON_AddNumberToObject(json, "sd_duration_ms", sd_player_duration_ms());
 
     // Current media source (radio|sd|bt) — resolved server-side so clients
     // don't replicate the kept-SD-queue nuance (paused SD still counts as SD).

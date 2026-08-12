@@ -145,6 +145,8 @@ Built by `send_full_state()`. Sent on connect and on every state change.
 | `sd_paused` | bool | |
 | `sd_shuffle` | bool | |
 | `sd_repeat` | number | `0` none, `1` all, `2` one |
+| `sd_position_ms` | number | Playback position of the current SD track, ms. `0` when idle. Frozen while `sd_paused`, and runs ~0.5 s ahead of the speaker (pipeline startup latency). **Extrapolate it** — see below |
+| `sd_duration_ms` | number | Length of the current SD track, ms. `0` = unknown (FLAC/AAC, or an unparseable header) — a client showing a progress bar must hide it rather than divide by zero |
 | `bt_enable` | bool | |
 | `bt_state` | number | `0` connected, `1` disconnected, `2` discoverable (`bt_state_t`) |
 | `bt_volume` | number | 0…100 |
@@ -223,6 +225,19 @@ wallpaper, UI profiles) is registered in
   (`media_control_execute`); the JSON one always stops the radio.
 - **`sd_shuffle` / `sd_repeat` are toggles/cycles, not setters.** To reach a
   known state, read it back from the state broadcast.
+- **`sd_position_ms` does not tick.** The state broadcast fires on state
+  *changes*, not on a timer, so a client that just displays the field shows a
+  counter that only moves when something else happens. Extrapolate instead —
+  the value is a wall-clock delta, so the device's own screen and a client run
+  the same arithmetic:
+
+  ```
+  shown = sd_position_ms + (now - when_the_frame_arrived)   // freeze if sd_paused
+  ```
+
+  Every new broadcast re-anchors it, so drift cannot accumulate. Do not ask for
+  periodic broadcasts to avoid this: that would cost every connected client a
+  frame per second for a number it can derive.
 - **Volume steps are fixed at 5** for `volp`/`volm`. A client wanting a
   different step must send `vol=N`.
 - `vol=N` **ignores** out-of-range values while `volp`/`volm` clamp — do not
