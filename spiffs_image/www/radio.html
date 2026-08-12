@@ -54,6 +54,67 @@ h1 {
     margin-top: 14px;
 }
 
+/* Sits directly under the panel and is widened to match it (see applyZoom), so it
+   reads as belonging to the device rather than to the page chrome. */
+.volbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.vol-icon { font-size: 14px; opacity: .7; }
+
+.vol-value {
+    min-width: 42px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg-dim);
+    font-size: 13px;
+}
+
+.volbar input[type=range] {
+    flex: 1;
+    min-width: 120px;
+    height: 22px;
+    margin: 0;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: pointer;
+}
+
+.volbar input[type=range]::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+}
+
+.volbar input[type=range]::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+}
+
+.volbar input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    margin-top: -5px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+}
+
+.volbar input[type=range]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+}
+
 .bar label { color: var(--fg-dim); }
 
 select, button {
@@ -92,6 +153,13 @@ button:hover, select:hover { border-color: var(--accent); }
 .badge.down { color: var(--warn); border-color: #5b482f; }
 .badge.down::before { background: var(--warn); }
 
+.topbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
 /* Device frame — #screen is sized in real LCD pixels and scaled as a whole, so
    every coordinate inside it is a device coordinate with no conversion. */
 .frame {
@@ -102,12 +170,70 @@ button:hover, select:hover { border-color: var(--accent); }
     background: var(--panel-bg);
 }
 
-#stage {
+/* Fullscreen is requested on #viewer, not on the frame alone: a fullscreen element
+   is the ONLY thing rendered, so anything the presenter still needs — the volume
+   bar, a way out — has to live inside it. Notes and toolbar stay outside and
+   correctly disappear. */
+#viewer { display: inline-block; }
+
+#viewer:fullscreen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    width: 100%;
+    height: 100%;
+    background: #000;
+}
+
+#viewer:fullscreen::backdrop { background: #000; }
+
+/* The device frame is chrome for the page, not for the wall. */
+#viewer:fullscreen .frame {
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+#viewer:fullscreen .volbar { margin-top: 0; }
+
+/* On the wall the two panels stack with the flex gap; the page-side caption and
+   margin would only push the pair off-centre. */
+#viewer:fullscreen #playlist_wrap { margin-top: 0; }
+#viewer:fullscreen .screen-caption { display: none; }
+
+/* Only reachable in fullscreen — outside it the toolbar button does the job. */
+.exit-fs { display: none; }
+
+#viewer:fullscreen .exit-fs {
+    display: block;
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    opacity: .45;
+    transition: opacity .15s;
+}
+
+#viewer:fullscreen .exit-fs:hover { opacity: 1; }
+
+#stage, #pl_stage {
     position: relative;
     overflow: hidden;
 }
 
-#screen {
+#playlist_wrap { margin-top: 20px; }
+
+.screen-caption {
+    margin-bottom: 6px;
+    color: var(--fg-dim);
+    font-size: 12px;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+#screen, #pl_screen {
     position: absolute;
     top: 0;
     left: 0;
@@ -133,6 +259,15 @@ button:hover, select:hover { border-color: var(--accent); }
     background: transparent;
     cursor: pointer;
 }
+
+/* Affordance only. The panel gives a row no pressed styling of its own — it plays
+   the station and leaves the screen — so nothing is painted here either. */
+.pl-row { cursor: pointer; }
+
+/* The device runs the list with LV_SCROLLBAR_MODE_OFF, so no bar is drawn over
+   the wallpaper here either. */
+.pl-view { scrollbar-width: none; }
+.pl-view::-webkit-scrollbar { display: none; }
 
 /* Actions that only exist inside the panel's own UI — shown, but nothing to send. */
 .hotspot.inert { cursor: not-allowed; }
@@ -246,19 +381,46 @@ button:hover, select:hover { border-color: var(--accent); }
 
 <div id="err"></div>
 
-<div class="frame">
-    <div id="stage"><div id="screen"></div></div>
+<div class="topbar">
+    <button id="fullscreen" type="button" title="Fill the browser window (Esc to leave)">
+        ⛶ Fullscreen
+    </button>
+</div>
+
+<div id="viewer">
+    <div class="frame">
+        <div id="stage"><div id="screen"></div></div>
+    </div>
+
+    <div class="volbar" id="volbar">
+        <span class="vol-icon">🔈</span>
+        <input type="range" id="volume" min="0" max="100" value="0" step="1"
+               aria-label="Volume">
+        <span class="vol-value" id="vol_value">—</span>
+    </div>
+
+    <div id="playlist_wrap" hidden>
+        <div class="screen-caption">Playlist screen</div>
+        <div class="frame">
+            <div id="pl_stage"><div id="pl_screen"></div></div>
+        </div>
+    </div>
+
+    <button id="exit_fs" class="exit-fs" type="button" title="Leave fullscreen (Esc)">
+        ✕ Exit
+    </button>
 </div>
 
 <div class="bar">
     <label for="zoom">Zoom</label>
     <select id="zoom">
-        <option value="fit">Fit width</option>
+        <option value="fit" selected>Fit window</option>
         <option value="1">1:1</option>
-        <option value="2" selected>2×</option>
+        <option value="2">2×</option>
         <option value="3">3×</option>
     </select>
     <button id="reload" type="button">Reload profile</button>
+    <button id="toggle_playlist" type="button">Show playlist screen</button>
     <label><input type="checkbox" id="show_hotspots"> Show touch areas</label>
     <span class="badge" id="ws_badge">connecting…</span>
     <span class="badge" id="dim_badge">—</span>
@@ -273,7 +435,24 @@ button:hover, select:hover { border-color: var(--accent); }
             geometry, real LVGL font metrics, the active theme palette and the
             WebSocket state feed. <strong>The touch hotspots are live</strong> —
             clicking one drives the radio for real, exactly as pressing the panel
-            would. Nothing else on this page writes to the device.
+            would. The volume bar under the panel writes too; it is the plain 0–100
+            master volume, so <code>radio_volslider_vol_max</code> (which only remaps
+            the on-screen slider's travel) does not apply to it. Nothing else on this
+            page writes to the device.
+        </p>
+        <p class="note">
+            <em>Show playlist screen</em> reveals SCREEN_PLAYLIST below, drawn from
+            <code>/api/ui/profile/playlist</code> and the live station list. Rows are
+            ordered favourites-first like the device orders them, the cursor sits on
+            the station that is playing, and that station's row carries the accent
+            colour. Its wallpaper is its own <code>playlist_wallpaper</code>, not the
+            radio's. <strong>Rows are clickable</strong> and play their station, and
+            like the panel they do nothing when that station is already playing. The
+            list scrolls — wheel, or drag it like a finger; a drag that turns into a
+            scroll cancels the pick, exactly as a swipe off a row does on the panel.
+            Changing station re-centres the cursor, again as the panel does. In
+            fullscreen the playlist comes up with the radio and the volume bar, since
+            the toggle button is outside the fullscreen element.
         </p>
         <p class="note">
             Dashed boxes are placeholders, not drawn artwork: the bar VU, stereo bars,

@@ -25,9 +25,11 @@
 const S = {
     meta:     null,   // /api/ui/profile/meta
     p:        null,   // /api/ui/profile/radio
+    pl:       null,   // /api/ui/profile/playlist
     settings: null,   // /api/settings
     pal:      null,   // active palette from /api/theme
     playlist: [],     // /api/playlist — carries the per-station icon paths
+    gotState: false,  // a state broadcast has landed, so live values are real
     live: {           // last WS state, seeded with what the device shows at rest
         radio: 'stopped', station_name: '', title: '', volume: 0,
         sr: 0, ch: 2, br: 0, sd_active: false, curr_index: -1,
@@ -39,6 +41,12 @@ const S = {
 
 const screenEl = document.getElementById('screen');
 const stageEl  = document.getElementById('stage');
+const frameEl  = document.querySelector('.frame');
+const viewerEl = document.getElementById('viewer');
+const volbarEl = document.getElementById('volbar');
+const plWrapEl   = document.getElementById('playlist_wrap');
+const plStageEl  = document.getElementById('pl_stage');
+const plScreenEl = document.getElementById('pl_screen');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Colours
@@ -199,6 +207,222 @@ function box(x, y, w, h, css) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Playlist screen — mirrors screen_playlist.c + ui_list_widget.c
+// ─────────────────────────────────────────────────────────────────────────────
+
+const UI_LIST_BOX_PAD = 2;   // ui_profile.h
+
+// list_box_of(): a box with both dimensions set is taken as given; otherwise the
+// list fills the panel under the header.
+function listBoxOf(p, pre) {
+    const bw = p[`${pre}_list_w`] | 0, bh = p[`${pre}_list_h`] | 0;
+    if (bw > 0 && bh > 0) {
+        return { x: p[`${pre}_list_x`] | 0, y: p[`${pre}_list_y`] | 0, w: bw, h: bh };
+    }
+    const top = p[`${pre}_header_hide`] ? 0 : (p[`${pre}_header_h`] | 0);
+    return { x: 0, y: top, w: S.meta.screen_w, h: S.meta.screen_h - top };
+}
+
+// build_order(): favourites first, original order preserved within each group.
+// The mapping matters — app_state.curr_index is a REAL index, while the cursor
+// and the row numbering live in display space.
+function playlistOrder() {
+    const fav = [], rest = [];
+    S.playlist.forEach((e, i) => (e.favorite ? fav : rest).push(i));
+    return fav.concat(rest);
+}
+
+// bind_row(): "%c%2d. %s" — '*' marks a favourite, the number is display position.
+function playlistRowText(order, dispIdx) {
+    const e = S.playlist[order[dispIdx]];
+    const star = (e && e.favorite) ? '*' : ' ';
+    return `${star}${String(dispIdx + 1).padStart(2, ' ')}. ${e ? e.name : ''}`;
+}
+
+function renderPlaylistScreen() {
+    const p = S.pl;
+    if (!p) return;
+    const th = S.pal;
+    const frag = document.createDocumentFragment();
+
+    plScreenEl.style.width  = S.meta.screen_w + 'px';
+    plScreenEl.style.height = S.meta.screen_h + 'px';
+
+    // ----- Header strip -----
+    if (!p.playlist_header_hide) {
+        const hh = p.playlist_header_h | 0;
+        const header = box(0, 0, S.meta.screen_w, hh, {
+            background: th.bg_secondary, overflow: 'hidden',
+        });
+
+        // LV_ALIGN_LEFT_MID / RIGHT_MID plus the configured offset. The label is
+        // centred on the strip's middle, so its top is derived from the font box.
+        const hf = lvMetrics(p.playlist_header_font);
+        header.appendChild(alignedText({
+            text: 'Playlist', fontId: p.playlist_header_font, color: th.accent,
+            left: p.playlist_label_x | 0,
+            top: Math.round((hh - hf.lh) / 2) + (p.playlist_label_y | 0),
+        }));
+
+        if (!p.playlist_hint_hide) {
+            const rf = lvMetrics(p.playlist_row_font);
+            const hint = alignedText({
+                text: 'press - play   swipe<>/long - exit',
+                fontId: p.playlist_row_font, color: th.text_muted,
+                top: Math.round((hh - rf.lh) / 2) + (p.playlist_hint_y | 0),
+            });
+            // RIGHT_MID: the offset is measured from the strip's right edge.
+            hint.style.right = (-(p.playlist_hint_x | 0)) + 'px';
+            frag.appendChild(header);
+            header.appendChild(hint);
+        } else {
+            frag.appendChild(header);
+        }
+    }
+
+    // ----- List -----
+    const bx = listBoxOf(p, 'playlist');
+    const pitch = Math.max((p.playlist_item_h | 0) + (p.playlist_item_pad | 0), 1);
+    const itemH = p.playlist_item_h | 0;
+    const viewH = Math.max(bx.h - 2 * UI_LIST_BOX_PAD, 1);
+    const rowW  = Math.max(bx.w - 2 * UI_LIST_BOX_PAD, 8);
+
+    const order = playlistOrder();
+    const count = order.length;
+    // The cursor starts on the station that is playing, translated into display
+    // space; with none playing the list opens on the first row.
+    const playing = order.indexOf(S.live.curr_index | 0);
+    const selected = playing >= 0 ? playing : 0;
+
+    // ui_list_select(): centre the selection, clamped to the scroll range.
+    const maxScroll = Math.max(count * pitch - viewH, 0);
+    const scrollY = clamp(selected * pitch + Math.floor(pitch / 2) - Math.floor(viewH / 2),
+                          0, maxScroll);
+
+    // The viewport is transparent — the wallpaper shows between and around rows —
+    // and scrolls vertically, like lv_obj_set_scroll_dir(LV_DIR_VER). Padding goes
+    // on the box itself (pad_all UI_LIST_BOX_PAD) with border-box sizing, so the
+    // content area comes out as row_w x view_h exactly as the widget computes them.
+    const view = box(bx.x, bx.y, bx.w, bx.h, {
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        boxSizing: 'border-box',
+        padding: UI_LIST_BOX_PAD + 'px',
+        touchAction: 'pan-y',
+    });
+    view.className = 'pl-view';
+
+    const content = document.createElement('div');
+    content.style.position = 'relative';
+    content.style.width  = rowW + 'px';
+    content.style.height  = (count * pitch) + 'px';
+    view.appendChild(content);
+
+    // Drag-to-scroll for a mouse, so the list behaves on a laptop the way it does
+    // under a finger. Touch is left to the browser's own panning — the pointer
+    // events would otherwise scroll it twice.
+    //
+    // A drag that crosses the threshold cancels the click that the browser sends on
+    // release, mirroring row_click_cb()'s ui_swipe_fired() guard: on the panel too,
+    // a swipe that started on a row must not be taken as picking that row.
+    let dragFrom = null;
+    let dragged  = false;
+
+    view.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'touch') return;
+        dragFrom = e.clientY;
+        dragged  = false;
+        view.setPointerCapture(e.pointerId);
+    });
+    view.addEventListener('pointermove', (e) => {
+        if (dragFrom === null) return;
+        const dy = e.clientY - dragFrom;
+        if (Math.abs(dy) > 6) dragged = true;
+        // Page pixels are device pixels times the zoom, and scrollTop is in the
+        // scaled element's own coordinates.
+        view.scrollTop -= dy / (S.scale || 1);
+        dragFrom = e.clientY;
+    });
+    const endDrag = (e) => {
+        if (dragFrom === null) return;
+        dragFrom = null;
+        if (view.hasPointerCapture(e.pointerId)) view.releasePointerCapture(e.pointerId);
+    };
+    view.addEventListener('pointerup', endDrag);
+    view.addEventListener('pointercancel', endDrag);
+
+    const rf = lvMetrics(p.playlist_row_font);
+    const padTop = Math.max(Math.floor((itemH - rf.lh) / 2), 0);
+    const rowOpa = clamp(p.playlist_label_bg_opa ?? 100, 0, 100) / 100;
+
+    // Every entry gets a node. The device recycles a pool of one screenful because
+    // it has 8 MB of PSRAM and a software renderer; a browser scrolling a few
+    // hundred divs natively has neither problem, and virtualising it here would add
+    // a second scroll implementation to keep honest.
+    for (let i = 0; i < count; i++) {
+        const top = i * pitch;
+        const isCursor = i === selected;
+        const bg = isCursor ? col(p.playlist_cursor_bg_color, th.accent)
+                            : col(p.playlist_row_bg_color, th.bg_secondary);
+        // style_row(): the cursor's own colours win; otherwise the row keeps the
+        // colour bind_row() gave it — accent for the station actually playing.
+        let fg = isCursor ? col(p.playlist_cursor_text_color, '#ffffff')
+                          : col(p.playlist_row_text_color, th.text_primary);
+        if (!isCursor && i === playing) fg = col(p.playlist_row_accent_color, th.accent);
+
+        const row = box(0, top, rowW, itemH, { overflow: 'hidden' });
+        row.style.background = rgba(bg, rowOpa);
+        row.appendChild(alignedText({
+            text: playlistRowText(order, i), fontId: p.playlist_row_font, color: fg,
+            left: p.playlist_row_pad_left | 0, top: padTop,
+        }));
+        // play_display_index(): the row plays its station. The index sent is the
+        // REAL one — s_order[] maps display position back, and radio_play_index()
+        // has always operated in real-index space.
+        row.className = 'pl-row';
+        const realIdx = order[i];
+        row.addEventListener('click', () => {
+            if (dragged) return;   // that press was a scroll, not a pick
+            // The device skips the call when that station is already playing.
+            if (realIdx === (S.live.curr_index | 0) && S.live.radio === 'playing') return;
+            if (!wsSend({ cmd: 'play_index', index: realIdx })) {
+                setWsBadge('down', 'not sent — no connection');
+            }
+        });
+        content.appendChild(row);
+    }
+
+    frag.appendChild(view);
+    plScreenEl.replaceChildren(frag);
+    // ui_list_select() centres the cursor. Applied after the nodes are in the
+    // document, since a detached element has nothing to scroll.
+    view.scrollTop = scrollY;
+}
+
+// A left- (or right-) positioned single line with the baseline nudged onto the
+// device's, used by the list screens where labels sit inside a strip or a row.
+function alignedText({ text, fontId, color, left, top }) {
+    const { px, lh } = lvMetrics(fontId);
+    const el = document.createElement('div');
+    el.style.position   = 'absolute';
+    el.style.top        = top + 'px';
+    if (left !== undefined) el.style.left = left + 'px';
+    el.style.fontSize   = px + 'px';
+    el.style.lineHeight = lh + 'px';
+    el.style.height     = lh + 'px';
+    el.style.color      = color;
+    el.style.whiteSpace = 'pre';    // the row text is column-aligned with spaces
+    el.style.overflow   = 'hidden';
+
+    const span = document.createElement('span');
+    span.style.position = 'relative';
+    span.style.top      = baselineOffset(fontId).toFixed(2) + 'px';
+    span.textContent    = text;
+    el.appendChild(span);
+    return el;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Background — mirrors ui_background_apply() for SCREEN_RADIO
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -218,19 +442,20 @@ function dimLayer(dimPct) {
     return dimPct > 0 ? `linear-gradient(rgba(0,0,0,${dimPct / 100}), rgba(0,0,0,${dimPct / 100}))` : '';
 }
 
-async function applyBackground() {
+// `ovr` is the screen's own wallpaper field. Both hub screens resolve identically;
+// only the field and the element they paint differ.
+async function applyBackground(targetEl, ovr, badge) {
     const display = S.settings.display || {};
     const dim     = clamp(display.wallpaper_dim || 0, 0, 100);
-    const ovr     = String(S.p.radio_wallpaper || '');
+    ovr           = String(ovr || '');
     const slot    = netSlotOf(ovr);
     const isPath  = ovr && ovr !== 'none' && slot < 0;
-    const badge   = document.getElementById('dim_badge');
 
     const paint = (image, what) => {
         const layers = [dimLayer(dim), image].filter(Boolean).join(', ');
-        screenEl.style.background     = layers || S.pal.bg_primary;
-        screenEl.style.backgroundSize = 'cover';
-        badge.textContent = dim > 0 ? `${what} · dim ${dim}%` : what;
+        targetEl.style.background     = layers || S.pal.bg_primary;
+        targetEl.style.backgroundSize = 'cover';
+        if (badge) badge.textContent = dim > 0 ? `${what} · dim ${dim}%` : what;
     };
 
     // 1. Internet wallpaper — only when this screen is not pinned to an SD file.
@@ -270,16 +495,16 @@ async function applyBackground() {
 
     // 3. Solid, when the gradient is switched off.
     if (!display.bg_gradient) {
-        screenEl.style.background = S.pal.bg_primary;
-        badge.textContent = 'solid background';
+        targetEl.style.background = S.pal.bg_primary;
+        if (badge) badge.textContent = 'solid background';
         return;
     }
 
     // 4. Vertical palette gradient (the device dithers it into RGB565; the browser
     //    renders it in full colour, so banding differs — the colours do not).
-    screenEl.style.background =
+    targetEl.style.background =
         `linear-gradient(${S.pal.bg_grad_top}, ${S.pal.bg_grad_bottom})`;
-    badge.textContent = 'theme gradient';
+    if (badge) badge.textContent = 'theme gradient';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -798,8 +1023,63 @@ function refreshLive() {
     if (S.els.volume)     setLabelText(S.els.volume, `VOL: ${L.volume | 0}%`);
 
     positionKnob();
+    refreshVolumeControl();
     refreshStationIcon();   // async; no-op unless the station actually changed
+
+    // The playlist's cursor and its accent row both key off curr_index, so it only
+    // needs rebuilding when the station actually changes — not on every volume tick.
+    if (S.pl && S.live.curr_index !== plRenderedIndex) {
+        plRenderedIndex = S.live.curr_index;
+        renderPlaylistScreen();
+    }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Page volume slider
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// A page control, not part of the rendered screen — the panel's own slider is
+// drawn inside #screen from radio_volslider_*. This one is the plain 0..100 master
+// volume, like the one on the main web UI, so radio_volslider_vol_max (which only
+// remaps the on-screen slider's travel) deliberately does not apply here.
+
+const volEl    = document.getElementById('volume');
+const volValEl = document.getElementById('vol_value');
+let volDragging = false;
+let volTimeout  = null;
+
+// vol_slider_widget_update() refuses to move the knob while the slider is pressed;
+// the same guard is needed here, or an incoming state broadcast would fight the
+// finger mid-drag and snap the slider back.
+function refreshVolumeControl() {
+    // Until the first state broadcast lands, the device's volume is unknown — so
+    // the control stays inert rather than showing a confident 0 % that could be
+    // dragged and would overwrite the real level.
+    volEl.disabled = !S.gotState;
+    if (!S.gotState) { volValEl.textContent = '—'; return; }
+    if (volDragging) return;
+    volEl.value = clamp(S.live.volume | 0, 0, 100);
+    volValEl.textContent = (S.live.volume | 0) + '%';
+}
+
+volEl.addEventListener('input', () => {
+    const v = parseInt(volEl.value, 10);
+    volValEl.textContent = v + '%';
+    // Same 150 ms debounce the main web UI uses: dragging fires 'input' per pixel
+    // and every frame would otherwise be a settings write on the device.
+    clearTimeout(volTimeout);
+    volTimeout = setTimeout(() => {
+        if (!wsSend({ cmd: 'set_volume', value: v })) setWsBadge('down', 'not sent — no connection');
+    }, 150);
+});
+
+// pointerdown/up rather than the change event: the guard has to cover the whole
+// drag, including the frames between the first move and the release.
+volEl.addEventListener('pointerdown', () => { volDragging = true; });
+volEl.addEventListener('pointerup',   () => { volDragging = false; });
+volEl.addEventListener('pointercancel', () => { volDragging = false; });
+// Keyboard arrows never set the dragging flag, so nothing needs releasing there.
+volEl.addEventListener('blur', () => { volDragging = false; });
 
 function setWsBadge(cls, text) {
     const b = document.getElementById('ws_badge');
@@ -833,6 +1113,7 @@ function connectWs() {
             sd_active: d.sd_active ?? S.live.sd_active,
             curr_index: d.curr_index ?? S.live.curr_index,
         });
+        S.gotState = true;
         refreshLive();
     };
 }
@@ -844,13 +1125,51 @@ function connectWs() {
 function applyZoom() {
     const mode = document.getElementById('zoom').value;
     const w = S.meta.screen_w, h = S.meta.screen_h;
-    // Measure the page, not the frame: the frame is inline-block and sized BY the
-    // stage, so asking it how wide it is would just echo the previous zoom back.
-    const avail = document.body.clientWidth - 62;   // body padding + frame padding/border
-    const k = mode === 'fit' ? clamp(avail / w, 1, 4) : parseFloat(mode);
+    let k;
+
+    if (document.fullscreenElement === viewerEl) {
+        // On the wall the panel should be as large as it goes, so the zoom picker
+        // is ignored here and both axes are fitted. No upper clamp: a 320x240 panel
+        // on a projector wants every pixel of it.
+        //
+        // Both the volume bar and the playlist panel share the fullscreen column,
+        // so the height is split: the bar and the gaps come off the top, and what
+        // is left is divided between the two panels, which scale together.
+        const panels  = plWrapEl.hidden ? 1 : 2;
+        const gaps    = 18 * (panels === 2 ? 2 : 1) + 16;   // flex gaps + margin
+        const reserve = volbarEl.offsetHeight + gaps;
+        const usableH = Math.max(window.innerHeight - reserve, 40);
+        k = Math.min(window.innerWidth / w, usableH / (h * panels));
+    } else if (mode === 'fit') {
+        // Fit the WINDOW, not just its width — fitting width alone is what made the
+        // default open too tall to see at once. Measure the page, never the frame:
+        // the frame is inline-block and sized BY the stage, so asking it how wide it
+        // is would just echo the last zoom back.
+        const availW = document.body.clientWidth - 62;  // body + frame padding/border
+        // Everything above the panel (toolbar, any error banner) is already baked
+        // into offsetTop, and it does not move with the zoom; below it sits the
+        // volume bar. Scroll position never enters into offsetTop, so this holds
+        // however the page is scrolled.
+        const availH = window.innerHeight - frameEl.offsetTop
+                     - volbarEl.offsetHeight - 44;
+        k = clamp(Math.min(availW / w, availH / h), 1, 4);
+    } else {
+        k = parseFloat(mode);
+    }
+    S.scale = k;   // the list's drag-scroll converts page pixels back through it
     screenEl.style.transform = `scale(${k})`;
     stageEl.style.width  = Math.round(w * k) + 'px';
     stageEl.style.height = Math.round(h * k) + 'px';
+
+    // The playlist screen is the same panel, so it rides the same scale.
+    plScreenEl.style.transform = `scale(${k})`;
+    plStageEl.style.width  = Math.round(w * k) + 'px';
+    plStageEl.style.height = Math.round(h * k) + 'px';
+
+    // Line the volume bar up with the panel above it, in both modes. Read after the
+    // stage is sized, since the frame takes its width from it — and in fullscreen
+    // the frame drops its padding and border, so this is the bare screen width.
+    volbarEl.style.width = frameEl.offsetWidth + 'px';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -869,14 +1188,16 @@ async function loadAll() {
         if (!r.ok) throw new Error(url + ' → HTTP ' + r.status);
         return r.json();
     };
-    const [meta, radio, settings, theme] = await Promise.all([
+    const [meta, radio, playlist, settings, theme] = await Promise.all([
         get('/api/ui/profile/meta'),
         get('/api/ui/profile/radio'),
+        get('/api/ui/profile/playlist'),
         get('/api/settings'),
         get('/api/theme'),
     ]);
     S.meta     = meta;
     S.p        = radio;
+    S.pl       = playlist;
     S.settings = settings;
     S.pal      = theme[theme.current] || theme.dark;
 
@@ -894,6 +1215,18 @@ async function loadAll() {
     screenEl.style.height = meta.screen_h + 'px';
 }
 
+// Both screens, background included. The playlist's wallpaper is its own field —
+// screen_wp_override() gives SCREEN_PLAYLIST playlist_wallpaper, not the radio's.
+let plRenderedIndex = null;
+
+async function renderEverything() {
+    await renderScreen();
+    await applyBackground(screenEl, S.p.radio_wallpaper, document.getElementById('dim_badge'));
+    renderPlaylistScreen();
+    plRenderedIndex = S.live.curr_index;
+    await applyBackground(plScreenEl, S.pl.playlist_wallpaper, null);
+}
+
 async function boot() {
     try {
         await loadAll();
@@ -904,8 +1237,7 @@ async function boot() {
         baselineFix.clear();
 
         applyZoom();
-        await renderScreen();
-        await applyBackground();
+        await renderEverything();
         connectWs();
         setInterval(() => { if (S.els.clock) setLabelText(S.els.clock, nowString()); }, 10000);
     } catch (err) {
@@ -917,14 +1249,61 @@ document.getElementById('zoom').addEventListener('change', applyZoom);
 document.getElementById('show_hotspots').addEventListener('change', (e) => {
     screenEl.classList.toggle('show-hotspots', e.target.checked);
 });
+
+const togglePlaylistBtn = document.getElementById('toggle_playlist');
+
+function setPlaylistVisible(show) {
+    plWrapEl.hidden = !show;
+    togglePlaylistBtn.textContent = show ? 'Hide playlist screen' : 'Show playlist screen';
+    // It was laid out while hidden, so the stage had no size to scale against.
+    if (S.meta) applyZoom();
+}
+
+togglePlaylistBtn.addEventListener('click', () => setPlaylistVisible(plWrapEl.hidden));
+
+const fullscreenBtn = document.getElementById('fullscreen');
+
+function toggleFullscreen() {
+    if (document.fullscreenElement) {
+        document.exitFullscreen();
+    } else {
+        // Rejected when the gesture is not trusted or the browser forbids it —
+        // report it rather than leaving a button that silently does nothing.
+        viewerEl.requestFullscreen().catch(err => fail('Fullscreen refused: ' + err.message));
+    }
+}
+
+fullscreenBtn.addEventListener('click', toggleFullscreen);
+// The in-viewer twin: the toolbar button is outside the fullscreen element and so
+// is not rendered there, which left Esc as the only way out.
+document.getElementById('exit_fs').addEventListener('click', toggleFullscreen);
+
+// Covers Esc and the browser's own fullscreen controls, not just the buttons.
+let plHiddenBeforeFs = null;
+
+document.addEventListener('fullscreenchange', () => {
+    const on = document.fullscreenElement === viewerEl;
+    fullscreenBtn.textContent = on ? '⛶ Exit fullscreen' : '⛶ Fullscreen';
+
+    if (on) {
+        // The toggle lives in the toolbar, which is outside the fullscreen element
+        // and therefore not rendered — so the playlist has to come up with the
+        // panel, or there would be no way to reveal it from the wall.
+        plHiddenBeforeFs = plWrapEl.hidden;
+        setPlaylistVisible(true);
+    } else if (plHiddenBeforeFs !== null) {
+        setPlaylistVisible(!plHiddenBeforeFs);
+        plHiddenBeforeFs = null;
+    }
+    if (S.meta) applyZoom();
+});
 window.addEventListener('resize', () => { if (S.meta) applyZoom(); });
 document.getElementById('reload').addEventListener('click', async () => {
     try {
         await loadAll();
         baselineFix.clear();
         applyZoom();
-        await renderScreen();
-        await applyBackground();
+        await renderEverything();
     } catch (err) {
         fail('Reload failed: ' + err.message);
     }
