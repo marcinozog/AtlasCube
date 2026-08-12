@@ -119,15 +119,20 @@ async function renderSdScreen() {
     if (p.sd_status_show) info('sdStatus', 'sd_status_x', 'sd_status_y');
     if (p.sd_show_time)   info('sdTime',   'sd_time_x',   'sd_time_y');
 
-    // Read-only progress bar: muted track at 40 % opacity, accent indicator, both
-    // with a fully rounded end (radius = height / 2).
+    // Read-only progress bar, both parts with a fully rounded end (radius =
+    // height / 2). Colours follow the profile overrides; the theme default track
+    // keeps its 40 % wash, a track colour picked on purpose is painted solid.
     if (p.sd_show_bar && (p.sd_bar_w | 0) > 0) {
         const bw = p.sd_bar_w | 0, bh = p.sd_bar_h | 0;
         const r  = Math.floor(bh / 2) + 'px';
+        const track = p.sd_bar_bg_color ? col(p.sd_bar_bg_color, th.text_muted)
+                                        : rgba(th.text_muted, 40 / 255);
         const bar = box(p.sd_bar_x | 0, p.sd_bar_y | 0, bw, bh, {
-            background: rgba(th.text_muted, 40 / 255), borderRadius: r, overflow: 'hidden',
+            background: track, borderRadius: r, overflow: 'hidden',
         });
-        S.els.sdBarFill = box(0, 0, 0, bh, { background: th.accent, borderRadius: r });
+        S.els.sdBarFill = box(0, 0, 0, bh, {
+            background: col(p.sd_bar_color, th.accent), borderRadius: r,
+        });
         bar.appendChild(S.els.sdBarFill);
         S.els.sdBar = bar;
         S.els.sdBarW = bw;

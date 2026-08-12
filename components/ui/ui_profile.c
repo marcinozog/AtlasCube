@@ -2119,6 +2119,8 @@ static void load_sd(const cJSON *obj, ui_profile_t *p)
     load_i16 (obj, "sd_bar_y",                  &p->sd_bar_y);
     load_i16 (obj, "sd_bar_w",                  &p->sd_bar_w);
     load_i16 (obj, "sd_bar_h",                  &p->sd_bar_h);
+    load_u32 (obj, "sd_bar_color",              &p->sd_bar_color);
+    load_u32 (obj, "sd_bar_bg_color",           &p->sd_bar_bg_color);
     load_bool(obj, "sd_show_cover",             &p->sd_show_cover);
     load_i16 (obj, "sd_cover_x",                &p->sd_cover_x);
     load_i16 (obj, "sd_cover_y",                &p->sd_cover_y);
@@ -2238,6 +2240,8 @@ static cJSON *dump_sd(const ui_profile_t *p)
     add_i16 (o, "sd_bar_y",                  p->sd_bar_y);
     add_i16 (o, "sd_bar_w",                  p->sd_bar_w);
     add_i16 (o, "sd_bar_h",                  p->sd_bar_h);
+    add_u32 (o, "sd_bar_color",              p->sd_bar_color);
+    add_u32 (o, "sd_bar_bg_color",           p->sd_bar_bg_color);
     add_bool(o, "sd_show_cover",             p->sd_show_cover);
     add_i16 (o, "sd_cover_x",                p->sd_cover_x);
     add_i16 (o, "sd_cover_y",                p->sd_cover_y);

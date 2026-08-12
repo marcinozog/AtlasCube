@@ -72,6 +72,20 @@ static void bar_hide(void)
     if (s_bar) lv_obj_add_flag(s_bar, LV_OBJ_FLAG_HIDDEN);
 }
 
+// Played part and the track behind it, both honouring the profile overrides
+// (0 = follow the theme). The muted 40 % wash only makes sense for the theme
+// default, which has to stay out of the fill's way; a colour picked on purpose
+// is painted solid.
+static void bar_apply_colors(const ui_profile_t *p, const ui_theme_colors_t *th)
+{
+    if (!s_bar) return;
+    lv_obj_set_style_bg_color(s_bar, lv_color_hex(theme_color_or(p->sd_bar_bg_color, th->text_muted)),
+                              LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(s_bar, p->sd_bar_bg_color ? LV_OPA_COVER : LV_OPA_40, LV_PART_MAIN);
+    lv_obj_set_style_bg_color(s_bar, lv_color_hex(theme_color_or(p->sd_bar_color, th->accent)),
+                              LV_PART_INDICATOR);
+}
+
 static void progress_update(void)
 {
     if (!s_time && !s_bar) return;
@@ -246,9 +260,7 @@ static void sd_player_screen_create(lv_obj_t *parent)
     if (p->sd_show_bar && p->sd_bar_w > 0) {
         s_bar = lv_bar_create(parent);
         lv_obj_set_size(s_bar, p->sd_bar_w, p->sd_bar_h);
-        lv_obj_set_style_bg_color(s_bar, lv_color_hex(th->text_muted), LV_PART_MAIN);
-        lv_obj_set_style_bg_opa(s_bar, LV_OPA_40, LV_PART_MAIN);
-        lv_obj_set_style_bg_color(s_bar, lv_color_hex(th->accent), LV_PART_INDICATOR);
+        bar_apply_colors(p, th);
         lv_obj_set_style_radius(s_bar, p->sd_bar_h / 2, LV_PART_MAIN);
         lv_obj_set_style_radius(s_bar, p->sd_bar_h / 2, LV_PART_INDICATOR);
         lv_obj_set_pos(s_bar, p->sd_bar_x, p->sd_bar_y);
@@ -428,10 +440,7 @@ static void sd_player_apply_theme(void)
     if (s_volume) { lv_obj_set_style_text_color(s_volume, lv_color_hex(info_col), LV_PART_MAIN); ui_label_scrim(s_volume, p->sd_label_bg_opa); }
     if (s_status) { lv_obj_set_style_text_color(s_status, lv_color_hex(info_col), LV_PART_MAIN); ui_label_scrim(s_status, p->sd_label_bg_opa); }
     if (s_time)   { lv_obj_set_style_text_color(s_time,   lv_color_hex(info_col), LV_PART_MAIN); ui_label_scrim(s_time,   p->sd_label_bg_opa); }
-    if (s_bar) {
-        lv_obj_set_style_bg_color(s_bar, lv_color_hex(th->text_muted), LV_PART_MAIN);
-        lv_obj_set_style_bg_color(s_bar, lv_color_hex(th->accent),     LV_PART_INDICATOR);
-    }
+    bar_apply_colors(p, th);
 
     clock_widget_apply_theme();
     mode_indicator_apply_theme();

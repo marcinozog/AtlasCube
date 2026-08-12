@@ -311,6 +311,8 @@ typedef struct {
     int16_t          sd_bar_y;
     int16_t          sd_bar_w;
     int16_t          sd_bar_h;
+    uint32_t         sd_bar_color;             // played part, 0 = theme accent
+    uint32_t         sd_bar_bg_color;          // track behind it, 0 = theme text_muted at 40%
     bool             sd_show_cover;            // album cover ("cover.bin" in the track's folder)
     int16_t          sd_cover_x;               // cover top-left position
     int16_t          sd_cover_y;

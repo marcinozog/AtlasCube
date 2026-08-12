@@ -329,6 +329,8 @@ const SD_FIELDS = [
     { key: 'sd_bar_y',                label: 'Bar Y',             type: 'number' },
     { key: 'sd_bar_w',                label: 'Bar W',             type: 'number' },
     { key: 'sd_bar_h',                label: 'Bar H',             type: 'number' },
+    { key: 'sd_bar_color',            label: 'Bar colour',        type: 'color' },
+    { key: 'sd_bar_bg_color',         label: 'Track colour',      type: 'color' },
 
     { key: 'sd_show_cover',           label: 'Show album cover',  type: 'bool' },
     { key: 'sd_cover_x',              label: 'Cover X',           type: 'number' },
@@ -584,7 +586,7 @@ const FORM_GROUPS = {
         ] },
         { heading: 'Playback' },
         { title: 'Playback time', enabledBy: 'sd_show_time', fields: ['sd_show_time', 'sd_time_x', 'sd_time_y'] },
-        { title: 'Progress bar', enabledBy: 'sd_show_bar', fields: ['sd_show_bar', 'sd_bar_x', 'sd_bar_y', 'sd_bar_w', 'sd_bar_h'] },
+        { title: 'Progress bar', enabledBy: 'sd_show_bar', fields: ['sd_show_bar', 'sd_bar_x', 'sd_bar_y', 'sd_bar_w', 'sd_bar_h', 'sd_bar_color', 'sd_bar_bg_color'] },
         { title: 'Album cover', enabledBy: 'sd_show_cover', fields: ['sd_show_cover', 'sd_cover_x', 'sd_cover_y', 'sd_cover_size'] },
         { title: 'VU meters', fields: [], subgroups: [
             { title: 'Bar VU', enabledBy: 'sd_show_vu', fields: ['sd_show_vu', 'sd_vu_x', 'sd_vu_y', 'sd_vu_w', 'sd_vu_h', 'sd_vu_transparent', 'sd_vu_bg_color', 'sd_vu_bar_color'] },
