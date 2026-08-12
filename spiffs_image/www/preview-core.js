@@ -39,7 +39,9 @@ const S = {
         sr: 0, ch: 2, br: 0, curr_index: -1,
         sd_active: false, sd_index: 0, sd_count: 0, sd_track: '', sd_dir: '',
         sd_paused: false, sd_shuffle: false, sd_repeat: 0,
+        sd_position_ms: null, sd_duration_ms: null,   // null = firmware predates them
     },
+    sdPosAt: 0,       // performance.now() when sd_position_ms was received
     els: {},          // live-updating nodes of the primary screen
     ws: null,
     wsRetry: 250,
@@ -801,6 +803,9 @@ function connectWs() {
         for (const k of Object.keys(S.live)) {
             if (d[k] !== undefined) S.live[k] = d[k];
         }
+        // Anchor for the extrapolated playback position (see docs/ws_protocol.md):
+        // every broadcast re-anchors it, so drift cannot accumulate.
+        if (d.sd_position_ms !== undefined) S.sdPosAt = performance.now();
         S.gotState = true;
         refreshLive();
     };

@@ -9,12 +9,28 @@
 
 const SD_INFO_BOX_W = () => S.meta.screen_w - 20;   // screen_sd_player.c
 
-// The playback position lives in sd_player_position_ms() on the device and is not
-// in the state broadcast, so neither the counter nor the bar can be truthful here.
-// Both are drawn with real geometry at a representative position rather than left
-// out — the point of the preview is where things sit, and an absent bar would
-// misrepresent the layout more than a staged one does.
+// Fallback for firmware that predates sd_position_ms / sd_duration_ms: the layout
+// still has to read, and an absent bar would misrepresent it more than a staged
+// one does. Marked as staged on the page whenever it is in use.
 const SD_DEMO_PROGRESS = 0.38;
+
+// Live position, extrapolated the way the protocol doc prescribes: the field is a
+// wall-clock delta, so adding the time elapsed since the frame arrived reproduces
+// what sd_player_position_ms() would return right now. Frozen while paused,
+// exactly as the device freezes it at s_pause_start_us.
+function sdProgress() {
+    const L = S.live;
+    if (typeof L.sd_position_ms !== 'number') return null;   // old firmware
+    if (!L.sd_active) return { pos: 0, dur: 0 };
+
+    let pos = L.sd_position_ms;
+    if (!L.sd_paused) pos += performance.now() - S.sdPosAt;
+
+    const dur = L.sd_duration_ms | 0;
+    // progress_update() clamps a position that has run past a known duration.
+    if (dur && pos > dur) pos = dur;
+    return { pos, dur };
+}
 
 // ── Album cover — sd_cover_widget.c ─────────────────────────────────────────
 // "cover.bin" alongside the tracks, so the artwork follows the folder, not the
@@ -111,9 +127,10 @@ async function renderSdScreen() {
         const bar = box(p.sd_bar_x | 0, p.sd_bar_y | 0, bw, bh, {
             background: rgba(th.text_muted, 40 / 255), borderRadius: r, overflow: 'hidden',
         });
-        bar.appendChild(box(0, 0, Math.round(bw * SD_DEMO_PROGRESS), bh, {
-            background: th.accent, borderRadius: r,
-        }));
+        S.els.sdBarFill = box(0, 0, 0, bh, { background: th.accent, borderRadius: r });
+        bar.appendChild(S.els.sdBarFill);
+        S.els.sdBar = bar;
+        S.els.sdBarW = bw;
         frag.appendChild(bar);
     }
 
@@ -122,7 +139,45 @@ async function renderSdScreen() {
 
     screenEl.replaceChildren(frag);
     await renderVolSlider(screenEl, p, 'sd');
+
+    // The device drives both the counter and the bar off a 1 Hz lv_timer created
+    // when either exists; the same beat here keeps the extrapolation moving
+    // between state broadcasts.
+    clearInterval(sdTick);
+    sdTick = (S.els.sdTime || S.els.sdBar) ? setInterval(updateSdProgress, 1000) : null;
+
     refreshLive();
+}
+
+let sdTick = null;
+
+function updateSdProgress() {
+    const L = S.live;
+    const live = sdProgress();
+
+    if (S.els.sdTime) {
+        if (!L.sd_active) {
+            setLabelText(S.els.sdTime, '');
+        } else if (live) {
+            // "elapsed / total", or elapsed alone until the length is known.
+            setLabelText(S.els.sdTime, live.dur
+                ? `${fmtMmss(live.pos)} / ${fmtMmss(live.dur)}`
+                : fmtMmss(live.pos));
+        } else {
+            setLabelText(S.els.sdTime, `${fmtMmss(74000)} / ${fmtMmss(195000)}`);
+        }
+    }
+
+    if (S.els.sdBar) {
+        // The bar needs a known length; formats without one keep it hidden and
+        // show the elapsed counter alone.
+        const show = live ? (L.sd_active && live.dur > 0) : true;
+        S.els.sdBar.style.display = show ? '' : 'none';
+        if (show) {
+            const frac = live ? live.pos / live.dur : SD_DEMO_PROGRESS;
+            S.els.sdBarFill.style.width = Math.round(S.els.sdBarW * clamp(frac, 0, 1)) + 'px';
+        }
+    }
 }
 
 // ── Live ────────────────────────────────────────────────────────────────────
@@ -173,12 +228,6 @@ function refreshSdLive() {
         setLabelText(S.els.sdStatus, flags.join('   '));
     }
 
-    // Staged, like the bar: without a position there is nothing true to show, and
-    // an empty line would move every label judged against it.
-    if (S.els.sdTime) {
-        setLabelText(S.els.sdTime,
-            L.sd_active ? `${fmtMmss(74000)} / ${fmtMmss(195000)}` : '');
-    }
-
+    updateSdProgress();   // snap the counter and bar on track/source change
     refreshSdCover();
 }

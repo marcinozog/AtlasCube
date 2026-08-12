@@ -461,12 +461,15 @@ button:hover, select:hover { border-color: var(--accent); }
             field, not the radio's.
         </p>
         <p class="note">
-            Three things cannot be truthful, and are staged rather than omitted so the
-            layout still reads: the needle meters' <em>deflection</em> (the RMS levels
-            are tapped inside the DSP element and are not published to any client), and
-            the SD player's progress bar and elapsed counter (the position lives in
-            <code>sd_player_position_ms()</code>, also unpublished). Their geometry,
-            colours and visibility rules are real. The clock reads this browser's time,
+            One thing cannot be truthful and is staged rather than omitted so the
+            layout still reads: the needle meters' <em>deflection</em>. The RMS levels
+            driving them are tapped inside the DSP element and are not published to any
+            client. Their geometry, colours and visibility rules are real. The SD
+            player's counter and progress bar <em>are</em> live — the device publishes
+            <code>sd_position_ms</code>/<code>sd_duration_ms</code> and this page
+            extrapolates between broadcasts, as the protocol doc prescribes; against
+            firmware that predates those fields they fall back to a staged position.
+            The clock reads this browser's time,
             the weather row shows sample text, and long text is clipped here instead of
             scrolling.
         </p>
