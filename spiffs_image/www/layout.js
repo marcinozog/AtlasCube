@@ -256,7 +256,7 @@ const RADIO_FIELDS = [
     { key: 'radio_stereo_peak',          label: 'Peak hold',         type: 'bool' },
     { key: 'radio_stereo_zones',         label: 'Colour zones',      type: 'bool' },
     { key: 'radio_stereo_bg_color',      label: 'Background colour', type: 'color' },
-    { key: 'radio_stereo_bar_color',     label: 'Bar colour',        type: 'color' },
+    { key: 'radio_stereo_bar_color',     label: 'Bar colour',        type: 'color', enabledBy: '!radio_stereo_zones' },
     { key: 'radio_stereo_show_l',        label: 'Show left bar',     type: 'bool' },
     { key: 'radio_stereo_l_x',           label: 'Left bar X',        type: 'number' },
     { key: 'radio_stereo_l_y',           label: 'Left bar Y',        type: 'number' },
@@ -373,7 +373,7 @@ const SD_FIELDS = [
     { key: 'sd_stereo_peak',          label: 'Peak hold',         type: 'bool' },
     { key: 'sd_stereo_zones',         label: 'Colour zones',      type: 'bool' },
     { key: 'sd_stereo_bg_color',      label: 'Background colour', type: 'color' },
-    { key: 'sd_stereo_bar_color',     label: 'Bar colour',        type: 'color' },
+    { key: 'sd_stereo_bar_color',     label: 'Bar colour',        type: 'color', enabledBy: '!sd_stereo_zones' },
     { key: 'sd_stereo_show_l',        label: 'Show left bar',     type: 'bool' },
     { key: 'sd_stereo_l_x',           label: 'Left bar X',        type: 'number' },
     { key: 'sd_stereo_l_y',           label: 'Left bar Y',        type: 'number' },
@@ -3694,6 +3694,11 @@ function buildFormRow(field, data, group, details) {
     // Every row except the toggle itself disappears when the group is off.
     if (group.enabledBy && field.key !== groupToggleKey(group))
         row.classList.add('form-row-conditional');
+    // A field can also carry its own gate, on top of the group's: a bool in the
+    // same section that has to hold for the field to mean anything (the stereo
+    // VU's bar colour, say, which the fixed zone palette overrules). Hiding it
+    // beats leaving a control that silently does nothing.
+    if (field.enabledBy) row.dataset.enabledBy = field.enabledBy;
 
     const lab = document.createElement('label');
     lab.textContent = field.label;
@@ -3864,10 +3869,15 @@ function groupToggleKey(group) {
     return key && key[0] === '!' ? key.slice(1) : key;
 }
 
+// Evaluates one such gate: a field name, optionally '!'-prefixed to invert it.
+function flagHolds(key, data) {
+    const on = !!data[key[0] === '!' ? key.slice(1) : key];
+    return key[0] === '!' ? !on : on;
+}
+
 function groupEnabled(group, data) {
     if (!group.enabledBy) return true;
-    const on = !!data[groupToggleKey(group)];
-    return group.enabledBy[0] === '!' ? !on : on;
+    return flagHolds(group.enabledBy, data);
 }
 
 function refreshGroup(details, group, data) {
@@ -3881,6 +3891,10 @@ function refreshGroup(details, group, data) {
             // that live inside it.
             if (row.classList.contains('form-row-conditional') ||
                 row.classList.contains('form-subgroup')) row.hidden = !enabled;
+            // A per-field gate stacks on top: the row needs both its own flag
+            // and the group's to show.
+            if (row.dataset.enabledBy)
+                row.hidden = !enabled || !flagHolds(row.dataset.enabledBy, data);
         }
     }
     const meta = details.firstElementChild?.querySelector('.form-group-meta');
