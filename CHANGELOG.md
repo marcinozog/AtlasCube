@@ -9,6 +9,11 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.50.3] - 2026-08-14
+
+### Fixed
+- **display:** bound every wait on the shared LCD/touch SPI bus
+
 ## [0.50.2] - 2026-08-13
 
 ### Added
@@ -959,7 +964,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.50.2...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.50.3...HEAD
+[0.50.3]: https://github.com/marcinozog/AtlasCube/compare/v0.50.2...v0.50.3
 [0.50.2]: https://github.com/marcinozog/AtlasCube/compare/v0.50.0...v0.50.2
 [0.50.0]: https://github.com/marcinozog/AtlasCube/compare/v0.49.0...v0.50.0
 [0.49.0]: https://github.com/marcinozog/AtlasCube/compare/v0.48.0...v0.49.0
