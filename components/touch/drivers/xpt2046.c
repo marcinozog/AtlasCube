@@ -2,6 +2,7 @@
 
 #include "esp_log.h"
 #include "trace.h"
+#include "freertos/FreeRTOS.h"
 #include <string.h>
 
 static const char *TAG = "XPT2046";
@@ -21,6 +22,19 @@ static const char *TAG = "XPT2046";
 #define XPT_Z_THRESHOLD  400   // measured Z below this → treat as "not pressed"
 #define XPT_SAMPLES      4     // averaged per axis to cut ADC jitter
 
+// Every wait below is bounded, and deliberately so. This controller normally
+// shares SPI2 with the panel, whose flush queues an interrupt-driven DMA
+// transfer and returns before it completes — so a conversion routinely starts
+// while the LCD still owns the bus. spi_device_polling_transmit() cannot survive
+// that: it forces portMAX_DELAY on both of its halves (the bus-lock handover in
+// spi_device_polling_start, and the bare `while (!spi_hal_usr_is_done())` spin in
+// spi_device_polling_end), and it takes the bus by acquisition, which suspends
+// the interrupt-driven transactions of the other device. One lost handover then
+// hangs the LVGL task forever — no panic, no reset, radio still playing.
+// Queued transactions take a real timeout and use the same arbitration path as
+// the panel, so both devices on the bus now go through one mechanism.
+#define XPT_SPI_TIMEOUT_MS 50
+
 static spi_device_handle_t s_dev = NULL;
 
 // Transfer buffers for one conversion. Four bytes and static rather than three
@@ -36,23 +50,71 @@ static spi_device_handle_t s_dev = NULL;
 static WORD_ALIGNED_ATTR uint8_t s_tx[4];
 static WORD_ALIGNED_ATTR uint8_t s_rx[4];
 
+// The descriptor is static for the same reason, plus one of its own: when a
+// conversion times out the driver still owns it, so it has to outlive the call.
+static spi_transaction_t s_trans;
+static bool s_trans_pending = false;   // driver still owns s_trans / s_rx
+static bool s_spi_failed    = false;   // one log line per failure streak
+
+// read_cb runs on every LVGL tick, so an unconditional log would bury the
+// console. One line when the bus starts failing and one when it recovers is
+// enough to see it in a user's log.
+static void xpt_report_spi(const char *stage, esp_err_t err)
+{
+    if (s_spi_failed) return;
+    s_spi_failed = true;
+    ESP_LOGW(TAG, "SPI %s failed: %s — touch samples dropped",
+             stage, esp_err_to_name(err));
+}
+
 // One 12-bit conversion: a 4-byte full-duplex frame [cmd, 0, 0, 0]. The result
 // arrives MSB-first in bytes 1..2, left-aligned by 3 bits (so >> 3 → 12-bit);
 // the 4th byte is padding the controller shifts out as zeros, which costs 8
 // extra clocks at 2 MHz and changes nothing about the reading.
 static uint16_t xpt_xfer(uint8_t cmd)
 {
+    spi_transaction_t *finished = NULL;
+    esp_err_t err;
+
+    // A conversion that timed out earlier left the descriptor and s_rx with the
+    // driver. Reclaim them before reuse, or drop this sample and retry later.
+    if (s_trans_pending) {
+        if (spi_device_get_trans_result(s_dev, &finished,
+                                        pdMS_TO_TICKS(XPT_SPI_TIMEOUT_MS)) != ESP_OK)
+            return 0;
+        s_trans_pending = false;
+    }
+
     memset(s_tx, 0, sizeof(s_tx));
     memset(s_rx, 0, sizeof(s_rx));
     s_tx[0] = cmd;
 
-    spi_transaction_t t = {
+    s_trans = (spi_transaction_t){
         .length    = sizeof(s_tx) * 8,
         .rxlength  = sizeof(s_rx) * 8,
         .tx_buffer = s_tx,
         .rx_buffer = s_rx,
     };
-    if (spi_device_polling_transmit(s_dev, &t) != ESP_OK) return 0;
+
+    err = spi_device_queue_trans(s_dev, &s_trans, pdMS_TO_TICKS(XPT_SPI_TIMEOUT_MS));
+    if (err != ESP_OK) {
+        xpt_report_spi("queue", err);
+        return 0;
+    }
+    s_trans_pending = true;
+
+    err = spi_device_get_trans_result(s_dev, &finished,
+                                      pdMS_TO_TICKS(XPT_SPI_TIMEOUT_MS));
+    if (err != ESP_OK) {
+        xpt_report_spi("result", err);
+        return 0;              // stays pending — the next call retries the reclaim
+    }
+    s_trans_pending = false;
+
+    if (s_spi_failed) {
+        ESP_LOGI(TAG, "SPI recovered");
+        s_spi_failed = false;
+    }
     return ((uint16_t)((s_rx[1] << 8) | s_rx[2])) >> 3;
 }
 

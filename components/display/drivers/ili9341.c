@@ -88,7 +88,13 @@ static void spi_init(void)
         // MISO only matters when an XPT2046 shares this bus; -1 (default) otherwise.
         .miso_io_num = g_pins.tp_miso,
         .sclk_io_num = g_pins.lcd_clk,
-        .max_transfer_sz = DISPLAY_WIDTH * DISPLAY_HEIGHT * 2 + 8
+        .max_transfer_sz = DISPLAY_WIDTH * DISPLAY_HEIGHT * 2 + 8,
+        // Pin the bus ISR to CPU1 — the core lvgl_task runs on. The bus is
+        // brought up here from app_main (CPU0), and the default AUTO affinity
+        // would register the ISR there, leaving every completion and bus-lock
+        // handover crossing cores while both users of this bus (the panel and a
+        // shared XPT2046) live on CPU1. Must track display_start()'s core.
+        .isr_cpu_id = ESP_INTR_CPU_AFFINITY_1,
     };
 
     ESP_ERROR_CHECK(spi_bus_initialize(DISPLAY_HOST, &buscfg, SPI_DMA_CH_AUTO));
@@ -313,6 +319,34 @@ static void my_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_m
     // NOTE: do NOT call lv_display_flush_ready() here — spi_post_cb does it.
 }
 
+// The safety net for a completion that never arrives. Without a flush_wait_cb,
+// LVGL waits in wait_for_flushing()'s bare `while (disp->flushing);` — an
+// unbounded spin that no watchdog resets, which is exactly how a stall on the
+// shared bus turns into a permanently frozen screen with the radio still
+// playing. It also made the reclaim guard at the top of my_flush_cb unreachable
+// in that case: LVGL never calls flush_cb again, so the timeout never runs. With
+// this installed LVGL clears `flushing` unconditionally once we return, so the
+// worst case degrades to a dropped frame.
+//
+// Not the normal path: LVGL calls this only while `flushing` is still set, i.e.
+// when spi_post_cb has not fired yet. When DMA finishes in time the callback is
+// skipped and the descriptor is reclaimed by the next my_flush_cb() as before.
+static void my_flush_wait_cb(lv_display_t *disp)
+{
+    (void)disp;
+    if (!s_color_inflight) return;   // nothing of ours pending — let LVGL move on
+
+    spi_transaction_t *finished;
+    if (spi_device_get_trans_result(spi, &finished,
+                                    pdMS_TO_TICKS(FLUSH_SPI_TIMEOUT_MS)) != ESP_OK) {
+        // Still owned by the driver, so leave the flag set: the next flush
+        // retries the reclaim instead of reusing s_color_trans.
+        ESP_LOGW(TAG, "flush wait timed out — frame dropped");
+        return;
+    }
+    s_color_inflight = false;
+}
+
 static void ili9341_clear(uint16_t color)
 {
     uint8_t col[4] = {0x00, 0x00, (319 >> 8), (319 & 0xFF)};
@@ -364,6 +398,7 @@ void ili9341_init(void)
     lv_display_t *disp = lv_display_create(DISPLAY_WIDTH, DISPLAY_HEIGHT);
     // lv_display_set_color_format(disp, LV_COLOR_FORMAT_RGB565_SWAP);
     lv_display_set_flush_cb(disp, my_flush_cb);
+    lv_display_set_flush_wait_cb(disp, my_flush_wait_cb);
 
     lv_display_set_buffers(
         disp,

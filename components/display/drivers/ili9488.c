@@ -61,7 +61,13 @@ static void spi_init(void)
         .sclk_io_num = g_pins.lcd_clk,
         // 18-bit RGB666 over SPI → 3 bytes/pixel. We flush row-by-row, so the
         // largest single transfer is one display row (DISPLAY_WIDTH * 3 bytes).
-        .max_transfer_sz = DISPLAY_WIDTH * 3 + 8
+        .max_transfer_sz = DISPLAY_WIDTH * 3 + 8,
+        // Pin the bus ISR to CPU1 — the core lvgl_task runs on. The bus is
+        // brought up here from app_main (CPU0), and the default AUTO affinity
+        // would register the ISR there, leaving every completion and bus-lock
+        // handover crossing cores while both users of this bus (the panel and a
+        // shared XPT2046) live on CPU1. Must track display_start()'s core.
+        .isr_cpu_id = ESP_INTR_CPU_AFFINITY_1,
     };
 
     ESP_ERROR_CHECK(spi_bus_initialize(DISPLAY_HOST, &buscfg, SPI_DMA_CH_AUTO));

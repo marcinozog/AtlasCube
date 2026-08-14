@@ -25,6 +25,7 @@
 #include "freertos/queue.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "esp_task_wdt.h"
 #include <string.h>
 
 // --------------------------------------------------------------------------
@@ -630,6 +631,15 @@ void ui_manager_run(void)
 
     do_navigate(SCREEN_SPLASH);
 
+    // Subscribe to the task watchdog. ESP_TASK_WDT_PANIC is off, so this never
+    // resets the device — it turns "the screen froze but the radio kept playing"
+    // (this task stuck on an unbounded wait, which produces no console output at
+    // all) into a backtrace naming the function it is stuck in. A slow screen
+    // rebuild can trip it too; a false positive costs one warning, which is a
+    // far better trade than another silent freeze report.
+    const bool wdt_ok = (esp_task_wdt_add(NULL) == ESP_OK);
+    if (!wdt_ok) ESP_LOGW(TAG, "task_wdt_add failed — freezes will stay silent");
+
     ui_event_t ev;
 
     while (1) {
@@ -744,6 +754,7 @@ void ui_manager_run(void)
         uint32_t delay_ms = lv_timer_handler();
         if (delay_ms < 5)  delay_ms = 5;
         if (delay_ms > 50) delay_ms = 50;
+        if (wdt_ok) esp_task_wdt_reset();
         vTaskDelay(pdMS_TO_TICKS(delay_ms));
     }
 }
