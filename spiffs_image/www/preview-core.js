@@ -561,11 +561,20 @@ function volumeCommand(value, source = S.mode) {
 
 // vol_to_travel(): the LVGL range stays 0..100; <pre>_volslider_vol_max only
 // rescales what that travel means.
-function volToTravel(vol) {
+function volSliderMax() {
     const p = primaryProfile();
     const raw = p ? p[`${modeCfg().primary}_volslider_vol_max`] : 100;
-    const max = (raw >= 1 && raw <= 100) ? raw : 100;
+    return (raw >= 1 && raw <= 100) ? raw : 100;
+}
+
+function volToTravel(vol) {
+    const max = volSliderMax();
     return clamp(Math.floor((vol * 100 + Math.floor(max / 2)) / max), 0, 100);
+}
+
+// travel_to_vol(): the other direction, for a finger that lands on the track.
+function travelToVol(travel) {
+    return clamp(Math.floor((clamp(travel, 0, 100) * volSliderMax() + 50) / 100), 0, 100);
 }
 
 async function renderVolSlider(parent, p, pre) {
@@ -587,15 +596,20 @@ async function renderVolSlider(parent, p, pre) {
     const track    = S.pal.text_muted;
 
     // radius 0 throughout — the firmware squares the corners deliberately (a
-    // CIRCLE-radius knob hangs the SW renderer at large sizes).
-    parent.appendChild(box(x, y, w, h, { background: knobOnly ? 'transparent' : track }));
+    // CIRCLE-radius knob hangs the SW renderer at large sizes). The track is the
+    // one element that takes the pointer (the fill and the knob are painted over
+    // it and pass events through), so it exists even in knob-only mode, exactly
+    // as the transparent LVGL slider underneath the artwork does.
+    const trackEl = box(x, y, w, h, { background: knobOnly ? 'transparent' : track });
+    parent.appendChild(trackEl);
 
     const travel = volToTravel(volumeOf());
     if (!knobOnly) {
         const indEl = vertical
             ? box(x, y + h - Math.round(h * travel / 100), w, Math.round(h * travel / 100),
-                  { background: fill })
-            : box(x, y, Math.round(w * travel / 100), h, { background: fill });
+                  { background: fill, pointerEvents: 'none' })
+            : box(x, y, Math.round(w * travel / 100), h,
+                  { background: fill, pointerEvents: 'none' });
         parent.appendChild(indEl);
         S.els.volIndicator = indEl;
     }
@@ -619,13 +633,89 @@ async function renderVolSlider(parent, p, pre) {
         } catch { /* unreadable artwork — the device keeps its plain themed knob */ }
     }
 
-    const knobEl = box(0, 0, knobW, knobH, knobArt ? {} : { background: fill });
+    const knobEl = box(0, 0, knobW, knobH, knobArt
+        ? { pointerEvents: 'none' } : { background: fill, pointerEvents: 'none' });
     if (knobArt) paintArt(knobEl, knobArt);
     parent.appendChild(knobEl);
 
     S.els.volKnob = knobEl;
     S.els.volGeom = { x, y, w, h, knobW, knobH, vertical };
+    trackEl.style.cursor = vertical ? 'ns-resize' : 'ew-resize';
+    bindVolSlider(trackEl);
     positionKnob();
+}
+
+// ── Dragging the on-screen slider ───────────────────────────────────────────
+//
+// The panel's slider is a real control, so this one is too. An LVGL slider jumps
+// to the press point, which is why the value is set on pointerdown and not only
+// while moving.
+//
+// When it applies differs by channel, and that difference is the firmware's:
+// value_changed_cb() drives audio_engine_set_volume() live on the main channel
+// but returns early for BT ("BT applies on release only"), and released_cb()
+// commits through settings on both. So the main channel gets debounced frames
+// during the drag — the same 150 ms the page's own bar uses, since each one is a
+// settings write on the device — and BT gets nothing until the finger lifts.
+let volKnobDragging = false;
+let volKnobTimeout  = null;
+// What the finger is pointing at. Sends read this rather than S.live, which a
+// state broadcast can overwrite with the device's slightly older level between
+// two moves — releasing would then commit the value we were dragging away from.
+let volKnobTravel   = 0;
+
+function volTravelAt(clientX, clientY) {
+    const g = S.els.volGeom;
+    const rect = stageEl.getBoundingClientRect();
+    const lx = (clientX - rect.left) / S.scale;
+    const ly = (clientY - rect.top)  / S.scale;
+    const frac = g.vertical ? (g.y + g.h - ly) / g.h : (lx - g.x) / g.w;
+    return clamp(Math.round(frac * 100), 0, 100);
+}
+
+// The knob follows the finger, and so does everything else reading the level —
+// the page bar included, which is what the panel does too (the on-screen slider
+// and the overlay show one number).
+function volDragTo(travel) {
+    volKnobTravel = travel;
+    const vol = travelToVol(travel);
+    if (S.mode === 'bt') S.live.bt_volume = vol;
+    else                 S.live.volume    = vol;
+    positionKnob();
+    refreshVolumeControl();
+}
+
+function bindVolSlider(el) {
+    // Without this a drag on a vertical slider scrolls the page instead of moving
+    // the knob — the browser claims the gesture before the first pointermove.
+    el.style.touchAction = 'none';
+    el.style.userSelect  = 'none';
+
+    el.addEventListener('pointerdown', (e) => {
+        el.setPointerCapture(e.pointerId);
+        volKnobDragging = true;
+        volDragTo(volTravelAt(e.clientX, e.clientY));
+    });
+
+    el.addEventListener('pointermove', (e) => {
+        if (!volKnobDragging) return;
+        volDragTo(volTravelAt(e.clientX, e.clientY));
+        if (S.mode === 'bt') return;              // applies on release only
+        clearTimeout(volKnobTimeout);
+        volKnobTimeout = setTimeout(
+            () => wsSend(volumeCommand(travelToVol(volKnobTravel))), 150);
+    });
+
+    const end = () => {
+        if (!volKnobDragging) return;
+        volKnobDragging = false;
+        clearTimeout(volKnobTimeout);
+        if (!wsSend(volumeCommand(travelToVol(volKnobTravel)))) {
+            setWsBadge('down', 'not sent — no connection');
+        }
+    };
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointercancel', end);
 }
 
 // position_knob(): the knob travels inside the track, v=100 → right / top.
@@ -802,8 +892,10 @@ function refreshLive() {
     else                         refreshBtLive();
 
     if (S.els.clock) setLabelText(S.els.clock, nowString());
-    positionKnob();
-    refreshVolumeControl();
+    // vol_slider_widget_update() refuses to move the knob while the slider is
+    // pressed; without the same guard an arriving broadcast would fight the finger
+    // and snap the level back mid-drag.
+    if (!volKnobDragging) { positionKnob(); refreshVolumeControl(); }
     refreshListLive();
     refreshEqLive();     // no-op unless the equalizer modal is open
 }
