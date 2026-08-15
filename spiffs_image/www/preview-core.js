@@ -507,12 +507,15 @@ function renderSharedStubs(frag, p, pre) {
                                      NEEDLE_DEMO_LEVEL.r));
 }
 
-// clock_widget: an "HH:MM" label, centre-anchored, on the section's plate.
-function renderClockWidget(frag, p, pre) {
+// clock_widget: an "HH:MM" label on the section's plate. The anchor is the
+// screen's to choose, not the widget's — radio and SD pass UI_ALIGN_CENTER,
+// screen_bt.c passes UI_ALIGN_LEFT, and centring a left-anchored clock would
+// shift it half its own width off.
+function renderClockWidget(frag, p, pre, align = 'center') {
     if (!p[`${pre}_show_clock`]) return;
     S.els.clock = makeLabel({
         x: p[`${pre}_clock_widget_x`] | 0, y: p[`${pre}_clock_widget_y`] | 0,
-        fontId: p[`${pre}_clock_font`], text: nowString(),
+        fontId: p[`${pre}_clock_font`], text: nowString(), align,
         plate: clamp(p[`${pre}_label_bg_opa`] ?? 50, 0, 100),
         color: S.pal.text_primary,
     });

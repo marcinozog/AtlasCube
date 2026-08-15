@@ -38,7 +38,7 @@ async function renderBtScreen() {
     const frag = document.createDocumentFragment();
 
     renderSharedStubs(frag, p, 'bt');      // the mode indicator, as bt_create() starts
-    renderClockWidget(frag, p, 'bt');
+    renderClockWidget(frag, p, 'bt', 'left');   // bt_create() anchors it left
 
     if (p.bt_show_circle) {
         const cw = p.bt_circle_w | 0, ch = p.bt_circle_h | 0;
