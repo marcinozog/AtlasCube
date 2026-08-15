@@ -280,18 +280,17 @@ function dimLayer(dimPct) {
 
 // `ovr` is the screen's own wallpaper field — every hub screen has one, and they
 // resolve identically; only the field and the element painted differ.
-async function applyBackground(targetEl, ovr, badge) {
+async function applyBackground(targetEl, ovr) {
     const display = S.settings.display || {};
     const dim     = clamp(display.wallpaper_dim || 0, 0, 100);
     ovr           = String(ovr || '');
     const slot    = netSlotOf(ovr);
     const isPath  = ovr && ovr !== 'none' && slot < 0;
 
-    const paint = (image, what) => {
+    const paint = (image) => {
         const layers = [dimLayer(dim), image].filter(Boolean).join(', ');
         targetEl.style.background     = layers || S.pal.bg_primary;
         targetEl.style.backgroundSize = 'cover';
-        if (badge) badge.textContent = dim > 0 ? `${what} · dim ${dim}%` : what;
     };
 
     // 1. Internet wallpaper — only when this screen is not pinned to an SD file.
@@ -304,8 +303,7 @@ async function applyBackground(targetEl, ovr, badge) {
                                         { cache: 'no-store' });
                 if (img.ok) {
                     const dec = window.LvBin.decodeToCanvas(await img.arrayBuffer());
-                    paint(`url("${dec.canvas.toDataURL('image/png')}")`,
-                          'internet wallpaper' + (slot >= 0 ? ` (slot ${slot})` : ''));
+                    paint(`url("${dec.canvas.toDataURL('image/png')}")`);
                     return;
                 }
             }
@@ -323,7 +321,7 @@ async function applyBackground(targetEl, ovr, badge) {
                                   { cache: 'no-store' });
             if (f.ok) {
                 const dec = window.LvBin.decodeToCanvas(await f.arrayBuffer());
-                paint(`url("${dec.canvas.toDataURL('image/png')}")`, 'SD wallpaper');
+                paint(`url("${dec.canvas.toDataURL('image/png')}")`);
                 return;
             }
         } catch { /* unreadable file — the device falls back to the gradient too */ }
@@ -332,7 +330,6 @@ async function applyBackground(targetEl, ovr, badge) {
     // 3. Solid, when the gradient is switched off.
     if (!display.bg_gradient) {
         targetEl.style.background = S.pal.bg_primary;
-        if (badge) badge.textContent = 'solid background';
         return;
     }
 
@@ -340,7 +337,6 @@ async function applyBackground(targetEl, ovr, badge) {
     //    renders it in full colour, so banding differs — the colours do not).
     targetEl.style.background =
         `linear-gradient(${S.pal.bg_grad_top}, ${S.pal.bg_grad_bottom})`;
-    if (badge) badge.textContent = 'theme gradient';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -996,11 +992,10 @@ async function renderEverything() {
     if (S.mode === 'radio') await renderRadioScreen();
     else                    await renderSdScreen();
 
-    await applyBackground(screenEl, primaryProfile()[`${cfg.primary}_wallpaper`],
-                          document.getElementById('dim_badge'));
+    await applyBackground(screenEl, primaryProfile()[`${cfg.primary}_wallpaper`]);
 
     renderListScreen();
-    await applyBackground(listScreen, listProfile()[`${cfg.list}_wallpaper`], null);
+    await applyBackground(listScreen, listProfile()[`${cfg.list}_wallpaper`]);
     applyZoom();
 }
 
