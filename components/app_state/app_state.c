@@ -210,6 +210,7 @@ void app_state_update(const app_state_patch_t *patch)
     if (patch->has_bt_enable)         n = buf_append(buf, sizeof(buf), n, " bt_enable=%d", s_state.bt_enable);
     if (patch->has_bt_auto_switch)    n = buf_append(buf, sizeof(buf), n, " bt_auto_switch=%d", s_state.bt_auto_switch);
     if (patch->has_bt_state)          n = buf_append(buf, sizeof(buf), n, " bt_connected=%d", s_state.bt_state);
+    if (patch->has_bt_playing)        n = buf_append(buf, sizeof(buf), n, " bt_playing=%d", s_state.bt_playing);
     if (patch->has_bt_volume)         n = buf_append(buf, sizeof(buf), n, " bt_volume=%d", s_state.bt_volume);
     if (patch->has_bt_vol_sync)       n = buf_append(buf, sizeof(buf), n, " bt_vol_sync=%d", s_state.bt_vol_sync);
     if (patch->has_bt_title)          n = buf_append(buf, sizeof(buf), n, " bt_title=%s", s_state.bt_title);
