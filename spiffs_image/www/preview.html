@@ -317,6 +317,7 @@ button:hover, select:hover { border-color: var(--accent); }
          In fullscreen the bar floats over the corner instead of sitting above
          the panel — same controls, no duplicates to keep in sync. -->
     <div class="topbar">
+        <span class="badge" id="ws_badge">connecting…</span>
         <label for="mode">Source</label>
         <select id="mode">
             <option value="radio" selected>Radio</option>
@@ -338,7 +339,9 @@ button:hover, select:hover { border-color: var(--accent); }
         <span class="vol-value" id="vol_value">—</span>
     </div>
 
-    <div id="list_wrap" hidden>
+    <!-- Shown from the start: the list is half of what the page is for, and a
+         visitor should not have to find a button to see it. -->
+    <div id="list_wrap">
         <div class="screen-caption" id="list_caption">Playlist screen</div>
         <div class="frame">
             <div id="list_stage"><div id="list_screen"></div></div>
@@ -358,7 +361,6 @@ button:hover, select:hover { border-color: var(--accent); }
     <button id="reload" type="button">Reload profile</button>
     <button id="toggle_list" type="button">Show playlist screen</button>
     <label><input type="checkbox" id="show_hotspots"> Show touch areas</label>
-    <span class="badge" id="ws_badge">connecting…</span>
     <span class="badge" id="dim_badge">—</span>
 </div>
 

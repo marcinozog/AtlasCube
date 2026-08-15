@@ -54,6 +54,20 @@ const MODES = {
     sd:    { primary: 'sd',    list: 'browser',  listCaption: 'SD browser screen' },
 };
 
+// Which source was shown last, so a reload comes back where it left off. A view
+// preference of this browser, nothing the device knows about. Validated against
+// MODES, so a key left over from a build that had a source this one does not
+// falls back instead of rendering nothing.
+const MODE_KEY = 'atlascube.preview.mode';
+
+function storedMode() {
+    try {
+        const v = localStorage.getItem(MODE_KEY);
+        if (MODES[v]) return v;
+    } catch (e) { /* private mode */ }
+    return 'radio';
+}
+
 const screenEl   = document.getElementById('screen');
 const stageEl    = document.getElementById('stage');
 const frameEl    = document.querySelector('.frame');
@@ -955,6 +969,7 @@ const modeEl = document.getElementById('mode');
 
 async function setMode(value) {
     S.mode = value;
+    try { localStorage.setItem(MODE_KEY, value); } catch (e) { /* private mode */ }
     listCapEl.textContent = modeCfg().listCaption;
     toggleListBtn.textContent = listButtonLabel();
     // The browser's rows come from the device, one folder at a time.
@@ -1032,6 +1047,12 @@ async function boot() {
         await document.fonts.load('500 16px AtlasMontserrat');
         await document.fonts.ready;
         baselineFix.clear();
+
+        // Restore the source before the first render, and before the socket opens:
+        // onopen asks for the SD listing when the mode is already 'sd', so nothing
+        // extra has to be kicked off here.
+        S.mode = storedMode();
+        modeEl.value = S.mode;
 
         listCapEl.textContent = modeCfg().listCaption;
         toggleListBtn.textContent = listButtonLabel();
