@@ -110,9 +110,9 @@ button:disabled:hover { border-color: var(--line); }
     background: var(--panel-bg);
 }
 
-#stage, #list_stage { position: relative; overflow: hidden; }
+#stage, #list_stage, #eq_stage { position: relative; overflow: hidden; }
 
-#screen, #list_screen {
+#screen, #list_screen, #eq_screen {
     position: absolute;
     top: 0;
     left: 0;
@@ -300,6 +300,36 @@ button:disabled:hover { border-color: var(--line); }
     white-space: nowrap;
 }
 
+/* Equalizer modal. Sized by its content (the scaled panel), never wider than the
+   window — a phone gets the same screen, just at a smaller scale. */
+#eq_modal {
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--page-bg);
+    color: var(--fg);
+    max-width: 96vw;
+    max-height: 96vh;
+    overflow: auto;
+}
+
+#eq_modal::backdrop { background: rgba(0, 0, 0, .72); }
+
+.modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 8px;
+}
+
+.modal-head .screen-caption { margin: 0; }
+
+/* The bands are dragged with the pointer; no text selection while doing so. */
+#eq_screen { touch-action: none; user-select: none; }
+
+.eq-band { position: absolute; cursor: ns-resize; }
+
 #err {
     margin-bottom: 14px;
     padding: 10px 12px;
@@ -328,6 +358,9 @@ button:disabled:hover { border-color: var(--line); }
             <option value="sd">SD card</option>
             <option value="bt">Bluetooth</option>
         </select>
+        <button id="eq_open" type="button" title="Show the equalizer screen (Esc to close)">
+            🎛 Equalizer
+        </button>
         <button id="fullscreen" type="button" title="Fill the browser window (Esc to leave)">
             ⛶ Fullscreen
         </button>
@@ -370,11 +403,25 @@ button:disabled:hover { border-color: var(--line); }
     <label><input type="checkbox" id="show_hotspots"> Show touch areas</label>
 </div>
 
+<!-- The equalizer is not a source but a screen you arrive at from radio/SD/BT, so
+     it gets a modal instead of a slot in the source list. A <dialog> renders in the
+     top layer, which sits above a fullscreen element — it stays reachable there. -->
+<dialog id="eq_modal">
+    <div class="modal-head">
+        <span class="screen-caption">Equalizer screen</span>
+        <button id="eq_close" type="button">Close</button>
+    </div>
+    <div class="frame">
+        <div id="eq_stage"><div id="eq_screen"></div></div>
+    </div>
+</dialog>
+
 <script src="lvbin.js"></script>
 <script src="preview-core.js"></script>
 <script src="preview-list.js"></script>
 <script src="preview-radio.js"></script>
 <script src="preview-sd.js"></script>
 <script src="preview-bt.js"></script>
+<script src="preview-eq.js"></script>
 </body>
 </html>

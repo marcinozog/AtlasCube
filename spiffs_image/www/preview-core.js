@@ -42,6 +42,7 @@ const S = {
         sd_position_ms: null, sd_duration_ms: null,   // null = firmware predates them
         bt_state: 1, bt_playing: false, bt_volume: 0, bt_title: '', bt_artist: '',
         bt_duration_ms: 0, bt_position_s: 0,
+        eq: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],   // the 10 band gains, dB
     },
     sdPosAt: 0,       // performance.now() when sd_position_ms was received
     els: {},          // live-updating nodes of the primary screen
@@ -783,6 +784,7 @@ function refreshLive() {
     positionKnob();
     refreshVolumeControl();
     refreshListLive();
+    refreshEqLive();     // no-op unless the equalizer modal is open
 }
 
 // ── Page volume slider ──────────────────────────────────────────────────────
@@ -1069,7 +1071,7 @@ async function loadAll() {
         if (!r.ok) throw new Error(url + ' → HTTP ' + r.status);
         return r.json();
     };
-    const sections = ['radio', 'playlist', 'sd', 'browser', 'bt'];
+    const sections = ['radio', 'playlist', 'sd', 'browser', 'bt', 'eq'];
     const [meta, settings, theme, ...profs] = await Promise.all([
         get('/api/ui/profile/meta'),
         get('/api/settings'),
