@@ -2485,7 +2485,11 @@ static void load_eq(const cJSON *obj, ui_profile_t *p)
     load_font(obj, "eq_info_font",  &p->eq_info_font);
     load_i16 (obj, "eq_hint_x",     &p->eq_hint_x);
     load_i16 (obj, "eq_hint_y",     &p->eq_hint_y);
+    load_font(obj, "eq_hint_font",  &p->eq_hint_font);
     load_bool(obj, "eq_hint_hide",  &p->eq_hint_hide);
+    // Loaded before the conversions below, which derive the slider height from the
+    // frequency strip and so need this font's line height.
+    load_font(obj, "eq_freq_font",  &p->eq_freq_font);
     load_bool(obj, "eq_freq_hide",  &p->eq_freq_hide);
     load_i16 (obj, "eq_group_x",    &p->eq_group_x);
     load_i16 (obj, "eq_group_y",    &p->eq_group_y);
@@ -2544,7 +2548,11 @@ static cJSON *dump_eq(const ui_profile_t *p)
     add_font(o, "eq_info_font",  p->eq_info_font);
     add_i16 (o, "eq_hint_x",     p->eq_hint_x);
     add_i16 (o, "eq_hint_y",     p->eq_hint_y);
+    add_font(o, "eq_hint_font",  p->eq_hint_font);
     add_bool(o, "eq_hint_hide",  p->eq_hint_hide);
+    // The frequency strip's height is this font's line height + 6, so a client
+    // drawing the group has to know it rather than guess.
+    add_font(o, "eq_freq_font",  p->eq_freq_font);
     add_bool(o, "eq_freq_hide",  p->eq_freq_hide);
     // Anchor + span + slider size. The height is not round-tripped: the editor
     // derives it the same way ui_profile_eq_group_box() does. eq_slider_w doubles
