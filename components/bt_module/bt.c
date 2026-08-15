@@ -182,6 +182,52 @@ static bool bt_extract_field(const char *buf, const char *key, char *out, size_t
     return true;
 }
 
+// ── Play confirmation ───────────────────────────────────────────────────────
+//
+// The module announces "playing" whenever the phone hands over a media session,
+// which happens on every unlock of a paired phone even with playback paused: the
+// metadata of the last track arrives (title, artist, length, codec, rate) and a
+// few seconds later "+SRC=NONE" takes it all back. Acting on that announcement
+// stops the radio, takes the output and drags the panel to the BT screen for
+// nothing.
+//
+// What separates the two cases is the position: a phone that really plays reports
+// +PYPS roughly once a second and the value moves, while the announcement carries
+// no position at all. So the play event only arms this; the SECOND differing
+// position confirms it, which in practice takes about a second.
+//
+// bt_playing waits for that confirmation as well, not just the callback:
+// apply_follow_source() navigates on the flag's own rising edge, so setting it
+// early would move the screen no matter what the callback did.
+static bool s_play_pending = false;
+static int  s_pending_pos  = -1;      // position seen while pending, -1 = none yet
+
+// Modules whose descriptor has no position key cannot confirm anything, so they
+// keep the old immediate behaviour rather than never reporting playback at all.
+static inline bool play_needs_confirm(void)
+{
+    return g_bt->key_pos_s && g_bt->key_pos_s[0];
+}
+
+static void play_confirmed(void)
+{
+    s_play_pending = false;
+    s_pending_pos  = -1;
+    app_state_update(&(app_state_patch_t){
+        .has_bt_playing = true,
+        .bt_playing     = true
+    });
+    // Phone started playing — let the source coordinator react (stop radio,
+    // switch source to BT) when exclusive auto-switch is enabled.
+    if (s_play_event_cb) s_play_event_cb(true);
+}
+
+static void play_pending_cancel(void)
+{
+    s_play_pending = false;
+    s_pending_pos  = -1;
+}
+
 void bt_parse_cmd(const char *cmd) {
     if (strstr(cmd, g_bt->evt_connected) ||
         (g_bt->evt_connected_alt && strstr(cmd, g_bt->evt_connected_alt))) {
@@ -191,6 +237,7 @@ void bt_parse_cmd(const char *cmd) {
         });
     }
     else if (strstr(cmd, g_bt->evt_disconnected)) {
+        play_pending_cancel();
         app_state_update(&(app_state_patch_t){
             .has_bt_state   = true,
             .bt_state       = BT_DISCONNECTED,
@@ -207,6 +254,7 @@ void bt_parse_cmd(const char *cmd) {
     }
 
     if (strstr(cmd, g_bt->evt_src_none)) {
+        play_pending_cancel();   // the announcement took itself back
         app_state_update(&(app_state_patch_t){
             .has_bt_title       = true, .bt_title       = "",
             .has_bt_artist      = true, .bt_artist      = "",
@@ -220,7 +268,8 @@ void bt_parse_cmd(const char *cmd) {
         if (s_play_event_cb) s_play_event_cb(false);   // playback stopped
     }
 
-    // Get metadata
+    // Get metadata. The queries go out either way — the position they turn on is
+    // exactly what decides whether this announcement meant anything.
     if (strstr(cmd, g_bt->evt_play)) {
         bt_send_raw(g_bt->cmd_get_meta);
         vTaskDelay(pdMS_TO_TICKS(100));
@@ -230,14 +279,12 @@ void bt_parse_cmd(const char *cmd) {
         vTaskDelay(pdMS_TO_TICKS(100));
         bt_send_raw(g_bt->cmd_get_arate);
 
-        app_state_update(&(app_state_patch_t){
-            .has_bt_playing = true,
-            .bt_playing     = true
-        });
-
-        // Phone started playing — let the source coordinator react (stop radio,
-        // switch source to BT) when exclusive auto-switch is enabled.
-        if (s_play_event_cb) s_play_event_cb(true);
+        if (play_needs_confirm()) {
+            s_play_pending = true;
+            s_pending_pos  = -1;
+        } else {
+            play_confirmed();
+        }
     }
 
     char buf[128];
@@ -267,6 +314,13 @@ void bt_parse_cmd(const char *cmd) {
             .has_bt_position_s = true,
             .bt_position_s     = s
         });
+        // A moving position is the proof the announcement never carried: the
+        // first report is only the mark to measure from, the second one that
+        // differs says the track is actually running.
+        if (s_play_pending) {
+            if (s_pending_pos < 0)      s_pending_pos = s;
+            else if (s != s_pending_pos) play_confirmed();
+        }
     }
     if (bt_extract_field(cmd, g_bt->key_codec, buf, sizeof(buf))) {
         app_state_update(&(app_state_patch_t){
