@@ -256,6 +256,28 @@ function alignedText({ text, fontId, color, left, top }) {
     return el;
 }
 
+// Decoded artwork goes into the page as a <canvas>, never as a PNG data URL:
+// Chromium on Android has been seen returning a blank (white) image from
+// canvas.toDataURL() for artwork with an alpha channel — Edge/Android drew the
+// knobs as white rectangles while the very same canvas inserted into the DOM drew
+// correctly. Stretched to the element's box, which is LV_IMAGE_ALIGN_STRETCH, the
+// alignment the widgets use. The copy is needed because one canvas cannot be in
+// two places at once — the ten EQ bands share a single decoded knob.
+function paintArt(el, src) {
+    const c = document.createElement('canvas');
+    c.width  = src.width;
+    c.height = src.height;
+    c.getContext('2d').drawImage(src, 0, 0);
+    c.style.position = 'absolute';
+    c.style.left   = '0';
+    c.style.top    = '0';
+    c.style.width  = '100%';
+    c.style.height = '100%';
+    el.replaceChildren(c);
+}
+
+function clearArt(el) { el.replaceChildren(); }
+
 // A widget this preview does not draw for real yet.
 function stub(x, y, w, h, label) {
     const el = document.createElement('div');
@@ -581,7 +603,7 @@ async function renderVolSlider(parent, p, pre) {
     // Knob artwork, when the slot holds an SD .bin. build_knob_image() sizes it
     // from the cross axis and lets the other axis follow the aspect ratio.
     const ref = String(p[`${pre}_volslider_knob_image`] || '').trim();
-    let knobW = vertical ? w : h, knobH = vertical ? w : h, knobUrl = '';
+    let knobW = vertical ? w : h, knobH = vertical ? w : h, knobArt = null;
 
     if (ref && !/^asset\d$/.test(ref)) {
         try {
@@ -592,14 +614,13 @@ async function renderVolSlider(parent, p, pre) {
                 const dec = window.LvBin.decodeToCanvas(await f.arrayBuffer());
                 if (vertical) { knobW = w; knobH = Math.max(1, Math.floor(dec.h * knobW / dec.w)); }
                 else          { knobH = h; knobW = Math.max(1, Math.floor(dec.w * knobH / dec.h)); }
-                knobUrl = dec.canvas.toDataURL('image/png');
+                knobArt = dec.canvas;
             }
         } catch { /* unreadable artwork — the device keeps its plain themed knob */ }
     }
 
-    const knobEl = box(0, 0, knobW, knobH, knobUrl
-        ? { backgroundImage: `url("${knobUrl}")`, backgroundSize: '100% 100%' }
-        : { background: fill });
+    const knobEl = box(0, 0, knobW, knobH, knobArt ? {} : { background: fill });
+    if (knobArt) paintArt(knobEl, knobArt);
     parent.appendChild(knobEl);
 
     S.els.volKnob = knobEl;

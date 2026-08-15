@@ -31,7 +31,7 @@ async function refreshStationIcon() {
     iconLoadedPath = rel;
 
     if (!rel) {                       // clear_icon(): hide, don't leave stale art
-        el.style.backgroundImage = '';
+        clearArt(el);
         el.style.display = 'none';
         return;
     }
@@ -42,13 +42,12 @@ async function refreshStationIcon() {
         if (currentIconPath() !== rel) return;   // station changed mid-download
         // LV_IMAGE_ALIGN_STRETCH into a size x size object: the .bin is loaded at
         // up to 64x64 and then stretched to the configured box, aspect ignored.
-        el.style.backgroundImage = `url("${dec.canvas.toDataURL('image/png')}")`;
-        el.style.backgroundSize  = '100% 100%';
+        paintArt(el, dec.canvas);
         el.style.display = '';
     } catch (err) {
         // The widget logs "Cannot load %s" and simply shows nothing.
         console.warn('Station icon unavailable:', rel, err.message);
-        el.style.backgroundImage = '';
+        clearArt(el);
         el.style.display = 'none';
         iconLoadedPath = null;        // retry if the station comes round again
     }

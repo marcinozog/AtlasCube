@@ -171,8 +171,7 @@ async function loadEqKnob(p, geom) {
             kh = geom.sliderH;
             kw = dec.h > 0 ? Math.floor(dec.w * kh / dec.h) : kw;
         }
-        return { url: dec.canvas.toDataURL('image/png'),
-                 w: Math.max(kw, 1), h: Math.max(kh, 1) };
+        return { art: dec.canvas, w: Math.max(kw, 1), h: Math.max(kh, 1) };
     } catch {
         // No artwork on the card is the normal case — the themed knob stays.
         return null;
@@ -247,11 +246,8 @@ async function renderEqScreen() {
             // Sibling above the slider, not a child — it is not clickable on the
             // device either; the band underneath owns the drag.
             b.knobImg = box(x + Math.trunc((g.sw - EQ.knob.w) / 2), g.gy,
-                            EQ.knob.w, EQ.knob.h, {
-                backgroundImage: `url("${EQ.knob.url}")`,
-                backgroundSize: '100% 100%',
-                pointerEvents: 'none',
-            });
+                            EQ.knob.w, EQ.knob.h, { pointerEvents: 'none' });
+            paintArt(b.knobImg, EQ.knob.art);
             frag.appendChild(b.knobImg);
         } else {
             const size = g.sw + 2 * EQ_KNOB_PAD;

@@ -46,7 +46,7 @@ async function refreshSdCover() {
     coverLoadedDir = dir;
 
     if (!dir) {
-        el.style.backgroundImage = '';
+        clearArt(el);
         el.style.display = 'none';
         return;
     }
@@ -57,12 +57,11 @@ async function refreshSdCover() {
         if (!f.ok) throw new Error('HTTP ' + f.status);
         const dec = window.LvBin.decodeToCanvas(await f.arrayBuffer());
         if (coverLoadedDir !== dir) return;      // folder changed mid-download
-        el.style.backgroundImage = `url("${dec.canvas.toDataURL('image/png')}")`;
-        el.style.backgroundSize  = '100% 100%';
+        paintArt(el, dec.canvas);
         el.style.display = '';
     } catch {
         // A folder without artwork is the normal case, not an error.
-        el.style.backgroundImage = '';
+        clearArt(el);
         el.style.display = 'none';
         coverLoadedDir = null;
     }
