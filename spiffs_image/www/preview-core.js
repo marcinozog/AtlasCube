@@ -40,7 +40,7 @@ const S = {
         sd_active: false, sd_index: 0, sd_count: 0, sd_track: '', sd_dir: '',
         sd_paused: false, sd_shuffle: false, sd_repeat: 0,
         sd_position_ms: null, sd_duration_ms: null,   // null = firmware predates them
-        bt_state: 1, bt_volume: 0, bt_title: '', bt_artist: '',
+        bt_state: 1, bt_playing: false, bt_volume: 0, bt_title: '', bt_artist: '',
         bt_duration_ms: 0, bt_position_s: 0,
     },
     sdPosAt: 0,       // performance.now() when sd_position_ms was received
@@ -668,12 +668,13 @@ function hotspotCommand(action, source) {
     if (source === 'bt') {
         switch (action) {
             // Both toggles are one and the same on BT (media_control.c: an AVRCP
-            // toggle already IS play/pause), and both branch on app_state.bt_playing,
-            // which the state broadcast does not carry. The plain-text frame is the
-            // exact path instead: media_source_current() returns BT whenever BT is
-            // enabled, which is precisely when the panel is on this screen.
+            // toggle already IS play/pause), and both branch on bt_playing — which
+            // is why the state frame carries it. The plain-text `toggle` must NOT be
+            // used here: it resolves through media_source_current(), so with the SD
+            // player running it would stop SD instead of touching the module, while
+            // the panel's own hotspot passes CONTROL_SOURCE_BT and always means BT.
             case 0:
-            case 6: return 'toggle';
+            case 6: return L.bt_playing ? { cmd: 'bt_pause' } : { cmd: 'bt_play' };
             case 1: return { cmd: 'bt_prev' };
             case 2: return { cmd: 'bt_next' };
             case 5: return { cmd: 'bt_pause' };   // MEDIA_ACTION_STOP is a pause here
