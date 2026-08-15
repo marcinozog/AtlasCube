@@ -149,6 +149,7 @@ Built by `send_full_state()`. Sent on connect and on every state change.
 | `sd_duration_ms` | number | Length of the current SD track, ms. `0` = unknown (FLAC/AAC, or an unparseable header) — a client showing a progress bar must hide it rather than divide by zero |
 | `bt_enable` | bool | |
 | `bt_state` | number | `0` connected, `1` disconnected, `2` discoverable (`bt_state_t`) |
+| `bt_playing` | bool | Phone-side AVRCP playback is running. The only way to tell which direction a BT play/pause should go: `bt_play` / `bt_pause` act on the module whatever the active source is, while the plain-text `toggle` follows `media_source_current()` and would hit the radio or the SD player instead |
 | `bt_volume` | number | 0…100 |
 | `bt_vol_sync` | bool | |
 | `bt_title` / `bt_artist` | string | AVRCP metadata |

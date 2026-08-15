@@ -417,6 +417,7 @@ static void send_full_state(void)
     cJSON_AddStringToObject(json, "type", "state");
     cJSON_AddBoolToObject(json, "bt_enable", s->bt_enable);
     cJSON_AddNumberToObject(json, "bt_state", s->bt_state);
+    cJSON_AddBoolToObject(json, "bt_playing", s->bt_playing);
     cJSON_AddNumberToObject(json, "bt_volume", s->bt_volume);
     cJSON_AddBoolToObject(json, "bt_vol_sync", s->bt_vol_sync);
     cJSON_AddStringToObject(json, "bt_title",  s->bt_title);
