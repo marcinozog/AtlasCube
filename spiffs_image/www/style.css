@@ -210,6 +210,81 @@ body {
 }
 
 /* ════════════════════════════════════════════════
+   SCREEN PREVIEW LINK
+   ════════════════════════════════════════════════ */
+/* Same shape as .discover-link, deliberately in --orange: everything else on this
+   page is accent blue, so the one warm element is the one that gets noticed.
+   Sized like the card so it reads as a banner sitting on top of it. */
+.preview-link {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    width: 440px;
+    max-width: calc(100vw - 24px);
+    margin: 0 auto 12px;
+    padding: 11px 12px;
+    border: 1px solid rgba(255,170,0,.45);
+    border-radius: var(--radius);
+    background: linear-gradient(100deg, rgba(255,170,0,.16), rgba(255,170,0,.04));
+    color: var(--text);
+    text-decoration: none;
+    transition: border-color .18s, background .18s, transform .18s;
+}
+
+.preview-link:hover {
+    border-color: var(--orange);
+    background: linear-gradient(100deg, rgba(255,170,0,.28), rgba(255,170,0,.08));
+    transform: translateY(-1px);
+}
+
+.preview-link:focus-visible {
+    outline: 2px solid var(--orange);
+    outline-offset: 2px;
+}
+
+.preview-link-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 31px;
+    width: 31px;
+    height: 31px;
+    border: 1px solid var(--orange);
+    border-radius: 50%;
+    color: var(--orange);
+    font-size: 15px;
+    box-shadow: 0 0 12px rgba(255,170,0,.22);
+}
+
+.preview-link-copy {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.preview-link-title {
+    color: var(--orange);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .035em;
+}
+
+.preview-link-subtitle {
+    color: var(--text-dim);
+    font-size: 11px;
+}
+
+.preview-link-arrow {
+    color: var(--orange);
+    font-size: 19px;
+    line-height: 1;
+    transition: transform .18s;
+}
+
+.preview-link:hover .preview-link-arrow { transform: translateX(3px); }
+
+/* ════════════════════════════════════════════════
    CARD
    ════════════════════════════════════════════════ */
 .card {
