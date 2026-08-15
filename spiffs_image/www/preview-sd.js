@@ -193,11 +193,6 @@ function basenameOf(path) {
     return i >= 0 ? String(path).slice(i + 1) : String(path);
 }
 
-function fmtMmss(ms) {
-    const s = Math.floor(ms / 1000);
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-}
-
 // repeat_str()
 function repeatText(r) {
     return r === 1 ? 'REPEAT ALL' : (r === 2 ? 'REPEAT ONE' : '');

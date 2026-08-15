@@ -40,6 +40,8 @@ const S = {
         sd_active: false, sd_index: 0, sd_count: 0, sd_track: '', sd_dir: '',
         sd_paused: false, sd_shuffle: false, sd_repeat: 0,
         sd_position_ms: null, sd_duration_ms: null,   // null = firmware predates them
+        bt_state: 1, bt_volume: 0, bt_title: '', bt_artist: '',
+        bt_duration_ms: 0, bt_position_s: 0,
     },
     sdPosAt: 0,       // performance.now() when sd_position_ms was received
     els: {},          // live-updating nodes of the primary screen
@@ -47,11 +49,14 @@ const S = {
     wsRetry: 250,
 };
 
-// The two modes pair a "what is playing" screen with the list you pick from —
-// the same pairing the device makes between a source and its browser.
+// Each mode pairs a "what is playing" screen with the list you pick from — the
+// same pairing the device makes between a source and its browser. BT has no list
+// of its own (the phone owns the queue), so its `list` is null and every list
+// step is skipped rather than faked.
 const MODES = {
     radio: { primary: 'radio', list: 'playlist', listCaption: 'Playlist screen' },
     sd:    { primary: 'sd',    list: 'browser',  listCaption: 'SD browser screen' },
+    bt:    { primary: 'bt',    list: null,       listCaption: '' },
 };
 
 // Which source was shown last, so a reload comes back where it left off. A view
@@ -105,6 +110,13 @@ function rgba(hex, alpha) {
 }
 
 function clamp(v, lo, hi) { return v < lo ? lo : (v > hi ? hi : v); }
+
+// "m:ss", the format both players print — the minutes are not zero-padded, and a
+// position that has not started yet reads 0:00 rather than a negative time.
+function fmtMmss(ms) {
+    const s = Math.max(Math.floor(ms / 1000), 0);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Fonts
@@ -509,6 +521,18 @@ function renderClockWidget(frag, p, pre) {
 
 // ── Volume slider (the one drawn ON the screen) — vol_slider_widget.c ────────
 
+// The BT screen drives the module's own level (app_state.bt_volume, set through
+// settings_set_bt_volume), every other source the engine's master volume — the
+// same split vol_slider_widget.c makes on its s_bt flag. Two separate numbers on
+// the device, so reading or writing the wrong one would move the wrong output.
+function volumeOf(source = S.mode) {
+    return (source === 'bt' ? S.live.bt_volume : S.live.volume) | 0;
+}
+
+function volumeCommand(value, source = S.mode) {
+    return source === 'bt' ? { cmd: 'bt_volume', value } : { cmd: 'set_volume', value };
+}
+
 // vol_to_travel(): the LVGL range stays 0..100; <pre>_volslider_vol_max only
 // rescales what that travel means.
 function volToTravel(vol) {
@@ -531,14 +555,16 @@ async function renderVolSlider(parent, p, pre) {
     if (vertical && w >= h) w = h - 1;
 
     const knobOnly = !!p[`${pre}_volslider_knob_only`];
-    const fill     = S.pal.accent;          // not the BT screen, so accent
+    // apply_theme(): the BT screen paints its slider in the brand colour, the
+    // others in the accent.
+    const fill     = pre === 'bt' ? S.pal.bt_brand : S.pal.accent;
     const track    = S.pal.text_muted;
 
     // radius 0 throughout — the firmware squares the corners deliberately (a
     // CIRCLE-radius knob hangs the SW renderer at large sizes).
     parent.appendChild(box(x, y, w, h, { background: knobOnly ? 'transparent' : track }));
 
-    const travel = volToTravel(S.live.volume | 0);
+    const travel = volToTravel(volumeOf());
     if (!knobOnly) {
         const indEl = vertical
             ? box(x, y + h - Math.round(h * travel / 100), w, Math.round(h * travel / 100),
@@ -581,7 +607,7 @@ async function renderVolSlider(parent, p, pre) {
 function positionKnob() {
     const g = S.els.volGeom;
     if (!g || !S.els.volKnob) return;
-    const v  = volToTravel(S.live.volume | 0);
+    const v  = volToTravel(volumeOf());
     const tx = Math.max(g.w - g.knobW, 0);
     const ty = Math.max(g.h - g.knobH, 0);
     S.els.volKnob.style.left = (g.vertical ? g.x + Math.floor((g.w - g.knobW) / 2)
@@ -630,10 +656,26 @@ const HOTSPOT_ACTIONS = [
 function hotspotCommand(action, source) {
     const L = S.live;
 
-    // Volume is the same arithmetic on every source.
+    // Volume is the same ±2 arithmetic on every source; only which volume it is
+    // differs (BT steps its module's level, see volumeOf).
     if (action === 3 || action === 4) {
-        return { cmd: 'set_volume',
-                 value: clamp((L.volume | 0) + (action === 4 ? 2 : -2), 0, 100) };
+        return volumeCommand(clamp(volumeOf(source) + (action === 4 ? 2 : -2), 0, 100), source);
+    }
+
+    if (source === 'bt') {
+        switch (action) {
+            // Both toggles are one and the same on BT (media_control.c: an AVRCP
+            // toggle already IS play/pause), and both branch on app_state.bt_playing,
+            // which the state broadcast does not carry. The plain-text frame is the
+            // exact path instead: media_source_current() returns BT whenever BT is
+            // enabled, which is precisely when the panel is on this screen.
+            case 0:
+            case 6: return 'toggle';
+            case 1: return { cmd: 'bt_prev' };
+            case 2: return { cmd: 'bt_next' };
+            case 5: return { cmd: 'bt_pause' };   // MEDIA_ACTION_STOP is a pause here
+            default: return null;
+        }
     }
 
     if (source === 'sd') {
@@ -729,8 +771,9 @@ function nowString() {
 }
 
 function refreshLive() {
-    if (S.mode === 'radio') refreshRadioLive();
-    else                    refreshSdLive();
+    if      (S.mode === 'radio') refreshRadioLive();
+    else if (S.mode === 'sd')    refreshSdLive();
+    else                         refreshBtLive();
 
     if (S.els.clock) setLabelText(S.els.clock, nowString());
     positionKnob();
@@ -742,8 +785,10 @@ function refreshLive() {
 //
 // A page control, not part of the rendered screen — the panel's own slider is
 // drawn inside the screen from <pre>_volslider_*. This one is the plain 0..100
-// master volume, like the one on the main web UI, so <pre>_volslider_vol_max
-// (which only remaps the on-screen slider's travel) deliberately does not apply.
+// volume of whatever source is on show, like the one on the main web UI, so
+// <pre>_volslider_vol_max (which only remaps the on-screen slider's travel)
+// deliberately does not apply. On BT that is the module's level: dragging this
+// while the BT screen is up must not move the radio's volume instead.
 
 const volEl    = document.getElementById('volume');
 const volValEl = document.getElementById('vol_value');
@@ -760,8 +805,8 @@ function refreshVolumeControl() {
     volEl.disabled = !S.gotState;
     if (!S.gotState) { volValEl.textContent = '—'; return; }
     if (volDragging) return;
-    volEl.value = clamp(S.live.volume | 0, 0, 100);
-    volValEl.textContent = (S.live.volume | 0) + '%';
+    volEl.value = clamp(volumeOf(), 0, 100);
+    volValEl.textContent = volumeOf() + '%';
 }
 
 volEl.addEventListener('input', () => {
@@ -771,7 +816,7 @@ volEl.addEventListener('input', () => {
     // and every frame would otherwise be a settings write on the device.
     clearTimeout(volTimeout);
     volTimeout = setTimeout(() => {
-        if (!wsSend({ cmd: 'set_volume', value: v })) setWsBadge('down', 'not sent — no connection');
+        if (!wsSend(volumeCommand(v))) setWsBadge('down', 'not sent — no connection');
     }, 150);
 });
 
@@ -945,18 +990,30 @@ document.addEventListener('fullscreenchange', () => {
 
 const toggleListBtn = document.getElementById('toggle_list');
 
+// What the button says the user wants. Kept separate from the panel's actual
+// visibility so that switching to BT — which has no list at all — hides the panel
+// without forgetting the preference for when radio or SD comes back.
+let listWanted = true;
+
 function listButtonLabel() {
-    const what = S.mode === 'radio' ? 'playlist' : 'browser';
+    const cfg = modeCfg();
+    if (!cfg.list) return 'No list screen';
+    const what = cfg.list === 'playlist' ? 'playlist' : 'browser';
     return (listWrapEl.hidden ? 'Show ' : 'Hide ') + what + ' screen';
 }
 
 function setListVisible(show) {
-    listWrapEl.hidden = !show;
+    const has = !!modeCfg().list;
+    listWrapEl.hidden = !has || !show;
+    toggleListBtn.disabled = !has;
     toggleListBtn.textContent = listButtonLabel();
     if (S.meta) applyZoom();
 }
 
-toggleListBtn.addEventListener('click', () => setListVisible(listWrapEl.hidden));
+toggleListBtn.addEventListener('click', () => {
+    listWanted = listWrapEl.hidden;
+    setListVisible(listWanted);
+});
 
 // One control, which is why it lives inside #viewer: it has to keep working in
 // fullscreen, and a second copy would need syncing (and would go stale silently —
@@ -967,7 +1024,7 @@ async function setMode(value) {
     S.mode = value;
     try { localStorage.setItem(MODE_KEY, value); } catch (e) { /* private mode */ }
     listCapEl.textContent = modeCfg().listCaption;
-    toggleListBtn.textContent = listButtonLabel();
+    setListVisible(listWanted);
     // The browser's rows come from the device, one folder at a time.
     if (S.mode === 'sd' && !S.sdList) requestSdList();
     await renderEverything();
@@ -989,13 +1046,16 @@ async function renderEverything() {
     S.els = {};
     const cfg = modeCfg();
 
-    if (S.mode === 'radio') await renderRadioScreen();
-    else                    await renderSdScreen();
+    if      (S.mode === 'radio') await renderRadioScreen();
+    else if (S.mode === 'sd')    await renderSdScreen();
+    else                         await renderBtScreen();
 
     await applyBackground(screenEl, primaryProfile()[`${cfg.primary}_wallpaper`]);
 
-    renderListScreen();
-    await applyBackground(listScreen, listProfile()[`${cfg.list}_wallpaper`]);
+    if (cfg.list) {
+        renderListScreen();
+        await applyBackground(listScreen, listProfile()[`${cfg.list}_wallpaper`]);
+    }
     applyZoom();
 }
 
@@ -1005,7 +1065,7 @@ async function loadAll() {
         if (!r.ok) throw new Error(url + ' → HTTP ' + r.status);
         return r.json();
     };
-    const sections = ['radio', 'playlist', 'sd', 'browser'];
+    const sections = ['radio', 'playlist', 'sd', 'browser', 'bt'];
     const [meta, settings, theme, ...profs] = await Promise.all([
         get('/api/ui/profile/meta'),
         get('/api/settings'),
@@ -1050,7 +1110,7 @@ async function boot() {
         modeEl.value = S.mode;
 
         listCapEl.textContent = modeCfg().listCaption;
-        toggleListBtn.textContent = listButtonLabel();
+        setListVisible(listWanted);
         await renderEverything();
         connectWs();
         setInterval(() => { if (S.els.clock) setLabelText(S.els.clock, nowString()); }, 10000);

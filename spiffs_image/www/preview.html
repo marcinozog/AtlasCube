@@ -70,6 +70,10 @@ select, button {
 
 button:hover, select:hover { border-color: var(--accent); }
 
+/* The list toggle on a source that has no list screen (Bluetooth). */
+button:disabled { opacity: .45; cursor: default; }
+button:disabled:hover { border-color: var(--line); }
+
 .badge {
     display: inline-flex;
     align-items: center;
@@ -322,6 +326,7 @@ button:hover, select:hover { border-color: var(--accent); }
         <select id="mode">
             <option value="radio" selected>Radio</option>
             <option value="sd">SD card</option>
+            <option value="bt">Bluetooth</option>
         </select>
         <button id="fullscreen" type="button" title="Fill the browser window (Esc to leave)">
             ⛶ Fullscreen
@@ -359,7 +364,9 @@ button:hover, select:hover { border-color: var(--accent); }
         <option value="3">3×</option>
     </select>
     <button id="reload" type="button">Reload profile</button>
-    <button id="toggle_list" type="button">Show playlist screen</button>
+    <!-- The list panel starts visible, so this starts as the hide direction; boot()
+         relabels it for the restored source. -->
+    <button id="toggle_list" type="button">Hide playlist screen</button>
     <label><input type="checkbox" id="show_hotspots"> Show touch areas</label>
 </div>
 
@@ -368,5 +375,6 @@ button:hover, select:hover { border-color: var(--accent); }
 <script src="preview-list.js"></script>
 <script src="preview-radio.js"></script>
 <script src="preview-sd.js"></script>
+<script src="preview-bt.js"></script>
 </body>
 </html>
