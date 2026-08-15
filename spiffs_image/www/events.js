@@ -83,6 +83,37 @@ async function loadStations() {
         : '<option value="0" disabled>Playlist empty — add stations first</option>';
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Bell symbol on the event notification screen. One switch for every event, so
+// it sits on this page even though the value itself is a display option
+// (settings.display.event_bell) patched through /api/settings.
+// ─────────────────────────────────────────────────────────────────────────────
+function paintEventBell(on) {
+    document.getElementById('ev_bell_on') .classList.toggle('active', on);
+    document.getElementById('ev_bell_off').classList.toggle('active', !on);
+}
+
+function setEventBell(on) {
+    paintEventBell(on);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display: { event_bell: on } })
+    }).catch(console.error);
+}
+
+async function loadEventBell() {
+    let on = true;   // default on, also the fallback when settings are unreachable
+    try {
+        const res = await fetch('/api/settings', { cache: 'no-store' });
+        const s   = await res.json();
+        on = s.display?.event_bell !== false;
+    } catch (e) {
+        console.error('Settings load error', e);
+    }
+    paintEventBell(on);
+}
+
 // Show/hide form groups based on the active tab, the selected type and (for
 // playback schedules) the radio-vs-SD source.
 function evTypeChanged() {
@@ -103,6 +134,7 @@ function evTypeChanged() {
     // the artwork nor the text placement means anything for them.
     document.getElementById('ev_image_group').style.display   = sched ? 'none' : '';
     document.getElementById('ev_textpos_group').style.display = sched ? 'none' : '';
+    document.getElementById('ev_bell_panel').style.display    = sched ? 'none' : '';
     document.getElementById('ev_stop_toggle_group').style.display = sched ? '' : 'none';
     document.getElementById('ev_time_label').textContent = sched ? 'Start time' : 'Time';
 
@@ -968,6 +1000,7 @@ function escapeHtml(s) {
     await loadStations();
     await loadPanelMeta();     // upload converts to this panel's size
     await loadImageSlots();    // only slots that actually hold an image
+    await loadEventBell();
     evFormReset();
     await evLoad();
 })();

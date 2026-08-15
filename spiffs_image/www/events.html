@@ -32,6 +32,21 @@
     </nav>
 
     <!-- ══════════════════════════════════════════
+         Notification look — one switch for every event
+    ══════════════════════════════════════════ -->
+    <div class="panel" id="ev_bell_panel">
+        <div class="panel-label">EVENT NOTIFICATION · ALL EVENTS</div>
+        <div class="field-group">
+            <label class="field-label">Bell symbol</label>
+            <div class="field-hint">The big 🔔 shown when an event fires. Switch it off to leave the wallpaper bare behind the event text. An event that carries its own graphic shows that instead, either way.</div>
+            <div class="theme-toggle uniform" id="ev_bell_toggle" style="width:fit-content">
+                <button type="button" class="theme-btn" id="ev_bell_on"  onclick="setEventBell(true)">🔔 Show</button>
+                <button type="button" class="theme-btn" id="ev_bell_off" onclick="setEventBell(false)">🚫 Hide</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══════════════════════════════════════════
          Form (add / edit)
     ══════════════════════════════════════════ -->
     <div class="panel ev-form" id="ev_form">
