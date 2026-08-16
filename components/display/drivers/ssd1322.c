@@ -27,6 +27,7 @@
 #include "settings.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/semphr.h"
 #include <string.h>
 
 static const char *TAG = "SSD1322";
@@ -46,6 +47,18 @@ static const char *TAG = "SSD1322";
 static spi_device_handle_t spi;
 static uint8_t            *s_gram;   // packed 4-bit frame, DMA-capable
 
+// Recursive — the flush takes the lock around the whole window+GRAM sequence
+// and the inner cmd/data writers re-take it. Without it, display_set_backlight()
+// (called from the esp_timer task by dim_schedule, and from the HTTP/WS task by
+// settings_set_brightness) would drive D/C low and queue its own transaction on
+// the same device handle while the LVGL task is mid-frame — the panel would take
+// a command inside the pixel stream, and two tasks would share one
+// spi_device_handle_t, which the SPI master driver does not support.
+static SemaphoreHandle_t s_spi_mtx;
+
+#define SPI_LOCK()    xSemaphoreTakeRecursive(s_spi_mtx, portMAX_DELAY)
+#define SPI_UNLOCK()  xSemaphoreGiveRecursive(s_spi_mtx)
+
 void display_set_backlight(uint8_t brightness);
 void display_set_flip(bool flip);
 
@@ -60,6 +73,12 @@ static volatile bool s_flip_dirty = false;
 
 static void spi_init(void)
 {
+    s_spi_mtx = xSemaphoreCreateRecursiveMutex();
+    if (!s_spi_mtx) {
+        ESP_LOGE(TAG, "SPI mutex create failed");
+        return;
+    }
+
     spi_bus_config_t buscfg = {
         .mosi_io_num = g_pins.lcd_mosi,
         .miso_io_num = -1,
@@ -82,17 +101,22 @@ static void spi_init(void)
 
 static void ssd1322_cmd(uint8_t cmd)
 {
+    if (!s_spi_mtx) return;          // driver not up yet (or mutex alloc failed)
+    SPI_LOCK();
     gpio_set_level(g_pins.lcd_dc, 0);
     spi_transaction_t t = { .length = 8, .tx_buffer = &cmd };
     spi_device_transmit(spi, &t);
+    SPI_UNLOCK();
 }
 
 static void ssd1322_data(const uint8_t *data, int len)
 {
-    if (len <= 0) return;
+    if (len <= 0 || !s_spi_mtx) return;
+    SPI_LOCK();
     gpio_set_level(g_pins.lcd_dc, 1);
     spi_transaction_t t = { .length = len * 8, .tx_buffer = data };
     spi_device_transmit(spi, &t);
+    SPI_UNLOCK();
 }
 
 static void ssd1322_data1(uint8_t b) { ssd1322_data(&b, 1); }
@@ -178,7 +202,9 @@ static void my_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_m
     if (s_flip_dirty) {              // apply a pending 180° flip
         s_flip_dirty = false;
         uint8_t remap0 = s_flip_on ? 0x06 : 0x14;
+        SPI_LOCK();                  // command + its two parameters are one unit
         ssd1322_cmd(0xA0); ssd1322_data1(remap0); ssd1322_data1(0x11);
+        SPI_UNLOCK();
     }
     const uint16_t *src = (const uint16_t *)px_map;
     int total = DISPLAY_WIDTH * DISPLAY_HEIGHT;
@@ -188,8 +214,12 @@ static void my_flush_cb(lv_display_t *disp, const lv_area_t *area, uint8_t *px_m
         s_gram[i >> 1] = (hi << 4) | lo;
     }
 
+    // Window addressing and the GRAM burst must reach the panel back to back —
+    // a brightness command slipped in between would land inside the pixel data.
+    SPI_LOCK();
     ssd1322_set_window();
     ssd1322_data(s_gram, SSD1322_GRAM_BYTES);
+    SPI_UNLOCK();
 
     lv_display_flush_ready(disp);
 }
@@ -248,12 +278,18 @@ void ssd1322_init(void)
 /**
  * @brief Set OLED brightness via the contrast-current register.
  * @param brightness  0 = off, 100 = full brightness
+ *
+ * Takes SPI_LOCK, so this is safe to call from any task (dim_schedule runs it
+ * from the esp_timer task, the web/WS handlers from the HTTP task).
  */
 void display_set_backlight(uint8_t brightness)
 {
+    if (!s_spi_mtx) return;
     if (brightness > 100) brightness = 100;
+    SPI_LOCK();
     ssd1322_cmd(0xC1);
     ssd1322_data1((brightness * 255) / 100);
+    SPI_UNLOCK();
 }
 
 void display_set_invert(bool invert)

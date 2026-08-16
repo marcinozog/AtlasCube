@@ -160,7 +160,10 @@ the other drivers push RGB565 straight to the panel, but the SSD1322 is a
 
 - **No backlight pin.** It's a self-emissive OLED, so there is no LEDC PWM
   channel. `display_set_backlight()` writes the contrast-current register
-  (`0xC1`) instead — same 0–100 API, mapped to 0x00–0xFF.
+  (`0xC1`) instead — same 0–100 API, mapped to 0x00–0xFF. Because that is a
+  bus write and not a PWM duty change, this driver needs the §2 mutex just
+  like the CO5300: brightness comes from the esp_timer task (`dim_schedule`)
+  and from the web/WS task, both concurrent with the flush.
 - **2 pixels per byte.** GDDRAM packs two 4-bit pixels into each byte (high
   nibble = left pixel). LVGL still renders RGB565 (`LV_COLOR_DEPTH=16`), so
   `flush_cb` converts each pixel to luma (`Rec.601` weighting) and packs the
