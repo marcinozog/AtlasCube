@@ -1632,7 +1632,48 @@ function showOtaStatus(msg, type) {
     el.className = 'save-status' + (type ? ' ' + type : '');
 }
 
-function uploadFirmware() {
+// Read the ESP image header + app descriptor from the head of the picked file.
+// Layout: esp_image_header_t (24 B) + esp_image_segment_header_t (8 B), then
+// esp_app_desc_t at offset 32 — magic_word, secure_version, 8 reserved bytes,
+// version[32], project_name[32].
+//
+// The point is to tell an app image from a merged full-flash image: both start
+// with 0xE9 (the merged one leads with the bootloader), but only an app carries
+// the descriptor magic. Catching that here matters because the device cannot
+// report it — POST /api/ota rejects an oversized body before reading it, and
+// esp_http_server then closes the socket, so the browser only ever sees a lost
+// connection instead of the error text.
+const APP_DESC_OFF   = 32;
+const APP_DESC_MAGIC = 0xABCD5432;
+
+function cstr(bytes) {
+    let s = '';
+    for (const b of bytes) {
+        if (b === 0) break;
+        if (b < 0x20 || b > 0x7E) return '';   // not a plain C string → ignore
+        s += String.fromCharCode(b);
+    }
+    return s;
+}
+
+async function inspectFirmware(file) {
+    const head = new Uint8Array(await file.slice(0, 128).arrayBuffer());
+    if (head.length < 128)        return { error: 'The file is too small to be a firmware image' };
+    if (head[0] !== 0xE9)         return { error: 'Not an ESP firmware image (no 0xE9 header)' };
+
+    const dv = new DataView(head.buffer);
+    if (dv.getUint32(APP_DESC_OFF, true) !== APP_DESC_MAGIC) {
+        return { error: 'This is a full-flash image (bootloader + partition table), ' +
+                        'not an application image. Use the file ending in ' +
+                        '-ota.bin, or atlascube.bin from a local build.' };
+    }
+    return {
+        version: cstr(head.subarray(APP_DESC_OFF + 16, APP_DESC_OFF + 48)),
+        project: cstr(head.subarray(APP_DESC_OFF + 48, APP_DESC_OFF + 80)),
+    };
+}
+
+async function uploadFirmware() {
     const fileEl = document.getElementById('ota_file');
     const btn    = document.getElementById('ota_btn');
     const wrap   = document.getElementById('ota_progress_wrap');
@@ -1645,7 +1686,20 @@ function uploadFirmware() {
         showOtaStatus('❌ Expected a .bin firmware image', 'error');
         return;
     }
-    if (!confirm('Flash "' + file.name + '" (' +
+
+    let info;
+    try {
+        info = await inspectFirmware(file);
+    } catch (e) {
+        showOtaStatus('❌ Could not read the file: ' + e.message, 'error');
+        return;
+    }
+    if (info.error) { showOtaStatus('❌ ' + info.error, 'error'); return; }
+
+    const what = info.project
+        ? info.project + ' ' + (info.version || '(no version)')
+        : file.name;
+    if (!confirm('Flash ' + what + ' (' +
                  (file.size / 1048576).toFixed(2) + ' MB)? ' +
                  'The device will reboot when done.')) {
         return;
@@ -1682,7 +1736,12 @@ function uploadFirmware() {
         if (bar.value >= 100) {
             showOtaStatus('✅ Uploaded. Device is rebooting…', 'ok');
         } else {
-            showOtaStatus('❌ Upload failed (connection lost)', 'error');
+            // The device rejects a bad request before reading the body, and the
+            // HTTP server then drops the socket — the reason never reaches us.
+            // An early drop usually means the image doesn't fit the OTA slot
+            // (or this 8 MB layout has no second slot at all).
+            showOtaStatus('❌ Upload failed (connection lost) — the image may not ' +
+                          'fit the OTA slot on this device', 'error');
             btn.disabled = false;
         }
     };

@@ -911,7 +911,9 @@
                 <code>AtlasCube-&lt;display&gt;-ota.bin</code> for your display from
                 <a href="https://atlascube.net/flash/" target="_blank" rel="noopener">atlascube.net/flash</a>.
                 The device writes it to the inactive slot and reboots into the new firmware.
-                <strong>Do not power off during the upload.</strong>
+                A release's <code>AtlasCube-&lt;display&gt;.bin</code> (without
+                <code>-ota</code>) is the full-flash image for USB flashing and is
+                rejected here. <strong>Do not power off during the upload.</strong>
             </div>
             <input type="file" id="ota_file" accept=".bin" class="ota-file" />
             <button id="ota_btn" onclick="uploadFirmware()">⬆️ Upload &amp; install</button>
