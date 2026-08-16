@@ -11,6 +11,7 @@
 #include "esp_mac.h"        // MACSTR/MAC2STR for /api/espnow
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
+#include "esp_image_format.h"   // esp_image_get_metadata() — real image length for /api/ota/backup
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
@@ -3506,10 +3507,9 @@ static esp_err_t api_ota_post_handler(httpd_req_t *req)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// GET /api/ota/backup  — download the currently running app partition as a .bin
-// Streams the whole active slot (including trailing 0xFF padding); the result is
-// a valid, re-flashable image. Lets you snapshot working firmware before an
-// update so you can roll back by re-uploading it.
+// GET /api/ota/backup  — download the currently running app image as a .bin
+// The result is byte-for-byte what POST /api/ota expects, so the download is a
+// rollback image: snapshot working firmware before an update, re-upload it after.
 // ─────────────────────────────────────────────────────────────────────────────
 static esp_err_t api_ota_backup_handler(httpd_req_t *req)
 {
@@ -3517,6 +3517,22 @@ static esp_err_t api_ota_backup_handler(httpd_req_t *req)
     if (run == NULL) {
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "No running partition");
         return ESP_FAIL;
+    }
+
+    // Send the image, not the whole slot: the app is ~2.5 MB inside a 6 MB
+    // partition and the tail is erased flash (0xFF), so streaming run->size
+    // would double the download for nothing. The metadata walk is a cheap header
+    // scan (no checksum/SHA pass) and yields the on-flash length, hash and
+    // signature included. If it fails, fall back to the full slot — a padded
+    // image still re-flashes fine, it is only wasteful.
+    size_t len = run->size;
+    esp_image_metadata_t meta;
+    esp_partition_pos_t  pos = { .offset = run->address, .size = run->size };
+    if (esp_image_get_metadata(&pos, &meta) == ESP_OK &&
+        meta.image_len > 0 && meta.image_len <= run->size) {
+        len = meta.image_len;
+    } else {
+        ESP_LOGW("OTA", "backup: image length unknown, sending the whole slot");
     }
 
     char *buf = malloc(OTA_RECV_BUF_SIZE);
@@ -3531,8 +3547,8 @@ static esp_err_t api_ota_backup_handler(httpd_req_t *req)
     httpd_resp_set_type(req, "application/octet-stream");
     httpd_resp_set_hdr(req, "Content-Disposition", disp);
 
-    for (size_t off = 0; off < run->size; off += OTA_RECV_BUF_SIZE) {
-        size_t chunk = run->size - off;
+    for (size_t off = 0; off < len; off += OTA_RECV_BUF_SIZE) {
+        size_t chunk = len - off;
         if (chunk > OTA_RECV_BUF_SIZE) chunk = OTA_RECV_BUF_SIZE;
         esp_err_t err = esp_partition_read(run, off, buf, chunk);
         if (err != ESP_OK) {
@@ -3549,7 +3565,7 @@ static esp_err_t api_ota_backup_handler(httpd_req_t *req)
     }
     free(buf);
     httpd_resp_send_chunk(req, NULL, 0);            // end of stream
-    ESP_LOGI("OTA", "Backup of '%s' (%u bytes) sent", run->label, (unsigned)run->size);
+    ESP_LOGI("OTA", "Backup of '%s' (%u bytes) sent", run->label, (unsigned)len);
     return ESP_OK;
 }
 

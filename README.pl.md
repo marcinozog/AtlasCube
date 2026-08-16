@@ -577,7 +577,7 @@ Aktualizacja firmware przez Wi-Fi z **Ustawienia → System** — bez kabla USB,
 
 **Bezpieczeństwo:**
 - Urządzenie zatrzymuje odtwarzanie na czas zapisu, żeby zwolnić RAM i uniknąć kontencji na flash/SPI.
-- **Najpierw backup:** przycisk *Export running firmware* (`GET /api/ota/backup`) pobiera aktywny slot jako `atlascube-<wersja>.bin` — re-flashowalny snapshot, który można wgrać z powrotem, żeby ręcznie cofnąć aktualizację.
+- **Najpierw backup:** przycisk *Download image* (`GET /api/ota/backup`) pobiera działający obraz aplikacji jako `atlascube-<wersja>.bin` — w tym samym formacie, który przyjmuje *Install image*, więc można go wgrać z powrotem, żeby ręcznie cofnąć aktualizację. Tylko firmware: ustawienia, pliki web UI i dane WiFi nie są w nim zawarte.
 
 Gdy nowy firmware niesie też nowe web UI, OTA zostawia partycję `www` bez zmian — urządzenie wykrywa rozjazd i samo proponuje naprawę jednym przyciskiem przez ekranowy monit **WEB UI OUTDATED** (patrz [Automatyczne aktualizacje](#automatyczne-aktualizacje) niżej). Ręczne ścieżki nadal działają: **strona setupu** (`/setup`) pokazuje baner *web UI out of date* z linkiem jednym kliknięciem do pasującego `AtlasCube-www.zip` z najnowszego release — rozpakuj i wgraj tam pliki (dołącz `www_version.txt`, żeby skasować ostrzeżenie) — albo edytuj/wgraj edytorem plików w przeglądarce (`/spiffs-editor.html`), albo zrób pełny reflash od `0x0`.
 

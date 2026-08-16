@@ -583,7 +583,7 @@ Update the firmware over Wi-Fi from **Settings → System** — no USB cable, no
 
 **Safety:**
 - The device stops playback during the write to free RAM and avoid flash/SPI contention.
-- **Backup first:** the *Export running firmware* button (`GET /api/ota/backup`) downloads the active slot as `atlascube-<version>.bin` — a re-flashable snapshot you can upload again to roll back manually.
+- **Backup first:** the *Download image* button (`GET /api/ota/backup`) downloads the running app image as `atlascube-<version>.bin` — the same format *Install image* accepts, so you can upload it again to roll back manually. Firmware only: settings, web UI files and WiFi credentials are not included.
 
 When a firmware update also ships new web UI, OTA leaves the `www` partition as-is — the device notices the mismatch and offers to fix it with one press via the on-device **WEB UI OUTDATED** prompt (see [Automatic updates](#automatic-updates) below). Manual fallbacks still work: the **setup page** (`/setup`) shows a *web UI out of date* banner with a one-click link to the matching `AtlasCube-www.zip` from the latest release — extract it and upload the files there (include `www_version.txt` to clear the warning) — or edit/upload via the in-browser file editor (`/spiffs-editor.html`), or do a full `0x0` reflash.
 

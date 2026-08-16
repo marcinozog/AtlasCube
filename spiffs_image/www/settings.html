@@ -877,13 +877,15 @@
     ══════════════════════════════════════════ -->
     <section class="tab-pane" id="tab-system" data-tab="system">
         <div class="panel ota-panel">
-            <label class="field-label">⬆️ Firmware update (OTA)</label>
+            <div class="panel-label">FIRMWARE (OTA)</div>
             <div class="ota-version-row">
                 <span>Current version</span>
                 <code id="ota_version">…</code>
             </div>
+
+            <label class="field-label">🔔 Update notifications</label>
             <div class="field-hint">
-                🔔 Show an update prompt on the device screen when a newer firmware is
+                Show an update prompt on the device screen when a newer firmware is
                 available. The device always checks at boot — this only controls the
                 on-screen prompt.
             </div>
@@ -891,7 +893,9 @@
                 <button class="theme-btn" id="settingsBtnUpdateOn"  onclick="setUpdateEnable(true)">✅ On</button>
                 <button class="theme-btn" id="settingsBtnUpdateOff" onclick="setUpdateEnable(false)">🚫 Off</button>
             </div>
+
             <div class="ota-divider"></div>
+            <label class="field-label">⬆️ Install image</label>
             <div id="www_outdated_warn" class="www-outdated-warn" style="display:none">
                 ⚠️ The web UI files don't match the firmware (left behind by an
                 app-only OTA update). Re-upload the new web UI files in the
@@ -918,12 +922,14 @@
             <div id="ota_status" class="save-status"></div>
 
             <div class="ota-divider"></div>
-            <label class="field-label">⬇️ Firmware backup</label>
+            <label class="field-label">⬇️ Export image (backup)</label>
             <div class="field-hint">
-                Download the currently running firmware as a <code>.bin</code> (the full app
-                slot) — a re-flashable snapshot to keep before updating.
+                Download the running firmware as a <code>.bin</code> — the same image the
+                section above installs. Keep it before updating, then re-upload it there
+                to roll back. Firmware only: settings, web UI files and WiFi credentials
+                are not included.
             </div>
-            <a href="/api/ota/backup" class="tool-btn tool-link ota-backup-btn" download>⬇️ Export running firmware</a>
+            <a href="/api/ota/backup" class="tool-btn tool-link ota-backup-btn" download>⬇️ Download image</a>
         </div>
 
         <div class="panel">
