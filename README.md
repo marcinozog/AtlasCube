@@ -611,7 +611,7 @@ Architecture and design notes in [`docs/`](docs/):
 - [`wallpapers.md`](docs/wallpapers.md) — putting a wallpaper on a screen: online gallery, internet slots, SD files
 - [`navigation.md`](docs/navigation.md) — screen map: the home ring, inputs (encoder/touch), how to edit it
 - [`display_drivers.md`](docs/display_drivers.md) — display driver gotchas (QSPI AMOLED even-boundary, shared SPI mutex, LVGL buffer vs internal DRAM budget)
-- [`ws_protocol.md`](docs/ws_protocol.md) — control protocol shared by the web UI, the Android app and the hardware pilot (WS commands, state broadcast, REST)
+- [`ws_protocol.md`](docs/ws_protocol.md) — control protocol shared by the web UI, the Android app and the hardware remote (WS commands, state broadcast, REST)
 
 ---
 

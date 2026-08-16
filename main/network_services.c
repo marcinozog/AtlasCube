@@ -61,7 +61,7 @@ static void on_connected(void)
     if (s_lock) xSemaphoreTake(s_lock, portMAX_DELAY);
 
     // ESP-NOW peers remember the interface they were added on, so a late AP→STA
-    // transition has to be followed here or the pilot goes quiet. Cheap and safe
+    // transition has to be followed here or the remote goes quiet. Cheap and safe
     // on every link-up, including plain reconnects.
     espnow_link_rebind();
 

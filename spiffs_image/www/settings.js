@@ -74,7 +74,7 @@ function selectTab(name, sub) {
     }
 
     // Both of these poll the device, so they run only while their own tab is on
-    // screen — the health snapshot on Diagnostics, the pilot's link on System.
+    // screen — the health snapshot on Diagnostics, the remote's link on System.
     if (name === 'diag')   startDiagPoll();   else stopDiagPoll();
     if (name === 'system') startEspnowPoll(); else stopEspnowPoll();
 }
@@ -2046,8 +2046,8 @@ async function importSettings() {
     }
 }
 
-// ── Hardware pilot (ESP-NOW) ─────────────────────────────────────────────────
-// The pilot pairs over ESP-NOW; this only opens the radio's 60 s accept window.
+// ── Hardware remote (ESP-NOW) ─────────────────────────────────────────────────
+// The remote pairs over ESP-NOW; this only opens the radio's 60 s accept window.
 // See docs/espnow_link.md.
 
 const ESPNOW_POLL_MS = 5000;
@@ -2072,7 +2072,7 @@ async function loadEspnow() {
         const r = await fetch('/api/espnow', { cache: 'no-store' });
         const d = await r.json();
 
-        // A firmware built without HAS_ESPNOW_PILOT still answers here — www is one
+        // A firmware built without HAS_ESPNOW_REMOTE still answers here — www is one
         // bundle for every variant, so the section has to remove itself.
         if (d.supported === false) {
             const panel = document.getElementById('espnow_panel');
@@ -2083,7 +2083,7 @@ async function loadEspnow() {
 
         el.textContent = d.paired ? d.peer : 'none';
 
-        // No "online" indicator on purpose: the pilot sleeps between presses, so
+        // No "online" indicator on purpose: the remote sleeps between presses, so
         // silence is not a fault and only the age of the last frame is honest.
         if (seen) {
             if (typeof d.last_seen_s !== 'number') {
@@ -2094,7 +2094,7 @@ async function loadEspnow() {
             }
         }
 
-        // Frame counters are debugging material for whoever is building a pilot,
+        // Frame counters are debugging material for whoever is building a remote,
         // so they appear only once there has been traffic.
         if (linkRow && link) {
             const rx = d.rx_frames || 0, fail = d.tx_fail || 0;
@@ -2123,18 +2123,18 @@ function stopEspnowPoll() {
     if (g_espnowTimer) { clearInterval(g_espnowTimer); g_espnowTimer = null; }
 }
 
-async function pairPilot() {
+async function pairRemote() {
     const btn = document.getElementById('espnow_pair_btn');
     btn.disabled = true;
     try {
         const r = await fetch('/api/espnow/pair', { method: 'POST' });
-        // 501 = built without the pilot link. Unreachable in practice, the panel
+        // 501 = built without the remote link. Unreachable in practice, the panel
         // hides itself in that build, but the body is then HTML and not JSON.
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const d = await r.json();
         if (!d.ok) throw new Error('Device error');
 
-        // Poll while the window is open so the MAC appears as soon as the pilot
+        // Poll while the window is open so the MAC appears as soon as the remote
         // answers, without the user reloading the page.
         let left = d.window_s;
         const tick = setInterval(async () => {
@@ -2146,13 +2146,13 @@ async function pairPilot() {
                 const el = document.getElementById('espnow_peer');
                 showStatusEl('espnow_status',
                              el && el.textContent !== 'none'
-                                 ? '✅ Pilot paired.'
-                                 : '⌛ Window closed — no pilot answered.',
+                                 ? '✅ Remote paired.'
+                                 : '⌛ Window closed — no remote answered.',
                              el && el.textContent !== 'none' ? 'ok' : 'error');
                 return;
             }
             showStatusEl('espnow_status',
-                         '🔗 Waiting for the pilot… ' + left + ' s', '');
+                         '🔗 Waiting for the remote… ' + left + ' s', '');
             await loadEspnow();
         }, 1000);
     } catch (e) {
@@ -2478,7 +2478,7 @@ document.addEventListener('visibilitychange', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 initTabs();
 loadSettings();
-// One-shot regardless of the active tab: a build without the pilot link has to
+// One-shot regardless of the active tab: a build without the remote link has to
 // hide its section even if the System tab is never opened. Polling starts there.
 loadEspnow();
 loadColors();

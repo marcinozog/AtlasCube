@@ -143,7 +143,7 @@ static esp_err_t ws_handler(httpd_req_t *req)
     ESP_LOGI(TAG, "RX: %s", payload);
 
     // --- Plain text commands (e.g. from the Android app) ---
-    // Shared with the ESP-NOW pilot link — see docs/espnow_link.md.
+    // Shared with the ESP-NOW remote link — see docs/espnow_link.md.
     if (payload[0] != '{') {
         media_command_execute_text(payload);
         free(ws_pkt.payload);

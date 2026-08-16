@@ -7,7 +7,7 @@ clients today and they all speak exactly this:
 |---|---|
 | Built-in web UI | [spiffs_image/www/](../spiffs_image/www/) (`app.js`, `bt.js`, `sd.js`, …) |
 | AtlasCubeRemote (Android) | `D:\Projekty\AndroidStudio\AtlasCubeRemote` |
-| AtlasCubeController (hardware pilot) | `D:\Projekty\VSCode\ESP32\AtlasCubeController` |
+| AtlasCubeController (hardware remote) | `D:\Projekty\VSCode\ESP32\AtlasCubeController` |
 
 This file is the single source of truth for the contract. Anything that changes
 [components/ws/ws_server.c](../components/ws/ws_server.c) or the `/api/*`
@@ -25,7 +25,7 @@ apart, each carrying its own stale copy of the protocol.
 | Discovery | mDNS `_http._tcp` on port 80, instance name `AtlasCube Radio`, TXT `host=<fqdn>` and `path=/` ([components/network/mdns_service.c](../components/network/mdns_service.c)) |
 | Max WS clients | 8 (`MAX_WS_CLIENTS`); a 9th handshake is logged and gets no slot — it still receives the initial state but no broadcasts |
 | Max incoming frame | 4096 B (`WS_MAX_FRAME_LEN`); a larger frame drops the client's socket |
-| Second transport | the hardware pilot speaks the plain-text vocabulary below over ESP-NOW instead of WS — link layer in [espnow_link.md](espnow_link.md) |
+| Second transport | the hardware remote speaks the plain-text vocabulary below over ESP-NOW instead of WS — link layer in [espnow_link.md](espnow_link.md) |
 
 **Dispatch rule:** a frame whose first byte is `{` is parsed as JSON, everything
 else is treated as a plain-text command. One frame = one command; there is no
@@ -48,7 +48,7 @@ batching and no framing beyond that.
 
 Handled by `media_command_execute_text()` in
 [components/services/media_control.c](../components/services/media_control.c) —
-transport-independent, and therefore **shared verbatim with the ESP-NOW pilot
+transport-independent, and therefore **shared verbatim with the ESP-NOW remote
 link** ([espnow_link.md](espnow_link.md)). A command added to this table works on
 both links at once; it must never be reimplemented per transport.
 

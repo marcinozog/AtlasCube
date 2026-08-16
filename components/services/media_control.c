@@ -164,7 +164,7 @@ void media_command_execute_text(const char *cmd)
 {
     ESP_LOGI(TAG, "Plain CMD: %s", cmd);
 
-    // Semantic transport (voice, remote, pilot): acts on whatever source is
+    // Semantic transport (voice, remote, remote): acts on whatever source is
     // playing right now (radio/SD/BT), resolved by media_source_current().
     if (strcmp(cmd, "stop") == 0) {
         media_control_execute(media_source_current(), MEDIA_ACTION_STOP);

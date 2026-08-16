@@ -120,7 +120,7 @@ the player screen of whichever source starts playing — RADIO, SD or BT. The
 check lives in `apply_follow_source()` in
 [ui_manager.c](../components/ui/ui_manager.c), driven by `app_state`, so every
 trigger path reaches it: touch, encoder, web, WS, MQTT, voice, the ESP-NOW
-pilot, a schedule, or a resume after boot.
+remote, a schedule, or a resume after boot.
 
 It only fires on a **rising edge**:
 

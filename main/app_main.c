@@ -98,7 +98,7 @@ void app_main(void)
     ws_init();          // app_state_subscribe #2
     http_server_start();// available on router IP (STA) and 192.168.4.1 (AP)
 
-    // ── ESP-NOW pilot link ───────────────────────────────────────────────────
+    // ── ESP-NOW remote link ───────────────────────────────────────────────────
     // Third control transport, sharing the WS command vocabulary — see
     // docs/espnow_link.md. Runs in both STA and AP mode (it binds to whichever
     // interface is up), and after playlist_load() so get_list has data.

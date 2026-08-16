@@ -131,7 +131,7 @@ static bool can_auto_screensaver_from(ui_screen_id_t id)
 
 // Follow-source (display.follow_source): when a source starts playing, surface
 // its player screen — whatever started it (touch, encoder, web, WS, MQTT, voice,
-// pilot, schedule, boot resume) lands here through app_state.
+// remote, schedule, boot resume) lands here through app_state.
 //
 // Rising edge only, so a next-track inside an already active SD queue does not
 // re-navigate, while stop → play does. The edges are tracked even when the

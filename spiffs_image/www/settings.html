@@ -981,9 +981,9 @@
         </div>
 
         <div class="panel" id="espnow_panel">
-            <label class="field-label">🎛️ Hardware pilot (ESP-NOW)</label>
+            <label class="field-label">🎛️ Hardware remote (ESP-NOW)</label>
             <div class="ota-version-row">
-                <span>Paired pilot</span>
+                <span>Paired remote</span>
                 <code id="espnow_peer">…</code>
             </div>
             <div class="ota-version-row">
@@ -995,16 +995,16 @@
                 <code id="espnow_link">…</code>
             </div>
             <div class="field-hint">
-                The pilot talks to the radio over ESP-NOW, not Wi-Fi — this button only
+                The remote talks to the radio over ESP-NOW, not Wi-Fi — this button only
                 opens a 60-second window during which the radio accepts a pairing
-                request. Press it, then start pairing from the pilot's own menu.
-                Pairing again replaces the stored pilot.
+                request. Press it, then start pairing from the remote's own menu.
+                Pairing again replaces the stored remote.
                 <br>
-                The pilot sleeps between button presses, so “last contact” is the
-                age of the last frame it sent — hours of silence is a healthy pilot
+                The remote sleeps between button presses, so “last contact” is the
+                age of the last frame it sent — hours of silence is a healthy remote
                 on battery, not a broken link.
             </div>
-            <button id="espnow_pair_btn" onclick="pairPilot()">🔗 Open pairing window</button>
+            <button id="espnow_pair_btn" onclick="pairRemote()">🔗 Open pairing window</button>
             <div id="espnow_status" class="save-status"></div>
         </div>
     </section>

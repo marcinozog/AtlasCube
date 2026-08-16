@@ -3796,17 +3796,17 @@ static esp_err_t api_restart_handler(httpd_req_t *req)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ESP-NOW pilot link — see docs/espnow_link.md
+// ESP-NOW remote link — see docs/espnow_link.md
 //
 // GET  /api/espnow      — pairing state, peer MAC, window, and link activity
 // POST /api/espnow/pair — opens the pairing window (and starts the link)
 //
-// The pilot never touches these; it pairs over ESP-NOW. This is the human-facing
-// trigger that opens the window, so an unpaired pilot in range cannot attach
+// The remote never touches these; it pairs over ESP-NOW. This is the human-facing
+// trigger that opens the window, so an unpaired remote in range cannot attach
 // itself unattended.
 //
-// Both stay registered in a build without HAS_ESPNOW_PILOT: GET reports
-// supported:false so the one shared www bundle can hide its Pilot section, and
+// Both stay registered in a build without HAS_ESPNOW_REMOTE: GET reports
+// supported:false so the one shared www bundle can hide its Remote section, and
 // POST answers 501.
 // ─────────────────────────────────────────────────────────────────────────────
 #define ESPNOW_PAIR_WINDOW_S 60
@@ -3820,7 +3820,7 @@ static esp_err_t api_espnow_get_handler(httpd_req_t *req)
     espnow_link_get_status(&st);
 
     // Always registered, even in a build without the link: www is one bundle for
-    // every variant, so the page has to learn at runtime that there is no pilot
+    // every variant, so the page has to learn at runtime that there is no remote
     // support here and hide its section. Same shape as OTA answering an 8 MB board.
     cJSON_AddBoolToObject(root, "supported", st.supported);
     cJSON_AddBoolToObject(root, "paired",    st.paired);
@@ -3831,7 +3831,7 @@ static esp_err_t api_espnow_get_handler(httpd_req_t *req)
     }
     cJSON_AddNumberToObject(root, "window_s", st.window_s);
 
-    // Activity. last_seen is an age, not a verdict: the pilot sleeps between
+    // Activity. last_seen is an age, not a verdict: the remote sleeps between
     // presses, so there is no "connected" to report — see espnow_link.h.
     if (st.last_seen_s != ESPNOW_NEVER)
         cJSON_AddNumberToObject(root, "last_seen_s", st.last_seen_s);
@@ -3854,12 +3854,12 @@ static esp_err_t api_espnow_pair_handler(httpd_req_t *req)
     if (!st.supported) {
         httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
         httpd_resp_send_err(req, HTTPD_501_METHOD_NOT_IMPLEMENTED,
-                            "This firmware was built without the ESP-NOW pilot link");
+                            "This firmware was built without the ESP-NOW remote link");
         return ESP_FAIL;
     }
 
     // Opening the window is also what starts the link on a radio that has never
-    // paired a pilot — espnow_link_init() leaves it down until then.
+    // paired a remote — espnow_link_init() leaves it down until then.
     espnow_link_pair_window_open(ESPNOW_PAIR_WINDOW_S);
 
     cJSON *root = cJSON_CreateObject();
