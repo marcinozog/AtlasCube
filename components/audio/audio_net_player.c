@@ -4,6 +4,7 @@
 #include "app_state.h"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
+#include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/idf_additions.h"   // xTaskCreatePinnedToCoreWithCaps
@@ -14,9 +15,33 @@ static const char *TAG = "AUDIO_NET";
 
 #define MAX_RETRIES 5
 
+// How long a stream has to have been producing audio for its loss to count as a
+// fresh incident rather than another failure in the same sequence.
+//
+// The budget exists for streams that never work — a dead URL, no route, an
+// internal-RAM shortage that kills the TLS read a second after it opens. Those
+// fail within a couple of seconds of the open, so five of them burn the budget
+// and the device reports an error instead of restarting the pipeline forever.
+// A station that played for half a minute and then dropped is the other thing
+// entirely: that is the network, and internet radio is supposed to keep
+// reconnecting to it. So it gets its five attempts back.
+#define STABLE_PLAY_US  (30 * 1000000LL)
+
 static TaskHandle_t s_retry_task_handle = NULL;
 static int s_retry_count = 0;
 static bool s_finite = false;   // current stream is a finite episode, not radio
+
+// A retry was scheduled and has not run yet. Separate from the budget because
+// the two answer different questions: this one is "is there a restart pending",
+// the counter is "how many have we already spent". Folding them together is what
+// made the budget unusable — the cancellation path had to zero the counter, and
+// it zeroed it on every successful start, so MAX_RETRIES was never reached.
+static bool s_retry_pending = false;
+
+// esp_timer_get_time() at the last MUSIC_INFO, i.e. when the current attempt
+// started producing audio. 0 = this attempt never got that far (a failed open,
+// or a restart that has not connected yet).
+static int64_t s_playing_since_us = 0;
 
 static void on_meta(const char *meta);
 static void on_info(void);
@@ -117,11 +142,18 @@ static void on_meta(const char *meta)
 /*
 static void on_info(void)
 A decoder reported MUSIC_INFO → the stream is producing output. Cancel any
-scheduled retry (esp-adf may have recovered the HTTP element internally).
+scheduled retry (esp-adf may have recovered the HTTP element internally) and
+start the clock that decides whether this attempt counts as healthy.
+
+Deliberately does NOT clear the retry budget. MUSIC_INFO fires a second or two
+after the connect, long before the stream has proven anything — when the failure
+is a TLS read dying just after the decoder reads the sample rate, this callback
+runs on every single attempt and would hand back a full budget each time.
 */
 static void on_info(void)
 {
-    s_retry_count = 0;
+    s_retry_pending    = false;
+    s_playing_since_us = esp_timer_get_time();
 }
 
 
@@ -150,7 +182,9 @@ static void on_error(int status)
     // Phase-2 resume (Range request) will refine this.
     if (s_finite && is_stream_lost) {
         ESP_LOGI(TAG, "Finite stream ended (status=%d)", status);
-        s_retry_count = 0;
+        s_retry_count      = 0;
+        s_retry_pending    = false;
+        s_playing_since_us = 0;
         audio_engine_mark_stopped();
         app_state_update(&(app_state_patch_t){
             .has_radio   = true,
@@ -159,9 +193,22 @@ static void on_error(int status)
         return;
     }
 
+    // Did this attempt play long enough to earn a fresh budget? Asked before the
+    // cap, so a station that ran for a while and then dropped never trips it.
+    int64_t played_us = s_playing_since_us
+        ? esp_timer_get_time() - s_playing_since_us : 0;
+
+    if (played_us > STABLE_PLAY_US) {
+        ESP_LOGI(TAG, "Stream ran %lld s before dropping — retry budget reset",
+                 played_us / 1000000);
+        s_retry_count = 0;
+    }
+    s_playing_since_us = 0;   // the next attempt has not produced audio yet
+
     if (s_retry_count >= MAX_RETRIES) {
         ESP_LOGE(TAG, "Max retries reached, giving up");
-        s_retry_count = 0;
+        s_retry_count   = 0;
+        s_retry_pending = false;   // nothing is owed a restart any more
         audio_engine_mark_stopped();
         app_state_update(&(app_state_patch_t){
             .has_radio   = true,
@@ -171,6 +218,7 @@ static void on_error(int status)
     }
 
     s_retry_count++;
+    s_retry_pending = true;
     ESP_LOGW(TAG, "%s (%d/%d), scheduling retry...",
              is_open_error ? "HTTP open failed" : "Stream lost",
              s_retry_count, MAX_RETRIES);
@@ -190,11 +238,17 @@ a FreeRTOS assert.
 */
 static void retry_task(void *param)
 {
-    // Baseline internal RAM on this board is ~7-8KB largest free block after
-    // WiFi/LVGL/audio is loaded. HTTP fits, HTTPS (mbedTLS handshake) needs
-    // more — the real fix is CONFIG_MBEDTLS_DYNAMIC_BUFFER in sdkconfig.
-    // Here we only log so it's easier to diagnose, but we don't block retry.
-    const size_t WARN_INTERNAL_LARGEST = 4 * 1024;
+    // Internal RAM on this board runs tight enough that a retry can fail for want
+    // of memory rather than network, so it is worth having in the log. Reported
+    // over the DMA-capable subset, not MALLOC_CAP_INTERNAL: RTCRAM counts as
+    // internal but cannot be DMAed into, so the plain internal figure has read up
+    // to 8 KB high — it said 17408 while the block that actually mattered was
+    // 1728. Diagnostic only; a low reading never blocks the retry.
+    //
+    // (The previous note here pointed at CONFIG_MBEDTLS_DYNAMIC_BUFFER as "the
+    // real fix". It is not: sdkconfig.defaults documents that DYNAMIC_BUFFER
+    // breaks HTTPS against a renegotiating CDN.)
+    const size_t WARN_DMA_LARGEST = 4 * 1024;
 
     while (1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -208,20 +262,21 @@ static void retry_task(void *param)
         if (!audio_engine_is_playing()) continue;
 
         // pipeline may have resumed by itself (esp-adf does internal element
-        // recovery) — if MUSIC_INFO zeroed the counter, don't break a working
-        // stream.
-        if (s_retry_count == 0) {
+        // recovery) — on_info() clears the pending flag, so don't restart a
+        // stream that came back on its own.
+        if (!s_retry_pending) {
             ESP_LOGI(TAG, "Retry cancelled — pipeline recovered");
             continue;
         }
 
-        size_t largest = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
-        if (largest < WARN_INTERNAL_LARGEST) {
-            ESP_LOGW(TAG, "Internal RAM critically low (largest=%u) — retry may fail",
+        size_t largest = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL |
+                                                          MALLOC_CAP_DMA);
+        if (largest < WARN_DMA_LARGEST) {
+            ESP_LOGW(TAG, "DMA-capable RAM critically low (largest=%u) — retry may fail",
                      largest);
         }
 
-        ESP_LOGW(TAG, "Retry %d/%d (internal largest=%u)...",
+        ESP_LOGW(TAG, "Retry %d/%d (DMA largest=%u)...",
                  s_retry_count, MAX_RETRIES, largest);
 
         audio_engine_restart_current();
@@ -250,7 +305,11 @@ void audio_net_player_play(const char *url, bool finite, uint32_t offset_bytes)
 {
     if (!url) return;
 
-    s_retry_count = 0;
+    // A deliberate play is a clean slate: full budget, nothing scheduled, and no
+    // playback time carried over from whatever was on before.
+    s_retry_count      = 0;
+    s_retry_pending    = false;
+    s_playing_since_us = 0;
     s_finite = finite;
 
     // Codec from URL hint; extension-less URLs (e.g. SHOUTcast host:port/;)
