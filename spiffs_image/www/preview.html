@@ -301,7 +301,13 @@ button:disabled:hover { border-color: var(--line); }
 }
 
 /* Equalizer modal. Sized by its content (the scaled panel), never wider than the
-   window — a phone gets the same screen, just at a smaller scale. */
+   window — a phone gets the same screen, just at a smaller scale.
+   The height cap is a percentage, not 96vh: an Android WebView (measured on
+   Chrome/150) resolves vh to ZERO while vw resolves correctly, which collapsed
+   this dialog to its title bar with the panel scrolling inside it. A modal is
+   positioned against the viewport, so 96% of the containing block is the same
+   number everywhere — and it is what the UA stylesheet itself caps dialogs
+   with. Keep it that way, and do not size anything here with vh. */
 #eq_modal {
     padding: 12px;
     border: 1px solid var(--line);
@@ -309,7 +315,7 @@ button:disabled:hover { border-color: var(--line); }
     background: var(--page-bg);
     color: var(--fg);
     max-width: 96vw;
-    max-height: 96vh;
+    max-height: 96%;
     overflow: auto;
 }
 
