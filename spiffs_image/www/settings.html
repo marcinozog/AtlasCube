@@ -716,7 +716,8 @@
         </div>
         <div class="panel">
             <label class="field-label">Client ID</label>
-            <input type="text" id="mqtt_client_id" class="field-input" placeholder="atlascube" />
+            <input type="text" id="mqtt_client_id" class="field-input" placeholder="atlascube-A1B2C3" />
+            <div class="field-hint">Must be unique per broker — two devices sharing one ID disconnect each other in a loop. Leave blank for an ID derived from this device's MAC.</div>
         </div>
         <div class="panel">
             <label class="field-label">Base topic</label>

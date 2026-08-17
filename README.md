@@ -478,7 +478,7 @@ The device runs an MQTT client that connects to a local broker (e.g. Mosquitto) 
 
 ### Topic map
 
-All radio topics use the prefix `<base_topic>/` (default: `atlascube/`). The MQTT `client_id` is a separate broker-level identifier and does not appear in topic names.
+All radio topics use the prefix `<base_topic>/` (default: `atlascube/`). The MQTT `client_id` is a separate broker-level identifier and does not appear in topic names. It has to be unique on the broker — two clients connecting with the same id kick each other off in an endless loop — so the default is `atlascube-<mac tail>`; leaving the field blank regenerates it.
 
 | Topic suffix | Direction | Payload | Notes |
 |---|---|---|---|

@@ -2,6 +2,7 @@
 #include "cJSON.h"
 #include "secrets.h"
 #include "esp_log.h"
+#include "esp_mac.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -39,12 +40,25 @@ mqtt_widget_type_t mqtt_widget_type_from_name(const char *s)
 
 mqtt_config_t *mqtt_config_get(void) { return &s_cfg; }
 
+// A client_id must be unique on the broker: MQTT 3.1.1 §3.1.4-2 makes the
+// broker drop the existing session when a second CONNECT arrives with the same
+// id, so two radios sharing one id kick each other off in an endless loop. The
+// default therefore carries the MAC tail — a bare "atlascube" collides the
+// moment someone owns a second device.
+static void apply_default_client_id(void)
+{
+    uint8_t mac[6] = {0};
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);
+    snprintf(s_cfg.client_id, sizeof(s_cfg.client_id),
+             "atlascube-%02X%02X%02X", mac[3], mac[4], mac[5]);
+}
+
 static void apply_defaults(void)
 {
     memset(&s_cfg, 0, sizeof(s_cfg));
     s_cfg.enabled = false;
     s_cfg.port = 1883;
-    copy_str(s_cfg.client_id,  sizeof(s_cfg.client_id),  "atlascube");
+    apply_default_client_id();
     copy_str(s_cfg.base_topic, sizeof(s_cfg.base_topic), "atlascube");
     for (int i = 0; i < MQTT_MAX_WIDGETS; ++i) {
         s_cfg.widgets[i].type = MQTT_W_NONE;
@@ -134,6 +148,12 @@ esp_err_t mqtt_config_load(void)
     }
     j = cJSON_GetObjectItem(json, "client_id");  if (cJSON_IsString(j)) copy_str(s_cfg.client_id,  sizeof(s_cfg.client_id),  j->valuestring);
     j = cJSON_GetObjectItem(json, "base_topic"); if (cJSON_IsString(j)) copy_str(s_cfg.base_topic, sizeof(s_cfg.base_topic), j->valuestring);
+
+    // An empty field — in the shipped mqtt.json or cleared in the web form —
+    // means "use the default". Restore it here so what /api/mqtt reports is
+    // what the broker sees; otherwise esp-mqtt would silently substitute its
+    // own ESP32_<mac> and the UI would show nothing.
+    if (s_cfg.client_id[0] == '\0') apply_default_client_id();
 
     cJSON *arr = cJSON_GetObjectItem(json, "widgets");
     if (cJSON_IsArray(arr)) {

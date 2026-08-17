@@ -472,7 +472,7 @@ W urządzeniu siedzi klient MQTT, który łączy się z lokalnym brokerem (np. M
 
 ### Mapa topiców
 
-Wszystkie topice radia mają prefix `<base_topic>/` (domyślnie `atlascube/`). `client_id` MQTT to osobna sprawa po stronie brokera i w nazwach topiców się nie pojawia.
+Wszystkie topice radia mają prefix `<base_topic>/` (domyślnie `atlascube/`). `client_id` MQTT to osobna sprawa po stronie brokera i w nazwach topiców się nie pojawia. Musi być unikalny na brokerze — dwa klienty z tym samym id rozłączają się nawzajem w kółko — więc domyślnie jest to `atlascube-<końcówka MAC>`; puste pole odtwarza tę wartość.
 
 | Suffix topiku | Kierunek | Payload | Uwagi |
 |---|---|---|---|
