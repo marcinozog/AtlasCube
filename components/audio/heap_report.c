@@ -15,16 +15,28 @@ void heap_report(const char *where)
     // The handshake/httpd failures are about the *largest contiguous* internal
     // block, not total free — so report both, plus the DMA-capable subset
     // (WiFi/LCD) and the min-ever free as a low-water mark.
+    //
+    // The DMA subset carries its own low-water mark because it is the half that
+    // actually binds, and the INT numbers systematically overstate it: RTCRAM
+    // (8 KB at 0x600FE000) is MALLOC_CAP_INTERNAL but not MALLOC_CAP_DMA, and
+    // being last-priority it sits mostly unused, so it shows up as free internal
+    // memory that no DMA buffer can ever be placed in. Measured 2026-08-17 during
+    // a failing HTTPS stream: INT largest=7680 while DMA largest=1728.
+    //
+    // Both mins are since-boot and never reset, so a dip early in the run — the
+    // net_wallpaper JPEG fetch is the usual one — pins them for the rest of the
+    // session. Comparing two runs means rebooting between them.
     size_t int_free   = heap_caps_get_free_size(MALLOC_CAP_INTERNAL);
     size_t int_large  = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL);
     size_t int_min    = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL);
     size_t dma_large  = heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+    size_t dma_min    = heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
     size_t psram_free = heap_caps_get_free_size(MALLOC_CAP_SPIRAM);
 
-    ESP_LOGW(TAG, "[%s] INT free=%u largest=%u min=%u | DMA largest=%u | PSRAM free=%u",
+    ESP_LOGW(TAG, "[%s] INT free=%u largest=%u min=%u | DMA largest=%u min=%u | PSRAM free=%u",
              where ? where : "?",
              (unsigned)int_free, (unsigned)int_large, (unsigned)int_min,
-             (unsigned)dma_large, (unsigned)psram_free);
+             (unsigned)dma_large, (unsigned)dma_min, (unsigned)psram_free);
 }
 
 

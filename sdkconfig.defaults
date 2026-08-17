@@ -46,18 +46,39 @@ CONFIG_MBEDTLS_EXTERNAL_MEM_ALLOC=y
 # pbuf fits and the web UI stays usable mid-stream.
 CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=2048
 
-# Hardware crypto re-enabled 2026-07-03: software AES-GCM (gcm_mult GHASH) on the
-# TLS record path was pegging CPU0 during HLS/HTTPS playback → IDLE0 task_wdt +
-# audible stutter. HW AES pulls in HW GCM (S3 AES peripheral does GHASH), and
-# HW SHA/MPI accelerate the per-segment TLS handshakes HLS keeps reopening.
-# The old "failed allocation during renegotiation" reason no longer holds after the
-# 2026-06-15 RAM recovery (INT largest free ~31KB mid-stream now).
-CONFIG_MBEDTLS_HARDWARE_AES=y
+# HW AES disabled 2026-08-17. It was re-enabled on 2026-07-03 because software
+# AES-GCM (gcm_mult GHASH) on the TLS record path pegged CPU0 during HLS/HTTPS
+# playback → IDLE0 task_wdt + audible stutter. What that trade missed is the RAM
+# side of the AES-DMA path.
+#
+# MBEDTLS_EXTERNAL_MEM_ALLOC (above) puts the TLS buffers in PSRAM. The AES-DMA
+# driver cannot hand a cache-line-unaligned PSRAM buffer to the DMA engine, so
+# esp_aes_process_dma_ext_ram() bounces every TLS record through a 1600 B
+# (AES_MAX_CHUNK_WRITE_SIZE) block of DMA-capable *internal* RAM — one for input,
+# one for output, per record.
+#
+# That block is the scarcest thing on this device. Measured 2026-08-17 with the
+# TCP window already halved: mid-stream INT largest was 5632-7680 B while the
+# DMA-capable largest was 1536-1728 B, i.e. below what one bounce buffer needs.
+# The gap is RTCRAM (8 KB at 0x600FE000): components/heap/port/esp32s3 gives it
+# MALLOC_CAP_INTERNAL but not MALLOC_CAP_DMA, and it is last-priority so it sits
+# unused and inflates every INT reading by up to 8 KB nothing can DMA into.
+# The failure is "esp-aes: Failed to allocate memory" → esp-tls read error
+# -0x0001 → the stream dies a second after the decoder reports its sample rate.
+#
+# Software AES allocates from the general heap instead, which has 11-21 KB free
+# at the same moment, so this is the only change that removes the dependency on
+# DMA-capable RAM rather than just widening the margin. If CPU load regresses,
+# the alternative is ESP_WIFI_DYNAMIC_RX_BUFFER_NUM (IDF default 32, and what
+# actually fills the DMA pool mid-stream) — not turning this back on.
+#
+# SHA/MPI stay on: they accelerate the handshake, which is where HLS spends its
+# CPU, and neither sits on the per-record path that needed the bounce buffer.
+CONFIG_MBEDTLS_HARDWARE_AES=n
 CONFIG_MBEDTLS_HARDWARE_SHA=y
 CONFIG_MBEDTLS_HARDWARE_MPI=y
 
 # WARNING: DYNAMIC_BUFFER + renegotiation = broken HTTPS (Eurozet CDN)
-# If HW AES regresses on a renegotiating CDN under low internal RAM, revert these to n.
 
 
 CONFIG_HTTPD_WS_SUPPORT=y
@@ -104,14 +125,35 @@ CONFIG_LWIP_MAX_SOCKETS=16
 # them ~6x faster so the pool never exhausts.
 CONFIG_LWIP_TCP_MSL=10000
 
-# TCP receive buffer and window — default 5760 B is too small for 256 kbps
-# audio streams. A small window forces frequent ACKs and limits throughput
-# due to the bandwidth-delay product, which results in stuttering at playback start
-# (TCP slow-start cannot fill the esp-adf ring buffer fast enough).
-# 32 KB ≈ 1 second at 256 kbps; leaves margin for network jitter.
-CONFIG_LWIP_TCP_WND_DEFAULT=32768
-CONFIG_LWIP_TCP_RCV_BUF_DEFAULT=32768
-CONFIG_LWIP_TCP_RECVMBOX_SIZE=32
+# TCP receive window. The IDF default of 5760 B is too small for 256 kbps audio:
+# a small window forces frequent ACKs and the bandwidth-delay product caps
+# throughput, so TCP slow-start cannot fill the esp-adf ring buffer and playback
+# stutters at start.
+#
+# 32768 was the first answer to that and it cost more than it bought. The window
+# is held as lwIP pbufs in *internal* RAM, and the pipeline drains it at the
+# stream bitrate (16 KB/s for 128 kbps), so it sits full for the whole stream:
+# measured 2026-08-17, every [pre-connect] → [mid-stream] pair lost 15-20 KB of
+# internal RAM. WiFi fills the window in bursts, so the dips are transient and
+# invisible to free/largest — only heap_caps_get_minimum_free_size() catches them,
+# and it bottomed out at 667 B of total internal free.
+#
+# That starves the 1600 B DMA-capable internal block esp-aes allocates per TLS
+# record (AES_MAX_CHUNK_WRITE_SIZE, reached because MBEDTLS_EXTERNAL_MEM_ALLOC
+# puts the TLS buffers in PSRAM and the AES-DMA path has to bounce them through
+# internal RAM — see MBEDTLS_HARDWARE_AES above). It surfaces as
+# "esp-aes: Failed to allocate memory" → esp-tls read error -0x0001 → the stream
+# dies mid-playback, and the device retries into an ever-worse heap.
+#
+# 16384 is still ~0.5 s at 256 kbps, and the real buffer is the esp-adf ring in
+# PSRAM. If start-up stutter comes back the next step is 20480, not 32768.
+# RECVMBOX follows the Kconfig rule WND/MSS + 2 = 16384/1440 + 2 ≈ 13, rounded up.
+#
+# CONFIG_LWIP_TCP_RCV_BUF_DEFAULT used to sit here and did nothing: no such symbol
+# exists in components/lwip/Kconfig: LWIP_TCP_WND_DEFAULT is the only receive-window
+# knob. Do not re-add it.
+CONFIG_LWIP_TCP_WND_DEFAULT=16384
+CONFIG_LWIP_TCP_RECVMBOX_SIZE=16
 
 # WiFi internal-RAM tuning. These trim WiFi's internal DMA-RAM footprint and
 # were previously only in the (gitignored) sdkconfig — a clean rebuild reset them

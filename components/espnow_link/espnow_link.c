@@ -114,12 +114,14 @@ static bool s_heap_sample;
 // function-local static, so each site would get its own.
 static void trace_heap(const char *what)
 {
-    ESP_LOGI(TAG, "%s: int free=%u largest=%u min=%u | DMA largest=%u",
+    ESP_LOGI(TAG, "%s: int free=%u largest=%u min=%u | DMA largest=%u min=%u",
              what,
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
              (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
              (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL),
              (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL |
+                                                        MALLOC_CAP_DMA),
+             (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL |
                                                         MALLOC_CAP_DMA));
 }
 
