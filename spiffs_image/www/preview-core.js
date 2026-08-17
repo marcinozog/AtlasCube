@@ -1178,6 +1178,31 @@ async function renderEverything() {
     applyZoom();
 }
 
+// The device's socket table is seven entries wide (HTTPD_MAX_OPEN_SOCKETS) and
+// shared with every other client, the Android app's WebSocket included. A browser
+// opens up to six parallel connections per host, so firing this page's nine boot
+// requests at once fills the table on its own; httpd then LRU-purges the
+// longest-idle session, and since state is only broadcast when it changes, that
+// is typically somebody's live WebSocket — the app went offline and reconnected
+// every time this page was opened. Two at a time stays inside the budget, and it
+// keeps the burst from competing with a playing stream for internal RAM, which is
+// the same reason max_open_sockets is only seven.
+const BOOT_FETCH_CONCURRENCY = 2;
+
+async function getAll(urls, get) {
+    const out = new Array(urls.length);
+    let next = 0;
+    const worker = async () => {
+        while (next < urls.length) {
+            const i = next++;
+            out[i] = await get(urls[i]);
+        }
+    };
+    const workers = Math.min(BOOT_FETCH_CONCURRENCY, urls.length);
+    await Promise.all(Array.from({ length: workers }, worker));
+    return out;
+}
+
 async function loadAll() {
     const get = async (url) => {
         const r = await fetch(url, { cache: 'no-store' });
@@ -1185,12 +1210,12 @@ async function loadAll() {
         return r.json();
     };
     const sections = ['radio', 'playlist', 'sd', 'browser', 'bt', 'eq'];
-    const [meta, settings, theme, ...profs] = await Promise.all([
-        get('/api/ui/profile/meta'),
-        get('/api/settings'),
-        get('/api/theme'),
-        ...sections.map(s => get('/api/ui/profile/' + s)),
-    ]);
+    const [meta, settings, theme, ...profs] = await getAll([
+        '/api/ui/profile/meta',
+        '/api/settings',
+        '/api/theme',
+        ...sections.map(s => '/api/ui/profile/' + s),
+    ], get);
     S.meta     = meta;
     S.settings = settings;
     S.pal      = theme[theme.current] || theme.dark;
