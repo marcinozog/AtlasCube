@@ -174,10 +174,16 @@ static void meter_render(bar_meter_t *m)
     lv_obj_invalidate_area(m->cont, &inv);
 }
 
+// Exponential smoothing never reaches its target, so a bar falling to rest would
+// otherwise decay through denormal floats forever. Snap to zero well below the
+// level that could round to a visible pixel.
+#define BAR_REST_EPS 1e-4f
+
 static void smooth_to(bar_meter_t *m, float target)
 {
     float k = (target > m->lvl) ? BAR_ATTACK : BAR_DECAY;
     m->lvl += (target - m->lvl) * k;
+    if (m->lvl < BAR_REST_EPS) m->lvl = 0.0f;
     // Peak jumps up to the bar instantly, then sags back slowly.
     if (m->lvl > m->peak_lvl) m->peak_lvl = m->lvl;
     else                      m->peak_lvl -= BAR_PEAK_FALL;

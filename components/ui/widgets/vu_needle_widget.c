@@ -129,10 +129,16 @@ static void meter_render(needle_meter_t *m)
     lv_obj_invalidate_area(m->cont, &inv);
 }
 
+// Exponential smoothing never reaches its target, so a needle falling to rest
+// would otherwise decay through denormal floats forever. Snap to zero well below
+// the level that could move the tip by a pixel.
+#define NEEDLE_REST_EPS 1e-4f
+
 static void smooth_to(needle_meter_t *m, float target)
 {
     float k = (target > m->lvl) ? NEEDLE_ATTACK : NEEDLE_DECAY;
     m->lvl += (target - m->lvl) * k;
+    if (m->lvl < NEEDLE_REST_EPS) m->lvl = 0.0f;
 }
 
 // LVGL-task timer: RMS → dB → AGC window → ballistics → needle angle.

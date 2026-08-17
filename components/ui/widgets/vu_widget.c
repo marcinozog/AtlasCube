@@ -132,6 +132,16 @@ static void build_bins(void)
 // (e.g. ILI9488 RGB666) where redrawing the full area every frame dominated. LVGL task.
 static void render_deltas(void)
 {
+    // Fully at rest (paused / stopped, levels snapped to 0 by smooth_to): nothing
+    // can move, so skip the per-bar powf instead of recomputing the same 1 px
+    // height 20x a second. Cheap compares replace the only float work the meter
+    // still did while idle.
+    bool moving = false;
+    for (int b = 0; b < s_nbars; b++) {
+        if (s_lvl[b] != 0.0f || s_hgt[b] != 1) { moving = true; break; }
+    }
+    if (!moving) return;
+
     lv_area_t a;
     lv_obj_get_coords(s_cont, &a);
 
@@ -186,10 +196,16 @@ static void vu_draw_cb(lv_event_t *e)
     }
 }
 
+// Exponential smoothing never reaches its target, so a bar falling to rest would
+// otherwise decay through denormal floats forever. Snap to zero well below the
+// level that could round to a visible pixel (see VU_REST_EPS).
+#define VU_REST_EPS 1e-4f
+
 static void smooth_to(int b, float target)
 {
     float k = (target > s_lvl[b]) ? VU_ATTACK : VU_DECAY;
     s_lvl[b] += (target - s_lvl[b]) * k;
+    if (s_lvl[b] < VU_REST_EPS) s_lvl[b] = 0.0f;
 }
 
 // One FFT frame → smoothed s_lvl[]. Runs on the core-0 FFT task only: NO LVGL
