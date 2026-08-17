@@ -558,11 +558,11 @@ function setDeviceMono(t) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Audio — volume curve (tapered / linear)
+// Audio — volume curve (tapered / gentle)
 // ─────────────────────────────────────────────────────────────────────────────
 function setDeviceVolumeLog(t) {
-    document.getElementById('settingsBtnVolLog')?.classList.toggle('active', t);
-    document.getElementById('settingsBtnVolLin')?.classList.toggle('active', !t);
+    document.getElementById('settingsBtnVolLog')   ?.classList.toggle('active', t);
+    document.getElementById('settingsBtnVolGentle')?.classList.toggle('active', !t);
     fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1132,8 +1132,8 @@ function populateForm(s) {
 
         // default true — older backend omits it and always tapered
         const vol_log = (s.audio.volume_log !== false);
-        document.getElementById('settingsBtnVolLog')?.classList.toggle('active', vol_log);
-        document.getElementById('settingsBtnVolLin')?.classList.toggle('active', !vol_log);
+        document.getElementById('settingsBtnVolLog')   ?.classList.toggle('active', vol_log);
+        document.getElementById('settingsBtnVolGentle')?.classList.toggle('active', !vol_log);
     }
     if (s.playlist) {
         const rob = !!s.playlist.resume_on_boot;   // default off

@@ -143,7 +143,7 @@ static const row_desc_t SEC_AUDIO[] = {
     { .title = "Output", .kind = RK_TOGGLE, .tget = get_mono, .tset = settings_set_mono,
       .on_txt = "<    Mono    >", .off_txt = "<    Stereo    >" },
     { .title = "Volume curve", .kind = RK_TOGGLE, .tget = get_vol_log, .tset = settings_set_volume_log,
-      .on_txt = "<    Tapered    >", .off_txt = "<    Linear    >" },
+      .on_txt = "<    Tapered    >", .off_txt = "<    Gentle    >" },
     { .title = "Equalizer", .kind = RK_SCREEN, .screen = SCREEN_EQ },
     { .title = "Test tone", .kind = RK_ACTION, .action = act_test_tone, .on_txt = "Play >" },
 };

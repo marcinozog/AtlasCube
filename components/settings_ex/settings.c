@@ -192,7 +192,7 @@ static esp_err_t load_from_file(void)
 
     // ===== AUDIO =====
     // Default first: a file with no "audio" section at all must still land on the
-    // taper, never on linear gain (which would be far louder at low volumes).
+    // full taper, never on the gentle curve (which is louder at low volumes).
     s_settings.audio.volume_log = true;
     cJSON *audio = cJSON_GetObjectItem(json, "audio");
     if (cJSON_IsObject(audio)) {

@@ -79,11 +79,12 @@ void audio_engine_mark_stopped(void);
 bool audio_engine_is_playing(void);
 
 void audio_engine_set_volume(int volume);
-// Volume taper. true (default) = the 0..100 position is raised to a power before
-// it becomes DSP gain, so the quiet end of the travel is usable; false = gain
-// tracks the number linearly, which is far louder at low settings. Applies live
-// — the current volume is re-pushed at the new curve. Bluetooth is unaffected
-// (the module scales in hardware, outside the DSP).
+// Volume taper. Both legs raise the 0..100 position to a power before it becomes
+// DSP gain: true (default) = the full audio taper, so the quiet end of the travel
+// stays fine-grained; false = a gentler curve, half as steep in dB, for amps that
+// already taper in hardware. Both reach full scale at 100 %. Applies live — the
+// current volume is re-pushed at the new curve. Bluetooth is unaffected (the
+// module scales in hardware, outside the DSP).
 void audio_engine_set_volume_log(bool logarithmic);
 void audio_engine_set_eq_10(int *bands);
 void audio_engine_set_eq_enabled(bool enabled);

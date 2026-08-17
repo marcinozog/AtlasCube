@@ -26,7 +26,7 @@ typedef struct {
     int eq[10];                 // Equalizer values
     bool eq_enabled;            // EQ on/off (volume works independently)
     bool mono;                  // Mono downmix on/off (pipeline sources only, not BT)
-    bool volume_log;            // Volume taper on/off (off = linear gain)
+    bool volume_log;            // Volume taper: on = full taper, off = gentle curve
     char url[256];              // URL radio station
     char station_name[64];      // Station name
     char title[128];            // Music title
