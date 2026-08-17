@@ -234,6 +234,13 @@ def pick_port():
     return val or None
 
 
+def ask_monitor():
+    """Ask whether to open the serial monitor once flashing is done. Asked up front
+    (with the port) so the run needs no attention after the build starts."""
+    ans = input("\nOpen the serial monitor after flashing? [y/N] ").strip().lower()
+    return ans in ("y", "yes")
+
+
 def git_update():
     """Pull the latest repo (this script included), then ask the user to re-run it.
 
@@ -264,7 +271,7 @@ def main():
     ap = argparse.ArgumentParser(description="AtlasCube build & flash (end-user script).")
     ap.add_argument("-p", "--port", help="serial port (e.g. COM5 / /dev/ttyUSB0); auto-detected if omitted")
     ap.add_argument("--scope", choices=list(ACTIONS), help="what to do: flash all|fw|ui, or build (compile only); skips the prompt")
-    ap.add_argument("--monitor", action="store_true", help="open the serial monitor after flashing")
+    ap.add_argument("--monitor", action="store_true", help="open the serial monitor after flashing (skips the prompt)")
     ap.add_argument("--clean", action="store_true", help="force a clean sdkconfig before building")
     ap.add_argument("-j", "--jobs", type=int, metavar="N", default=DEFAULT_JOBS,
                     help=f"parallel compile jobs (default {DEFAULT_JOBS}; use 0 for "
@@ -292,6 +299,12 @@ def main():
     port = args.port
     if action != "build" and not port and sys.stdin.isatty():
         port = pick_port()
+
+    # Same idea for the monitor: --monitor wins, otherwise ask now (flashing
+    # actions only) so nothing is prompted once the build is running.
+    monitor = args.monitor
+    if action in ("fw", "ui", "all") and not monitor and sys.stdin.isatty():
+        monitor = ask_monitor()
 
     def idf(*a):
         cmd = [sys.executable, str(idf_py)]
@@ -370,7 +383,7 @@ def main():
     else:  # all
         run(idf("flash"))
 
-    if args.monitor:
+    if monitor:
         run(idf("monitor"))
 
 
