@@ -17,6 +17,7 @@
 #include "esp_wifi.h"
 #include "esp_mac.h"
 #include "esp_timer.h"
+#include "esp_heap_caps.h"
 #include "esp_app_desc.h"
 #include "nvs.h"
 #include "cJSON.h"
@@ -86,6 +87,55 @@ typedef struct {
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Internal-heap sampling, armed with TRACE_ESPNOW. The link is a suspect in the
+// TLS-under-low-internal-RAM failures: the AES-DMA path needs a 1600 B
+// DMA-capable internal block per TLS record, and every reply built here is a
+// burst of sub-2048 B cJSON allocations, which CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL
+// keeps in exactly that heap.
+//
+// Field order matches heap_report(), so these lines read straight against the
+// [pre-connect]/[mid-stream] ones they land between.
+//
+// `min` is the since-boot low-water mark, and it is the point of sampling either
+// side of an exchange: a builder allocates and frees within one call, so a dip
+// deep enough to starve a concurrent AES allocation leaves no trace in `free` or
+// `largest` — only in `min`. Note it never resets, so comparing two runs means
+// rebooting between them.
+#define HEAP_TRACE_PERIOD_MS  2000
+
+// Set for a sampled exchange, read by reply(). Both ends are logged or neither:
+// an rx line paired with the reply of a different, unsampled frame would read as
+// a delta that never happened. Only ever touched on the worker task.
+static bool s_heap_sample;
+
+// Written by ESP_LOGI rather than the TRACE macro because the throttle has to be
+// shared across two call sites; TRACE_EVERY_MS keeps its budget in a
+// function-local static, so each site would get its own.
+static void trace_heap(const char *what)
+{
+    ESP_LOGI(TAG, "%s: int free=%u largest=%u min=%u | DMA largest=%u",
+             what,
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL),
+             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL),
+             (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL),
+             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL |
+                                                        MALLOC_CAP_DMA));
+}
+
+// A remote polls get_state continuously, so an unthrottled sample would drown the
+// very [mid-stream] lines it is there to be compared against.
+static bool heap_trace_due(void)
+{
+    static int64_t last_us = 0;
+
+    int64_t now = esp_timer_get_time();
+    if (last_us != 0 && now - last_us < (int64_t)HEAP_TRACE_PERIOD_MS * 1000) {
+        return false;
+    }
+    last_us = now;
+    return true;
+}
 
 static bool window_open(void)
 {
@@ -168,6 +218,13 @@ static void reply(const uint8_t mac[ESPNOW_MAC_LEN], uint8_t seq, char *json)
         if (err != ESP_OK) ESP_LOGW(TAG, "send failed: %s", esp_err_to_name(err));
     }
     free(frame);
+
+    // Closing sample: everything the builder allocated is back by now, so the
+    // gap to the rx line is what this reply left behind — and the gap in `min` is
+    // how deep it dug to get there. handle_frame() reassigns the flag for every
+    // frame, so a command that sends no reply cannot leak a sample onto the next
+    // exchange.
+    if (s_heap_sample) trace_heap("reply sent");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -596,6 +653,12 @@ static void handle_frame(const rx_frame_t *f)
 {
     const char *cmd = f->payload;
 
+    // Baseline for this exchange, before any builder has allocated. The command
+    // text is the label — "get_state" and "get_list=0,32" say what the reply will
+    // cost better than any prefix would.
+    s_heap_sample = trace_on(TRACE_ESPNOW) && heap_trace_due();
+    if (s_heap_sample) trace_heap(cmd);
+
     // ── pair: the only frame accepted from an unknown MAC ────────────────────
     if (strcmp(cmd, "pair") == 0) {
         if (!window_open()) {
@@ -834,6 +897,13 @@ static esp_err_t link_start(void)
 {
     if (s_ready) return ESP_OK;
 
+    // Brackets the link's fixed cost — the queue, esp_now_init() and the worker's
+    // internal stack — so the "roughly 10 KB" above stops being an estimate. The
+    // mask is persisted, so arming TRACE_ESPNOW and restarting catches this at
+    // boot, where a radio with a paired remote starts the link.
+    bool trace = trace_on(TRACE_ESPNOW);
+    if (trace) trace_heap("link before start");
+
     s_rx_q = xQueueCreate(RX_QUEUE_DEPTH, sizeof(rx_frame_t));
     if (!s_rx_q) return ESP_ERR_NO_MEM;
 
@@ -858,6 +928,8 @@ static esp_err_t link_start(void)
     }
 
     s_ready = true;
+
+    if (trace) trace_heap("link up");
 
     if (s_paired)
         ESP_LOGI(TAG, "link up on ch %d, paired with " MACSTR,
