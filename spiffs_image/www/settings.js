@@ -558,6 +558,19 @@ function setDeviceMono(t) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Audio — volume curve (tapered / linear)
+// ─────────────────────────────────────────────────────────────────────────────
+function setDeviceVolumeLog(t) {
+    document.getElementById('settingsBtnVolLog')?.classList.toggle('active', t);
+    document.getElementById('settingsBtnVolLin')?.classList.toggle('active', !t);
+    fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio: { volume_log: t } })
+    }).catch(console.error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Audio — exclusive source auto-switch (Radio ⇄ Bluetooth)
 // ─────────────────────────────────────────────────────────────────────────────
 function setBtAutoSwitch(on) {
@@ -1116,6 +1129,11 @@ function populateForm(s) {
         const mono = !!s.audio.mono;   // default false — older backend omits it
         document.getElementById('settingsBtnMono')  ?.classList.toggle('active', mono);
         document.getElementById('settingsBtnStereo')?.classList.toggle('active', !mono);
+
+        // default true — older backend omits it and always tapered
+        const vol_log = (s.audio.volume_log !== false);
+        document.getElementById('settingsBtnVolLog')?.classList.toggle('active', vol_log);
+        document.getElementById('settingsBtnVolLin')?.classList.toggle('active', !vol_log);
     }
     if (s.playlist) {
         const rob = !!s.playlist.resume_on_boot;   // default off

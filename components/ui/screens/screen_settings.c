@@ -106,6 +106,7 @@ static bool get_follow_src(void) { return app_state_get()->follow_source; }
 static bool get_bt_auto(void)    { return app_state_get()->bt_auto_switch; }
 static bool get_eq(void)         { return app_state_get()->eq_enabled; }
 static bool get_mono(void)       { return app_state_get()->mono; }
+static bool get_vol_log(void)    { return app_state_get()->volume_log; }
 static void act_restart(void)    { esp_restart(); }
 // Encoder-driven like every other Settings row — keep it out of the touch guard.
 static void act_test_tone(void)  { audio_engine_play_test_tone(1000, AUDIO_TEST_PINK); }
@@ -141,6 +142,8 @@ static const row_desc_t SEC_AUDIO[] = {
       .on_txt = "<    On    >", .off_txt = "<    Off    >" },
     { .title = "Output", .kind = RK_TOGGLE, .tget = get_mono, .tset = settings_set_mono,
       .on_txt = "<    Mono    >", .off_txt = "<    Stereo    >" },
+    { .title = "Volume curve", .kind = RK_TOGGLE, .tget = get_vol_log, .tset = settings_set_volume_log,
+      .on_txt = "<    Tapered    >", .off_txt = "<    Linear    >" },
     { .title = "Equalizer", .kind = RK_SCREEN, .screen = SCREEN_EQ },
     { .title = "Test tone", .kind = RK_ACTION, .action = act_test_tone, .on_txt = "Play >" },
 };

@@ -162,8 +162,8 @@ static void tick_cb(lv_timer_t *t)
         if (s_agc_ref < NEEDLE_AGC_REF_MIN) s_agc_ref = NEEDLE_AGC_REF_MIN;
 
         // The DSP tap is deliberately PRE-volume (the AGC window tracks the
-        // music, not the listening level — and the ^4 volume taper would park
-        // the needle in real dB). Scale the swing by the volume instead, so the
+        // music, not the listening level — and the volume taper would park the
+        // needle in real dB). Scale the swing by the volume instead, so the
         // needle visibly follows the knob like a real amplifier's meter. Square
         // root, not linear: linear crushed the swing at quiet listening levels
         // (25% volume left a quarter of the arc); sqrt keeps half the arc there

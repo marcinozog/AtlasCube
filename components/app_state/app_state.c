@@ -137,6 +137,10 @@ void app_state_update(const app_state_patch_t *patch)
         s_state.mono = patch->mono;
     }
 
+    if (patch->has_volume_log) {
+        s_state.volume_log = patch->volume_log;
+    }
+
     if (patch->has_url && patch->url) {
         strncpy(s_state.url, patch->url, sizeof(s_state.url) - 1);
         s_state.url[sizeof(s_state.url) - 1] = 0;
@@ -224,6 +228,7 @@ void app_state_update(const app_state_patch_t *patch)
     if (patch->has_eq)                n = buf_append(buf, sizeof(buf), n, " eq=*");
     if (patch->has_eq_enabled)        n = buf_append(buf, sizeof(buf), n, " eq_enabled=%d", s_state.eq_enabled);
     if (patch->has_mono)              n = buf_append(buf, sizeof(buf), n, " mono=%d", s_state.mono);
+    if (patch->has_volume_log)        n = buf_append(buf, sizeof(buf), n, " volume_log=%d", s_state.volume_log);
     if (patch->has_curr_index)        n = buf_append(buf, sizeof(buf), n, " curr_index=%d", s_state.curr_index);
     if (patch->has_url)               n = buf_append(buf, sizeof(buf), n, " url=%s", s_state.url);
     if (patch->has_station_name)      n = buf_append(buf, sizeof(buf), n, " station=%s", s_state.station_name);

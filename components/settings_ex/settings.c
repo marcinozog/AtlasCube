@@ -54,6 +54,7 @@ esp_err_t settings_init(void)
         for (int i = 0; i < 10; i++) s_settings.audio.eq[i] = 0;
         s_settings.audio.eq_enabled         = true;
         s_settings.audio.mono               = false;
+        s_settings.audio.volume_log         = true;
         s_settings.playlist.curr_index      = 0;
         s_settings.playlist.resume_on_boot  = false;
         s_settings.playlist.was_playing     = false;
@@ -190,6 +191,9 @@ static esp_err_t load_from_file(void)
     if (!json) return ESP_FAIL;
 
     // ===== AUDIO =====
+    // Default first: a file with no "audio" section at all must still land on the
+    // taper, never on linear gain (which would be far louder at low volumes).
+    s_settings.audio.volume_log = true;
     cJSON *audio = cJSON_GetObjectItem(json, "audio");
     if (cJSON_IsObject(audio)) {
 
@@ -225,6 +229,11 @@ static esp_err_t load_from_file(void)
         cJSON *mono = cJSON_GetObjectItem(audio, "mono");
         // missing in older file → default off (stereo)
         s_settings.audio.mono = cJSON_IsBool(mono) && cJSON_IsTrue(mono);
+
+        cJSON *vol_log = cJSON_GetObjectItem(audio, "volume_log");
+        // missing in older file → default on: the taper is what those installs
+        // have always sounded like, so an update must not make them louder
+        s_settings.audio.volume_log = !cJSON_IsBool(vol_log) || cJSON_IsTrue(vol_log);
     }
 
     // ===== PLAYLIST =====
@@ -639,6 +648,7 @@ static esp_err_t save_to_file_locked(void)
     cJSON_AddItemToObject(audio, "eq", eq);
     cJSON_AddBoolToObject(audio,   "eq_enabled", s_settings.audio.eq_enabled);
     cJSON_AddBoolToObject(audio,   "mono",       s_settings.audio.mono);
+    cJSON_AddBoolToObject(audio,   "volume_log", s_settings.audio.volume_log);
     cJSON_AddItemToObject(json, "audio", audio);
 
     // playlist
@@ -824,6 +834,7 @@ void settings_apply(void)
 */
 void settings_apply(void)
 {
+    audio_engine_set_volume_log(s_settings.audio.volume_log);   // curve first, then the level
     audio_engine_set_volume(s_settings.audio.volume);
     audio_engine_set_eq_10(s_settings.audio.eq);
     audio_engine_set_eq_enabled(s_settings.audio.eq_enabled);
@@ -845,6 +856,7 @@ void settings_apply(void)
         .has_eq                 = true,
         .has_eq_enabled         = true, .eq_enabled = s_settings.audio.eq_enabled,
         .has_mono               = true, .mono      = s_settings.audio.mono,
+        .has_volume_log         = true, .volume_log = s_settings.audio.volume_log,
         .has_curr_index         = true, .curr_index= s_settings.playlist.curr_index,
         .has_bt_enable          = true, .bt_enable = s_settings.bluetooth.enable,
         .has_bt_show_screen     = true, .bt_show_screen = s_settings.bluetooth.show_screen,
@@ -909,6 +921,17 @@ void settings_set_mono(bool mono)
     audio_engine_set_mono(mono);
     app_state_update(&(app_state_patch_t){
         .has_mono = true, .mono = mono
+    });
+    save_to_file();
+}
+
+void settings_set_volume_log(bool logarithmic)
+{
+    if (s_settings.audio.volume_log == logarithmic) return;
+    s_settings.audio.volume_log = logarithmic;
+    audio_engine_set_volume_log(logarithmic);
+    app_state_update(&(app_state_patch_t){
+        .has_volume_log = true, .volume_log = logarithmic
     });
     save_to_file();
 }

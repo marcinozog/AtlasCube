@@ -32,6 +32,7 @@ typedef struct {
     int  eq[10];
     bool eq_enabled;
     bool mono;             // downmix L+R to both channels (single-speaker builds)
+    bool volume_log;       // volume taper: true = audio taper, false = linear gain
 } audio_settings_t;
 
 typedef struct {
@@ -207,6 +208,7 @@ void settings_set_volume(int volume);
 void settings_set_eq_10(int *bands);
 void settings_set_eq_enabled(bool enabled);
 void settings_set_mono(bool mono);
+void settings_set_volume_log(bool logarithmic);
 void settings_set_curr_index(int index);
 void settings_set_resume_on_boot(bool enabled);
 void settings_set_was_playing(bool playing);

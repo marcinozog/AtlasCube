@@ -141,6 +141,13 @@ crackling went away.
 - Bands with `gain_db == 0` are skipped per-block (cheap default).
 - `eq_enabled` flag bypasses the entire EQ loop. Volume runs regardless.
   Toggle exposed in Settings UI.
+- Volume curve: the 0–100 % position is raised to an exponent before it becomes
+  DSP gain. `volume_log` picks the exponent — `true` (default) = 4.0, the audio
+  taper that keeps the quiet end of the scale usable; `false` = 1.0, gain equals
+  the number. Linear is far louder at low settings (20 % is −14 dB against
+  −56 dB tapered). Lives in `audio_engine_set_volume_log()`, so every path that
+  sets a level — encoder, web, MQTT, radio fade-in, notification volume —
+  inherits it. Bluetooth is outside the DSP and scales in the module instead.
 - DSP element stack lives in **internal SRAM** (`stack_in_ext = false`) —
   with PSRAM stack, biquad floating-point math caused micro-glitches at
   ≥256 kbps streams (PSRAM is ~5× slower for random access).
@@ -229,11 +236,15 @@ Audio settings stored in `/spiffs/settings.json`:
 "audio": {
   "volume": 30,
   "eq": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  "eq_enabled": true
+  "eq_enabled": true,
+  "mono": false,
+  "volume_log": true
 }
 ```
 
-Older config files without `eq_enabled` default to `true` on load.
+Older config files without `eq_enabled` default to `true` on load, and so does a
+missing `volume_log` — an update must not silently switch an existing install to
+the louder linear curve.
 
 ## Performance reference
 

@@ -520,6 +520,21 @@
         </div>
 
         <div class="panel">
+            <label class="field-label">Volume curve</label>
+            <div class="theme-toggle" id="volLogToggle" style="width:fit-content">
+                <button class="theme-btn" id="settingsBtnVolLog" onclick="setDeviceVolumeLog(true)">🎚️ Tapered</button>
+                <button class="theme-btn" id="settingsBtnVolLin" onclick="setDeviceVolumeLog(false)">📏 Linear</button>
+            </div>
+            <div class="field-hint">How the 0–100 % number maps to actual output gain.
+                <em>Tapered</em> (default) raises the position to the fourth power, so the quiet end of the
+                scale is fine-grained and usable. <em>Linear</em> makes gain follow the number directly —
+                for amplifiers that already taper in hardware.
+                <strong>Linear is dramatically louder at low settings</strong>: 20 % is −14 dB linear against
+                −56 dB tapered, so turn the volume down before switching. Applies instantly.
+                Bluetooth is unaffected (the module scales in hardware, outside the DSP).</div>
+        </div>
+
+        <div class="panel">
             <label class="field-label">Resume playback on boot</label>
             <div class="theme-toggle" id="resumeToggle" style="width:fit-content">
                 <button class="theme-btn" id="settingsBtnResumeOn"  onclick="setResumeOnBoot(true)">✅ On</button>
