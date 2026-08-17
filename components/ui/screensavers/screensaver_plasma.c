@@ -3,6 +3,7 @@
 #include "ui_profile.h"
 #include "lvgl.h"
 #include "esp_log.h"
+#include "esp_attr.h"
 #include "esp_heap_caps.h"
 #include <string.h>
 #include <math.h>
@@ -22,7 +23,11 @@ static uint32_t    s_t       = 0;
 
 // LUT in BSS — built once on first create
 static int8_t      s_sin_lut[LUT_SIZE];        // sin → [-127, 127]
-static uint16_t    s_palette[PALETTE_SIZE];    // RGB565 rainbow
+// RGB565 rainbow. Read once per pixel, which is the one case here where PSRAM
+// latency could have mattered — but 512 B is a working set the data cache holds
+// entirely after the first row, so the lookup stays a cache hit. 512 B of
+// internal DRAM is worth more than that (TMP/TODO/RAM).
+EXT_RAM_BSS_ATTR static uint16_t s_palette[PALETTE_SIZE];
 static bool        s_lut_ready = false;
 
 // ---------------------------------------------------------------------------

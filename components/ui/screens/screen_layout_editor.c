@@ -6,6 +6,7 @@
 #include "ui_profile.h"
 #include "lvgl.h"
 #include "esp_log.h"
+#include "esp_attr.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -135,8 +136,13 @@ _Static_assert(ARRAY_LEN(RADIO_ELEMENTS) <= MAX_EDITOR_ELEMENTS,
                "Increase MAX_EDITOR_ELEMENTS");
 
 static layout_editor_target_t s_target = LAYOUT_EDITOR_RADIO;
-static ui_profile_t           s_original;
-static ui_profile_t           s_work;
+// Two full ui_profile_t copies, 2736 B each — 5472 B of internal DRAM held for a
+// screen that is only open while somebody is editing a layout. To PSRAM
+// (TMP/TODO/RAM); they are read by the editor's UI code and handed to
+// ui_profile_set(), never touched with the flash cache disabled, so the move is
+// safe.
+EXT_RAM_BSS_ATTR static ui_profile_t s_original;
+EXT_RAM_BSS_ATTR static ui_profile_t s_work;
 static lv_obj_t              *s_root;
 static lv_obj_t              *s_boxes[MAX_EDITOR_ELEMENTS];
 static lv_obj_t              *s_status;

@@ -3,6 +3,7 @@
 #include "ui_profile.h"
 #include "lvgl.h"
 #include "esp_log.h"
+#include "esp_attr.h"
 #include "esp_heap_caps.h"
 #include "esp_random.h"
 #include <stdlib.h>
@@ -44,7 +45,12 @@ static lv_obj_t   *s_root   = NULL;
 static lv_obj_t   *s_canvas = NULL;
 static uint16_t   *s_buf    = NULL;
 static lv_timer_t *s_timer  = NULL;
-static rocket_t    s_rockets[ROCKET_COUNT];
+// The largest screensaver array in the build: 4536 B of internal DRAM, reserved
+// by the linker whether this screensaver ever runs. Internal DRAM is the
+// scarcest resource on the device (TMP/TODO/RAM), so it goes to PSRAM. The
+// animation reads it through the data cache and its working set is small, so
+// the extra latency does not show.
+EXT_RAM_BSS_ATTR static rocket_t s_rockets[ROCKET_COUNT];
 static int         s_w = 0, s_h = 0;
 
 // ---------------------------------------------------------------------------

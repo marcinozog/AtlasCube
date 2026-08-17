@@ -7,6 +7,7 @@
 #include "fonts/ui_fonts.h"
 #include "lvgl.h"
 #include "esp_log.h"
+#include "esp_attr.h"
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
 #include <time.h>
@@ -64,7 +65,9 @@ static uint16_t   *s_stage_buf  = NULL;   // full target image loaded from SD
 static lv_timer_t *s_timer   = NULL;
 static int         s_w = 0, s_h = 0;
 
-static char      *s_files[MAX_FILES];
+// 1024 B of pointers, touched once per slide — to PSRAM (TMP/TODO/RAM). Only the
+// array moves; the strdup'd names it points at were never in .bss anyway.
+EXT_RAM_BSS_ATTR static char *s_files[MAX_FILES];
 static int        s_file_count = 0;
 static int        s_file_idx   = -1;
 

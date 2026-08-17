@@ -3,6 +3,7 @@
 #include "ui_profile.h"
 #include "lvgl.h"
 #include "esp_log.h"
+#include "esp_attr.h"
 #include "esp_heap_caps.h"
 #include "esp_random.h"
 #include <stdlib.h>
@@ -25,7 +26,9 @@ static lv_obj_t   *s_root   = NULL;
 static lv_obj_t   *s_canvas = NULL;
 static uint16_t   *s_buf    = NULL;
 static lv_timer_t *s_timer  = NULL;
-static star_t      s_stars[STAR_COUNT];
+// 2400 B of internal DRAM held for a screensaver that is idle almost always —
+// to PSRAM, same reasoning as fireworks (TMP/TODO/RAM).
+EXT_RAM_BSS_ATTR static star_t s_stars[STAR_COUNT];
 static int         s_w = 0, s_h = 0;
 
 // ---------------------------------------------------------------------------
