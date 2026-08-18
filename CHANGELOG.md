@@ -9,6 +9,46 @@ While the major version is `0`, any minor release may introduce breaking changes
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-08-18
+
+### Added
+- **scripts:** ask whether to open the monitor after flashing
+- **espnow:** trace the link's internal-heap cost under TRACE_ESPNOW
+- **audio:** make the volume curve switchable between tapered and gentle
+- **audio:** make the volume curve switchable between tapered and linear
+- **www:** reject a full-flash image in the firmware upload panel
+- **ota:** unify the firmware panel and export only the app image
+- **www:** link the screen preview from the home page
+- **www:** make the on-screen volume slider draggable in the preview
+- **ui:** expose the equalizer's frequency and hint fonts in the profile JSON
+- **www:** preview the equalizer screen in a modal
+- **ws:** broadcast bt_playing in the state frame
+- **www:** add the Bluetooth screen to the preview page
+- **www:** open the preview with the list screen and remember the source
+
+### Changed
+- **ui:** stop the VU meters burning float work while at rest
+- **ui:** move screensaver and layout-editor buffers out of internal DRAM
+- call the hardware remote a remote, not a pilot
+- **www:** drop the background-tier badge from the preview
+- **www:** move the event bell toggle from Settings to the Events page
+
+### Fixed
+- **www:** keep the preview toolbar on one row on narrow screens
+- **www:** make the preview volume bar visible and knob-only
+- **audio:** reset the retry budget only after a stream has played
+- **net:** drop hardware AES so TLS stops needing DMA-capable internal RAM
+- **www:** load the preview's boot requests two at a time
+- **www:** cap the equalizer modal height with a percentage, not vh
+- **mqtt:** derive the default client_id from the MAC to avoid broker collisions
+- **display:** serialize SSD1322 brightness writes against the LVGL flush
+- **bt:** confirm a play announcement with a moving position before switching source
+- **www:** draw preview artwork from the canvas instead of a PNG data URL
+- **www:** drive BT play/pause from bt_playing, not the source-aware toggle
+
+### Other
+- **www:** add the Bluetooth screen to the preview page
+
 ## [0.50.3] - 2026-08-14
 
 ### Fixed
@@ -964,7 +1004,8 @@ Initial public snapshot pushed to GitHub.
 - SPIFFS-based settings and assets.
 - Firmware version derived from `git describe` and logged at boot.
 
-[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.50.3...HEAD
+[Unreleased]: https://github.com/marcinozog/AtlasCube/compare/v0.51.0...HEAD
+[0.51.0]: https://github.com/marcinozog/AtlasCube/compare/v0.50.3...v0.51.0
 [0.50.3]: https://github.com/marcinozog/AtlasCube/compare/v0.50.2...v0.50.3
 [0.50.2]: https://github.com/marcinozog/AtlasCube/compare/v0.50.0...v0.50.2
 [0.50.0]: https://github.com/marcinozog/AtlasCube/compare/v0.49.0...v0.50.0
