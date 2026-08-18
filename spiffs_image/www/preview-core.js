@@ -1123,7 +1123,8 @@ function applyZoom() {
     volbarEl.style.width = frameEl.offsetWidth + 'px';
 }
 
-const fullscreenBtn = document.getElementById('fullscreen');
+const fullscreenBtn   = document.getElementById('fullscreen');
+const fullscreenLabel = document.getElementById('fullscreen_label');
 
 function toggleFullscreen() {
     if (document.fullscreenElement) {
@@ -1141,7 +1142,10 @@ let listHiddenBeforeFs = null;
 
 document.addEventListener('fullscreenchange', () => {
     const on = document.fullscreenElement === viewerEl;
-    fullscreenBtn.textContent = on ? '⛶ Exit fullscreen' : '⛶ Fullscreen';
+    // Only the wording changes: the glyph is a sibling element, and on a narrow
+    // screen the wording is hidden altogether, so aria-label has to say it too.
+    fullscreenLabel.textContent = on ? 'Exit fullscreen' : 'Fullscreen';
+    fullscreenBtn.setAttribute('aria-label', on ? 'Exit fullscreen' : 'Fullscreen');
 
     if (on) {
         // The toggle lives in the toolbar, outside the fullscreen element and so

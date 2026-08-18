@@ -56,6 +56,25 @@ body {
 .topbar { margin-bottom: 10px; }
 .bar    { margin-top: 14px; }
 
+.topbar button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* One row of controls, or the bar stops looking like a bar. The fifth control —
+   Fullscreen, which a browser shows and the Android app removes outright, since
+   the Fullscreen API does nothing in its WebView — does not fit a phone, and
+   wrapping left it stranded on a second line under everything else. What goes is
+   the wording, not the controls: the glyph and the title/aria-label carry them. */
+@media (max-width: 560px) {
+    .topbar label,
+    .topbar .btn-label { display: none; }
+
+    /* Square around the lone glyph rather than a wide button with a gap in it. */
+    .topbar button { padding: 5px 9px; gap: 0; }
+}
+
 .bar label, .topbar label { color: var(--fg-dim); }
 
 select, button {
@@ -398,11 +417,16 @@ button:disabled:hover { border-color: var(--line); }
             <option value="sd">SD card</option>
             <option value="bt">Bluetooth</option>
         </select>
-        <button id="eq_open" type="button" title="Show the equalizer screen (Esc to close)">
-            🎛 Equalizer
+        <!-- Icon and wording are separate elements so a narrow screen can drop the
+             wording and keep the button (see the media query). aria-label carries
+             the name once the text is gone. -->
+        <button id="eq_open" type="button" aria-label="Equalizer"
+                title="Show the equalizer screen (Esc to close)">
+            <span class="btn-icon">🎛</span><span class="btn-label">Equalizer</span>
         </button>
-        <button id="fullscreen" type="button" title="Fill the browser window (Esc to leave)">
-            ⛶ Fullscreen
+        <button id="fullscreen" type="button" aria-label="Fullscreen"
+                title="Fill the browser window (Esc to leave)">
+            <span class="btn-icon">⛶</span><span class="btn-label" id="fullscreen_label">Fullscreen</span>
         </button>
     </div>
 
