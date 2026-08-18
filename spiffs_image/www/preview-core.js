@@ -913,6 +913,14 @@ const volEl    = document.getElementById('volume');
 const volValEl = document.getElementById('vol_value');
 let volDragging = false;
 let volTimeout  = null;
+let volLast     = 0;      // last level this control itself accepted, see 'input'
+
+// What the track shows. A native range input paints no progress, so the level was
+// only ever legible from the knob's position and the % label; the CSS reads --fill
+// to colour the bar up to the current value.
+function paintVolumeFill(v) {
+    volEl.style.setProperty('--fill', clamp(v, 0, 100) + '%');
+}
 
 // vol_slider_widget_update() refuses to move the knob while the slider is pressed;
 // the same guard is needed here, or an incoming state broadcast would fight the
@@ -922,14 +930,51 @@ function refreshVolumeControl() {
     // the control stays inert rather than showing a confident 0 % that could be
     // dragged and would overwrite the real level.
     volEl.disabled = !S.gotState;
-    if (!S.gotState) { volValEl.textContent = '—'; return; }
+    if (!S.gotState) { volValEl.textContent = '—'; paintVolumeFill(0); return; }
     if (volDragging) return;
     volEl.value = clamp(volumeOf(), 0, 100);
     volValEl.textContent = volumeOf() + '%';
+    paintVolumeFill(volumeOf());
+    volLast = parseInt(volEl.value, 10);
 }
+
+// Only the knob moves the volume. A native range input jumps to wherever it is
+// pressed, so a stray press on the far end of the bar meant set_volume 100 on a
+// radio that is actually playing in the room. Presses that miss the knob are
+// cancelled below; the knob keeps its ordinary drag and the arrow keys their ±1.
+const VOL_KNOB_GRAB = 14;   // half of the 16 px knob, plus slack for a fingertip
+
+function volPressOnKnob(clientX) {
+    const r  = volEl.getBoundingClientRect();
+    const lo = parseInt(volEl.min, 10), hi = parseInt(volEl.max, 10);
+    // The knob's centre travels between its own half-widths, not edge to edge.
+    const half = 8;
+    const frac = (parseInt(volEl.value, 10) - lo) / (hi - lo);
+    return Math.abs(clientX - (r.left + half + frac * (r.width - 2 * half)))
+           <= VOL_KNOB_GRAB;
+}
+
+// Home and End legitimately send the slider to an end in one go, so a keystroke is
+// exempt from the leap check below — that check is aimed at pointer presses only.
+let volKeyed = false;
+volEl.addEventListener('keydown', () => { volKeyed = true; });
 
 volEl.addEventListener('input', () => {
     const v = parseInt(volEl.value, 10);
+    const keyed = volKeyed;
+    volKeyed = false;
+    // Belt and braces for the press guards: a cancelled pointerdown suppresses the
+    // compatibility mouse events the input jumps on, but engines differ, so an
+    // unwanted jump can still surface here. Nothing but a drag or a keystroke can
+    // legitimately move further than the keyboard's PageUp step, so a bigger leap
+    // is that press — put the knob back instead of shouting.
+    if (!volDragging && !keyed && Math.abs(v - volLast) > 10) {
+        volEl.value = volLast;
+        paintVolumeFill(volLast);
+        return;
+    }
+    volLast = v;
+    paintVolumeFill(v);
     volValEl.textContent = v + '%';
     // Same 150 ms debounce the main web UI uses: dragging fires 'input' per pixel
     // and every frame would otherwise be a settings write on the device.
@@ -939,7 +984,18 @@ volEl.addEventListener('input', () => {
     }, 150);
 });
 
-volEl.addEventListener('pointerdown',   () => { volDragging = true; });
+volEl.addEventListener('pointerdown', ev => {
+    if (!volPressOnKnob(ev.clientX)) { ev.preventDefault(); return; }
+    volDragging = true;
+});
+
+// Touch needs its own guard: a pointerdown is derived from the touch sequence, and
+// cancelling the derived event does not cancel the touch the input is dragged by.
+volEl.addEventListener('touchstart', ev => {
+    const t = ev.touches[0];
+    if (t && !volPressOnKnob(t.clientX)) ev.preventDefault();
+}, { passive: false });
+
 volEl.addEventListener('pointerup',     () => { volDragging = false; });
 volEl.addEventListener('pointercancel', () => { volDragging = false; });
 volEl.addEventListener('blur',          () => { volDragging = false; });

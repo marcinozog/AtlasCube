@@ -208,33 +208,67 @@ button:disabled:hover { border-color: var(--line); }
     background: transparent;
     -webkit-appearance: none;
     appearance: none;
-    cursor: pointer;
+    /* Only the knob moves the volume (see the pointerdown guard in
+       preview-core.js), so the track must not advertise itself as clickable. */
+    cursor: default;
 }
 
-.volbar input[type=range]::-webkit-slider-runnable-track,
+.volbar input[type=range]:disabled { opacity: .4; }
+
+/* A groove cut into the page rather than a hairline drawn on it: taller than the
+   knob's stem, sunk below the page background, edged with --line, and filled in
+   --accent up to the current level (--fill, set from paintVolumeFill). The old
+   4 px var(--line) bar was all but invisible against --page-bg, which is how a
+   press could land on the far end without the end being visible at all.
+
+   The two engines get their own rules on purpose: one unknown selector voids the
+   whole rule, so a -webkit- and a -moz- pseudo-element must never share a list —
+   as they did here, leaving Firefox with no track styling whatsoever. */
+.volbar input[type=range]::-webkit-slider-runnable-track {
+    height: 8px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: linear-gradient(to right,
+                var(--accent) 0 var(--fill, 0%), #0d0f13 var(--fill, 0%) 100%);
+}
+
 .volbar input[type=range]::-moz-range-track {
-    height: 4px;
-    border-radius: 2px;
-    background: var(--line);
+    height: 8px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: #0d0f13;
 }
 
+.volbar input[type=range]::-moz-range-progress {
+    height: 8px;
+    border-radius: 4px 0 0 4px;
+    background: var(--accent);
+}
+
+/* Ringed in the page background so the knob still reads as a knob where it sits
+   on top of its own accent-coloured fill. grab, because dragging it is now the
+   only way to move the volume. */
 .volbar input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
     appearance: none;
-    width: 14px;
-    height: 14px;
-    margin-top: -5px;
+    width: 16px;
+    height: 16px;
+    margin-top: -4px;
     border-radius: 50%;
-    border: none;
+    border: 2px solid var(--page-bg);
     background: var(--accent);
+    box-shadow: 0 0 0 1px var(--line);
+    cursor: grab;
 }
 
 .volbar input[type=range]::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     border-radius: 50%;
-    border: none;
+    border: 2px solid var(--page-bg);
     background: var(--accent);
+    box-shadow: 0 0 0 1px var(--line);
+    cursor: grab;
 }
 
 /* Touch hotspots. Invisible at rest, exactly as the widget leaves them — the
@@ -379,7 +413,8 @@ button:disabled:hover { border-color: var(--line); }
     <div class="volbar" id="volbar">
         <span class="vol-icon">🔈</span>
         <input type="range" id="volume" min="0" max="100" value="0" step="1"
-               aria-label="Volume">
+               aria-label="Volume"
+               title="Drag the knob to change the volume — a press on the bar is ignored">
         <span class="vol-value" id="vol_value">—</span>
     </div>
 
