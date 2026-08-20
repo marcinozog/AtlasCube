@@ -2,7 +2,7 @@
 
 *[English](README.md) | Polski*
 
-[![Build firmware](https://github.com/marcinozog/AtlasCube/actions/workflows/build.yml/badge.svg)](https://github.com/marcinozog/AtlasCube/actions/workflows/build.yml)
+⚠️ Projekt przeniesiony. To repozytorium jest archiwum źródeł AtlasCube do wersji v0.51.0. Aktualne firmware, wydania i changelog znajdziesz na [atlascube.net](https://atlascube.net) — urządzenie wgrasz i zaktualizujesz przez [atlascube.net/flash](https://atlascube.net/flash), a lista zmian jest [tutaj](https://atlascube.net/changelog). Zgłoszenia i pull requesty nie są tu obsługiwane.
 
 Hobbystyczne radio internetowe i inteligentny zegar na uniwersalnej płytce (tymczasowo) z ESP32-S3 (AtlasCube). Gra radio z sieci, pokazuje godzinę, pilnuje przypomnień i ma web UI do konfiguracji. Wszystko działa lokalnie — żadnej chmury.
 
