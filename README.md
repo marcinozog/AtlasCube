@@ -2,7 +2,7 @@
 
 *English | [Polski](README.pl.md)*
 
-⚠️ Development has moved. This repository is an archive of the AtlasCube source up to v0.51.0. Current firmware, releases and the changelog now live at [atlascube.net](https://atlascube.net) — flash or update your device from [atlascube.net/flash](https://atlascube.net/flash), and see the changelog [changelog](https://atlascube.net/changelog) for what's new. Issues and pull requests here are no longer monitored.
+⚠️ Development has moved. This repository is an archive of the AtlasCube source up to v0.51.0. Current firmware, releases and the changelog now live at [atlascube.net](https://atlascube.net) — flash or update your device from [atlascube.net/flash](https://atlascube.net/flash), and see the [changelog](https://atlascube.net/changelog) for what's new. Issues and pull requests here are no longer monitored.
 
 A hobby project — internet radio and smart clock running on a generic dev board (for now) with ESP32-S3 (AtlasCube). Streams internet radio, shows a clock, manages reminders, and exposes a web UI for configuration. Everything runs on the device with no cloud dependency.
 
